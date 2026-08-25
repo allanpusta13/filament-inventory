@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
@@ -42,6 +43,20 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
     {
         /* TODO: Please implement your own logic here. */
         return true; // str_ends_with($this->email, '@larament.test');
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === UserRole::Admin;
+    }
+
+    public function canAccessWarehouse(Warehouse $warehouse): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        return $this->warehouses->contains($warehouse);
     }
 
     /**
@@ -94,7 +109,7 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
             'password' => 'hashed',
             'app_authentication_secret' => 'encrypted',
             'app_authentication_recovery_codes' => 'encrypted:array',
-            'role' => 'string',
+            'role' => UserRole::class,
         ];
     }
 }
