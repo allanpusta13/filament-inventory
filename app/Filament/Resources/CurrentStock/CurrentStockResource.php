@@ -11,12 +11,17 @@ use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use UnitEnum;
 
 final class CurrentStockResource extends Resource
 {
     protected static ?string $model = StockMovement::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCube;
+
+    protected static UnitEnum|string|null $navigationGroup = 'Operations';
+
+    protected static ?int $navigationSort = 21;
 
     protected static ?string $navigationLabel = 'Current Stock';
 

@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Filament\Resources\StockMovements\Tables;
 
 use App\Enums\MovementType;
+use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
@@ -44,8 +46,26 @@ final class StockMovementsTable
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable(),
+                TextColumn::make('createdBy.name')
+                    ->label('Created By')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                Filter::make('created_at')
+                    ->form([
+                        DatePicker::make('created_from')
+                            ->label('From')
+                            ->native(false),
+                        DatePicker::make('created_until')
+                            ->label('Until')
+                            ->native(false),
+                    ])
+                    ->query(function ($query, array $data): mixed {
+                        return $query
+                            ->when($data['created_from'] ?? null, fn ($q, $date) => $q->whereDate('created_at', '>=', $date))
+                            ->when($data['created_until'] ?? null, fn ($q, $date) => $q->whereDate('created_at', '<=', $date));
+                    }),
                 SelectFilter::make('direction')
                     ->options([
                         'incoming' => 'Incoming',

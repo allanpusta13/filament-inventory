@@ -47,7 +47,7 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
 
     public function isAdmin(): bool
     {
-        return $this->role === UserRole::Admin;
+        return ($this->attributes['role'] ?? null) === UserRole::Admin->value;
     }
 
     public function canAccessWarehouse(Warehouse $warehouse): bool

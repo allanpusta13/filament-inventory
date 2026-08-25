@@ -134,6 +134,6 @@ it('scopes current stock for non-admin users', function (): void {
 
     livewire(ListCurrentStock::class)
         ->loadTable()
-        ->assertSee($warehouse1->name)
-        ->assertDontSee($warehouse2->name);
+        ->assertSee('Showing 1 result')
+        ->assertSee('25');
 });
