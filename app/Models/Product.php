@@ -36,4 +36,9 @@ final class Product extends Model
     {
         return $this->hasMany(StockMovement::class);
     }
+
+    public function totalQuantity(): int
+    {
+        return (int) $this->stockMovements()->sum('quantity');
+    }
 }
