@@ -37,6 +37,10 @@ final class StockMovementsTable
                     ->sortable()
                     ->searchable()
                     ->toggleable(),
+                TextColumn::make('counterpart_warehouse')
+                    ->label('From/To')
+                    ->toggleable()
+                    ->placeholder('-'),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable(),

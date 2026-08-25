@@ -11,6 +11,7 @@ use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 final class StockMovementResource extends Resource
 {
@@ -42,6 +43,21 @@ final class StockMovementResource extends Resource
     public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
     {
         return false;
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        $user = auth()->user();
+
+        if (! $user->isAdmin()) {
+            $warehouseIds = $user->warehouses()->pluck('warehouses.id');
+
+            $query->whereIn('stock_movements.warehouse_id', $warehouseIds);
+        }
+
+        return $query;
     }
 
     public static function table(Table $table): Table

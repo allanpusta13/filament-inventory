@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 final class StockMovement extends Model
 {
@@ -63,6 +64,24 @@ final class StockMovement extends Model
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function getCounterpartWarehouseAttribute(): ?string
+    {
+        return match ($this->type) {
+            MovementType::TransferIn => $this->relatedMovement?->warehouse?->name,
+            MovementType::TransferOut => $this->inwardMovement?->warehouse?->name,
+            default => null,
+        };
+    }
+
+    /**
+     * For TransferOut: find the corresponding TransferIn row
+     * where related_movement_id points to this row.
+     */
+    public function inwardMovement(): HasOne
+    {
+        return $this->hasOne(self::class, 'related_movement_id');
     }
 
     protected static function boot(): void
