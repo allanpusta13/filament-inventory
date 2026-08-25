@@ -10,7 +10,9 @@ use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -18,6 +20,11 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
+
+    #[Fillable(['role'])]
+    protected $fillable = [
+        'role',
+    ];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -35,6 +42,14 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
     {
         /* TODO: Please implement your own logic here. */
         return true; // str_ends_with($this->email, '@larament.test');
+    }
+
+    /**
+     * @return BelongsToMany<Warehouse, $this>
+     */
+    public function warehouses(): BelongsToMany
+    {
+        return $this->belongsToMany(Warehouse::class, 'user_warehouse');
     }
 
     public function getAppAuthenticationSecret(): ?string
@@ -79,6 +94,7 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
             'password' => 'hashed',
             'app_authentication_secret' => 'encrypted',
             'app_authentication_recovery_codes' => 'encrypted:array',
+            'role' => 'string',
         ];
     }
 }
