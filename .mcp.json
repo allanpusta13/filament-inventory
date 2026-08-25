@@ -2,10 +2,17 @@
     "mcpServers": {
         "laravel-boost": {
             "command": "php",
+            "args": ["artisan", "boost:mcp"]
+        },
+        "tolaria": {
             "args": [
-                "artisan",
-                "boost:mcp"
-            ]
+                "C:\\Users\\Eizkie - ASUS\\AppData\\Local\\Tolaria\\mcp-server\\index.js"
+            ],
+            "command": "C:\\Program Files\\nodejs\\node.exe",
+            "env": {
+                "WS_UI_PORT": "9711"
+            },
+            "type": "stdio"
         }
     }
 }

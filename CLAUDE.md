@@ -29,6 +29,23 @@ This application is a Laravel application and its main Laravel ecosystems packag
 
 This project has domain-specific skills available in `**/skills/**`. You MUST activate the relevant skill whenever you work in that domain—don't wait until you're stuck.
 
+## Required Workflow
+
+Every non-trivial implementation task in this repo goes through the `plan-council-code-test` skill (`.claude/skills/plan-council-code-test/SKILL.md`): plan → multi-perspective council review (approve/deny) → code → full Pest suite, old and new tests → fix-and-retest if needed. Do not skip steps because a task looks small.
+
+Numbered task prompts live in `docs/00-project/prompts/` (`01.md`, `02.md`, ...), matching the blueprint's Implementation Order. Work through them in sequence; each one names the next.
+
+## Documentation (via Tolaria MCP)
+
+This repo's `docs/` vault is managed through Tolaria. Write into it as you go, not as an afterthought:
+
+- `docs/00-project/architecture-decisions/` — one ADR per non-obvious design decision (why, not just what). Written the same session the decision is made.
+- `docs/00-project/plans/` — the approved plan for each task, written once the council approves it in Step 2 of the `plan-council-code-test` skill. One file per task, e.g. `02-01-identify-tenant-middleware.md` (prompt number + task slug), so plans stay traceable back to both the prompt and the specific task within it.
+- `docs/00-project/prompts/` — the numbered task prompts (reference only, not edited during execution).
+- `docs/01-issues/` — one note per GitHub issue, if/when issue tracking is in use.
+- `docs/02-research/` — Filament/Laravel/package research, especially anything version-specific (Laravel 13, Filament 5.x, Livewire 4) that isn't obvious from training data.
+- `docs/03-daily-logs/` — optional, used for session summaries on larger or audit-style tasks.
+
 ## Conventions
 
 - You must follow all existing code conventions used in this application. When creating or editing a file, check sibling files for the correct structure, approach, and naming.
