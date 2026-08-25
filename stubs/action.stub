@@ -1,0 +1,17 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use Illuminate\Support\Facades\DB;
+
+final readonly class {{ class }}
+{
+    public function handle(): void
+    {
+        DB::transaction(function (): void {
+            //
+        });
+    }
+}
