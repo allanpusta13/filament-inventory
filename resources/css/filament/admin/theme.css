@@ -3,10 +3,184 @@
 @source '../../../../app/Filament/**/*';
 @source '../../../../resources/views/filament/**/*';
 
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+}
+
+/* Premium Sidebar */
 .fi-sidebar-nav {
-    border-right: 1px solid #e4e4e5;
+    border-right: 1px solid #e2e8f0;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
 }
 
 .dark .fi-sidebar-nav {
-    border-right: 1px solid  #18181B;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
+}
+
+/* Refined Cards */
+.fi-card {
+    border-radius: 0.75rem;
+    transition: all 0.2s ease;
+}
+
+.fi-card:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+}
+
+.dark .fi-card {
+    background: rgba(255, 255, 255, 0.02);
+    border-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Status Pills */
+.fi-status-badge {
+    border-radius: 9999px;
+    font-weight: 600;
+    letter-spacing: 0.025em;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    line-height: 1rem;
+}
+
+/* Stat Widget Enhancements */
+.fi-stat-wrapped {
+    border-radius: 0.75rem;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.fi-stat-wrapped:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.08);
+}
+
+.dark .fi-stat-wrapped {
+    border-color: rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Table Row Hover */
+.fi-ta-table tr.fi-ta-table-row {
+    transition: background-color 0.15s ease;
+}
+
+.fi-ta-table tr.fi-ta-table-row:hover {
+    background-color: rgba(59, 130, 246, 0.03);
+}
+
+.dark .fi-ta-table tr.fi-ta-table-row:hover {
+    background-color: rgba(59, 130, 246, 0.05);
+}
+
+/* Button Refinements */
+.fi-btn {
+    border-radius: 0.5rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    transition: all 0.15s ease;
+}
+
+.fi-btn:hover {
+    transform: translateY(-0.5px);
+}
+
+.fi-btn:active {
+    transform: translateY(0);
+}
+
+/* Input Focus States */
+.fi-input {
+    transition: all 0.15s ease;
+}
+
+.fi-input:focus {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.dark .fi-input:focus {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+/* Navigation Active State */
+.fi-sidebar-item-active {
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%);
+    border-left: 3px solid #3b82f6;
+}
+
+.dark .fi-sidebar-item-active {
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.05) 100%);
+    border-left: 3px solid #60a5fa;
+}
+
+/* Dashboard Section Headers */
+.fi-section-header {
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+/* Modal Enhancements */
+.fi-modal-window {
+    border-radius: 1rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background: #334155;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+}
+
+/* Smooth Transitions for Dark Mode */
+.dark {
+    color-scheme: dark;
+}
+
+/* Widget Grid Enhancement */
+.fi-widgets-grid {
+    gap: 1rem;
+}
+
+/* Pulsing Dot for Alerts */
+@keyframes pulse-ring {
+    0% {
+        transform: scale(0.8);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(2);
+        opacity: 0;
+    }
+}
+
+.pulse-ring {
+    animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+/* Mono Font for SKUs */
+.font-mono {
+    font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
 }

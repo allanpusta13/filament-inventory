@@ -19,25 +19,29 @@ final class WarehousesTable
             ->columns([
                 TextColumn::make('name')
                     ->sortable()
-                    ->searchable(),
+                    ->searchable()
+                    ->weight('bold'),
                 TextColumn::make('location')
                     ->sortable()
                     ->searchable()
-                    ->toggleable(),
+                    ->toggleable()
+                    ->icon('heroicon-m-map-pin'),
                 IconColumn::make('is_active')
                     ->boolean()
-                    ->sortable(),
+                    ->sortable()
+                    ->label('Status'),
                 TextColumn::make('users_count')
                     ->counts('users')
-                    ->label('Users')
+                    ->label('Staff')
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->badge(),
                 TextColumn::make('created_at')
-                    ->dateTime()
+                    ->dateTime('M j, Y')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('updated_at')
-                    ->dateTime()
+                    ->dateTime('M j, Y')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
