@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Pages;
 
 use App\Filament\Widgets\LowStockAlertWidget;
+use App\Filament\Widgets\QuickActionsWidget;
 use App\Filament\Widgets\RecentStockActivityWidget;
 use App\Filament\Widgets\StatsOverviewWidget;
 use App\Filament\Widgets\StockByWarehouseWidget;
@@ -16,6 +17,7 @@ final class Dashboard extends BaseDashboard
     public function getWidgets(): array
     {
         return [
+            QuickActionsWidget::class,
             StatsOverviewWidget::class,
             LowStockAlertWidget::class,
             RecentStockActivityWidget::class,

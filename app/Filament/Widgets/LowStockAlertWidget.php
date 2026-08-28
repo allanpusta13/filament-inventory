@@ -5,17 +5,20 @@ declare(strict_types=1);
 namespace App\Filament\Widgets;
 
 use App\Models\Product;
+use App\Traits\StockActions;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
 
 final class LowStockAlertWidget extends TableWidget
 {
+    use StockActions;
+
     protected static ?string $heading = 'Low Stock Alerts';
 
     protected static ?int $sort = 10;
 
-    protected static ?string $description = 'Products at or below reorder point';
+    protected static ?string $description = 'Products at or below reorder point — quick receive to restock';
 
     protected int|string|array $columnSpan = 'full';
 
@@ -73,6 +76,10 @@ final class LowStockAlertWidget extends TableWidget
                         default => 'warning',
                     }),
             ])
+            ->recordActions([
+                $this->quickReceiveAction(),
+            ])
+            ->toolbarActions([])
             ->defaultSort('name')
             ->paginated([5, 10, 25]);
     }
