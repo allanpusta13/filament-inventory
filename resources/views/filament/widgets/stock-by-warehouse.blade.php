@@ -1,5 +1,5 @@
 <x-filament-widgets::widget>
-    <x-filament::section heading="{{ static::getHeading() }}">
+    <x-filament::section heading="Stock by Warehouse">
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             @forelse ($warehouses as $warehouse)
                 <div class="fi-card relative flex flex-col overflow-hidden rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 p-6 shadow-sm transition-all duration-200 hover:shadow-md">
