@@ -16,14 +16,14 @@ final class RecentStockActivityWidget extends TableWidget
 
     protected static ?string $heading = 'Recent Stock Movements';
 
-    protected static ?int $sort = 30;
+    protected static ?int $sort = 42;
 
     protected static ?string $description = 'Last 10 stock movements across all warehouses';
 
     protected int|string|array $columnSpan = [
         'sm' => 'full',
         'md' => 'full',
-        'lg' => 'full',
+        'lg' => 5,
     ];
 
     public static function canView(): bool

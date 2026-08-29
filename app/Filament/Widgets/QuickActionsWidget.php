@@ -16,7 +16,7 @@ final class QuickActionsWidget extends Widget
 
     protected string $view = 'filament.widgets.quick-actions';
 
-    protected static ?int $sort = 11;
+    protected static ?int $sort = 12;
 
     protected static ?string $heading = 'Common Actions';
 
@@ -31,6 +31,7 @@ final class QuickActionsWidget extends Widget
         return [
             $this->receiveStockAction(),
             $this->shipStockAction(),
+            $this->transferStockAction(),
             $this->newProductAction(),
         ];
     }

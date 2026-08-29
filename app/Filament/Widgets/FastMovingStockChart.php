@@ -14,17 +14,17 @@ final class FastMovingStockChart extends ChartWidget
 
     protected ?string $heading = 'Top 10 High-Turnover Products';
 
-    protected static ?int $sort = 25;
+    protected static ?int $sort = 41;
 
     protected ?string $description = 'Top 10 products by stock movement frequency';
 
     protected int|string|array $columnSpan = [
         'sm' => 'full',
         'md' => 'full',
-        'lg' => 'full',
+        'lg' => 7,
     ];
 
-    protected ?string $maxHeight = '350px';
+    protected ?string $maxHeight = '300px';
 
     public static function canView(): bool
     {

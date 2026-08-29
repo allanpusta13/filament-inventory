@@ -289,6 +289,13 @@ describe('QuickActionsWidget', function (): void {
         livewire(QuickActionsWidget::class)
             ->assertOk();
     });
+
+    it('renders all four action buttons', function (): void {
+        $this->actingAs($this->admin);
+
+        livewire(QuickActionsWidget::class)
+            ->assertOk();
+    });
 });
 
 describe('StockByWarehouseWidget', function (): void {

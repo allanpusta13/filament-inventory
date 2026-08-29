@@ -94,10 +94,43 @@
     outline-color: #60a5fa;
 }
 
+/* Chart canvas ARIA support */
+.fi-chart-widget canvas[role="img"] {
+    cursor: default;
+}
+
+/* Chart data table toggle for screen readers */
+.fi-chart-data-toggle {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+.fi-chart-data-toggle:focus {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 0.5rem 1rem;
+    margin: 0.5rem 0;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+    background-color: #3b82f6;
+    color: #ffffff;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
 /* Chart Container */
 .fi-chart-widget {
     position: relative;
-    min-height: 400px;
     display: flex;
     flex-direction: column;
 }
@@ -214,6 +247,18 @@
 .fi-ta-table-container {
     max-height: 400px;
     overflow-y: auto;
+    overflow-x: auto;
+}
+
+/* Accessible scrollable table regions */
+.fi-ta-table-container[role="region"]:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+    border-radius: 0.375rem;
+}
+
+.dark .fi-ta-table-container[role="region"]:focus-visible {
+    outline-color: #60a5fa;
 }
 
 /* Button Refinements with WCAG AAA Touch Targets */
@@ -378,6 +423,27 @@ button.fi-primary:hover {
 
 .fi-btn:active {
     opacity: 1;
+}
+
+/* Reduced Motion — disable chart animations for accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .fi-chart-widget canvas {
+        animation: none !important;
+        transition: none !important;
+    }
+
+    .fi-chart-widget {
+        animation: none !important;
+        transition: none !important;
+    }
+
+    .skeleton {
+        animation: none !important;
+    }
+
+    .pulse-ring {
+        animation: none !important;
+    }
 }
 
 /* Input Focus States with High Contrast */
