@@ -14,15 +14,15 @@ final class StockMovementTrendChart extends ChartWidget
 {
     use DashboardFilterable;
 
-    protected ?string $heading = 'Inbound vs Outbound Shipments';
+    protected ?string $heading = 'Stock Inflow vs Outflow (30 Days)';
 
-    protected static ?int $sort = 31;
+    protected static ?int $sort = 20;
 
-    protected ?string $description = 'Supplier shipments (bars) and fulfillment (line) — last 30 days';
+    protected ?string $description = '';
 
     protected int|string|array $columnSpan = [
         'sm' => 'full',
-        'md' => 1,
+        'md' => 'full',
         'lg' => 7,
     ];
 

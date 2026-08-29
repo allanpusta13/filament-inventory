@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use App\Enums\UserRole;
 use App\Filament\Widgets\CategoryStockChart;
 use App\Filament\Widgets\DashboardSections\InventoryAnalyticsHeader;
 use App\Filament\Widgets\DashboardSections\OperationsAlertsHeader;
@@ -27,7 +28,11 @@ final class Dashboard extends BaseDashboard
     {
         $user = auth()->user();
 
-        return $user?->isAdmin() ?? false;
+        if (! $user) {
+            return false;
+        }
+
+        return in_array($user->role, [UserRole::Admin, UserRole::WarehouseStaff], true);
     }
 
     public function getColumns(): int|array
@@ -51,20 +56,20 @@ final class Dashboard extends BaseDashboard
     public function getWidgets(): array
     {
         return [
-            PerformanceOverviewHeader::class,
-            StatsOverviewWidget::class,
-            OperationsAlertsHeader::class,
-            LowStockAlertWidget::class,
-            QuickActionsWidget::class,
-            WarehouseStatusHeader::class,
-            StockByWarehouseWidget::class,
-            InventoryAnalyticsHeader::class,
-            StockMovementTrendChart::class,
-            CategoryStockChart::class,
-            PlanningActivityHeader::class,
-            FastMovingStockChart::class,
-            RecentStockActivityWidget::class,
-            AccountWidget::class,
+            QuickActionsWidget::class,        // sort: 0
+            StatsOverviewWidget::class,       // sort: 1
+            PerformanceOverviewHeader::class, // sort: 1
+            LowStockAlertWidget::class,       // sort: 10
+            OperationsAlertsHeader::class,    // sort: 10
+            StockByWarehouseWidget::class,    // sort: 15
+            WarehouseStatusHeader::class,     // sort: 15
+            StockMovementTrendChart::class,  // sort: 20
+            CategoryStockChart::class,       // sort: 21
+            InventoryAnalyticsHeader::class, // sort: 21
+            FastMovingStockChart::class,      // sort: 25
+            RecentStockActivityWidget::class, // sort: 30
+            PlanningActivityHeader::class,    // sort: 30
+            AccountWidget::class,             // sort: 100
         ];
     }
 }

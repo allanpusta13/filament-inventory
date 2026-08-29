@@ -17,7 +17,7 @@ final class LowStockAlertWidget extends TableWidget
 
     protected static ?string $heading = 'Low Stock Alerts';
 
-    protected static ?int $sort = 10;
+    protected static ?int $sort = 11;
 
     protected static ?string $description = 'Products at or below reorder point — quick receive to restock';
 
@@ -33,15 +33,16 @@ final class LowStockAlertWidget extends TableWidget
 
         $query = Product::query()
             ->select('products.*')
-            ->join('stock_movements', 'products.id', '=', 'stock_movements.product_id')
-            ->groupBy('products.id', 'products.sku', 'products.name', 'products.category', 'products.unit', 'products.reorder_point', 'products.created_at', 'products.updated_at')
-            ->havingRaw('SUM(stock_movements.quantity) <= products.reorder_point')
-            ->havingRaw('SUM(stock_movements.quantity) >= 0');
+            ->join('stock_movements', 'products.id', '=', 'stock_movements.product_id');
 
         $warehouseIds = $this->getFilterWarehouseIds($user);
         if ($warehouseIds !== null) {
             $query->whereIn('stock_movements.warehouse_id', $warehouseIds);
         }
+
+        $query = $query->groupBy('products.id', 'products.sku', 'products.name', 'products.category', 'products.unit', 'products.reorder_point', 'products.created_at', 'products.updated_at')
+            ->havingRaw('SUM(stock_movements.quantity) <= products.reorder_point')
+            ->havingRaw('SUM(stock_movements.quantity) >= 0');
 
         return $table
             ->query($query)
@@ -78,9 +79,7 @@ final class LowStockAlertWidget extends TableWidget
                         default => 'warning',
                     }),
             ])
-            ->recordActions([
-                $this->quickReceiveAction(),
-            ])
+            ->recordActions([$this->quickReceiveAction()])
             ->toolbarActions([])
             ->defaultSort('name')
             ->paginated([5, 10, 25])

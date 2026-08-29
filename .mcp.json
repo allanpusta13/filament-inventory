@@ -13,6 +13,14 @@
                 "WS_UI_PORT": "9711"
             },
             "type": "stdio"
+        },
+        "playwright": {
+            "command": "npx",
+            "args": ["@playwright/mcp@latest"]
+        },
+        "headroom": {
+            "command": "C:\\Users\\Eizkie - ASUS\\AppData\\Local\\Programs\\Python\\Python312\\Scripts\\headroom.exe",
+            "args": ["mcp", "serve"]
         }
     }
 }

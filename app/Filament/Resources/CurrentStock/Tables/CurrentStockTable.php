@@ -16,8 +16,7 @@ final class CurrentStockTable
                 TextColumn::make('product.name')
                     ->label('Product')
                     ->sortable()
-                    ->searchable()
-                    ->weight('bold'),
+                    ->searchable(),
                 TextColumn::make('warehouse.name')
                     ->label('Warehouse')
                     ->sortable()
@@ -25,25 +24,8 @@ final class CurrentStockTable
                 TextColumn::make('quantity')
                     ->label('Quantity')
                     ->sortable()
-                    ->weight('bold')
                     ->color(function (int $state): string {
-                        if ($state <= 0) {
-                            return 'danger';
-                        }
-
-                        return 'success';
-                    })
-                    ->formatStateUsing(fn (int $state): string => number_format($state)),
-                TextColumn::make('stock_status')
-                    ->label('Status')
-                    ->state(fn ($record): string => match (true) {
-                        $record->quantity <= 0 => 'Out of Stock',
-                        default => 'In Stock',
-                    })
-                    ->badge()
-                    ->color(fn ($record): string => match (true) {
-                        $record->quantity <= 0 => 'danger',
-                        default => 'success',
+                        return $state > 0 ? 'success' : ($state < 0 ? 'danger' : 'gray');
                     }),
             ])
             ->defaultSort('product.name')

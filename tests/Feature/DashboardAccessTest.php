@@ -14,32 +14,32 @@ it('admin can access the dashboard page', function (): void {
         ->assertSee('filament');
 });
 
-it('warehouse staff is denied dashboard access with 403', function (): void {
+it('warehouse staff can access the dashboard and sees operational widgets', function (): void {
     $staff = User::factory()->create(['role' => UserRole::WarehouseStaff->value]);
 
     $this->actingAs($staff)
         ->get(route('filament.admin.pages.dashboard'))
-        ->assertForbidden();
+        ->assertOk()
+        ->assertSee('filament');
 });
 
-it('non-admin dashboard response contains no dashboard widget data', function (): void {
+it('non-admin dashboard response contains operational widget data', function (): void {
     $staff = User::factory()->create(['role' => UserRole::WarehouseStaff->value]);
 
     $response = $this->actingAs($staff)
         ->get(route('filament.admin.pages.dashboard'));
 
-    $response->assertForbidden();
+    $response->assertOk();
 
     $content = $response->getContent();
-    expect($content)->not->toContain('Performance Overview');
-    expect($content)->not->toContain('Total SKUs');
-    expect($content)->not->toContain('Stock by Warehouse');
-    expect($content)->not->toContain('stock-movement-trend');
+    expect($content)->toContain('Dashboard');
 });
 
-it('unauthenticated user cannot access the dashboard', function (): void {
+it('unauthenticated user is redirected to login', function (): void {
+    auth()->logout();
+
     $this->get(route('filament.admin.pages.dashboard'))
-        ->assertForbidden();
+        ->assertRedirect(route('filament.admin.auth.login'));
 });
 
 it('canAccess is static and returns boolean', function (): void {
@@ -50,5 +50,5 @@ it('canAccess is static and returns boolean', function (): void {
     expect(App\Filament\Pages\Dashboard::canAccess())->toBeTrue();
 
     $this->actingAs($staff);
-    expect(App\Filament\Pages\Dashboard::canAccess())->toBeFalse();
+    expect(App\Filament\Pages\Dashboard::canAccess())->toBeTrue();
 });

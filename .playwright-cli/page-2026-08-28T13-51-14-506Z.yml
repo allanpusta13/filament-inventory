@@ -1,0 +1,90 @@
+- generic [active] [ref=f9e1]:
+  - navigation [ref=f9e3]:
+    - generic [ref=f9e4]:
+      - button "Collapse sidebar" [ref=f9e6] [cursor=pointer]
+      - link "Larament" [ref=f9e9] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000/admin
+    - generic [ref=f9e11]:
+      - generic [ref=f9e14]:
+        - generic [ref=f9e15]: Global search
+        - generic [ref=f9e16]:
+          - searchbox "Global search" [ref=f9e21]
+          - generic [ref=f9e22]: CTRL + K
+      - button "User menu" [ref=f9e26] [cursor=pointer]:
+        - img "Avatar of Admin" [ref=f9e27]
+  - generic [ref=f9e28]:
+    - complementary [ref=f9e30]:
+      - navigation [ref=f9e31]:
+        - list [ref=f9e32]:
+          - listitem [ref=f9e33]:
+            - list [ref=f9e34]:
+              - listitem [ref=f9e35]:
+                - link "Dashboard" [ref=f9e36] [cursor=pointer]:
+                  - /url: http://127.0.0.1:8000/admin
+          - listitem [ref=f9e40]:
+            - generic [ref=f9e41] [cursor=pointer]:
+              - generic [ref=f9e42]: Catalog
+              - button "Catalog" [expanded] [ref=f9e43]
+            - list [ref=f9e46]:
+              - listitem [ref=f9e47]:
+                - link "Products" [ref=f9e48] [cursor=pointer]:
+                  - /url: http://127.0.0.1:8000/admin/products
+          - listitem [ref=f9e52]:
+            - generic [ref=f9e53] [cursor=pointer]:
+              - generic [ref=f9e54]: Operations
+              - button "Operations" [expanded] [ref=f9e55]
+            - list [ref=f9e58]:
+              - listitem [ref=f9e59]:
+                - link "Stock Movements" [ref=f9e60] [cursor=pointer]:
+                  - /url: http://127.0.0.1:8000/admin/stock-movements
+              - listitem [ref=f9e64]:
+                - link "Current Stock" [ref=f9e65] [cursor=pointer]:
+                  - /url: http://127.0.0.1:8000/admin/current-stock
+          - listitem [ref=f9e69]:
+            - generic [ref=f9e70] [cursor=pointer]:
+              - generic [ref=f9e71]: Admin
+              - button "Admin" [expanded] [ref=f9e72]
+            - list [ref=f9e75]:
+              - listitem [ref=f9e76]:
+                - link "Warehouses" [ref=f9e77] [cursor=pointer]:
+                  - /url: http://127.0.0.1:8000/admin/warehouses
+              - listitem [ref=f9e81]:
+                - link "Users" [ref=f9e82] [cursor=pointer]:
+                  - /url: http://127.0.0.1:8000/admin/users
+    - main [ref=f9e87]:
+      - generic [ref=f9e89]:
+        - heading "Dashboard" [level=1] [ref=f9e92]
+        - generic [ref=f9e111]:
+          - img "Avatar of Admin" [ref=f9e112]
+          - generic [ref=f9e113]:
+            - heading "Welcome" [level=2] [ref=f9e114]
+            - paragraph [ref=f9e115]: Admin
+          - button "Sign out" [ref=f9e117] [cursor=pointer]
+  - generic:
+    - status
+  - generic [ref=f9e123]:
+    - generic [ref=f9e124] [cursor=pointer]
+    - generic [ref=f9e125]:
+      - generic [ref=f9e126] [cursor=pointer]: Request
+      - generic [ref=f9e127] [cursor=pointer]: Timeline
+      - generic [ref=f9e128] [cursor=pointer]:
+        - generic: Views
+        - generic [ref=f9e129]: "1"
+      - generic [ref=f9e130] [cursor=pointer]:
+        - generic: Queries
+        - generic [ref=f9e131]: "3"
+      - generic [ref=f9e132] [cursor=pointer]:
+        - generic: Models
+        - generic [ref=f9e133]: "1"
+      - generic [ref=f9e134] [cursor=pointer]:
+        - generic: Livewire
+        - generic [ref=f9e135]: "6"
+    - generic [ref=f9e136]:
+      - generic [ref=f9e137] [cursor=pointer]
+      - generic [ref=f9e138] [cursor=pointer]
+      - generic [ref=f9e139] [cursor=pointer]
+      - generic [ref=f9e141] [cursor=pointer]
+      - generic [ref=f9e142]: GET /admin
+      - generic [ref=f9e145] [cursor=pointer]: 556ms
+      - generic [ref=f9e147] [cursor=pointer]: 45MB
+      - generic [ref=f9e149] [cursor=pointer]: 13.x

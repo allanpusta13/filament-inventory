@@ -1,0 +1,189 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-26T16:00:00.000Z",
+  "title": "Design System: Filament Inventory",
+  "extensions": {
+    "colorMeta": {
+      "primary": { "role": "primary", "displayName": "Operational Blue", "canonical": "oklch(59.6% 0.23 264.4)", "tonalRamp": ["#1e3a5f", "#1e40af", "#2563eb", "#3b82f6", "#60a5fa", "#93c5fd", "#bfdbfe", "#dbeafe", "#eff6ff"] },
+      "primary-deep": { "role": "primary", "displayName": "Operational Blue Deep", "canonical": "oklch(53.7% 0.24 264.4)", "tonalRamp": ["#172554", "#1e3a5f", "#1e40af", "#2563eb", "#3b82f6", "#60a5fa", "#93c5fd", "#bfdbfe", "#dbeafe"] },
+      "primary-muted": { "role": "primary", "displayName": "Operational Blue Muted", "canonical": "oklch(92.7% 0.06 264.4)", "tonalRamp": ["#1e3a5f", "#1e40af", "#2563eb", "#3b82f6", "#60a5fa", "#93c5fd", "#bfdbfe", "#dbeafe", "#eff6ff"] },
+      "success": { "role": "semantic", "displayName": "Verdant Success", "canonical": "oklch(62.7% 0.2 142.5)", "tonalRamp": ["#052e16", "#14532d", "#166534", "#16a34a", "#22c55e", "#4ade80", "#86efac", "#bbf7d0", "#dcfce7"] },
+      "success-muted": { "role": "semantic", "displayName": "Verdant Success Muted", "canonical": "oklch(92.2% 0.08 142.5)", "tonalRamp": ["#052e16", "#14532d", "#166534", "#16a34a", "#22c55e", "#4ade80", "#86efac", "#bbf7d0", "#dcfce7"] },
+      "danger": { "role": "semantic", "displayName": "Signal Danger", "canonical": "oklch(57.7% 0.25 27.3)", "tonalRamp": ["#450a0a", "#7f1d1d", "#991b1b", "#dc2626", "#ef4444", "#f87171", "#fca5a5", "#fecaca", "#fee2e2"] },
+      "danger-muted": { "role": "semantic", "displayName": "Signal Danger Muted", "canonical": "oklch(93.2% 0.07 27.3)", "tonalRamp": ["#450a0a", "#7f1d1d", "#991b1b", "#dc2626", "#ef4444", "#f87171", "#fca5a5", "#fecaca", "#fee2e2"] },
+      "warning": { "role": "semantic", "displayName": "Caution Amber", "canonical": "oklch(66.6% 0.2 70.8)", "tonalRamp": ["#422006", "#78350f", "#92400e", "#d97706", "#f59e0b", "#fbbf24", "#fcd34d", "#fde68a", "#fef3c7"] },
+      "warning-muted": { "role": "semantic", "displayName": "Caution Amber Muted", "canonical": "oklch(95.2% 0.07 70.8)", "tonalRamp": ["#422006", "#78350f", "#92400e", "#d97706", "#f59e0b", "#fbbf24", "#fcd34d", "#fde68a", "#fef3c7"] },
+      "gray": { "role": "neutral", "displayName": "Muted Zinc", "canonical": "oklch(55.2% 0.016 285.9)", "tonalRamp": ["#09090b", "#18181b", "#27272a", "#3f3f46", "#52525b", "#71717a", "#a1a1aa", "#d4d4d8", "#f4f4f5"] },
+      "gray-muted": { "role": "neutral", "displayName": "Whisper Gray", "canonical": "oklch(97.1% 0.006 285.9)", "tonalRamp": ["#09090b", "#18181b", "#27272a", "#3f3f46", "#52525b", "#71717a", "#a1a1aa", "#d4d4d8", "#f4f4f5"] },
+      "neutral-bg": { "role": "neutral", "displayName": "Paper White", "canonical": "oklch(100% 0 0)", "tonalRamp": ["#09090b", "#18181b", "#27272a", "#3f3f46", "#52525b", "#71717a", "#a1a1aa", "#d4d4d8", "#ffffff"] },
+      "neutral-surface": { "role": "neutral", "displayName": "Whisper Surface", "canonical": "oklch(98.5% 0.002 285.9)", "tonalRamp": ["#09090b", "#18181b", "#27272a", "#3f3f46", "#52525b", "#71717a", "#a1a1aa", "#d4d4d8", "#fafafa"] },
+      "neutral-border": { "role": "neutral", "displayName": "Border Zinc", "canonical": "oklch(90.3% 0.007 285.9)", "tonalRamp": ["#09090b", "#18181b", "#27272a", "#3f3f46", "#52525b", "#71717a", "#a1a1aa", "#d4d4d8", "#e4e4e7"] },
+      "neutral-border-dark": { "role": "neutral", "displayName": "Border Zinc Dark", "canonical": "oklch(9.4% 0.006 285.9)", "tonalRamp": ["#09090b", "#18181b", "#27272a", "#3f3f46", "#52525b", "#71717a", "#a1a1aa", "#d4d4d8", "#e4e4e7"] },
+      "neutral-text": { "role": "neutral", "displayName": "Charcoal", "canonical": "oklch(9.4% 0.006 285.9)", "tonalRamp": ["#09090b", "#18181b", "#27272a", "#3f3f46", "#52525b", "#71717a", "#a1a1aa", "#d4d4d8", "#f4f4f5"] },
+      "neutral-text-muted": { "role": "neutral", "displayName": "Muted Zinc", "canonical": "oklch(55.2% 0.016 285.9)", "tonalRamp": ["#09090b", "#18181b", "#27272a", "#3f3f46", "#52525b", "#71717a", "#a1a1aa", "#d4d4d8", "#f4f4f5"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Page titles only (List Products, List Stock Movements)" },
+      "headline": { "displayName": "Headline", "purpose": "Section headings within pages (rare)" },
+      "title": { "displayName": "Title", "purpose": "Resource headers, modal titles, widget headings" },
+      "body": { "displayName": "Body", "purpose": "Table cells, form inputs, help text, notifications, all reading text" },
+      "label": { "displayName": "Label", "purpose": "Table headers, badge text, filter labels, button text, navigation items" }
+    },
+    "shadows": [
+      { "name": "modal-lift", "value": "0 25px 50px -12px rgba(0,0,0,0.15)", "purpose": "Action modals (Receive, Ship, Transfer, Adjustment), confirmation dialogs, profile menu" },
+      { "name": "dropdown-lift", "value": "0 10px 15px -3px rgba(0,0,0,0.1)", "purpose": "Select options, filter menus, date picker popover, notification dropdown" },
+      { "name": "tooltip-lift", "value": "0 4px 6px -1px rgba(0,0,0,0.1)", "purpose": "Icon tooltips, truncated cell tooltips" }
+    ],
+    "motion": [
+      { "name": "ease-standard", "value": "cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Default easing for state transitions (hover, focus, modal open/close)" },
+      { "name": "ease-quick", "value": "cubic-bezier(0.4, 0, 1, 1)", "purpose": "Fast transitions for hover/focus on dense UI (table rows, badges)" }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" },
+      { "name": "2xl", "value": "1536px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Primary action — Receive, Ship, Transfer, Save",
+      "html": "<button class=\"ds-btn-primary\">RECEIVE STOCK</button>",
+      "css": ".ds-btn-primary { background: #3b82f6; color: #fff; padding: 8px 16px; border-radius: 6px; font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif; font-size: 0.75rem; font-weight: 500; line-height: 1.5; letter-spacing: 0.02em; text-transform: uppercase; border: none; height: 40px; cursor: pointer; transition: background 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1); } .ds-btn-primary:hover { background: #2563eb; } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px #dbeafe; } .ds-btn-primary:active { background: #1d4ed8; } .ds-btn-primary:disabled { background: #93c5fd; cursor: not-allowed; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Secondary action — Cancel, Back",
+      "html": "<button class=\"ds-btn-secondary\">CANCEL</button>",
+      "css": ".ds-btn-secondary { background: #fafafa; color: #18181b; padding: 8px 16px; border-radius: 6px; font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif; font-size: 0.75rem; font-weight: 500; line-height: 1.5; letter-spacing: 0.02em; text-transform: uppercase; border: 1px solid #e4e4e7; height: 40px; cursor: pointer; transition: background 0.15s cubic-bezier(0.4, 0, 0.2, 1); } .ds-btn-secondary:hover { background: #e4e4e7; } .ds-btn-secondary:focus-visible { outline: none; box-shadow: 0 0 0 3px #dbeafe; } .ds-btn-secondary:active { background: #d4d4d8; }"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Destructive action — Delete, Remove",
+      "html": "<button class=\"ds-btn-danger\">DELETE</button>",
+      "css": ".ds-btn-danger { background: #dc2626; color: #fff; padding: 8px 16px; border-radius: 6px; font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif; font-size: 0.75rem; font-weight: 500; line-height: 1.5; letter-spacing: 0.02em; text-transform: uppercase; border: none; height: 40px; cursor: pointer; transition: background 0.15s cubic-bezier(0.4, 0, 0.2, 1); } .ds-btn-danger:hover { background: #b91c1c; } .ds-btn-danger:focus-visible { outline: none; box-shadow: 0 0 0 3px #fee2e2; } .ds-btn-danger:active { background: #991b1b; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input-text",
+      "description": "Standard text/number input — quantity, reference, search",
+      "html": "<input class=\"ds-input-text\" type=\"text\" placeholder=\"Enter quantity\" />",
+      "css": ".ds-input-text { background: #fff; color: #18181b; padding: 8px 12px; border-radius: 6px; border: 1px solid #e4e4e7; font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 400; line-height: 1.5; height: 40px; width: 100%; box-sizing: border-box; transition: border-color 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1); } .ds-input-text::placeholder { color: #a1a1aa; } .ds-input-text:hover { border-color: #d4d4d8; } .ds-input-text:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px #dbeafe; } .ds-input-text:disabled { background: #f4f4f5; color: #71717a; cursor: not-allowed; } .ds-input-text.ds-error { border-color: #dc2626; box-shadow: 0 0 0 3px #fee2e2; }"
+    },
+    {
+      "name": "Select",
+      "kind": "input",
+      "refersTo": "select",
+      "description": "Select dropdown — product, warehouse, filter selects",
+      "html": "<select class=\"ds-select\"><option value=\"\">Select product</option><option value=\"1\">Widget A</option><option value=\"2\">Widget B</option></select>",
+      "css": ".ds-select { background: #fff; color: #18181b; padding: 8px 12px; border-radius: 6px; border: 1px solid #e4e4e7; font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 400; line-height: 1.5; height: 40px; width: 100%; box-sizing: border-box; appearance: none; background-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2371717a' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E\"); background-position: right 8px center; background-repeat: no-repeat; background-size: 16px; padding-right: 36px; transition: border-color 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1); } .ds-select:hover { border-color: #d4d4d8; } .ds-select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px #dbeafe; } .ds-select:disabled { background: #f4f4f5; color: #71717a; cursor: not-allowed; }"
+    },
+    {
+      "name": "Success Badge",
+      "kind": "chip",
+      "refersTo": "badge-success",
+      "description": "Incoming movement, positive quantity — Receive, Transfer In",
+      "html": "<span class=\"ds-badge-success\">RECEIVE</span>",
+      "css": ".ds-badge-success { background: #dcfce7; color: #16a34a; padding: 2px 8px; border-radius: 4px; font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif; font-size: 0.75rem; font-weight: 500; line-height: 1.5; letter-spacing: 0.02em; text-transform: uppercase; display: inline-flex; align-items: center; white-space: nowrap; }"
+    },
+    {
+      "name": "Danger Badge",
+      "kind": "chip",
+      "refersTo": "badge-danger",
+      "description": "Outgoing movement, negative quantity, low stock — Ship, Transfer Out",
+      "html": "<span class=\"ds-badge-danger\">SHIP</span>",
+      "css": ".ds-badge-danger { background: #fee2e2; color: #dc2626; padding: 2px 8px; border-radius: 4px; font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif; font-size: 0.75rem; font-weight: 500; line-height: 1.5; letter-spacing: 0.02em; text-transform: uppercase; display: inline-flex; align-items: center; white-space: nowrap; }"
+    },
+    {
+      "name": "Warning Badge",
+      "kind": "chip",
+      "refersTo": "badge-warning",
+      "description": "Adjustment movement",
+      "html": "<span class=\"ds-badge-warning\">ADJUSTMENT</span>",
+      "css": ".ds-badge-warning { background: #fef3c7; color: #d97706; padding: 2px 8px; border-radius: 4px; font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif; font-size: 0.75rem; font-weight: 500; line-height: 1.5; letter-spacing: 0.02em; text-transform: uppercase; display: inline-flex; align-items: center; white-space: nowrap; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Standard content container — tables, forms, widgets",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-header\">CURRENT STOCK</div><div class=\"ds-card-body\">Table or form content</div></div>",
+      "css": ".ds-card { background: #fff; border-radius: 8px; border: 1px solid #e4e4e7; overflow: hidden; } .ds-card-header { padding: 16px 24px; border-bottom: 1px solid #e4e4e7; font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif; font-size: 1.125rem; font-weight: 600; line-height: 1.4; color: #18181b; } .ds-card-body { padding: 16px; }"
+    },
+    {
+      "name": "Action Modal",
+      "kind": "custom",
+      "refersTo": "modal",
+      "description": "Receive/Ship/Transfer/Adjustment modal forms — signature pattern",
+      "html": "<div class=\"ds-modal-overlay\"><div class=\"ds-modal\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"modal-title\"><header class=\"ds-modal-header\"><h2 id=\"modal-title\" class=\"ds-modal-title\">RECEIVE STOCK</h2><button class=\"ds-modal-close\" aria-label=\"Close\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 20 20\" fill=\"none\"><path stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\" d=\"M6 6l8 8M14 6l-8 8\"/></svg></button></header><form class=\"ds-modal-body\"><div class=\"ds-form-row\"><label class=\"ds-label\">PRODUCT</label><select class=\"ds-select\"><option>Widget A</option></select></div><div class=\"ds-form-row\"><label class=\"ds-label\">QUANTITY</label><input class=\"ds-input-text\" type=\"number\" min=\"1\" /></div></form><footer class=\"ds-modal-footer\"><button class=\"ds-btn-secondary\">CANCEL</button><button class=\"ds-btn-primary\">SAVE</button></footer></div></div>",
+      "css": ".ds-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 50; animation: ds-fade-in 0.15s cubic-bezier(0.4, 0, 0.2, 1); } @keyframes ds-fade-in { from { opacity: 0; } to { opacity: 1; } } .ds-modal { background: #fff; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15); max-width: 640px; width: 100%; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; animation: ds-slide-up 0.2s cubic-bezier(0.4, 0, 0.2, 1); } @keyframes ds-slide-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } .ds-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid #e4e4e7; } .ds-modal-title { font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif; font-size: 1.125rem; font-weight: 600; line-height: 1.4; color: #18181b; margin: 0; } .ds-modal-close { background: none; border: none; padding: 8px; color: #71717a; cursor: pointer; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: background 0.15s; } .ds-modal-close:hover { background: #f4f4f5; color: #18181b; } .ds-modal-body { padding: 24px; overflow-y: auto; } .ds-form-row { margin-bottom: 16px; } .ds-form-row:last-child { margin-bottom: 0; } .ds-label { display: block; font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif; font-size: 0.75rem; font-weight: 500; line-height: 1.5; letter-spacing: 0.02em; text-transform: uppercase; color: #71717a; margin-bottom: 6px; } .ds-modal-footer { display: flex; justify-content: flex-end; gap: 12px; padding: 16px 24px; border-top: 1px solid #e4e4e7; }"
+    },
+    {
+      "name": "Table",
+      "kind": "custom",
+      "refersTo": "table-row",
+      "description": "Data table — products, stock movements, current stock, users, warehouses",
+      "html": "<div class=\"ds-table-container\"><table class=\"ds-table\"><thead><tr><th>SKU</th><th>NAME</th><th>TOTAL STOCK</th></tr></thead><tbody><tr><td>WGT-001</td><td>Widget A</td><td><span class=\"ds-badge-success\">42</span></td></tr><tr class=\"ds-row-low\"><td>WGT-002</td><td>Widget B</td><td><span class=\"ds-badge-danger\">3</span></td></tr></tbody></table></div>",
+      "css": ".ds-table-container { background: #fff; border-radius: 8px; border: 1px solid #e4e4e7; overflow: hidden; } .ds-table { width: 100%; border-collapse: collapse; font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; line-height: 1.5; } .ds-table th { background: #fafafa; color: #71717a; font-size: 0.75rem; font-weight: 500; line-height: 1.5; letter-spacing: 0.02em; text-transform: uppercase; padding: 12px; text-align: left; border-bottom: 1px solid #e4e4e7; } .ds-table td { padding: 8px 12px; border-bottom: 1px solid #e4e4e7; color: #18181b; vertical-align: middle; } .ds-table tbody tr { background: #fff; transition: background 0.1s cubic-bezier(0.4, 0, 1, 1); } .ds-table tbody tr:last-child td { border-bottom: none; } .ds-table tbody tr:hover { background: #fafafa; } .ds-table tbody tr.ds-row-low { background: #fef2f2; } .ds-table tbody tr.ds-row-low:hover { background: #fee2e2; }"
+    },
+    {
+      "name": "Sidebar Navigation",
+      "kind": "nav",
+      "refersTo": "sidebar",
+      "description": "Collapsible sidebar with navigation groups (Catalog, Operations, Admin)",
+      "html": "<nav class=\"ds-sidebar\" aria-label=\"Main navigation\"><div class=\"ds-sidebar-header\">INVENTORY</div><ul class=\"ds-nav-group\"><li class=\"ds-nav-group-label\">CATALOG</li><li><a class=\"ds-nav-item ds-active\" href=\"#\"><svg class=\"ds-nav-icon\" viewBox=\"0 0 20 20\"><path fill=\"currentColor\" d=\"M5 3a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V5a2 2 0 00-2-2H5zm0 2h10v10H5V5z\"/></svg>Products</a></li></ul><ul class=\"ds-nav-group\"><li class=\"ds-nav-group-label\">OPERATIONS</li><li><a class=\"ds-nav-item\" href=\"#\"><svg class=\"ds-nav-icon\" viewBox=\"0 0 20 20\"><path fill=\"currentColor\" d=\"M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zm0 4a2 2 0 00-2 2v1h16v-1a2 2 0 00-2-2H4zm0 4a2 2 0 00-2 2v1h16v-1a2 2 0 00-2-2H4z\"/></svg>Stock Movements</a></li><li><a class=\"ds-nav-item\" href=\"#\"><svg class=\"ds-nav-icon\" viewBox=\"0 0 20 20\"><path fill=\"currentColor\" d=\"M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z\"/></svg>Current Stock</a></li></ul></nav>",
+      "css": ".ds-sidebar { width: 280px; background: #fff; border-right: 1px solid #e4e4e7; height: 100vh; position: fixed; left: 0; top: 0; display: flex; flex-direction: column; z-index: 40; transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1); } .ds-sidebar.collapsed { width: 72px; } .ds-sidebar-header { padding: 16px; font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #71717a; border-bottom: 1px solid #e4e4e7; } .ds-nav-group { list-style: none; margin: 0; padding: 8px 0; } .ds-nav-group-label { padding: 8px 16px; font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif; font-size: 0.75rem; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: #71717a; } .ds-nav-item { display: flex; align-items: center; gap: 12px; padding: 8px 16px; color: #18181b; text-decoration: none; font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 400; line-height: 1.5; transition: background 0.1s; } .ds-nav-item:hover { background: #fafafa; } .ds-nav-item.ds-active { color: #3b82f6; background: #dbeafe; border-left: 3px solid #3b82f6; } .ds-nav-icon { width: 20px; height: 20px; flex-shrink: 0; } .ds-sidebar.collapsed .ds-nav-item span, .ds-sidebar.collapsed .ds-nav-group-label, .ds-sidebar.collapsed .ds-sidebar-header { display: none; } .ds-sidebar.collapsed .ds-nav-item { justify-content: center; padding: 8px; } @media (prefers-color-scheme: dark) { .ds-sidebar { background: #0f0f10; border-right-color: #18181b; } .ds-sidebar-header { color: #a1a1aa; border-bottom-color: #18181b; } .ds-nav-group-label { color: #a1a1aa; } .ds-nav-item { color: #e4e4e7; } .ds-nav-item:hover { background: #18181b; } .ds-nav-item.ds-active { color: #60a5fa; background: #1e3a5f; border-left-color: #3b82f6; } .ds-nav-icon { stroke: #71717a; } }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Operations Deck",
+    "overview": "This is a command center for warehouse operations — scanability, trust, and speed over expression. The design recedes so data and actions lead. Every pixel serves the operator recording a movement, the manager checking reorder points, the admin configuring the system.\n\nClinical Blue Authority anchors the brand: Filament Blue is the single institutional color, used sparingly for primary actions and focus states. Semantic colors (Success green, Danger red, Warning amber) are pure signal — they never decorate, only communicate state. The rest is neutral: white surfaces, gray borders, charcoal text. No gradients, no illustrations, no decorative accents.",
+    "keyCharacteristics": [
+      "Single accent color (Filament Blue) — ≤10% of any screen",
+      "Semantic colors are signal, never decoration",
+      "Filament defaults everywhere — no custom component library to maintain",
+      "Flat surfaces at rest; elevation only on interaction (hover, focus, modal)",
+      "Instrument Sans throughout — one font, clear hierarchy",
+      "Density serves the floor: compact tables, scannable forms, fast modals"
+    ],
+    "rules": [
+      { "name": "The One Voice Rule", "body": "Operational Blue appears on ≤10% of any screen. Its rarity is the point — it marks the next action.", "section": "colors" },
+      { "name": "The Signal Purity Rule", "body": "Success, Danger, Warning are never used for decoration. They appear only on: quantity badges, movement type badges, row highlights for low stock, notification toasts, validation states. A green badge means \"stock increased\"; it never means \"this button looks nice.\"", "section": "colors" },
+      { "name": "The Neutral Discipline Rule", "body": "No custom grays. The neutral scale is Filament's default (Zinc). If a new neutral is needed, it comes from Zinc-50 through Zinc-950 — no hex inventions.", "section": "colors" },
+      { "name": "The Single Family Rule", "body": "No second font. If monospace is needed for SKUs or codes, use `font-mono` utility (system mono) — not a new family.", "section": "typography" },
+      { "name": "The Uppercase Label Rule", "body": "All column headers, filter labels, and button text are Label style (uppercase, tracked). This is the visual rhythm of the system.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "Cards, table containers, sidebar, header — no shadow at rest. Depth is conveyed by border (1px) and background contrast (white vs. neutral-surface).", "section": "elevation" },
+      { "name": "The Interaction-Only Elevation Rule", "body": "Shadows appear only on: modals, dropdowns, tooltips. Never on static cards, never on table rows, never on buttons at rest.", "section": "elevation" },
+      { "name": "The Consistent Radius Rule", "body": "Four radii, four jobs. No ad-hoc rounded-full, no rounded-none on interactive elements. Buttons are never pills; badges are never square.", "section": "shapes" }
+    ],
+    "dos": [
+      "Do use Operational Blue only for primary actions and focus states — One Voice Rule",
+      "Do use semantic colors (Success/Danger/Warning) only for quantity, movement type, validation, and alerts — Signal Purity Rule",
+      "Do use Filament defaults for every component — no custom button, card, input, or table classes",
+      "Do keep tables dense: 8px vertical row padding, no zebra striping, hover only",
+      "Do use Label style (uppercase, tracked) for all column headers, filter labels, button text",
+      "Do let Filament handle responsive behavior — no custom breakpoints",
+      "Do use recordClasses for row-level state (low stock → bg-danger-50)",
+      "Do use ->color() closures on TextColumn for cell-level semantic color"
+    ],
+    "donts": [
+      "Don't introduce a second accent color — the palette is locked",
+      "Don't use Success/Danger/Warning for decorative purposes (button variants, card headers, backgrounds)",
+      "Don't add shadows to cards, table containers, or static surfaces — Flat-By-Default Rule",
+      "Don't create custom radius values — Four radii, four jobs",
+      "Don't add a second font family — Single Family Rule",
+      "Don't use sentence-case for labels — Uppercase Label Rule",
+      "Don't override Filament's default spacing scale — 8px base rhythm",
+      "Don't add decorative illustrations, patterns, or gradients — Invisible Utility philosophy"
+    ]
+  }
+}

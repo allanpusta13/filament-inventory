@@ -29,11 +29,11 @@ final class CategoryStockChart extends ChartWidget
 
     protected static ?int $sort = 21;
 
-    protected ?string $description = 'Total inventory quantity per product category';
+    protected ?string $description = '';
 
     protected int|string|array $columnSpan = [
         'sm' => 'full',
-        'md' => 1,
+        'md' => 'full',
         'lg' => 5,
     ];
 

@@ -1,0 +1,7 @@
+{
+  "files": ["vendor/filament/filament/resources/views/components/layout/base.blade.php"],
+  "exclude": [],
+  "insertBefore": "</body>",
+  "commentSyntax": "html",
+  "cspChecked": false
+}

@@ -16,7 +16,7 @@ final class StockByWarehouseWidget extends Widget
 
     protected string $view = 'filament.widgets.stock-by-warehouse';
 
-    protected static ?int $sort = 15;
+    protected static ?int $sort = 21;
 
     protected static ?string $heading = 'Warehouse Inventory Summary';
 

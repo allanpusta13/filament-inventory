@@ -41,6 +41,7 @@ This repo's `docs/` vault is managed through Tolaria. Write into it as you go, n
 
 - `docs/00-project/architecture-decisions/` — one ADR per non-obvious design decision (why, not just what). Written the same session the decision is made.
 - `docs/00-project/plans/` — the approved plan for each task, written once the council approves it in Step 2 of the `plan-council-code-test` skill. One file per task, e.g. `02-01-identify-tenant-middleware.md` (prompt number + task slug), so plans stay traceable back to both the prompt and the specific task within it.
+- `docs/00-project/screenshots/` — the screenshots taken from playwright.
 - `docs/00-project/prompts/` — the numbered task prompts (reference only, not edited during execution).
 - `docs/01-issues/` — one note per GitHub issue, if/when issue tracking is in use.
 - `docs/02-research/` — Filament/Laravel/package research, especially anything version-specific (Laravel 13, Filament 5.x, Livewire 4) that isn't obvious from training data.

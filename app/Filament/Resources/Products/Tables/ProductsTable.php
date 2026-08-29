@@ -18,91 +18,45 @@ final class ProductsTable
         return $table
             ->columns([
                 TextColumn::make('sku')
-                    ->label('SKU')
                     ->sortable()
-                    ->searchable()
-                    ->fontFamily('mono')
-                    ->copyable()
-                    ->weight('bold'),
+                    ->searchable(),
                 TextColumn::make('name')
                     ->sortable()
-                    ->searchable()
-                    ->weight('bold'),
+                    ->searchable(),
                 TextColumn::make('category')
                     ->sortable()
                     ->searchable()
-                    ->badge()
-                    ->color('gray')
                     ->toggleable(),
                 TextColumn::make('unit')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('reorder_point')
-                    ->label('Reorder')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('total_stock')
-                    ->label('Stock')
+                    ->label('Total Stock')
                     ->state(function (Product $record): int {
                         return $record->totalQuantity();
                     })
-                    ->color(function (Product $record): string {
-                        $qty = $record->totalQuantity();
-                        if ($qty <= 0) {
-                            return 'danger';
-                        }
-                        if ($qty <= $record->reorder_point) {
-                            return 'warning';
-                        }
-
-                        return 'success';
+                    ->color(function (Product $record): ?string {
+                        return $record->totalQuantity() <= $record->reorder_point
+                            ? 'danger'
+                            : null;
                     })
-                    ->weight('bold')
                     ->sortable(),
-                TextColumn::make('stock_status')
-                    ->label('Status')
-                    ->state(function (Product $record): string {
-                        $qty = $record->totalQuantity();
-                        if ($qty <= 0) {
-                            return 'Out of Stock';
-                        }
-                        if ($qty <= $record->reorder_point) {
-                            return 'Low Stock';
-                        }
-
-                        return 'In Stock';
-                    })
-                    ->badge()
-                    ->color(function (Product $record): string {
-                        $qty = $record->totalQuantity();
-                        if ($qty <= 0) {
-                            return 'danger';
-                        }
-                        if ($qty <= $record->reorder_point) {
-                            return 'warning';
-                        }
-
-                        return 'success';
-                    }),
                 TextColumn::make('created_at')
-                    ->dateTime('M j, Y')
+                    ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('updated_at')
-                    ->dateTime('M j, Y')
+                    ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->recordClasses(function (Product $record): ?string {
-                $qty = $record->totalQuantity();
-                if ($qty <= 0) {
-                    return 'bg-rose-50 dark:bg-rose-500/5';
-                }
-                if ($qty <= $record->reorder_point) {
-                    return 'bg-amber-50 dark:bg-amber-500/5';
-                }
-
-                return null;
+                return $record->totalQuantity() <= $record->reorder_point
+                    ? 'bg-danger-50'
+                    : null;
             })
             ->filters([
                 //

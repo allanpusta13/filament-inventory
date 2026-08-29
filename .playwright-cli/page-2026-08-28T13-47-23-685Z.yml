@@ -1,0 +1,44 @@
+- generic [active] [ref=f5e1]:
+  - banner [ref=f5e2]:
+    - navigation [ref=f5e3]:
+      - link "Log in" [ref=f5e4] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000/admin/login
+  - main [ref=f5e6]:
+    - generic [ref=f5e7]:
+      - heading "Let's get started" [level=1] [ref=f5e8]
+      - paragraph [ref=f5e9]: Laravel has an incredibly rich ecosystem. We suggest starting with the following.
+      - list [ref=f5e10]:
+        - listitem [ref=f5e11]:
+          - generic [ref=f5e15]:
+            - text: Read the
+            - link "Documentation" [ref=f5e16] [cursor=pointer]:
+              - /url: https://laravel.com/docs
+        - listitem [ref=f5e20]:
+          - generic [ref=f5e24]:
+            - text: Watch video tutorials at
+            - link "Laracasts" [ref=f5e25] [cursor=pointer]:
+              - /url: https://laracasts.com
+      - list [ref=f5e29]:
+        - listitem [ref=f5e30]:
+          - link "Deploy now" [ref=f5e31] [cursor=pointer]:
+            - /url: https://cloud.laravel.com
+  - generic [ref=f5e104]:
+    - generic [ref=f5e105] [cursor=pointer]
+    - generic [ref=f5e106]:
+      - generic [ref=f5e107] [cursor=pointer]: Request
+      - generic [ref=f5e108] [cursor=pointer]: Timeline
+      - generic [ref=f5e109] [cursor=pointer]:
+        - generic: Views
+        - generic [ref=f5e110]: "1"
+      - generic [ref=f5e111] [cursor=pointer]:
+        - generic: Queries
+        - generic [ref=f5e112]: "3"
+    - generic [ref=f5e113]:
+      - generic [ref=f5e114] [cursor=pointer]
+      - generic [ref=f5e115] [cursor=pointer]
+      - generic [ref=f5e116] [cursor=pointer]
+      - generic [ref=f5e118] [cursor=pointer]
+      - generic [ref=f5e119]: GET /
+      - generic [ref=f5e122] [cursor=pointer]: 224ms
+      - generic [ref=f5e124] [cursor=pointer]: 40MB
+      - generic [ref=f5e126] [cursor=pointer]: 13.x

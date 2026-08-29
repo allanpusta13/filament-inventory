@@ -1,0 +1,30 @@
+- generic [active] [ref=f3e1]:
+  - main [ref=f3e2]:
+    - generic [ref=f3e4]:
+      - heading "404" [level=1] [ref=f3e5]
+      - generic [ref=f3e6]: Not Found
+  - generic [ref=f3e9]:
+    - generic [ref=f3e10] [cursor=pointer]
+    - generic [ref=f3e11]:
+      - generic [ref=f3e12] [cursor=pointer]:
+        - generic: Request
+        - generic [ref=f3e13]: "404"
+      - generic [ref=f3e14] [cursor=pointer]:
+        - generic: Exceptions
+        - generic [ref=f3e15]: "1"
+      - generic [ref=f3e16] [cursor=pointer]: Timeline
+      - generic [ref=f3e17] [cursor=pointer]:
+        - generic: Views
+        - generic [ref=f3e18]: "2"
+      - generic [ref=f3e19] [cursor=pointer]:
+        - generic: Queries
+        - generic [ref=f3e20]: "0"
+    - generic [ref=f3e21]:
+      - generic [ref=f3e22] [cursor=pointer]
+      - generic [ref=f3e23] [cursor=pointer]
+      - generic [ref=f3e24] [cursor=pointer]
+      - generic [ref=f3e26] [cursor=pointer]
+      - generic [ref=f3e27]: GET /admin/dashboard
+      - generic [ref=f3e30] [cursor=pointer]: 259ms
+      - generic [ref=f3e32] [cursor=pointer]: 39MB
+      - generic [ref=f3e34] [cursor=pointer]: 13.x

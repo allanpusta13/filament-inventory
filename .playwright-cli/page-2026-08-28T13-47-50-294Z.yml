@@ -1,0 +1,98 @@
+- generic [active] [ref=f7e1]:
+  - navigation [ref=f7e3]:
+    - generic [ref=f7e4]:
+      - button "Collapse sidebar" [ref=f7e6] [cursor=pointer]
+      - link "Larament" [ref=f7e9] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000/admin
+    - generic [ref=f7e11]:
+      - generic [ref=f7e14]:
+        - generic [ref=f7e15]: Global search
+        - generic [ref=f7e16]:
+          - searchbox "Global search" [ref=f7e21]
+          - generic [ref=f7e22]: CTRL + K
+      - button "User menu" [ref=f7e26] [cursor=pointer]:
+        - img "Avatar of Admin" [ref=f7e27]
+  - generic [ref=f7e28]:
+    - complementary [ref=f7e30]:
+      - navigation [ref=f7e31]:
+        - list [ref=f7e32]:
+          - listitem [ref=f7e33]:
+            - list [ref=f7e34]:
+              - listitem [ref=f7e35]:
+                - link "Dashboard" [ref=f7e36] [cursor=pointer]:
+                  - /url: http://127.0.0.1:8000/admin
+          - listitem [ref=f7e40]:
+            - generic [ref=f7e41] [cursor=pointer]:
+              - generic [ref=f7e42]: Catalog
+              - button "Catalog" [expanded] [ref=f7e43]
+            - list [ref=f7e46]:
+              - listitem [ref=f7e47]:
+                - link "Products" [ref=f7e48] [cursor=pointer]:
+                  - /url: http://127.0.0.1:8000/admin/products
+          - listitem [ref=f7e52]:
+            - generic [ref=f7e53] [cursor=pointer]:
+              - generic [ref=f7e54]: Operations
+              - button "Operations" [expanded] [ref=f7e55]
+            - list [ref=f7e58]:
+              - listitem [ref=f7e59]:
+                - link "Stock Movements" [ref=f7e60] [cursor=pointer]:
+                  - /url: http://127.0.0.1:8000/admin/stock-movements
+              - listitem [ref=f7e64]:
+                - link "Current Stock" [ref=f7e65] [cursor=pointer]:
+                  - /url: http://127.0.0.1:8000/admin/current-stock
+          - listitem [ref=f7e69]:
+            - generic [ref=f7e70] [cursor=pointer]:
+              - generic [ref=f7e71]: Admin
+              - button "Admin" [expanded] [ref=f7e72]
+            - list [ref=f7e75]:
+              - listitem [ref=f7e76]:
+                - link "Warehouses" [ref=f7e77] [cursor=pointer]:
+                  - /url: http://127.0.0.1:8000/admin/warehouses
+              - listitem [ref=f7e81]:
+                - link "Users" [ref=f7e82] [cursor=pointer]:
+                  - /url: http://127.0.0.1:8000/admin/users
+    - main [ref=f7e87]:
+      - generic [ref=f7e89]:
+        - heading "Dashboard" [level=1] [ref=f7e92]
+        - generic [ref=f7e99]:
+          - generic [ref=f7e101]:
+            - button "Receive Stock" [ref=f7e102] [cursor=pointer]
+            - button "Ship Stock" [ref=f7e105] [cursor=pointer]
+            - button "New Product" [ref=f7e108] [cursor=pointer]
+          - generic [ref=f7e116]:
+            - heading "Stock by Category" [level=2] [ref=f7e117]
+            - paragraph [ref=f7e118]: Total inventory quantity per product category
+          - generic [ref=f7e131]:
+            - img "Avatar of Admin" [ref=f7e132]
+            - generic [ref=f7e133]:
+              - heading "Welcome" [level=2] [ref=f7e134]
+              - paragraph [ref=f7e135]: Admin
+            - button "Sign out" [ref=f7e137] [cursor=pointer]
+  - generic:
+    - status
+  - generic [ref=f7e143]:
+    - generic [ref=f7e144] [cursor=pointer]
+    - generic [ref=f7e145]:
+      - generic [ref=f7e146] [cursor=pointer]: Request
+      - generic [ref=f7e147] [cursor=pointer]: Timeline
+      - generic [ref=f7e148] [cursor=pointer]:
+        - generic: Views
+        - generic [ref=f7e149]: "1"
+      - generic [ref=f7e150] [cursor=pointer]:
+        - generic: Queries
+        - generic [ref=f7e151]: "3"
+      - generic [ref=f7e152] [cursor=pointer]:
+        - generic: Models
+        - generic [ref=f7e153]: "1"
+      - generic [ref=f7e154] [cursor=pointer]:
+        - generic: Livewire
+        - generic [ref=f7e155]: "6"
+    - generic [ref=f7e156]:
+      - generic [ref=f7e157] [cursor=pointer]
+      - generic [ref=f7e158] [cursor=pointer]
+      - generic [ref=f7e159] [cursor=pointer]
+      - generic [ref=f7e161] [cursor=pointer]
+      - generic [ref=f7e162]: GET /admin
+      - generic [ref=f7e165] [cursor=pointer]: 388ms
+      - generic [ref=f7e167] [cursor=pointer]: 45MB
+      - generic [ref=f7e169] [cursor=pointer]: 13.x

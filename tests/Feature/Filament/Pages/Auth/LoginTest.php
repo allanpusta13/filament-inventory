@@ -42,9 +42,13 @@ test('an authenticated admin user can access the admin panel', function () {
         ->assertOk();
 });
 
-test('an authenticated non-admin user is denied the admin dashboard', function () {
+test('an authenticated non-admin user can access the admin dashboard', function () {
+    $this->actingAs(
+        App\Models\User::factory()->create(['role' => App\Enums\UserRole::WarehouseStaff->value])
+    );
+
     $this->get('admin')
-        ->assertForbidden();
+        ->assertOk();
 });
 
 test('an authenticated user can logout', function () {

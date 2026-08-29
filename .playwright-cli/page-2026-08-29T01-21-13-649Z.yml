@@ -1,0 +1,102 @@
+- generic [active] [ref=f1e1]:
+  - navigation [ref=f1e3]:
+    - generic [ref=f1e4]:
+      - button "Collapse sidebar" [ref=f1e6] [cursor=pointer]
+      - link "Larament" [ref=f1e9] [cursor=pointer]:
+        - /url: http://localhost:8000/admin
+    - generic [ref=f1e11]:
+      - generic [ref=f1e14]:
+        - generic [ref=f1e15]: Global search
+        - generic [ref=f1e16]:
+          - searchbox "Global search" [ref=f1e21]
+          - generic [ref=f1e22]: CTRL + K
+      - button "User menu" [ref=f1e26] [cursor=pointer]:
+        - img "Avatar of Admin" [ref=f1e27]
+  - generic [ref=f1e28]:
+    - complementary [ref=f1e30]:
+      - navigation [ref=f1e31]:
+        - list [ref=f1e32]:
+          - listitem [ref=f1e33]:
+            - list [ref=f1e34]:
+              - listitem [ref=f1e35]:
+                - link "Dashboard" [ref=f1e36] [cursor=pointer]:
+                  - /url: http://localhost:8000/admin
+          - listitem [ref=f1e40]:
+            - generic [ref=f1e41] [cursor=pointer]:
+              - generic [ref=f1e42]: Catalog
+              - button "Catalog" [expanded] [ref=f1e43]
+            - list [ref=f1e46]:
+              - listitem [ref=f1e47]:
+                - link "Products" [ref=f1e48] [cursor=pointer]:
+                  - /url: http://localhost:8000/admin/products
+          - listitem [ref=f1e52]:
+            - generic [ref=f1e53] [cursor=pointer]:
+              - generic [ref=f1e54]: Operations
+              - button "Operations" [expanded] [ref=f1e55]
+            - list [ref=f1e58]:
+              - listitem [ref=f1e59]:
+                - link "Stock Movements" [ref=f1e60] [cursor=pointer]:
+                  - /url: http://localhost:8000/admin/stock-movements
+              - listitem [ref=f1e64]:
+                - link "Current Stock" [ref=f1e65] [cursor=pointer]:
+                  - /url: http://localhost:8000/admin/current-stock
+          - listitem [ref=f1e69]:
+            - generic [ref=f1e70] [cursor=pointer]:
+              - generic [ref=f1e71]: Admin
+              - button "Admin" [expanded] [ref=f1e72]
+            - list [ref=f1e75]:
+              - listitem [ref=f1e76]:
+                - link "Warehouses" [ref=f1e77] [cursor=pointer]:
+                  - /url: http://localhost:8000/admin/warehouses
+              - listitem [ref=f1e81]:
+                - link "Users" [ref=f1e82] [cursor=pointer]:
+                  - /url: http://localhost:8000/admin/users
+    - main [ref=f1e87]:
+      - generic [ref=f1e89]:
+        - heading "Dashboard" [level=1] [ref=f1e92]
+        - generic [ref=f1e99]:
+          - generic [ref=f1e103]:
+            - img "Avatar of Admin" [ref=f1e104]
+            - generic [ref=f1e105]:
+              - heading "Welcome" [level=2] [ref=f1e106]
+              - paragraph [ref=f1e107]: Admin
+            - button "Sign out" [ref=f1e109] [cursor=pointer]
+          - generic [ref=f1e116]:
+            - generic [ref=f1e117]:
+              - link [ref=f1e118] [cursor=pointer]:
+                - /url: https://filamentphp.com
+                - img "Filament" [ref=f1e119]
+              - paragraph [ref=f1e130]: v5.6.8
+            - generic [ref=f1e131]:
+              - link "Documentation" [ref=f1e132] [cursor=pointer]:
+                - /url: https://filamentphp.com/docs
+              - link [ref=f1e135] [cursor=pointer]:
+                - /url: https://github.com/filamentphp/filament
+  - generic:
+    - status
+  - generic [ref=f1e150]:
+    - generic [ref=f1e151] [cursor=pointer]
+    - generic [ref=f1e152]:
+      - generic [ref=f1e153] [cursor=pointer]: Request
+      - generic [ref=f1e154] [cursor=pointer]: Timeline
+      - generic [ref=f1e155] [cursor=pointer]:
+        - generic: Views
+        - generic [ref=f1e156]: "1"
+      - generic [ref=f1e157] [cursor=pointer]:
+        - generic: Queries
+        - generic [ref=f1e158]: "3"
+      - generic [ref=f1e159] [cursor=pointer]:
+        - generic: Models
+        - generic [ref=f1e160]: "1"
+      - generic [ref=f1e161] [cursor=pointer]:
+        - generic: Livewire
+        - generic [ref=f1e162]: "7"
+    - generic [ref=f1e163]:
+      - generic [ref=f1e164] [cursor=pointer]
+      - generic [ref=f1e165] [cursor=pointer]
+      - generic [ref=f1e166] [cursor=pointer]
+      - generic [ref=f1e168] [cursor=pointer]
+      - generic [ref=f1e169]: GET /admin
+      - generic [ref=f1e172] [cursor=pointer]: 816ms
+      - generic [ref=f1e174] [cursor=pointer]: 46MB
+      - generic [ref=f1e176] [cursor=pointer]: 13.x

@@ -35,11 +35,14 @@ it('renders dashboard page for admin', function (): void {
         ->assertOk();
 });
 
-it('denies dashboard access for warehouse staff', function (): void {
-    $this->actingAs($this->staff);
+it('warehouse staff can access the dashboard and sees operational widgets', function (): void {
+    $this->actingAs($this->staff)
+        ->get(route('filament.admin.pages.dashboard'))
+        ->assertOk();
 
-    $this->get(route('filament.admin.pages.dashboard'))
-        ->assertForbidden();
+    $this->actingAs($this->staff)
+        ->livewire(LowStockAlertWidget::class)
+        ->assertSee('Low Stock Alerts');
 });
 
 describe('StatsOverviewWidget', function (): void {
@@ -192,10 +195,13 @@ describe('StatsOverviewWidget', function (): void {
             'quantity' => 200,
         ]);
 
+        // Set session filter before rendering widget
         session(['admin_warehouse_filter' => $this->warehouse1->id]);
 
         livewire(StatsOverviewWidget::class)
-            ->assertSee('100');
+            ->assertSee('Total Units on Hand')
+            ->assertSee('100')
+            ->assertSeeHtml('data-testid="kpi-total-stock"');
     });
 });
 
@@ -437,6 +443,7 @@ describe('RecentStockActivityWidget', function (): void {
         $this->actingAs($this->admin);
 
         $product = Product::factory()->create(['name' => 'Recent Widget Product']);
+
         $movement = StockMovement::factory()->create([
             'product_id' => $product->id,
             'warehouse_id' => $this->warehouse1->id,
@@ -453,6 +460,7 @@ describe('RecentStockActivityWidget', function (): void {
         $this->actingAs($this->staff);
 
         $product = Product::factory()->create();
+
         $movement1 = StockMovement::factory()->create([
             'product_id' => $product->id,
             'warehouse_id' => $this->warehouse1->id,
@@ -494,20 +502,21 @@ describe('WarehouseFilterWidget', function (): void {
     it('stores selected warehouse in session', function (): void {
         $this->actingAs($this->admin);
 
-        session(['admin_warehouse_filter' => $this->warehouse1->id]);
+        livewire(WarehouseFilterWidget::class)
+            ->set('selectedWarehouseId', (string) $this->warehouse1->id)
+            ->assertOk();
 
-        $selected = WarehouseFilterWidget::getSelectedWarehouseId();
-
-        expect($selected)->toBe($this->warehouse1->id);
+        expect(session('admin_warehouse_filter'))->toBe((string) $this->warehouse1->id);
     });
 
     it('returns null when no warehouse selected', function (): void {
         $this->actingAs($this->admin);
 
-        session()->forget('admin_warehouse_filter');
+        $this->get(route('filament.admin.pages.dashboard'))
+            ->assertOk();
 
-        $selected = WarehouseFilterWidget::getSelectedWarehouseId();
+        $warehouseIds = session('admin_warehouse_filter');
 
-        expect($selected)->toBeNull();
+        expect($warehouseIds)->toBeNull();
     });
 });

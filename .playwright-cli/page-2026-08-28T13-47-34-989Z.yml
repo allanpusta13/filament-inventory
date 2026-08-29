@@ -1,0 +1,51 @@
+- generic [ref=f6e1]:
+  - main [ref=f6e4]:
+    - generic [ref=f6e6]:
+      - generic [ref=f6e7]:
+        - generic [ref=f6e8]: Larament
+        - heading "Sign in" [level=1] [ref=f6e9]
+      - generic [ref=f6e13]:
+        - generic [ref=f6e17]:
+          - generic [ref=f6e20]:
+            - generic [ref=f6e24]:
+              - text: Email address
+              - superscript [ref=f6e25]: "*"
+            - textbox "Email address*" [active] [ref=f6e29]: admin@example.com
+          - generic [ref=f6e32]:
+            - generic [ref=f6e36]:
+              - text: Password
+              - superscript [ref=f6e37]: "*"
+            - generic [ref=f6e39]:
+              - textbox "Password*" [ref=f6e41]: password
+              - button "Show password" [ref=f6e44] [cursor=pointer]
+          - generic [ref=f6e53]:
+            - checkbox "Remember me" [checked] [ref=f6e54]
+            - generic [ref=f6e55]: Remember me
+        - button "Sign in" [ref=f6e61] [cursor=pointer]
+  - generic:
+    - status
+  - generic [ref=f6e65]:
+    - generic [ref=f6e66] [cursor=pointer]
+    - generic [ref=f6e67]:
+      - generic [ref=f6e68] [cursor=pointer]: Request
+      - generic [ref=f6e69] [cursor=pointer]: Timeline
+      - generic [ref=f6e70] [cursor=pointer]:
+        - generic: Views
+        - generic [ref=f6e71]: "1"
+      - generic [ref=f6e72] [cursor=pointer]:
+        - generic: Queries
+        - generic [ref=f6e73]: "2"
+      - generic [ref=f6e74] [cursor=pointer]:
+        - generic: Livewire
+        - generic [ref=f6e75]: "2"
+    - generic [ref=f6e76]:
+      - generic [ref=f6e77] [cursor=pointer]
+      - generic [ref=f6e78] [cursor=pointer]
+      - generic [ref=f6e79] [cursor=pointer]
+      - generic [ref=f6e81] [cursor=pointer]
+      - generic [ref=f6e83] [cursor=pointer]:
+        - generic [ref=f6e84]: "2"
+        - generic [ref=f6e85]: GET /admin/login
+      - generic [ref=f6e86] [cursor=pointer]: 303ms
+      - generic [ref=f6e88] [cursor=pointer]: 44MB
+      - generic [ref=f6e90] [cursor=pointer]: 13.x

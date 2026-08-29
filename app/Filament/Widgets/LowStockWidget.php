@@ -15,6 +15,11 @@ final class LowStockWidget extends TableWidget
 
     protected static ?int $sort = 10;
 
+    public static function canView(): bool
+    {
+        return false;
+    }
+
     public function table(Table $table): Table
     {
         return $table

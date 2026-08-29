@@ -17,9 +17,9 @@ final class StatsOverviewWidget extends BaseWidget
     protected static ?int $sort = 1;
 
     protected int|string|array $columnSpan = [
-        'sm' => 'full',
-        'md' => 'full',
-        'lg' => 'full',
+        'sm' => 1,
+        'md' => 2,
+        'lg' => 4,
     ];
 
     protected function getStats(): array
@@ -34,7 +34,7 @@ final class StatsOverviewWidget extends BaseWidget
         $stockTrend = $this->getStockTrendData($warehouseIds);
 
         return [
-            Stat::make('Total Active SKUs', number_format($totalItems))
+            Stat::make('Total SKUs', number_format($totalItems))
                 ->description('Products in catalog')
                 ->descriptionIcon('heroicon-m-cube')
                 ->color('primary')
@@ -42,7 +42,7 @@ final class StatsOverviewWidget extends BaseWidget
                 ->extraAttributes([
                     'data-testid' => 'kpi-total-skus',
                 ]),
-            Stat::make('Total Stock Quantity', number_format($totalStock))
+            Stat::make('Total Units on Hand', number_format($totalStock))
                 ->description('Units across all warehouses')
                 ->descriptionIcon('heroicon-m-arrow-trending-up')
                 ->color('success')
@@ -89,14 +89,9 @@ final class StatsOverviewWidget extends BaseWidget
 
     private function getTotalStockQuantity(?array $warehouseIds): int
     {
-        $query = StockMovement::query()
-            ->selectRaw('COALESCE(SUM(quantity), 0) as total_quantity');
-
-        if ($warehouseIds !== null) {
-            $query->whereIn('warehouse_id', $warehouseIds);
-        }
-
-        return (int) $query->value('total_quantity');
+        return StockMovement::query()
+            ->when($warehouseIds !== null, fn ($q) => $q->whereIn('warehouse_id', $warehouseIds))
+            ->sum('quantity');
     }
 
     private function getStockTrendData(?array $warehouseIds): array

@@ -21,52 +21,36 @@ final class StockMovementsTable
                 TextColumn::make('product.name')
                     ->label('Product')
                     ->sortable()
-                    ->searchable()
-                    ->weight('bold'),
+                    ->searchable(),
                 TextColumn::make('warehouse.name')
                     ->label('Warehouse')
                     ->sortable()
                     ->searchable(),
                 TextColumn::make('type')
-                    ->label('Type')
                     ->badge()
                     ->color(fn (MovementType $state): string => $state->getColor())
-                    ->formatStateUsing(fn (MovementType $state): string => match ($state) {
-                        MovementType::Receive => 'Received',
-                        MovementType::Ship => 'Shipped',
-                        MovementType::TransferOut => 'Transfer Out',
-                        MovementType::TransferIn => 'Transfer In',
-                        MovementType::Adjustment => 'Adjustment',
-                    })
                     ->sortable(),
                 TextColumn::make('quantity')
-                    ->label('Qty')
                     ->sortable()
-                    ->color(fn (int $state): string => $state > 0 ? 'success' : 'danger')
-                    ->formatStateUsing(fn (int $state): string => $state > 0 ? '+'.number_format($state) : number_format($state))
-                    ->weight('bold'),
+                    ->color(function (int $state): string {
+                        return $state > 0 ? 'success' : 'danger';
+                    }),
                 TextColumn::make('reference')
-                    ->label('Reference')
                     ->sortable()
                     ->searchable()
-                    ->toggleable()
-                    ->limit(20)
-                    ->copyable(),
+                    ->toggleable(),
                 TextColumn::make('counterpart_warehouse')
                     ->label('From/To')
                     ->toggleable()
-                    ->placeholder('-')
-                    ->icon('heroicon-m-arrows-right-left'),
+                    ->placeholder('-'),
                 TextColumn::make('created_at')
-                    ->label('Date')
-                    ->dateTime('M j, g:i A')
+                    ->dateTime()
                     ->sortable(),
                 TextColumn::make('createdBy.name')
                     ->label('Created By')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->defaultSort('created_at', 'desc')
             ->filters([
                 Filter::make('created_at')
                     ->form([

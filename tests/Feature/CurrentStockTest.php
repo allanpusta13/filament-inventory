@@ -5,7 +5,7 @@ declare(strict_types=1);
 use App\Enums\MovementType;
 use App\Enums\UserRole;
 use App\Filament\Resources\CurrentStock\Pages\ListCurrentStock;
-use App\Filament\Widgets\LowStockWidget;
+use App\Filament\Widgets\LowStockAlertWidget;
 use App\Models\Product;
 use App\Models\User;
 use App\Models\Warehouse;
@@ -75,7 +75,7 @@ it('does not show zero-quantity rows', function (): void {
 it('can render low stock widget', function (): void {
     $this->actingAs($this->user);
 
-    Livewire\Livewire::test(LowStockWidget::class)
+    Livewire\Livewire::test(LowStockAlertWidget::class)
         ->assertOk();
 });
 
@@ -89,7 +89,7 @@ it('shows products at or below reorder point in widget', function (): void {
         quantity: 5,
     );
 
-    Livewire\Livewire::test(LowStockWidget::class)
+    Livewire\Livewire::test(LowStockAlertWidget::class)
         ->loadTable()
         ->assertSee($this->product->name);
 });
@@ -104,7 +104,7 @@ it('does not show products above reorder point in widget', function (): void {
         quantity: 50,
     );
 
-    Livewire\Livewire::test(LowStockWidget::class)
+    Livewire\Livewire::test(LowStockAlertWidget::class)
         ->loadTable()
         ->assertDontSee($this->product->name);
 });
