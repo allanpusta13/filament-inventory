@@ -6,11 +6,14 @@ namespace App\Filament\Widgets;
 
 use App\Enums\MovementType;
 use App\Models\StockMovement;
+use App\Traits\DashboardFilterable;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Carbon;
 
 final class StockMovementTrendChart extends ChartWidget
 {
+    use DashboardFilterable;
+
     protected ?string $heading = 'Stock Inflow vs Outflow (30 Days)';
 
     protected static ?int $sort = 20;
@@ -40,7 +43,6 @@ final class StockMovementTrendChart extends ChartWidget
     protected function getData(): array
     {
         $user = auth()->user();
-        $isAdmin = $user->isAdmin();
         $startDate = Carbon::now()->subDays(29)->startOfDay();
         $endDate = Carbon::now()->endOfDay();
 
@@ -60,8 +62,8 @@ final class StockMovementTrendChart extends ChartWidget
             ->groupBy('date')
             ->orderBy('date');
 
-        if (! $isAdmin) {
-            $warehouseIds = $user->warehouses()->pluck('warehouses.id');
+        $warehouseIds = $this->getFilterWarehouseIds($user);
+        if ($warehouseIds !== null) {
             $inflowQuery->whereIn('warehouse_id', $warehouseIds);
             $outflowQuery->whereIn('warehouse_id', $warehouseIds);
         }

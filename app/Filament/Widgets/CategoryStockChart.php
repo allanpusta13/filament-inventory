@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Filament\Widgets;
 
 use App\Models\StockMovement;
+use App\Traits\DashboardFilterable;
 use Filament\Widgets\ChartWidget;
 
 final class CategoryStockChart extends ChartWidget
 {
+    use DashboardFilterable;
+
     private const COLORS = [
         '#6366f1', // indigo
         '#10b981', // emerald
@@ -51,7 +54,6 @@ final class CategoryStockChart extends ChartWidget
     protected function getData(): array
     {
         $user = auth()->user();
-        $isAdmin = $user->isAdmin();
 
         $query = StockMovement::query()
             ->selectRaw("
@@ -63,8 +65,8 @@ final class CategoryStockChart extends ChartWidget
             ->havingRaw('SUM(stock_movements.quantity) > 0')
             ->orderByDesc('total_quantity');
 
-        if (! $isAdmin) {
-            $warehouseIds = $user->warehouses()->pluck('warehouses.id');
+        $warehouseIds = $this->getFilterWarehouseIds($user);
+        if ($warehouseIds !== null) {
             $query->whereIn('stock_movements.warehouse_id', $warehouseIds);
         }
 

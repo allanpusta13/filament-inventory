@@ -6,11 +6,14 @@ namespace App\Filament\Widgets;
 
 use App\Models\Product;
 use App\Models\StockMovement;
+use App\Traits\DashboardFilterable;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
 final class StatsOverviewWidget extends BaseWidget
 {
+    use DashboardFilterable;
+
     protected static ?int $sort = 1;
 
     protected int|string|array $columnSpan = [
@@ -36,15 +39,15 @@ final class StatsOverviewWidget extends BaseWidget
         $stockQuery = StockMovement::query()
             ->selectRaw('SUM(quantity) as total_quantity');
 
-        if (! $isAdmin) {
-            $warehouseIds = $user->warehouses()->pluck('warehouses.id');
+        $warehouseIds = $this->getFilterWarehouseIds($user);
+        if ($warehouseIds !== null) {
             $stockQuery->whereIn('warehouse_id', $warehouseIds);
         }
 
         $totalStock = (int) $stockQuery->value('total_quantity');
 
-        $lowStockCount = $this->getLowStockCount($isAdmin, $user);
-        $outOfStockCount = $this->getOutOfStockCount($isAdmin, $user);
+        $lowStockCount = $this->getLowStockCount($user);
+        $outOfStockCount = $this->getOutOfStockCount($user);
 
         return [
             Stat::make('Total SKUs', number_format($totalItems))
@@ -73,7 +76,7 @@ final class StatsOverviewWidget extends BaseWidget
         ];
     }
 
-    private function getLowStockCount(bool $isAdmin, $user): int
+    private function getLowStockCount(\App\Models\User $user): int
     {
         $query = Product::query()
             ->select('products.id')
@@ -82,15 +85,15 @@ final class StatsOverviewWidget extends BaseWidget
             ->havingRaw('SUM(stock_movements.quantity) <= products.reorder_point')
             ->havingRaw('SUM(stock_movements.quantity) > 0');
 
-        if (! $isAdmin) {
-            $warehouseIds = $user->warehouses()->pluck('warehouses.id');
+        $warehouseIds = $this->getFilterWarehouseIds($user);
+        if ($warehouseIds !== null) {
             $query->whereIn('stock_movements.warehouse_id', $warehouseIds);
         }
 
         return $query->count();
     }
 
-    private function getOutOfStockCount(bool $isAdmin, $user): int
+    private function getOutOfStockCount(\App\Models\User $user): int
     {
         $query = Product::query()
             ->select('products.id')
@@ -98,8 +101,8 @@ final class StatsOverviewWidget extends BaseWidget
             ->groupBy('products.id')
             ->havingRaw('SUM(stock_movements.quantity) <= 0');
 
-        if (! $isAdmin) {
-            $warehouseIds = $user->warehouses()->pluck('warehouses.id');
+        $warehouseIds = $this->getFilterWarehouseIds($user);
+        if ($warehouseIds !== null) {
             $query->whereIn('stock_movements.warehouse_id', $warehouseIds);
         }
 

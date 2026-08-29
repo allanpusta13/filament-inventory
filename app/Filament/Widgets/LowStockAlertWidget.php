@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Widgets;
 
 use App\Models\Product;
+use App\Traits\DashboardFilterable;
 use App\Traits\StockActions;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -12,7 +13,7 @@ use Filament\Widgets\TableWidget;
 
 final class LowStockAlertWidget extends TableWidget
 {
-    use StockActions;
+    use DashboardFilterable, StockActions;
 
     protected static ?string $heading = 'Low Stock Alerts';
 
@@ -20,12 +21,15 @@ final class LowStockAlertWidget extends TableWidget
 
     protected static ?string $description = 'Products at or below reorder point — quick receive to restock';
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = [
+        'sm' => 'full',
+        'md' => 'full',
+        'lg' => 7,
+    ];
 
     public function table(Table $table): Table
     {
         $user = auth()->user();
-        $isAdmin = $user->isAdmin();
 
         $query = Product::query()
             ->select('products.*')
@@ -34,8 +38,8 @@ final class LowStockAlertWidget extends TableWidget
             ->havingRaw('SUM(stock_movements.quantity) <= products.reorder_point')
             ->havingRaw('SUM(stock_movements.quantity) >= 0');
 
-        if (! $isAdmin) {
-            $warehouseIds = $user->warehouses()->pluck('warehouses.id');
+        $warehouseIds = $this->getFilterWarehouseIds($user);
+        if ($warehouseIds !== null) {
             $query->whereIn('stock_movements.warehouse_id', $warehouseIds);
         }
 
@@ -64,15 +68,13 @@ final class LowStockAlertWidget extends TableWidget
                     ->weight('bold'),
                 TextColumn::make('status')
                     ->label('Status')
-                    ->state(function (int $state): string {
-                        return match (true) {
-                            $state <= 0 => 'Out of Stock',
-                            default => 'Low Stock',
-                        };
+                    ->state(fn (Product $record): string => match (true) {
+                        (int) $record->stockMovements()->sum('quantity') <= 0 => 'Out of Stock',
+                        default => 'Low Stock',
                     })
                     ->badge()
-                    ->color(fn (int $state): string => match (true) {
-                        $state <= 0 => 'danger',
+                    ->color(fn (Product $record): string => match (true) {
+                        (int) $record->stockMovements()->sum('quantity') <= 0 => 'danger',
                         default => 'warning',
                     }),
             ])
@@ -81,6 +83,7 @@ final class LowStockAlertWidget extends TableWidget
             ])
             ->toolbarActions([])
             ->defaultSort('name')
-            ->paginated([5, 10, 25]);
+            ->paginated([5, 10, 25])
+            ->striped();
     }
 }

@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Filament\Widgets;
 
 use App\Models\StockMovement;
+use App\Traits\DashboardFilterable;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
 
 final class RecentStockActivityWidget extends TableWidget
 {
+    use DashboardFilterable;
+
     protected static ?string $heading = 'Recent Stock Movements';
 
     protected static ?int $sort = 30;
@@ -38,8 +41,8 @@ final class RecentStockActivityWidget extends TableWidget
 
         $user = auth()->user();
 
-        if (! $user->isAdmin()) {
-            $warehouseIds = $user->warehouses()->pluck('warehouses.id');
+        $warehouseIds = $this->getFilterWarehouseIds($user);
+        if ($warehouseIds !== null) {
             $query->whereIn('warehouse_id', $warehouseIds);
         }
 

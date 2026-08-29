@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Filament\Widgets;
 
 use App\Models\StockMovement;
+use App\Traits\DashboardFilterable;
 use Filament\Widgets\ChartWidget;
 
 final class FastMovingStockChart extends ChartWidget
 {
+    use DashboardFilterable;
+
     protected ?string $heading = 'Top 10 High-Turnover Products';
 
     protected static ?int $sort = 25;
@@ -38,7 +41,6 @@ final class FastMovingStockChart extends ChartWidget
     protected function getData(): array
     {
         $user = auth()->user();
-        $isAdmin = $user->isAdmin();
 
         $query = StockMovement::query()
             ->selectRaw('
@@ -52,8 +54,8 @@ final class FastMovingStockChart extends ChartWidget
             ->orderByDesc('movement_count')
             ->limit(10);
 
-        if (! $isAdmin) {
-            $warehouseIds = $user->warehouses()->pluck('warehouses.id');
+        $warehouseIds = $this->getFilterWarehouseIds($user);
+        if ($warehouseIds !== null) {
             $query->whereIn('stock_movements.warehouse_id', $warehouseIds);
         }
 

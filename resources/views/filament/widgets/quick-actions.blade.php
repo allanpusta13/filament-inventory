@@ -1,5 +1,5 @@
 <x-filament-widgets::widget>
-    <div class="flex flex-wrap gap-3">
+    <div class="flex flex-col gap-3">
         @foreach ($this->getActions() as $action)
             {{ $action }}
         @endforeach

@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Filament\Widgets;
 
 use App\Models\Warehouse;
+use App\Traits\DashboardFilterable;
 use Filament\Widgets\Widget;
 
 final class StockByWarehouseWidget extends Widget
 {
+    use DashboardFilterable;
+
     public ?array $warehouses = [];
 
     protected string $view = 'filament.widgets.stock-by-warehouse';
@@ -38,14 +41,14 @@ final class StockByWarehouseWidget extends Widget
     public function loadWarehouses(): void
     {
         $user = auth()->user();
-        $isAdmin = $user->isAdmin();
+
+        $warehouseIds = $this->getFilterWarehouseIds($user);
 
         $query = Warehouse::query()
             ->select('warehouses.*')
             ->withCount(['stockMovements as total_movements']);
 
-        if (! $isAdmin) {
-            $warehouseIds = $user->warehouses()->pluck('warehouses.id');
+        if ($warehouseIds !== null) {
             $query->whereIn('warehouses.id', $warehouseIds);
         }
 
