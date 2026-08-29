@@ -6,11 +6,15 @@ namespace App\Filament\Widgets;
 
 use App\Models\Warehouse;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Concerns\InteractsWithForms;
+use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
 use Filament\Widgets\Widget;
 
-final class WarehouseFilterWidget extends Widget
+final class WarehouseFilterWidget extends Widget implements HasForms
 {
+    use InteractsWithForms;
+
     public ?string $selectedWarehouseId = null;
 
     protected static ?string $heading = 'Filter by Warehouse';
