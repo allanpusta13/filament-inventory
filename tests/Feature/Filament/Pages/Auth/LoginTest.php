@@ -33,9 +33,18 @@ test('an unauthenticated user can login', function () {
         ->assertHasNoFormErrors();
 });
 
-test('an authenticated user can access the admin panel', function () {
+test('an authenticated admin user can access the admin panel', function () {
+    $this->actingAs(
+        App\Models\User::factory()->create(['role' => App\Enums\UserRole::Admin->value])
+    );
+
     $this->get('admin')
         ->assertOk();
+});
+
+test('an authenticated non-admin user is denied the admin dashboard', function () {
+    $this->get('admin')
+        ->assertForbidden();
 });
 
 test('an authenticated user can logout', function () {

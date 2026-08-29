@@ -12,17 +12,26 @@ use App\Filament\Widgets\DashboardSections\PlanningActivityHeader;
 use App\Filament\Widgets\DashboardSections\WarehouseStatusHeader;
 use App\Filament\Widgets\FastMovingStockChart;
 use App\Filament\Widgets\LowStockAlertWidget;
+use App\Filament\Widgets\ProductCatalogWidget;
 use App\Filament\Widgets\QuickActionsWidget;
 use App\Filament\Widgets\RecentStockActivityWidget;
 use App\Filament\Widgets\StatsOverviewWidget;
 use App\Filament\Widgets\StockByWarehouseWidget;
 use App\Filament\Widgets\StockMovementTrendChart;
+use App\Filament\Widgets\WarehouseCapacityWidget;
 use App\Filament\Widgets\WarehouseFilterWidget;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Widgets\AccountWidget;
 
 final class Dashboard extends BaseDashboard
 {
+    public static function canAccess(): bool
+    {
+        $user = auth()->user();
+
+        return $user?->isAdmin() ?? false;
+    }
+
     public function getColumns(): int|array
     {
         return [
@@ -56,6 +65,8 @@ final class Dashboard extends BaseDashboard
             CategoryStockChart::class,
             PlanningActivityHeader::class,
             FastMovingStockChart::class,
+            ProductCatalogWidget::class,
+            WarehouseCapacityWidget::class,
             RecentStockActivityWidget::class,
             AccountWidget::class,
         ];

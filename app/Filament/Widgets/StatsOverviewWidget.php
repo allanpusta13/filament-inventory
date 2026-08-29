@@ -25,57 +25,101 @@ final class StatsOverviewWidget extends BaseWidget
     protected function getStats(): array
     {
         $user = auth()->user();
-
         $warehouseIds = $this->getFilterWarehouseIds($user);
 
-        $productQuery = Product::query();
+        $totalItems = $this->getTotalSkuCount($warehouseIds);
+        $totalStock = $this->getTotalStockQuantity($warehouseIds);
+        $lowStockCount = $this->getLowStockCount($user);
+        $outOfStockCount = $this->getOutOfStockCount($user);
+        $stockTrend = $this->getStockTrendData($warehouseIds);
+
+        return [
+            Stat::make('Total Active SKUs', number_format($totalItems))
+                ->description('Products in catalog')
+                ->descriptionIcon('heroicon-m-cube')
+                ->color('primary')
+                ->chart($stockTrend)
+                ->extraAttributes([
+                    'data-testid' => 'kpi-total-skus',
+                ]),
+            Stat::make('Total Stock Quantity', number_format($totalStock))
+                ->description('Units across all warehouses')
+                ->descriptionIcon('heroicon-m-arrow-trending-up')
+                ->color('success')
+                ->chart($stockTrend)
+                ->extraAttributes([
+                    'data-testid' => 'kpi-total-stock',
+                ]),
+            Stat::make('Items Below Reorder Point', number_format($lowStockCount))
+                ->description('At or below reorder point')
+                ->descriptionIcon('heroicon-m-exclamation-triangle')
+                ->color($lowStockCount > 0 ? 'warning' : 'success')
+                ->descriptionColor($lowStockCount > 0 ? 'warning' : null)
+                ->extraAttributes([
+                    'class' => $lowStockCount > 0 ? 'ring-1 ring-amber-400/30 bg-amber-50/50 dark:bg-amber-950/20' : '',
+                    'data-testid' => 'kpi-low-stock',
+                ]),
+            Stat::make('Zero Stock SKUs', number_format($outOfStockCount))
+                ->description('Products with zero stock')
+                ->descriptionIcon('heroicon-m-x-circle')
+                ->color($outOfStockCount > 0 ? 'danger' : 'success')
+                ->descriptionColor($outOfStockCount > 0 ? 'danger' : null)
+                ->extraAttributes([
+                    'class' => $outOfStockCount > 0 ? 'ring-1 ring-rose-500/30 bg-rose-50/50 dark:bg-rose-950/20' : '',
+                    'data-testid' => 'kpi-out-of-stock',
+                ]),
+        ];
+    }
+
+    private function getTotalSkuCount(?array $warehouseIds): int
+    {
+        $query = Product::query();
+
         if ($warehouseIds !== null) {
-            $productQuery->whereIn('id', function ($query) use ($warehouseIds) {
+            $query->whereIn('id', function ($query) use ($warehouseIds) {
                 $query->select('product_id')
                     ->from('stock_movements')
                     ->whereIn('warehouse_id', $warehouseIds)
                     ->groupBy('product_id');
             });
         }
-        $totalItems = $productQuery->count();
 
-        $stockQuery = StockMovement::query()
-            ->selectRaw('SUM(quantity) as total_quantity');
+        return $query->count();
+    }
+
+    private function getTotalStockQuantity(?array $warehouseIds): int
+    {
+        $query = StockMovement::query()
+            ->selectRaw('COALESCE(SUM(quantity), 0) as total_quantity');
 
         if ($warehouseIds !== null) {
-            $stockQuery->whereIn('warehouse_id', $warehouseIds);
+            $query->whereIn('warehouse_id', $warehouseIds);
         }
 
-        $totalStock = (int) $stockQuery->value('total_quantity');
+        return (int) $query->value('total_quantity');
+    }
 
-        $lowStockCount = $this->getLowStockCount($user);
-        $outOfStockCount = $this->getOutOfStockCount($user);
+    private function getStockTrendData(?array $warehouseIds): array
+    {
+        $query = StockMovement::query()
+            ->selectRaw('DATE(created_at) as date, COALESCE(SUM(quantity), 0) as daily_total')
+            ->where('created_at', '>=', now()->subDays(7))
+            ->groupBy('date')
+            ->orderBy('date');
 
-        return [
-            Stat::make('Total SKUs', number_format($totalItems))
-                ->description('Products in catalog')
-                ->descriptionIcon('heroicon-m-cube')
-                ->color('primary')
-                ->chart([7, 3, 4, 5, 6, 3, 5, 2]),
-            Stat::make('Total Units on Hand', number_format($totalStock))
-                ->description('Units across all warehouses')
-                ->descriptionIcon('heroicon-m-arrow-trending-up')
-                ->color('success'),
-            Stat::make('Items Below Reorder Point', number_format($lowStockCount))
-                ->description('At or below reorder point')
-                ->descriptionIcon('heroicon-m-exclamation-triangle')
-                ->color($lowStockCount > 0 ? 'warning' : 'success')
-                ->extraAttributes([
-                    'class' => $lowStockCount > 0 ? 'ring-1 ring-amber-400/20' : '',
-                ]),
-            Stat::make('Zero Stock SKUs', number_format($outOfStockCount))
-                ->description('Products with zero stock')
-                ->descriptionIcon('heroicon-m-x-circle')
-                ->color($outOfStockCount > 0 ? 'danger' : 'success')
-                ->extraAttributes([
-                    'class' => $outOfStockCount > 0 ? 'ring-1 ring-rose-500/20' : '',
-                ]),
-        ];
+        if ($warehouseIds !== null) {
+            $query->whereIn('warehouse_id', $warehouseIds);
+        }
+
+        $data = $query->pluck('daily_total', 'date')->toArray();
+
+        $result = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = now()->subDays($i)->format('Y-m-d');
+            $result[] = (int) ($data[$date] ?? 0);
+        }
+
+        return $result;
     }
 
     private function getLowStockCount(\App\Models\User $user): int

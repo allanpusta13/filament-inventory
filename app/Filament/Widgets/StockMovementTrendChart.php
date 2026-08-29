@@ -14,11 +14,11 @@ final class StockMovementTrendChart extends ChartWidget
 {
     use DashboardFilterable;
 
-    protected ?string $heading = 'Stock Inflow vs Outflow (30 Days)';
+    protected ?string $heading = 'Inbound vs Outbound Shipments';
 
-    protected static ?int $sort = 20;
+    protected static ?int $sort = 31;
 
-    protected ?string $description = 'Daily stock inflow vs outflow — last 30 days';
+    protected ?string $description = 'Supplier shipments (bars) and fulfillment (line) — last 30 days';
 
     protected int|string|array $columnSpan = [
         'sm' => 'full',
@@ -32,7 +32,7 @@ final class StockMovementTrendChart extends ChartWidget
     {
         $user = auth()->user();
 
-        return $user ? $user->isAdmin() : false;
+        return $user?->isAdmin() ?? false;
     }
 
     public function getPollingInterval(): ?string
@@ -85,26 +85,29 @@ final class StockMovementTrendChart extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => 'Stock In',
+                    'label' => 'Inbound Shipments',
                     'data' => $inflowValues,
-                    'backgroundColor' => 'rgba(16, 185, 129, 0.15)',
+                    'type' => 'bar',
+                    'backgroundColor' => 'rgba(16, 185, 129, 0.6)',
                     'borderColor' => '#10b981',
-                    'borderWidth' => 2,
-                    'fill' => true,
-                    'tension' => 0.4,
-                    'pointRadius' => 0,
-                    'pointHoverRadius' => 4,
+                    'borderWidth' => 1,
+                    'borderRadius' => 4,
+                    'yAxisID' => 'y',
+                    'order' => 2,
                 ],
                 [
-                    'label' => 'Stock Out',
+                    'label' => 'Outbound Fulfillment',
                     'data' => $outflowValues,
-                    'backgroundColor' => 'rgba(244, 63, 94, 0.15)',
+                    'type' => 'line',
                     'borderColor' => '#f43f5e',
+                    'backgroundColor' => 'rgba(244, 63, 94, 0.1)',
                     'borderWidth' => 2,
                     'fill' => true,
                     'tension' => 0.4,
                     'pointRadius' => 0,
                     'pointHoverRadius' => 4,
+                    'yAxisID' => 'y1',
+                    'order' => 1,
                 ],
             ],
             'labels' => $labels,
@@ -113,7 +116,7 @@ final class StockMovementTrendChart extends ChartWidget
 
     protected function getType(): string
     {
-        return 'line';
+        return 'bar';
     }
 
     protected function getOptions(): array
@@ -163,7 +166,19 @@ final class StockMovementTrendChart extends ChartWidget
                     ],
                 ],
                 'y' => [
+                    'type' => 'linear',
+                    'display' => true,
+                    'position' => 'left',
                     'beginAtZero' => true,
+                    'title' => [
+                        'display' => true,
+                        'text' => 'Inbound',
+                        'color' => '#10b981',
+                        'font' => [
+                            'size' => 11,
+                            'family' => 'Instrument Sans',
+                        ],
+                    ],
                     'grid' => [
                         'color' => 'rgba(148, 163, 184, 0.15)',
                     ],
@@ -173,7 +188,31 @@ final class StockMovementTrendChart extends ChartWidget
                             'size' => 11,
                             'family' => 'Instrument Sans',
                         ],
-                        'callback' => 'function(value) { return value >= 1000 ? (value/1000).toFixed(1) + "k" : value; }',
+                    ],
+                ],
+                'y1' => [
+                    'type' => 'linear',
+                    'display' => true,
+                    'position' => 'right',
+                    'beginAtZero' => true,
+                    'title' => [
+                        'display' => true,
+                        'text' => 'Outbound',
+                        'color' => '#f43f5e',
+                        'font' => [
+                            'size' => 11,
+                            'family' => 'Instrument Sans',
+                        ],
+                    ],
+                    'grid' => [
+                        'drawOnChartArea' => false,
+                    ],
+                    'ticks' => [
+                        'color' => '#64748b',
+                        'font' => [
+                            'size' => 11,
+                            'family' => 'Instrument Sans',
+                        ],
                     ],
                 ],
             ],

@@ -35,11 +35,11 @@ it('renders dashboard page for admin', function (): void {
         ->assertOk();
 });
 
-it('renders dashboard page for warehouse staff', function (): void {
+it('denies dashboard access for warehouse staff', function (): void {
     $this->actingAs($this->staff);
 
     $this->get(route('filament.admin.pages.dashboard'))
-        ->assertOk();
+        ->assertForbidden();
 });
 
 describe('StatsOverviewWidget', function (): void {
