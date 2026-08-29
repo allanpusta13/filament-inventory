@@ -1,7 +1,7 @@
 <x-filament-widgets::widget>
     <div class="flex items-center gap-4">
         <div class="flex-1">
-            {!! $this->form !!}
+            {!! $this->form->toHtml() !!}
         </div>
         @if ($selectedWarehouseId)
             <button
