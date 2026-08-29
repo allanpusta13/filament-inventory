@@ -22,7 +22,7 @@ final class QuickActionsWidget extends Widget
 
     protected int|string|array $columnSpan = [
         'sm' => 'full',
-        'md' => 'full',
+        'md' => 1,
         'lg' => 5,
     ];
 

@@ -23,7 +23,7 @@ final class LowStockAlertWidget extends TableWidget
 
     protected int|string|array $columnSpan = [
         'sm' => 'full',
-        'md' => 'full',
+        'md' => 1,
         'lg' => 7,
     ];
 
