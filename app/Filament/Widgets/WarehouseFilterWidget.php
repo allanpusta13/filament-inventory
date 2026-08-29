@@ -8,7 +8,7 @@ use App\Models\Warehouse;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Widgets\Widget;
 
 final class WarehouseFilterWidget extends Widget implements HasForms
@@ -46,7 +46,7 @@ final class WarehouseFilterWidget extends Widget implements HasForms
         $this->selectedWarehouseId = session('admin_warehouse_filter');
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $form): Schema
     {
         return $form
             ->schema([
