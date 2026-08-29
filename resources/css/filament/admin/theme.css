@@ -9,109 +9,515 @@
     --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
 }
 
-/* Premium Sidebar */
-.fi-sidebar-nav {
-    border-right: 1px solid #e2e8f0;
-    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+/* Chart Accessibility Data Table */
+.fi-chart-data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
 }
 
-.dark .fi-sidebar-nav {
-    border-right: 1px solid rgba(255, 255, 255, 0.06);
-    background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
+.fi-chart-data-table th,
+.fi-chart-data-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
 }
 
-/* Refined Cards */
-.fi-card {
-    border-radius: 0.75rem;
-    transition: all 0.2s ease;
+.dark .fi-chart-data-table th,
+.dark .fi-chart-data-table td {
+    border-bottom: 1px solid #334155;
 }
 
-.fi-card:hover {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-}
-
-.dark .fi-card {
-    background: rgba(255, 255, 255, 0.02);
-    border-color: rgba(255, 255, 255, 0.06);
-}
-
-/* Status Pills */
-.fi-status-badge {
-    border-radius: 9999px;
+.fi-chart-data-table th {
     font-weight: 600;
-    letter-spacing: 0.025em;
-    padding: 0.25rem 0.75rem;
-    font-size: 0.75rem;
-    line-height: 1rem;
+    color: #0f172a;
+    background-color: #f8fafc;
 }
 
-/* Stat Widget Enhancements */
-.fi-stat-wrapped {
-    border-radius: 0.75rem;
-    border: 1px solid transparent;
-    transition: all 0.2s ease;
+.dark .fi-chart-data-table th {
+    color: #f1f5f9;
+    background-color: #1e293b;
 }
 
-.fi-stat-wrapped:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.08);
+.fi-chart-data-table td {
+    color: #334155;
 }
 
-.dark .fi-stat-wrapped {
-    border-color: rgba(255, 255, 255, 0.06);
-    background: rgba(255, 255, 255, 0.02);
+.dark .fi-chart-data-table td {
+    color: #e2e8f0;
 }
 
-/* Table Row Hover */
-.fi-ta-table tr.fi-ta-table-row {
-    transition: background-color 0.15s ease;
-}
-
-.fi-ta-table tr.fi-ta-table-row:hover {
-    background-color: rgba(59, 130, 246, 0.03);
-}
-
-.dark .fi-ta-table tr.fi-ta-table-row:hover {
+.fi-chart-data-table tbody tr:hover {
     background-color: rgba(59, 130, 246, 0.05);
 }
 
-/* Button Refinements */
+.dark .fi-chart-data-table tbody tr:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+}
+
+/* Chart Data Modal */
+.fi-chart-data-modal {
+    animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.fi-chart-data-close {
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    transition: all 0.15s ease;
+}
+
+.fi-chart-data-close:hover {
+    background-color: #f1f5f9;
+}
+
+.dark .fi-chart-data-close:hover {
+    background-color: #334155;
+}
+
+/* Chart Canvas Accessibility */
+.fi-chart-widget canvas {
+    outline: none;
+}
+
+.fi-chart-widget canvas:focus-visible {
+    outline: 3px solid #3b82f6;
+    outline-offset: 2px;
+    border-radius: 0.375rem;
+}
+
+.dark .fi-chart-widget canvas:focus-visible {
+    outline-color: #60a5fa;
+}
+
+/* Chart Container */
+.fi-chart-widget {
+    position: relative;
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+}
+
+.fi-chart-widget .fi-chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.fi-chart-widget .fi-chart-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.dark .fi-chart-widget .fi-chart-title {
+    color: #f1f5f9;
+}
+
+.fi-chart-widget .fi-chart-description {
+    font-size: 0.875rem;
+    color: #64748b;
+}
+
+.dark .fi-chart-widget .fi-chart-description {
+    color: #94a3b8;
+}
+
+/* Widget Grid Improvements */
+.fi-widgets-grid {
+    gap: 1.5rem;
+}
+
+/* Stat Widget — flat by default, border-only at rest */
+.fi-stat-wrapped {
+    border-radius: 0.75rem;
+    border: 1px solid transparent;
+    transition: background-color 0.15s ease;
+}
+
+.fi-stat-wrapped:hover {
+    background-color: #f8fafc;
+}
+
+.dark .fi-stat-wrapped {
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.dark .fi-stat-wrapped:hover {
+    background-color: rgba(255, 255, 255, 0.04);
+}
+
+/* Card — flat by default, border-only depth, hover lift via background */
+.fi-card {
+    border-radius: 0.75rem;
+    transition: background-color 0.15s ease;
+}
+
+.fi-card:hover {
+    background-color: #fafafa;
+}
+
+.dark .fi-card {
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.dark .fi-card:hover {
+    background-color: rgba(255, 255, 255, 0.04);
+}
+
+/* Enhanced Table Design */
+.fi-ta-table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.fi-ta-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: #f8fafc;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.dark .fi-ta-table thead th {
+    background-color: #1e293b;
+    border-bottom: 2px solid #334155;
+}
+
+.fi-ta-table tbody tr:nth-child(even) {
+    background-color: #f8fafc;
+}
+
+.dark .fi-ta-table tbody tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.fi-ta-table tbody tr:hover {
+    background-color: rgba(59, 130, 246, 0.05);
+}
+
+.dark .fi-ta-table tbody tr:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+}
+
+.fi-ta-table td,
+.fi-ta-table th {
+    padding: 0.75rem 1rem;
+}
+
+/* Table Height Constraint to Prevent CLS */
+.fi-ta-table-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* Button Refinements with WCAG AAA Touch Targets */
 .fi-btn {
     border-radius: 0.5rem;
     font-weight: 600;
     letter-spacing: 0.01em;
     transition: all 0.15s ease;
+    min-height: 48px;
+    min-width: 48px;
+    font-size: 0.875rem;
+}
+
+/* Ensure danger/rose buttons have WCAG AA compliant contrast - override Filament defaults */
+.fi-btn.fi-color-danger,
+.fi-btn.fi-color-rose,
+.fi-btn[style*="bg-rose"],
+.fi-btn[style*="bg-red"],
+.fi-btn.fi-danger,
+.fi-btn.fi-rose,
+button.fi-danger,
+button.fi-rose {
+    background-color: #dc2626 !important;
+    color: #ffffff !important;
+    border-color: #dc2626 !important;
+}
+
+.fi-btn.fi-color-danger:hover,
+.fi-btn.fi-color-rose:hover,
+.fi-btn[style*="bg-rose"]:hover,
+.fi-btn[style*="bg-red"]:hover,
+.fi-btn.fi-danger:hover,
+.fi-btn.fi-rose:hover,
+button.fi-danger:hover,
+button.fi-rose:hover {
+    background-color: #b91c1c !important;
+    border-color: #b91c1c !important;
+}
+
+/* Ensure primary buttons have good contrast */
+.fi-btn.fi-color-primary,
+.fi-btn[style*="bg-blue"],
+.fi-btn[style*="bg-indigo"],
+.fi-btn.fi-primary,
+button.fi-primary {
+    background-color: #2563eb !important;
+    color: #ffffff !important;
+    border-color: #2563eb !important;
+}
+
+.fi-btn.fi-color-primary:hover,
+.fi-btn[style*="bg-blue"]:hover,
+.fi-btn[style*="bg-indigo"]:hover,
+.fi-btn.fi-primary:hover,
+button.fi-primary:hover {
+    background-color: #1d4ed8 !important;
+    border-color: #1d4ed8 !important;
+}
+
+/* Override any remaining Filament danger/rose color usage with WCAG AA compliant colors */
+[style*="bg-rose-500"],
+[style*="bg-rose-600"],
+[style*="bg-red-500"],
+[style*="bg-red-600"],
+.fi-color-rose-500,
+.fi-color-rose-600,
+.fi-color-red-500,
+.fi-color-red-600 {
+    background-color: #dc2626 !important;
+}
+
+[style*="text-white"][style*="bg-rose"],
+[style*="text-white"][style*="bg-red"],
+.fi-text-white.fi-bg-rose,
+.fi-text-white.fi-bg-red {
+    color: #ffffff !important;
+}
+
+/* Ensure all text meets minimum 14px (0.875rem) for body, 16px (1rem) ideal */
+.fi-page,
+.fi-page *:not(svg):not(path):not(g):not(use):not(symbol):not(defs) {
+    font-size: 0.875rem;
+}
+
+/* Fix tiny text issues - ensure minimum font sizes */
+.fi-table-cell,
+.fi-table-header,
+.fi-widget-content,
+.fi-stat-label,
+.fi-stat-value,
+.fi-stat-description,
+.fi-widget-header,
+.fi-widget-title,
+.fi-widget-description,
+.fi-simple-page,
+.fi-simple-page *,
+.fi-form-field,
+.fi-form-label,
+.fi-form-hint,
+.fi-input,
+.fi-select,
+.fi-textarea,
+.fi-label,
+.fi-badge,
+.fi-tag,
+.fi-pagination,
+.fi-pagination *,
+.fi-breadcrumb,
+.fi-breadcrumb * {
+    font-size: 0.875rem !important;
+}
+
+/* Table cell specific sizing */
+.fi-ta-table td,
+.fi-ta-table th {
+    font-size: 0.875rem !important;
+}
+
+/* Stats widget sizing */
+.fi-stats-overview-widget .fi-stat-value {
+    font-size: 1.5rem !important;
+    font-weight: 700;
+}
+
+.fi-stats-overview-widget .fi-stat-label {
+    font-size: 0.875rem !important;
+    font-weight: 500;
+}
+
+.fi-stats-overview-widget .fi-stat-description {
+    font-size: 0.875rem !important;
+}
+
+/* Chart widget text */
+.fi-chart-widget .fi-chart-title {
+    font-size: 1rem !important;
+}
+
+.fi-chart-widget .fi-chart-description {
+    font-size: 0.875rem !important;
+}
+
+/* Section headers */
+.fi-section-header {
+    font-size: 1.25rem !important;
+}
+
+/* Sidebar navigation */
+.fi-sidebar-nav .fi-sidebar-item {
+    font-size: 0.875rem !important;
+}
+
+/* Modal content */
+.fi-modal-content,
+.fi-modal-body {
+    font-size: 0.875rem !important;
 }
 
 .fi-btn:hover {
-    transform: translateY(-0.5px);
+    opacity: 0.9;
 }
 
 .fi-btn:active {
-    transform: translateY(0);
+    opacity: 1;
 }
 
-/* Input Focus States */
+/* Input Focus States with High Contrast */
 .fi-input {
     transition: all 0.15s ease;
 }
 
 .fi-input:focus {
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    border-color: #3b82f6;
 }
 
 .dark .fi-input:focus {
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+    border-color: #60a5fa;
 }
 
-/* Navigation Active State */
+/* Keyboard Navigation Focus Indicators */
+*:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+}
+
+.dark *:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
+}
+
+/* Sidebar — flat surfaces, border-only depth */
+.fi-sidebar-nav {
+    border-right: 1px solid #e2e4e6;
+    background: #ffffff;
+}
+
+.dark .fi-sidebar-nav {
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    background: #0f172a;
+}
+
+/* Status Pills with High Contrast - WCAG AA Compliant */
+.fi-status-badge {
+    border-radius: 9999px;
+    font-weight: 600;
+    letter-spacing: 0.025em;
+    padding: 0.375rem 0.875rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+}
+
+/* Success badge - green background with dark text for contrast */
+.fi-status-badge.fi-color-success,
+.fi-status-badge[style*="bg-emerald"],
+.fi-status-badge[style*="bg-green"] {
+    background-color: #dcfce7 !important;
+    color: #166534 !important;
+    border: 1px solid #86efac;
+}
+
+.dark .fi-status-badge.fi-color-success,
+.dark .fi-status-badge[style*="bg-emerald"],
+.dark .fi-status-badge[style*="bg-green"] {
+    background-color: #14532d !important;
+    color: #bbf7d0 !important;
+    border: 1px solid #166534;
+}
+
+/* Warning badge - amber background with dark text */
+.fi-status-badge.fi-color-warning,
+.fi-status-badge[style*="bg-amber"],
+.fi-status-badge[style*="bg-yellow"] {
+    background-color: #fef3c7 !important;
+    color: #92400e !important;
+    border: 1px solid #fcd34d;
+}
+
+.dark .fi-status-badge.fi-color-warning,
+.dark .fi-status-badge[style*="bg-amber"],
+.dark .fi-status-badge[style*="bg-yellow"] {
+    background-color: #78350f !important;
+    color: #fde68a !important;
+    border: 1px solid #92400e;
+}
+
+/* Danger badge - red background with dark text for WCAG AA contrast */
+.fi-status-badge.fi-color-danger,
+.fi-status-badge[style*="bg-rose"],
+.fi-status-badge[style*="bg-red"] {
+    background-color: #fee2e2 !important;
+    color: #991b1b !important;
+    border: 1px solid #fca5a5;
+}
+
+.dark .fi-status-badge.fi-color-danger,
+.dark .fi-status-badge[style*="bg-rose"],
+.dark .fi-status-badge[style*="bg-red"] {
+    background-color: #7f1d1d !important;
+    color: #fecaca !important;
+    border: 1px solid #991b1b;
+}
+
+/* Primary badge - blue background with dark text */
+.fi-status-badge.fi-color-primary,
+.fi-status-badge[style*="bg-blue"],
+.fi-status-badge[style*="bg-indigo"] {
+    background-color: #dbeafe !important;
+    color: #1e40af !important;
+    border: 1px solid #93c5fd;
+}
+
+.dark .fi-status-badge.fi-color-primary,
+.dark .fi-status-badge[style*="bg-blue"],
+.dark .fi-status-badge[style*="bg-indigo"] {
+    background-color: #1e3a8a !important;
+    color: #bfdbfe !important;
+    border: 1px solid #3b82f6;
+}
+
+/* Gray badge */
+.fi-status-badge.fi-color-gray,
+.fi-status-badge[style*="bg-gray"] {
+    background-color: #f3f4f6 !important;
+    color: #374151 !important;
+    border: 1px solid #d1d5db;
+}
+
+.dark .fi-status-badge.fi-color-gray,
+.dark .fi-status-badge[style*="bg-gray"] {
+    background-color: #374151 !important;
+    color: #d1d5db !important;
+    border: 1px solid #4b5563;
+}
+
+/* Navigation Active State — Operational Blue left accent */
 .fi-sidebar-item-active {
-    background: linear-gradient(90deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%);
+    background-color: rgba(59, 130, 246, 0.08);
     border-left: 3px solid #3b82f6;
 }
 
 .dark .fi-sidebar-item-active {
-    background: linear-gradient(90deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.05) 100%);
+    background-color: rgba(59, 130, 246, 0.12);
     border-left: 3px solid #60a5fa;
 }
 
@@ -119,18 +525,23 @@
 .fi-section-header {
     font-weight: 700;
     letter-spacing: -0.01em;
+    color: #0f172a;
 }
 
-/* Modal Enhancements */
+.dark .fi-section-header {
+    color: #f1f5f9;
+}
+
+/* Modal Enhancements — Modal Lift shadow allowed per DESIGN.md */
 .fi-modal-window {
-    border-radius: 1rem;
+    border-radius: 0.5rem;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 }
 
 /* Scrollbar Styling */
 ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -139,7 +550,7 @@
 
 ::-webkit-scrollbar-thumb {
     background: #cbd5e1;
-    border-radius: 3px;
+    border-radius: 4px;
 }
 
 .dark ::-webkit-scrollbar-thumb {
@@ -157,11 +568,6 @@
 /* Smooth Transitions for Dark Mode */
 .dark {
     color-scheme: dark;
-}
-
-/* Widget Grid Enhancement */
-.fi-widgets-grid {
-    gap: 1rem;
 }
 
 /* Pulsing Dot for Alerts */
@@ -183,4 +589,74 @@
 /* Mono Font for SKUs */
 .font-mono {
     font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+}
+
+/* Tabular Numbers for Data */
+.font-tabular-nums {
+    font-variant-numeric: tabular-nums;
+}
+
+/* Loading Skeleton */
+@keyframes skeleton-loading {
+    0% {
+        background-position: -200px 0;
+    }
+    100% {
+        background-position: calc(200px + 100%) 0;
+    }
+}
+
+.skeleton {
+    background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+    background-size: 200px 100%;
+    animation: skeleton-loading 1.5s infinite;
+}
+
+.dark .skeleton {
+    background: linear-gradient(90deg, #334155 25%, #475569 50%, #334155 75%);
+    background-size: 200px 100%;
+    animation: skeleton-loading 1.5s infinite;
+}
+
+/* WCAG AAA Contrast Improvements */
+.fi-ta-table td {
+    color: #1e293b;
+    font-size: 0.875rem;
+}
+
+.dark .fi-ta-table td {
+    color: #e2e8f0;
+    font-size: 0.875rem;
+}
+
+.fi-ta-table th {
+    color: #0f172a;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.dark .fi-ta-table th {
+    color: #f1f5f9;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+/* Base font size for better readability - WCAG recommends minimum 16px (1rem) for body text */
+.fi-page,
+.fi-page * {
+    font-size: 1rem;
+}
+
+/* Ensure all interactive text meets minimum 11px (0.6875rem) floor, prefer 14px (0.875rem) */
+.fi-btn,
+.fi-input,
+.fi-select,
+.fi-textarea,
+.fi-label,
+.fi-table-cell,
+.fi-table-header,
+.fi-widget-content,
+.fi-simple-page,
+.fi-simple-page * {
+    font-size: max(1rem, 0.875rem);
 }

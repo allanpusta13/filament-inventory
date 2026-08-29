@@ -11,19 +11,30 @@ use Illuminate\Support\Carbon;
 
 final class StockMovementTrendChart extends ChartWidget
 {
-    protected ?string $heading = 'Stock Movement Trend';
+    protected ?string $heading = 'Stock Inflow vs Outflow (30 Days)';
 
-    protected static ?int $sort = 15;
+    protected static ?int $sort = 20;
 
     protected ?string $description = 'Daily stock inflow vs outflow — last 30 days';
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = [
+        'sm' => 'full',
+        'md' => 'full',
+        'lg' => 6,
+    ];
 
     protected ?string $maxHeight = '300px';
 
+    public static function canView(): bool
+    {
+        $user = auth()->user();
+
+        return $user ? $user->isAdmin() : false;
+    }
+
     public function getPollingInterval(): ?string
     {
-        return '60s';
+        return '30s';
     }
 
     protected function getData(): array
@@ -110,6 +121,29 @@ final class StockMovementTrendChart extends ChartWidget
                 'legend' => [
                     'display' => true,
                     'position' => 'top',
+                    'labels' => [
+                        'usePointStyle' => true,
+                        'padding' => 16,
+                        'font' => [
+                            'size' => 12,
+                            'family' => 'Instrument Sans',
+                        ],
+                    ],
+                ],
+                'tooltip' => [
+                    'mode' => 'index',
+                    'intersect' => false,
+                    'backgroundColor' => 'rgba(15, 23, 42, 0.95)',
+                    'titleColor' => '#f1f5f9',
+                    'bodyColor' => '#e2e8f0',
+                    'borderColor' => 'rgba(148, 163, 184, 0.3)',
+                    'borderWidth' => 1,
+                    'padding' => 12,
+                    'cornerRadius' => 8,
+                    'displayColors' => true,
+                ],
+                'title' => [
+                    'display' => false,
                 ],
             ],
             'scales' => [
@@ -119,18 +153,37 @@ final class StockMovementTrendChart extends ChartWidget
                     ],
                     'ticks' => [
                         'maxTicksLimit' => 10,
+                        'color' => '#64748b',
+                        'font' => [
+                            'size' => 11,
+                            'family' => 'Instrument Sans',
+                        ],
                     ],
                 ],
                 'y' => [
                     'beginAtZero' => true,
                     'grid' => [
-                        'color' => 'rgba(0, 0, 0, 0.05)',
+                        'color' => 'rgba(148, 163, 184, 0.15)',
+                    ],
+                    'ticks' => [
+                        'color' => '#64748b',
+                        'font' => [
+                            'size' => 11,
+                            'family' => 'Instrument Sans',
+                        ],
+                        'callback' => 'function(value) { return value >= 1000 ? (value/1000).toFixed(1) + "k" : value; }',
                     ],
                 ],
             ],
             'interaction' => [
                 'mode' => 'index',
                 'intersect' => false,
+            ],
+            'maintainAspectRatio' => false,
+            'responsive' => true,
+            'animation' => [
+                'duration' => 750,
+                'easing' => 'easeOutQuart',
             ],
         ];
     }

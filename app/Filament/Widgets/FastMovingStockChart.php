@@ -9,15 +9,26 @@ use Filament\Widgets\ChartWidget;
 
 final class FastMovingStockChart extends ChartWidget
 {
-    protected ?string $heading = 'Fast-Moving Items';
+    protected ?string $heading = 'Top 10 High-Turnover Products';
 
-    protected static ?int $sort = 26;
+    protected static ?int $sort = 25;
 
     protected ?string $description = 'Top 10 products by stock movement frequency';
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = [
+        'sm' => 'full',
+        'md' => 'full',
+        'lg' => 'full',
+    ];
 
-    protected ?string $maxHeight = '300px';
+    protected ?string $maxHeight = '350px';
+
+    public static function canView(): bool
+    {
+        $user = auth()->user();
+
+        return $user ? true : false; // Visible to both admin and warehouse_staff
+    }
 
     public function getPollingInterval(): ?string
     {
@@ -96,20 +107,57 @@ final class FastMovingStockChart extends ChartWidget
                 'legend' => [
                     'display' => true,
                     'position' => 'top',
+                    'labels' => [
+                        'usePointStyle' => true,
+                        'padding' => 16,
+                        'font' => [
+                            'size' => 12,
+                            'family' => 'Instrument Sans',
+                        ],
+                    ],
+                ],
+                'tooltip' => [
+                    'backgroundColor' => 'rgba(15, 23, 42, 0.95)',
+                    'titleColor' => '#f1f5f9',
+                    'bodyColor' => '#e2e8f0',
+                    'borderColor' => 'rgba(148, 163, 184, 0.3)',
+                    'borderWidth' => 1,
+                    'padding' => 12,
+                    'cornerRadius' => 8,
                 ],
             ],
             'scales' => [
                 'x' => [
                     'beginAtZero' => true,
                     'grid' => [
-                        'color' => 'rgba(0, 0, 0, 0.05)',
+                        'color' => 'rgba(148, 163, 184, 0.15)',
+                    ],
+                    'ticks' => [
+                        'color' => '#64748b',
+                        'font' => [
+                            'size' => 11,
+                            'family' => 'Instrument Sans',
+                        ],
                     ],
                 ],
                 'y' => [
                     'grid' => [
                         'display' => false,
                     ],
+                    'ticks' => [
+                        'color' => '#64748b',
+                        'font' => [
+                            'size' => 11,
+                            'family' => 'Instrument Sans',
+                        ],
+                    ],
                 ],
+            ],
+            'maintainAspectRatio' => false,
+            'responsive' => true,
+            'animation' => [
+                'duration' => 750,
+                'easing' => 'easeOutQuart',
             ],
         ];
     }

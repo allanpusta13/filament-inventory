@@ -22,19 +22,30 @@ final class CategoryStockChart extends ChartWidget
         '#06b6d4', // cyan
     ];
 
-    protected ?string $heading = 'Stock by Category';
+    protected ?string $heading = 'Inventory by Product Category';
 
-    protected static ?int $sort = 25;
+    protected static ?int $sort = 21;
 
     protected ?string $description = 'Total inventory quantity per product category';
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = [
+        'sm' => 'full',
+        'md' => 'full',
+        'lg' => 6,
+    ];
 
     protected ?string $maxHeight = '300px';
 
+    public static function canView(): bool
+    {
+        $user = auth()->user();
+
+        return $user ? $user->isAdmin() : false;
+    }
+
     public function getPollingInterval(): ?string
     {
-        return '60s';
+        return '30s';
     }
 
     protected function getData(): array
@@ -43,10 +54,10 @@ final class CategoryStockChart extends ChartWidget
         $isAdmin = $user->isAdmin();
 
         $query = StockMovement::query()
-            ->selectRaw('
-                COALESCE(products.category, \'Uncategorized\') as category,
+            ->selectRaw("
+                COALESCE(products.category, 'Uncategorized') as category,
                 SUM(stock_movements.quantity) as total_quantity
-            ')
+            ")
             ->join('products', 'products.id', '=', 'stock_movements.product_id')
             ->groupBy('category')
             ->havingRaw('SUM(stock_movements.quantity) > 0')
@@ -96,13 +107,42 @@ final class CategoryStockChart extends ChartWidget
                     'display' => true,
                     'position' => 'right',
                     'labels' => [
-                        'padding' => 12,
+                        'padding' => 16,
                         'usePointStyle' => true,
                         'pointStyle' => 'circle',
+                        'font' => [
+                            'size' => 12,
+                            'family' => 'Instrument Sans',
+                        ],
+                    ],
+                ],
+                'tooltip' => [
+                    'backgroundColor' => 'rgba(15, 23, 42, 0.95)',
+                    'titleColor' => '#f1f5f9',
+                    'bodyColor' => '#e2e8f0',
+                    'borderColor' => 'rgba(148, 163, 184, 0.3)',
+                    'borderWidth' => 1,
+                    'padding' => 12,
+                    'cornerRadius' => 8,
+                    'callbacks' => [
+                        'label' => 'function(context) {
+                            const value = context.parsed;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                            return context.label + ": " + value.toLocaleString() + " (" + percentage + "%)";
+                        }',
                     ],
                 ],
             ],
             'cutout' => '60%',
+            'maintainAspectRatio' => false,
+            'responsive' => true,
+            'animation' => [
+                'animateRotate' => true,
+                'animateScale' => true,
+                'duration' => 1000,
+                'easing' => 'easeOutQuart',
+            ],
         ];
     }
 }

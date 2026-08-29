@@ -11,7 +11,20 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 final class StatsOverviewWidget extends BaseWidget
 {
-    protected static ?int $sort = 0;
+    protected static ?int $sort = 1;
+
+    protected int|string|array $columnSpan = [
+        'sm' => 'full',
+        'md' => 'full',
+        'lg' => 'full',
+    ];
+
+    public static function canView(): bool
+    {
+        $user = auth()->user();
+
+        return $user?->isAdmin() ?? false;
+    }
 
     protected function getStats(): array
     {
@@ -34,23 +47,23 @@ final class StatsOverviewWidget extends BaseWidget
         $outOfStockCount = $this->getOutOfStockCount($isAdmin, $user);
 
         return [
-            Stat::make('Total Items', number_format($totalItems))
+            Stat::make('Total SKUs', number_format($totalItems))
                 ->description('Products in catalog')
                 ->descriptionIcon('heroicon-m-cube')
                 ->color('primary')
                 ->chart([7, 3, 4, 5, 6, 3, 5, 2]),
-            Stat::make('Total Stock', number_format($totalStock))
+            Stat::make('Total Units on Hand', number_format($totalStock))
                 ->description('Units across all warehouses')
                 ->descriptionIcon('heroicon-m-arrow-trending-up')
                 ->color('success'),
-            Stat::make('Low Stock Alerts', number_format($lowStockCount))
+            Stat::make('Items Below Reorder Point', number_format($lowStockCount))
                 ->description('At or below reorder point')
                 ->descriptionIcon('heroicon-m-exclamation-triangle')
                 ->color($lowStockCount > 0 ? 'warning' : 'success')
                 ->extraAttributes([
                     'class' => $lowStockCount > 0 ? 'ring-1 ring-amber-400/20' : '',
                 ]),
-            Stat::make('Out of Stock', number_format($outOfStockCount))
+            Stat::make('Zero Stock SKUs', number_format($outOfStockCount))
                 ->description('Products with zero stock')
                 ->descriptionIcon('heroicon-m-x-circle')
                 ->color($outOfStockCount > 0 ? 'danger' : 'success')

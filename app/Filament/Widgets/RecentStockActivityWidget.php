@@ -11,13 +11,24 @@ use Filament\Widgets\TableWidget;
 
 final class RecentStockActivityWidget extends TableWidget
 {
-    protected static ?string $heading = 'Recent Stock Activity';
+    protected static ?string $heading = 'Recent Stock Movements';
 
-    protected static ?int $sort = 20;
+    protected static ?int $sort = 30;
 
     protected static ?string $description = 'Last 10 stock movements across all warehouses';
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = [
+        'sm' => 'full',
+        'md' => 'full',
+        'lg' => 'full',
+    ];
+
+    public static function canView(): bool
+    {
+        $user = auth()->user();
+
+        return $user ? true : false; // Visible to both admin and warehouse_staff
+    }
 
     public function table(Table $table): Table
     {
@@ -77,6 +88,7 @@ final class RecentStockActivityWidget extends TableWidget
             ])
             ->defaultSort('created_at', 'desc')
             ->paginated([5, 10, 25])
-            ->poll('60s');
+            ->poll('60s')
+            ->striped();
     }
 }

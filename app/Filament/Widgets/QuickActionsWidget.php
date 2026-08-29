@@ -16,11 +16,15 @@ final class QuickActionsWidget extends Widget
 
     protected string $view = 'filament.widgets.quick-actions';
 
-    protected static ?int $sort = 0;
+    protected static ?int $sort = 11;
 
-    protected static ?string $heading = 'Quick Actions';
+    protected static ?string $heading = 'Common Actions';
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = [
+        'sm' => 'full',
+        'md' => 'full',
+        'lg' => 5,
+    ];
 
     public function getActions(): array
     {

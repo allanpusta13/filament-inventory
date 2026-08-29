@@ -13,11 +13,22 @@ final class StockByWarehouseWidget extends Widget
 
     protected string $view = 'filament.widgets.stock-by-warehouse';
 
-    protected static ?int $sort = 30;
+    protected static ?int $sort = 15;
 
-    protected static ?string $heading = 'Stock by Warehouse';
+    protected static ?string $heading = 'Warehouse Inventory Summary';
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = [
+        'sm' => 'full',
+        'md' => 'full',
+        'lg' => 'full',
+    ];
+
+    public static function canView(): bool
+    {
+        $user = auth()->user();
+
+        return $user?->isAdmin() ?? false;
+    }
 
     public function mount(): void
     {
