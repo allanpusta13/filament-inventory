@@ -5,6 +5,11 @@ declare(strict_types=1);
 namespace App\Filament\Pages;
 
 use App\Filament\Widgets\CategoryStockChart;
+use App\Filament\Widgets\DashboardSections\InventoryAnalyticsHeader;
+use App\Filament\Widgets\DashboardSections\OperationsAlertsHeader;
+use App\Filament\Widgets\DashboardSections\PerformanceOverviewHeader;
+use App\Filament\Widgets\DashboardSections\PlanningActivityHeader;
+use App\Filament\Widgets\DashboardSections\WarehouseStatusHeader;
 use App\Filament\Widgets\FastMovingStockChart;
 use App\Filament\Widgets\LowStockAlertWidget;
 use App\Filament\Widgets\QuickActionsWidget;
@@ -39,12 +44,17 @@ final class Dashboard extends BaseDashboard
     public function getWidgets(): array
     {
         return [
+            PerformanceOverviewHeader::class,
             StatsOverviewWidget::class,
+            OperationsAlertsHeader::class,
             LowStockAlertWidget::class,
             QuickActionsWidget::class,
+            WarehouseStatusHeader::class,
             StockByWarehouseWidget::class,
+            InventoryAnalyticsHeader::class,
             StockMovementTrendChart::class,
             CategoryStockChart::class,
+            PlanningActivityHeader::class,
             FastMovingStockChart::class,
             RecentStockActivityWidget::class,
             AccountWidget::class,

@@ -28,8 +28,15 @@ beforeEach(function (): void {
     $this->staff->warehouses()->attach([$this->warehouse1->id]);
 });
 
-it('renders dashboard page', function (): void {
+it('renders dashboard page for admin', function (): void {
     $this->actingAs($this->admin);
+
+    $this->get(route('filament.admin.pages.dashboard'))
+        ->assertOk();
+});
+
+it('renders dashboard page for warehouse staff', function (): void {
+    $this->actingAs($this->staff);
 
     $this->get(route('filament.admin.pages.dashboard'))
         ->assertOk();
@@ -43,12 +50,61 @@ describe('StatsOverviewWidget', function (): void {
             ->assertOk();
     });
 
-    it('warehouse staff cannot view stats overview', function (): void {
+    it('warehouse staff can view stats overview', function (): void {
         $this->actingAs($this->staff);
 
-        $isVisible = StatsOverviewWidget::canView();
+        livewire(StatsOverviewWidget::class)
+            ->assertOk();
+    });
 
-        expect($isVisible)->toBeFalse();
+    it('warehouse staff sees only assigned warehouse stats', function (): void {
+        $this->actingAs($this->staff);
+
+        $product1 = Product::factory()->create(['name' => 'Staff Product']);
+        $product2 = Product::factory()->create(['name' => 'Other WH Product']);
+
+        StockMovement::factory()->create([
+            'product_id' => $product1->id,
+            'warehouse_id' => $this->warehouse1->id,
+            'type' => MovementType::Receive,
+            'quantity' => 50,
+        ]);
+
+        StockMovement::factory()->create([
+            'product_id' => $product2->id,
+            'warehouse_id' => $this->warehouse2->id,
+            'type' => MovementType::Receive,
+            'quantity' => 100,
+        ]);
+
+        livewire(StatsOverviewWidget::class)
+            ->assertSee('50')
+            ->assertDontSee('150');
+    });
+
+    it('warehouse staff sees correct low stock count for assigned warehouse', function (): void {
+        $this->actingAs($this->staff);
+
+        $product1 = Product::factory()->create(['reorder_point' => 50, 'name' => 'Staff Low Item']);
+        $product2 = Product::factory()->create(['reorder_point' => 50, 'name' => 'Other WH Low Item']);
+
+        StockMovement::factory()->create([
+            'product_id' => $product1->id,
+            'warehouse_id' => $this->warehouse1->id,
+            'type' => MovementType::Receive,
+            'quantity' => 20,
+        ]);
+
+        StockMovement::factory()->create([
+            'product_id' => $product2->id,
+            'warehouse_id' => $this->warehouse2->id,
+            'type' => MovementType::Receive,
+            'quantity' => 20,
+        ]);
+
+        livewire(StatsOverviewWidget::class)
+            ->assertSee('Items Below Reorder Point')
+            ->assertSee('1');
     });
 
     it('admin sees correct total sku count', function (): void {

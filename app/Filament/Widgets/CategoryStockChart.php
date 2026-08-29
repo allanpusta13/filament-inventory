@@ -34,7 +34,7 @@ final class CategoryStockChart extends ChartWidget
     protected int|string|array $columnSpan = [
         'sm' => 'full',
         'md' => 'full',
-        'lg' => 6,
+        'lg' => 5,
     ];
 
     protected ?string $maxHeight = '300px';

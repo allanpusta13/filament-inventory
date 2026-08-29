@@ -22,24 +22,26 @@ final class StatsOverviewWidget extends BaseWidget
         'lg' => 'full',
     ];
 
-    public static function canView(): bool
-    {
-        $user = auth()->user();
-
-        return $user?->isAdmin() ?? false;
-    }
-
     protected function getStats(): array
     {
         $user = auth()->user();
-        $isAdmin = $user->isAdmin();
 
-        $totalItems = Product::count();
+        $warehouseIds = $this->getFilterWarehouseIds($user);
+
+        $productQuery = Product::query();
+        if ($warehouseIds !== null) {
+            $productQuery->whereIn('id', function ($query) use ($warehouseIds) {
+                $query->select('product_id')
+                    ->from('stock_movements')
+                    ->whereIn('warehouse_id', $warehouseIds)
+                    ->groupBy('product_id');
+            });
+        }
+        $totalItems = $productQuery->count();
 
         $stockQuery = StockMovement::query()
             ->selectRaw('SUM(quantity) as total_quantity');
 
-        $warehouseIds = $this->getFilterWarehouseIds($user);
         if ($warehouseIds !== null) {
             $stockQuery->whereIn('warehouse_id', $warehouseIds);
         }

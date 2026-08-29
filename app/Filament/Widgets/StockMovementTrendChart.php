@@ -23,7 +23,7 @@ final class StockMovementTrendChart extends ChartWidget
     protected int|string|array $columnSpan = [
         'sm' => 'full',
         'md' => 'full',
-        'lg' => 6,
+        'lg' => 7,
     ];
 
     protected ?string $maxHeight = '300px';
