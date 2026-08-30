@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Enums\MovementType;
+use App\Enums\TransferOrderStatus;
 use App\Exceptions\InsufficientStockException;
 use App\Models\StockMovement;
+use App\Models\TransferOrderItem;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -113,5 +115,48 @@ final class InventoryService
     {
         return (int) StockMovement::where('product_id', $productId)
             ->sum('quantity');
+    }
+
+    /**
+     * Compute reserved quantity for a product at a warehouse.
+     * Reserved = SUM(approved_quantity) for items in confirmed/dispatched orders
+     * where the warehouse is the sender (fulfilling branch).
+     */
+    public function reservedQuantity(int $productId, int $warehouseId): int
+    {
+        return (int) TransferOrderItem::where('product_id', $productId)
+            ->whereHas('transferOrder', function ($query) use ($warehouseId) {
+                $query->where('sender_branch_id', $warehouseId)
+                    ->whereIn('status', [
+                        TransferOrderStatus::Confirmed,
+                        TransferOrderStatus::Dispatched,
+                    ])
+                    ->whereNull('received_at');
+            })
+            ->where('item_status', '!=', 'removed')
+            ->sum('approved_quantity');
+    }
+
+    /**
+     * Compute available quantity for negotiation (on-hand minus reserved).
+     */
+    public function availableForNegotiation(int $productId, int $warehouseId): int
+    {
+        $onHand = $this->currentQuantity($productId, $warehouseId);
+        $reserved = $this->reservedQuantity($productId, $warehouseId);
+
+        return max(0, $onHand - $reserved);
+    }
+
+    /**
+     * Lock stock rows for a product at a warehouse using SELECT ... FOR UPDATE.
+     * Must be called within a DB::transaction.
+     */
+    public function lockStockForProduct(int $productId, int $warehouseId): void
+    {
+        StockMovement::where('product_id', $productId)
+            ->where('warehouse_id', $warehouseId)
+            ->lockForUpdate()
+            ->get();
     }
 }
