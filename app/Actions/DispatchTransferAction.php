@@ -68,11 +68,17 @@ final class DispatchTransferAction
                     );
                 }
 
+                $variantId = \App\Models\ProductVariant::where('product_id', $item->product_id)->value('id');
+
+                if ($variantId === null) {
+                    throw new RuntimeException("No variant found for product {$item->product_id}.");
+                }
+
                 $this->inventoryService->recordMovement(
-                    productId: $item->product_id,
+                    variantId: $variantId,
                     warehouseId: $order->sender_branch_id,
                     type: MovementType::TransferOut,
-                    quantity: -$approvedQty,
+                    baseQuantity: -$approvedQty,
                     reference: $order->reference_number,
                 );
             }

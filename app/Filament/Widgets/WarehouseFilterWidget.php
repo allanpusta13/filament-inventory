@@ -57,7 +57,7 @@ final class WarehouseFilterWidget extends Widget implements HasForms
                         ->pluck('name', 'id')
                         ->toArray())
                     ->searchable()
-                    ->reactive()
+                    ->live()
                     ->afterStateUpdated(function (?string $state): void {
                         if ($state !== null) {
                             session(['admin_warehouse_filter' => $state]);

@@ -60,7 +60,7 @@ final class StockAdjustment extends Page implements HasForms
                     ->label('Warehouse')
                     ->options($userWarehouses)
                     ->required()
-                    ->reactive()
+                    ->live()
                     ->preload(),
                 Select::make('variant_id')
                     ->label('Product Variant')

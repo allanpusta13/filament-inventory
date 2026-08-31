@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace App\Enums;
 
 use Filament\Support\Contracts\HasColor;
+use Filament\Support\Contracts\HasLabel;
 
-enum TransferOrderItemStatus: string implements HasColor
+enum TransferOrderItemStatus: string implements HasColor, HasLabel
 {
     case Requested = 'requested';
     case Approved = 'approved';

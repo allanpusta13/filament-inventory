@@ -36,14 +36,12 @@ final class UserForm
                     ->dehydrateStateUsing(fn ($state): string => Hash::make($state)),
                 Select::make('role')
                     ->options(UserRole::class)
-                    ->required()
-                    ->native(false),
+                    ->required(),
                 Select::make('warehouses')
                     ->multiple()
                     ->relationship('warehouses', 'name')
                     ->searchable()
-                    ->preload()
-                    ->native(false),
+                    ->preload(),
             ]);
     }
 }

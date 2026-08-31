@@ -63,11 +63,17 @@ final class ReceiveTransferAction
                 );
 
                 if ($receivedQty > 0) {
+                    $variantId = \App\Models\ProductVariant::where('product_id', $item->product_id)->value('id');
+
+                    if ($variantId === null) {
+                        throw new RuntimeException("No variant found for product {$item->product_id}.");
+                    }
+
                     $this->inventoryService->recordMovement(
-                        productId: $item->product_id,
+                        variantId: $variantId,
                         warehouseId: $order->receiver_branch_id,
                         type: MovementType::TransferIn,
-                        quantity: $receivedQty,
+                        baseQuantity: $receivedQty,
                         reference: $order->reference_number,
                     );
                 }

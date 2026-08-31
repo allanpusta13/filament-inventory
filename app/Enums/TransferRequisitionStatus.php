@@ -1,0 +1,53 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Enums;
+
+use Filament\Support\Contracts\HasColor;
+use Filament\Support\Contracts\HasLabel;
+
+enum TransferRequisitionStatus: string implements HasColor, HasLabel
+{
+    case Draft = 'draft';
+    case Requested = 'requested';
+    case UnderReviewFulfiller = 'under_review_fulfiller';
+    case UnderReviewRequestor = 'under_review_requestor';
+    case Approved = 'approved';
+    case Confirmed = 'confirmed';
+    case Dispatched = 'dispatched';
+    case PartiallyReceived = 'partially_received';
+    case Completed = 'completed';
+    case ClosedWithLoss = 'closed_with_loss';
+
+    public function getColor(): string|array|null
+    {
+        return match ($this) {
+            self::Draft => 'gray',
+            self::Requested => 'info',
+            self::UnderReviewFulfiller, self::UnderReviewRequestor => 'warning',
+            self::Approved => 'success',
+            self::Confirmed => 'success',
+            self::Dispatched => 'primary',
+            self::PartiallyReceived => 'warning',
+            self::Completed => 'success',
+            self::ClosedWithLoss => 'danger',
+        };
+    }
+
+    public function getLabel(): string
+    {
+        return match ($this) {
+            self::Draft => 'Draft',
+            self::Requested => 'Requested',
+            self::UnderReviewFulfiller => 'Under Review (Fulfiller)',
+            self::UnderReviewRequestor => 'Under Review (Requestor)',
+            self::Approved => 'Approved',
+            self::Confirmed => 'Confirmed',
+            self::Dispatched => 'Dispatched',
+            self::PartiallyReceived => 'Partially Received',
+            self::Completed => 'Completed',
+            self::ClosedWithLoss => 'Closed with Loss',
+        };
+    }
+}

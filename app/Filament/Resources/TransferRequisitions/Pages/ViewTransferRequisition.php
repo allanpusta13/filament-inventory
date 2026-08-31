@@ -1,0 +1,217 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Filament\Resources\TransferRequisitions\Pages;
+
+use App\Enums\TransferRequisitionStatus;
+use App\Filament\Resources\TransferRequisitions\TransferRequisitionResource;
+use App\Models\TransferRequisition;
+use App\Services\InventoryService;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Filament\Actions\Action;
+use Filament\Actions\DeleteAction;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Notifications\Notification;
+use Filament\Resources\Pages\ViewRecord;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\URL;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
+
+final class ViewTransferRequisition extends ViewRecord
+{
+    protected static string $resource = TransferRequisitionResource::class;
+
+    public function mount(mixed $record): void
+    {
+        parent::mount($record);
+
+        if (request()->query('scan') === '1' && in_array($this->record->status, [TransferRequisitionStatus::Dispatched, TransferRequisitionStatus::PartiallyReceived])) {
+            $this->dispatch('open-modal', modal: 'scan_to_receive');
+        }
+    }
+
+    public function form(Schema $schema): Schema
+    {
+        return $schema
+            ->schema([
+                Section::make('Transfer Details')->schema([
+                    Grid::make(2)->schema([
+                        TextEntry::make('reference_code'),
+                        TextEntry::make('status')->badge(),
+                        TextEntry::make('fromWarehouse.name')->label('Source Warehouse'),
+                        TextEntry::make('toWarehouse.name')->label('Destination Warehouse'),
+                        TextEntry::make('requestedBy.name')->label('Requested By'),
+                        TextEntry::make('requested_at')->dateTime(),
+                    ]),
+                ]),
+            ]);
+    }
+
+    public function getRecord(): TransferRequisition
+    {
+        return $this->record;
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('submit')
+                ->label('Submit Requisition')
+                ->icon('heroicon-o-paper-airplane')
+                ->color('primary')
+                ->visible(fn (TransferRequisition $record): bool => $record->status === TransferRequisitionStatus::Draft)
+                ->action(fn (TransferRequisition $record) => $record->update([
+                    'status' => TransferRequisitionStatus::Requested,
+                ])),
+
+            Action::make('counter_offer')
+                ->label('Counter-Offer')
+                ->icon('heroicon-o-arrows-right-left')
+                ->color('warning')
+                ->visible(fn (TransferRequisition $record): bool => in_array($record->status, [TransferRequisitionStatus::UnderReviewFulfiller, TransferRequisitionStatus::UnderReviewRequestor, TransferRequisitionStatus::Requested]))
+                ->schema([
+                    \Filament\Forms\Components\Textarea::make('notes')
+                        ->label('Negotiation Notes')
+                        ->rows(3),
+                ])
+                ->action(function (TransferRequisition $record, array $data): void {
+                    $newStatus = $record->status === TransferRequisitionStatus::UnderReviewFulfiller
+                        ? TransferRequisitionStatus::UnderReviewRequestor
+                        : TransferRequisitionStatus::UnderReviewFulfiller;
+
+                    $record->update([
+                        'status' => $newStatus,
+                        'notes' => $data['notes'] ?? $record->notes,
+                    ]);
+                }),
+
+            Action::make('confirm')
+                ->label('Confirm Requisition')
+                ->icon('heroicon-o-check-circle')
+                ->color('success')
+                ->visible(fn (TransferRequisition $record): bool => in_array($record->status, [TransferRequisitionStatus::Requested, TransferRequisitionStatus::UnderReviewFulfiller, TransferRequisitionStatus::UnderReviewRequestor]))
+                ->requiresConfirmation()
+                ->action(function (TransferRequisition $record): void {
+                    app(InventoryService::class)->lockStockForRequisition($record->id);
+
+                    Notification::make()
+                        ->title('Requisition Confirmed')
+                        ->success()
+                        ->send();
+                }),
+
+            Action::make('dispatch')
+                ->label('Dispatch')
+                ->icon('heroicon-o-truck')
+                ->color('primary')
+                ->visible(fn (TransferRequisition $record): bool => $record->status === TransferRequisitionStatus::Confirmed)
+                ->requiresConfirmation()
+                ->action(function (TransferRequisition $record): void {
+                    app(InventoryService::class)->dispatchTransfer($record->id);
+
+                    Notification::make()
+                        ->title('Transfer Dispatched')
+                        ->success()
+                        ->send();
+                }),
+
+            DeleteAction::make()
+                ->visible(fn (TransferRequisition $record): bool => $record->status === TransferRequisitionStatus::Draft && $record->requested_by === auth()->id()),
+
+            Action::make('print_stn')
+                ->label('Print STN')
+                ->icon('heroicon-o-document-text')
+                ->color('gray')
+                ->visible(fn (TransferRequisition $record): bool => in_array($record->status, [TransferRequisitionStatus::Dispatched, TransferRequisitionStatus::PartiallyReceived, TransferRequisitionStatus::Completed, TransferRequisitionStatus::ClosedWithLoss]))
+                ->action(function (TransferRequisition $record): void {
+                    $scanUrl = URL::temporarySignedRoute(
+                        'stn.scan',
+                        now()->addDays(30),
+                        ['transferRequisition' => $record->id]
+                    );
+
+                    $qrCode = QrCode::size(140)->generate($scanUrl);
+
+                    $pdf = Pdf::loadView('pdf.stn-manifest', [
+                        'requisition' => $record->load(['items.variant', 'fromWarehouse', 'toWarehouse', 'requestedBy']),
+                        'qrCode' => $qrCode,
+                    ]);
+
+                    $pdf->stream("STN-{$record->reference_code}.pdf");
+                }),
+
+            Action::make('scan_to_receive')
+                ->label('Scan to Receive')
+                ->icon('heroicon-o-qr-code')
+                ->color('success')
+                ->visible(fn (TransferRequisition $record): bool => in_array($record->status, [TransferRequisitionStatus::Dispatched, TransferRequisitionStatus::PartiallyReceived]))
+                ->schema([
+                    Repeater::make('received_items')
+                        ->label('Received Items')
+                        ->schema([
+                            TextInput::make('item_id')
+                                ->dehydrated()
+                                ->readOnly()
+                                ->hidden(),
+                            TextInput::make('variant_sku')
+                                ->label('Variant')
+                                ->readOnly(),
+                            TextInput::make('expected_qty')
+                                ->label('Expected (Base)')
+                                ->readOnly(),
+                            TextInput::make('good_qty')
+                                ->label('Good Qty')
+                                ->numeric()
+                                ->required()
+                                ->minValue(0)
+                                ->default(fn (array $state): int => (int) ($state['expected_qty'] ?? 0)),
+                            TextInput::make('damaged_qty')
+                                ->label('Damaged Qty')
+                                ->numeric()
+                                ->required()
+                                ->minValue(0)
+                                ->default(0),
+                            Select::make('loss_category')
+                                ->label('Loss Category')
+                                ->options([
+                                    'Damaged in Transit' => 'Damaged in Transit',
+                                    'Short Shipment' => 'Short Shipment',
+                                    'Spoiled' => 'Spoiled',
+                                    'Transit Variance' => 'Transit Variance',
+                                ])
+                                ->default('Transit Variance'),
+                        ])
+                        ->default(fn (TransferRequisition $record): array => $record->items->map(fn ($item) => [
+                            'item_id' => $item->id,
+                            'variant_sku' => $item->variant->sku.' - '.$item->variant->name,
+                            'expected_qty' => $item->shipped_base_qty,
+                        ])->toArray())
+                        ->columns(1),
+                ])
+                ->action(function (TransferRequisition $record, array $data): void {
+                    $receivedData = [];
+                    foreach ($data['received_items'] as $item) {
+                        $receivedData[$item['item_id']] = [
+                            'good_qty' => (int) $item['good_qty'],
+                            'damaged_qty' => (int) $item['damaged_qty'],
+                            'loss_category' => $item['loss_category'] ?? 'Transit Variance',
+                        ];
+                    }
+
+                    app(InventoryService::class)->scanToReceive($record->id, $receivedData);
+
+                    Notification::make()
+                        ->title('Receiving Complete')
+                        ->body("Requisition {$record->reference_code} has been processed.")
+                        ->success()
+                        ->send();
+                }),
+        ];
+    }
+}
