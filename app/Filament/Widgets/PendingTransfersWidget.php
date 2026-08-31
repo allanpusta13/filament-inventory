@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Widgets;
 
-use App\Filament\Resources\TransferRequisitionResource;
+use App\Filament\Resources\TransferRequisitions\TransferRequisitionResource;
 use App\Models\TransferRequisition;
 use Filament\Tables;
 use Filament\Tables\Table;

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Widgets;
 
-use App\Filament\Resources\ProductVariantResource;
-use App\Filament\Resources\TransferRequisitionResource;
+use App\Filament\Resources\Products\ProductResource;
+use App\Filament\Resources\TransferRequisitions\TransferRequisitionResource;
 use App\Models\InTransit;
 use App\Models\ProductVariant;
 use App\Models\WarehouseStock;
@@ -64,12 +64,12 @@ final class WarehouseStockOverviewWidget extends StatsOverviewWidget
                 ->description('Unique variant-warehouse combinations')
                 ->descriptionIcon('heroicon-o-cube')
                 ->color('success')
-                ->url(ProductVariantResource::getUrl('index')),
+                ->url(ProductResource::getUrl('index')),
             Stat::make('Low Stock Alerts', $lowStockCount)
                 ->description('Variants at or below reorder point')
                 ->descriptionIcon('heroicon-o-exclamation-triangle')
                 ->color($lowStockCount > 0 ? 'danger' : 'success')
-                ->url(ProductVariantResource::getUrl('index')),
+                ->url(ProductResource::getUrl('index')),
             Stat::make('Active Shipments', $activeShipments)
                 ->description('Currently in transit')
                 ->descriptionIcon('heroicon-o-truck')
