@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\ProductPrices\Pages\CreateProductPrice;
-use App\Filament\Resources\ProductPrices\Pages\EditProductPrice;
-use App\Filament\Resources\ProductPrices\Pages\ListProductPrices;
+// use App\Filament\Resources\ProductPrices\Pages\CreateProductPrice;
+// use App\Filament\Resources\ProductPrices\Pages\EditProductPrice;
+// use App\Filament\Resources\ProductPrices\Pages\ListProductPrices;
 use App\Models\ProductPrice;
 use BackedEnum;
 use Filament\Forms\Components\Select;
@@ -141,9 +141,10 @@ final class ProductPriceResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => ListProductPrices::route('/'),
-            'create' => CreateProductPrice::route('/create'),
-            'edit' => EditProductPrice::route('/{record}/edit'),
+        // TODO: Fix the routes for the ProductPriceResource pages. The current routes are commented out and need to be updated to match the correct page classes.
+            // 'index' => ListProductPrices::route('/'),
+            // 'create' => CreateProductPrice::route('/create'),
+            // 'edit' => EditProductPrice::route('/{record}/edit'),
         ];
     }
 }

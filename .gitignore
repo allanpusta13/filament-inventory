@@ -23,3 +23,7 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+/graphify-out
+/playwright-report
+/playwright-screenshots
+/test-results

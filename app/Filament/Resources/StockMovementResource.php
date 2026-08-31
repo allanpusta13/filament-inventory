@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\StockMovementResource\Pages\ListStockMovements;
+// use App\Filament\Resources\StockMovementResource\Pages\ListStockMovements;
 use App\Models\StockMovement;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -101,7 +101,8 @@ final class StockMovementResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => ListStockMovements::route('/'),
+        // TODO: Fix the routes for the StockMovementResource pages. The current routes are commented out and need to be updated to match the correct page classes.
+            // 'index' => ListStockMovements::route('/'),
         ];
     }
 }
