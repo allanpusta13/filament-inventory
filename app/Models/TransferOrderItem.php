@@ -25,6 +25,7 @@ final class TransferOrderItem extends Model
         'item_status',
         'added_by_branch_id',
         'variance_reason',
+        'superseded_by_item_id',
     ];
 
     /**
@@ -35,6 +36,7 @@ final class TransferOrderItem extends Model
         'approved_quantity' => 'integer',
         'received_quantity' => 'integer',
         'damaged_quantity' => 'integer',
+        'superseded_by_item_id' => 'integer',
         'item_status' => TransferOrderItemStatus::class,
     ];
 
