@@ -51,12 +51,10 @@ test.describe('Warehouse Staff (staff.dvo@example.com)', () => {
     await expect(page.locator('.fi-ta-table .fi-ac-link-action').first()).not.toBeVisible();
   });
 
-  test.fixme('cross-tenant: cannot see other warehouse requisitions in list', async ({ page }) => {
-    // Backend gap: TransferRequisitionPolicy::viewAny() returns true unconditionally.
-    // List-level warehouse scoping is not implemented.
-    // Once backend adds ->modifyQueryUsing() warehouse scope, remove test.fixme().
+  test('cross-tenant: cannot see other warehouse requisitions in list', async ({ page }) => {
     await login(page, USERS.staffDvo);
     await page.goto(`${BASE_URL}/admin/transfer-requisitions`);
+    // TRQ-2026-0001 is MNL→CEB — staff.dvo (DVO only) should not see it
     await expect(page.getByText('TRQ-2026-0001')).not.toBeVisible();
   });
 });

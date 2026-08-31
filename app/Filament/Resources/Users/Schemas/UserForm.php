@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Users\Schemas;
 
+use App\Enums\UserRole;
 use App\Filament\Resources\Users\Pages\CreateUser;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Hash;
@@ -32,6 +34,16 @@ final class UserForm
                     ->autocomplete('new-password')
                     ->dehydrated(fn ($state): bool => filled($state))
                     ->dehydrateStateUsing(fn ($state): string => Hash::make($state)),
+                Select::make('role')
+                    ->options(UserRole::class)
+                    ->required()
+                    ->native(false),
+                Select::make('warehouses')
+                    ->multiple()
+                    ->relationship('warehouses', 'name')
+                    ->searchable()
+                    ->preload()
+                    ->native(false),
             ]);
     }
 }

@@ -84,6 +84,7 @@ it('can create a user', function () {
             'name' => $user->name,
             'email' => $user->email,
             'password' => $user->password,
+            'role' => 'warehouse_staff',
         ])
         ->call('create')
         ->assertNotified();

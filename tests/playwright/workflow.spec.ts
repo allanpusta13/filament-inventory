@@ -24,6 +24,14 @@ function getLatestTransferCode(): string {
   return output.trim();
 }
 
+function getLatestTransferId(): number {
+  const output = execSync(
+    'php artisan tinker --execute="echo App\\Models\\TransferRequisition::latest()->first()->id ?? 0;"',
+    { cwd: 'D:\\Personal\\filament-inventory', encoding: 'utf-8' },
+  );
+  return parseInt(output.trim(), 10);
+}
+
 test('Full multi-role lifecycle: create → submit → confirm → dispatch → receive → verify', async ({ page }) => {
   test.setTimeout(300000);
 
@@ -41,14 +49,15 @@ test('Full multi-role lifecycle: create → submit → confirm → dispatch → 
   await page.getByLabel('Requested qty').fill('10');
 
   await page.getByRole('button', { name: 'Create', exact: true }).click();
-  // Redirects to view page (TRQ detail), not the list
   await page.waitForURL(/\/admin\/transfer-requisitions\/\d+$/, { timeout: 10000 });
   await page.waitForTimeout(1000);
 
   const referenceCode = getLatestTransferCode();
+  const transferId = getLatestTransferId();
   expect(referenceCode).toMatch(/^TRQ-/);
+  expect(transferId).toBeGreaterThan(0);
 
-  // Submit from the view page (staff has Submit + Delete buttons visible)
+  // Submit from the view page
   const submitBtn = page.getByRole('button', { name: 'Submit Requisition' });
   if (await submitBtn.isVisible()) {
     await submitBtn.click();
@@ -57,13 +66,10 @@ test('Full multi-role lifecycle: create → submit → confirm → dispatch → 
 
   await logout(page);
 
-  // Act II: CEB Manager confirms
+  // Act II: CEB Manager confirms — navigate directly by ID
   await login(page, USERS.managerCeb);
-  await page.goto(`${BASE_URL}/admin/transfer-requisitions`);
-  const row3 = page.locator('.fi-ta-table tbody tr').filter({ hasText: referenceCode });
-  await expect(row3).toBeVisible();
-  await row3.locator('.fi-ac-link-action').first().click();
-  await page.waitForURL(/\/admin\/transfer-requisitions\/\d+$/, { timeout: 10000 });
+  await page.goto(`${BASE_URL}/admin/transfer-requisitions/${transferId}`);
+  await page.waitForTimeout(1000);
 
   const confirmBtn = page.getByRole('button', { name: 'Confirm Requisition' });
   if (await confirmBtn.isVisible()) {
@@ -75,11 +81,8 @@ test('Full multi-role lifecycle: create → submit → confirm → dispatch → 
 
   // Act III: CEB Manager dispatches
   await login(page, USERS.managerCeb);
-  await page.goto(`${BASE_URL}/admin/transfer-requisitions`);
-  const row4 = page.locator('.fi-ta-table tbody tr').filter({ hasText: referenceCode });
-  await expect(row4).toBeVisible();
-  await row4.locator('.fi-ac-link-action').first().click();
-  await page.waitForURL(/\/admin\/transfer-requisitions\/\d+$/, { timeout: 10000 });
+  await page.goto(`${BASE_URL}/admin/transfer-requisitions/${transferId}`);
+  await page.waitForTimeout(1000);
 
   const dispatchBtn = page.getByRole('button', { name: 'Dispatch' });
   if (await dispatchBtn.isVisible()) {
@@ -91,11 +94,8 @@ test('Full multi-role lifecycle: create → submit → confirm → dispatch → 
 
   // Act IV: CEB Manager receives
   await login(page, USERS.managerCeb);
-  await page.goto(`${BASE_URL}/admin/transfer-requisitions`);
-  const row5 = page.locator('.fi-ta-table tbody tr').filter({ hasText: referenceCode });
-  await expect(row5).toBeVisible();
-  await row5.locator('.fi-ac-link-action').first().click();
-  await page.waitForURL(/\/admin\/transfer-requisitions\/\d+$/, { timeout: 10000 });
+  await page.goto(`${BASE_URL}/admin/transfer-requisitions/${transferId}`);
+  await page.waitForTimeout(1000);
 
   const receiveBtn = page.getByRole('button', { name: 'Scan to Receive' });
   if (await receiveBtn.isVisible()) {

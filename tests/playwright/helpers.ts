@@ -34,11 +34,11 @@ async function logout(page: Page): Promise<void> {
 }
 
 async function selectFilamentOption(page: Page, fieldLabel: string, optionText: string): Promise<void> {
-  const field = page.locator('.fi-fo-select-wrp').filter({ hasText: fieldLabel });
-  const input = field.locator('.fi-select-input');
-  await input.click();
-  await page.waitForTimeout(500);
-  await page.locator('.fi-dropdown-list-item').filter({ hasText: optionText }).click();
+  const field = page.locator('.fi-fo-select-wrp').filter({ hasText: fieldLabel }).first();
+  const button = field.locator('button');
+  await button.click();
+  await page.waitForTimeout(800);
+  await page.getByRole('option', { name: optionText }).click();
   await page.waitForTimeout(300);
 }
 

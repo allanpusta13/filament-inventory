@@ -1,4 +1,4 @@
-import { test, expect, BASE_URL, USERS, login, logout } from './helpers';
+import { test, expect, BASE_URL, USERS, login, logout, selectFilamentOption } from './helpers';
 
 test.describe('Administrator (admin@example.com)', () => {
   test.setTimeout(180000);
@@ -76,6 +76,11 @@ test.describe('Administrator (admin@example.com)', () => {
     await page.getByLabel('Name').fill(`E2E User ${Date.now()}`);
     await page.getByLabel('Email').fill(`e2e-${Date.now()}@test.com`);
     await page.locator('input[type="password"]').first().fill('password');
+    const roleField = page.locator('.fi-fo-select-wrp').filter({ hasText: 'Role' }).first();
+    await roleField.locator('button').click();
+    await page.waitForTimeout(500);
+    await page.locator('.fi-dropdown-panel:visible').getByText('WarehouseStaff').click();
+    await page.waitForTimeout(300);
     await page.getByRole('button', { name: 'Create', exact: true }).click();
     await page.waitForURL('**/edit', { timeout: 10000 });
   });
