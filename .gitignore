@@ -27,3 +27,9 @@ Thumbs.db
 /playwright-report
 /playwright-screenshots
 /test-results
+
+# armada:start
+/armada/
+/.opencode/
+/opencode.json
+# armada:end
