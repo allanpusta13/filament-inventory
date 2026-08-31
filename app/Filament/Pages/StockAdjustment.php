@@ -14,9 +14,9 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Throwable;
@@ -47,12 +47,12 @@ final class StockAdjustment extends Page implements HasForms
     {
         $user = Auth::user();
 
-        return $user->role === UserRole::Admin || $user->role === UserRole::BranchManager;
+        return $user?->role === UserRole::Admin || $user?->role === UserRole::BranchManager;
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $form): Schema
     {
-        $userWarehouses = Auth::user()->warehouses()->pluck('warehouses.id', 'warehouses.name')->toArray();
+        $userWarehouses = Auth::user()?->warehouses()->pluck('warehouses.id', 'warehouses.name')->toArray() ?? [];
 
         return $form
             ->schema([
@@ -70,13 +70,14 @@ final class StockAdjustment extends Page implements HasForms
                         }
 
                         return ProductVariant::query()
-                            ->whereHas('currentStock', fn (Builder $q) => $q->where('warehouse_id', $state))
+                            ->whereHas('warehouseStock', fn (Builder $q) => $q->where('warehouse_id', $state))
                             ->with('product')
                             ->get()
-                            ->mapWithKeys(function (ProductVariant $v) {
-                                $qty = $v->currentStock->first()?->on_hand_quantity ?? 0;
+                            ->mapWithKeys(function (ProductVariant $v) use ($state) {
+                                $qty = $v->warehouseStock->where('warehouse_id', $state)->first()?->on_hand_quantity ?? 0;
+                                $sku = $v->product?->sku ?? 'Unknown';
 
-                                return [$v->id => "{$v->product->sku} - {$v->name} ({$qty} on hand)"];
+                                return [$v->id => "{$sku} - {$v->name} ({$qty} on hand)"];
                             })
                             ->toArray();
                     })

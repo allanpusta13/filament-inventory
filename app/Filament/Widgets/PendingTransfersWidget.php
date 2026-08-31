@@ -21,16 +21,18 @@ final class PendingTransfersWidget extends BaseWidget
     public function table(Table $table): Table
     {
         $user = auth()->user();
-        $isAdmin = $user->isAdmin();
+        $isAdmin = $user?->isAdmin() ?? false;
 
         return $table
             ->query(function () use ($isAdmin, $user) {
-                $query = TransferRequisition::whereIn('status', ['requested', 'under_review']);
+                $query = TransferRequisition::whereIn('status', ['requested', 'under_review_fulfiller', 'under_review_requestor']);
 
                 if (! $isAdmin) {
                     $warehouseIds = $user->warehouses()->pluck('warehouses.id')->toArray();
-                    $query->whereIn('from_warehouse_id', $warehouseIds)
-                        ->orWhereIn('to_warehouse_id', $warehouseIds);
+                    $query->where(function ($q) use ($warehouseIds): void {
+                        $q->whereIn('from_warehouse_id', $warehouseIds)
+                            ->orWhereIn('to_warehouse_id', $warehouseIds);
+                    });
                 }
 
                 return $query->latest('requested_at');
@@ -50,7 +52,8 @@ final class PendingTransfersWidget extends BaseWidget
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'requested' => 'warning',
-                        'under_review' => 'info',
+                        'under_review_fulfiller' => 'info',
+                        'under_review_requestor' => 'info',
                         default => 'gray',
                     }),
                 Tables\Columns\TextColumn::make('requested_at')

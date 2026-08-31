@@ -17,7 +17,7 @@ final class WarehouseStockOverviewWidget extends StatsOverviewWidget
     protected function getStats(): array
     {
         $user = auth()->user();
-        $isAdmin = $user->isAdmin();
+        $isAdmin = $user?->isAdmin() ?? false;
         $warehouseIds = $isAdmin ? [] : $user->warehouses()->pluck('warehouses.id')->toArray();
 
         $stockQuery = WarehouseStock::query();
@@ -30,7 +30,7 @@ final class WarehouseStockOverviewWidget extends StatsOverviewWidget
         $lowStockCount = 0;
         $variants = ProductVariant::with('product')->get();
         foreach ($variants as $variant) {
-            $reorderPoint = $variant->product->reorder_point ?? 0;
+            $reorderPoint = $variant->product?->reorder_point ?? 0;
             if ($reorderPoint <= 0) {
                 continue;
             }
@@ -44,12 +44,6 @@ final class WarehouseStockOverviewWidget extends StatsOverviewWidget
             }
         }
 
-        $transitQuery = InTransit::where('status', 'in_transit');
-        if (! $isAdmin) {
-            $transitQuery->whereIn('warehouse_id', $warehouseIds);
-        }
-        // InTransit doesn't have warehouse_id directly; check via requisition
-        // For simplicity, count all active in_transit shipments for admin, or filter by user's warehouses
         $activeShipments = InTransit::where('status', 'in_transit')
             ->whereHas('requisition', function ($q) use ($isAdmin, $warehouseIds): void {
                 if (! $isAdmin) {
