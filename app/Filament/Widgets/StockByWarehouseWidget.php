@@ -57,9 +57,9 @@ final class StockByWarehouseWidget extends Widget
         $this->warehouses = $warehouses->map(function (Warehouse $warehouse) {
             $totalQuantity = $warehouse->stockMovements()->sum('quantity');
             $productCount = $warehouse->stockMovements()
-                ->select('product_id')
+                ->join('product_variants', 'stock_movements.variant_id', '=', 'product_variants.id')
                 ->distinct()
-                ->count('product_id');
+                ->count('product_variants.product_id');
 
             return [
                 'id' => $warehouse->id,

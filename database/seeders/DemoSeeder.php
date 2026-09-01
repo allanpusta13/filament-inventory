@@ -76,12 +76,24 @@ final class DemoSeeder extends Seeder
         foreach ($products as $product) {
             $baseQty = $product->reorder_point > 50 ? (int) ($product->reorder_point * 1.8) : (int) ($product->reorder_point * 4);
 
+            // Get or create a variant for this product
+            $variant = $product->variants()->firstOrCreate([
+                'sku' => $product->sku.'-001',
+                'barcode' => null,
+                'name' => $product->name.' Default',
+                'attributes' => '{}',
+                'base_unit_name' => 'unit',
+                'cost_price' => 10.00,
+                'sale_price' => 20.00,
+            ]);
+
             StockMovement::factory()->create([
-                'product_id' => $product->id,
+                'variant_id' => $variant->id,
                 'warehouse_id' => $warehouses[0]->id,
                 'type' => MovementType::Receive,
                 'quantity' => $baseQty,
-                'reference' => 'INIT-001',
+                'reference_code' => 'INIT-001',
+                'created_by' => $admin->id,
                 'created_at' => $now->copy()->subDays(25),
             ]);
 
@@ -90,29 +102,32 @@ final class DemoSeeder extends Seeder
 
             if (in_array($product->sku, $outOfStockProducts)) {
                 StockMovement::factory()->create([
-                    'product_id' => $product->id,
+                    'variant_id' => $variant->id,
                     'warehouse_id' => $warehouses[0]->id,
                     'type' => MovementType::Ship,
                     'quantity' => -$baseQty,
-                    'reference' => 'SHIP-OOS',
+                    'reference_code' => 'SHIP-OOS',
+                    'created_by' => $admin->id,
                     'created_at' => $now->copy()->subDays(20),
                 ]);
             } elseif (in_array($product->sku, $lowStockProducts)) {
                 StockMovement::factory()->create([
-                    'product_id' => $product->id,
+                    'variant_id' => $variant->id,
                     'warehouse_id' => $warehouses[0]->id,
                     'type' => MovementType::Ship,
                     'quantity' => -(int) ($baseQty * 0.92),
-                    'reference' => 'SHIP-LOW',
+                    'reference_code' => 'SHIP-LOW',
+                    'created_by' => $admin->id,
                     'created_at' => $now->copy()->subDays(18),
                 ]);
             } else {
                 StockMovement::factory()->create([
-                    'product_id' => $product->id,
+                    'variant_id' => $variant->id,
                     'warehouse_id' => $warehouses[0]->id,
                     'type' => MovementType::Ship,
                     'quantity' => -(int) ($baseQty * 0.4),
-                    'reference' => 'SHIP-STD',
+                    'reference_code' => 'SHIP-STD',
+                    'created_by' => $admin->id,
                     'created_at' => $now->copy()->subDays(15),
                 ]);
             }
@@ -127,11 +142,12 @@ final class DemoSeeder extends Seeder
                     }
 
                     StockMovement::factory()->create([
-                        'product_id' => $product->id,
+                        'variant_id' => $variant->id,
                         'warehouse_id' => $warehouses[array_rand([0, 1, 2])]->id,
                         'type' => $type,
                         'quantity' => $qty,
-                        'reference' => mb_strtoupper($type->value).'-'.mb_str_pad((string) $day, 3, '0', STR_PAD_LEFT),
+                        'reference_code' => mb_strtoupper($type->value).'-'.mb_str_pad((string) $day, 3, '0', STR_PAD_LEFT),
+                        'created_by' => $admin->id,
                         'created_at' => $now->copy()->subDays($day)->addHours(rand(8, 17)),
                     ]);
                 }

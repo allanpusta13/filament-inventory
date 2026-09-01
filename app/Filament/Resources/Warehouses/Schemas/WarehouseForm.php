@@ -15,6 +15,10 @@ final class WarehouseForm
     {
         return $schema
             ->components([
+                TextInput::make('code')
+                    ->maxLength(10)
+                    ->required()
+                    ->unique(ignoreRecord: true),
                 TextInput::make('name')
                     ->maxLength(255)
                     ->required(),

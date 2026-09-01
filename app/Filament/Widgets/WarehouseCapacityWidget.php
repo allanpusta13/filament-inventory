@@ -41,8 +41,8 @@ final class WarehouseCapacityWidget extends Widget
         return $query->get()->map(function (Warehouse $warehouse) {
             $totalQty = StockMovement::where('warehouse_id', $warehouse->id)->sum('quantity');
             $productCount = StockMovement::where('warehouse_id', $warehouse->id)
-                ->distinct('product_id')
-                ->count('product_id');
+                ->distinct('variant_id')
+                ->count('variant_id');
 
             return [
                 'id' => $warehouse->id,
@@ -59,7 +59,7 @@ final class WarehouseCapacityWidget extends Widget
         $user = auth()->user();
         $warehouseIds = $this->getFilterWarehouseIds($user);
 
-        $query = StockMovement::with(['product', 'warehouse'])
+        $query = StockMovement::with(['variant.product', 'warehouse'])
             ->latest()
             ->limit(10);
 
@@ -69,11 +69,11 @@ final class WarehouseCapacityWidget extends Widget
 
         return $query->get()->map(fn (StockMovement $m) => [
             'id' => $m->id,
-            'product' => $m->product->name ?? 'Unknown',
+            'product' => $m->variant?->product?->name ?? 'Unknown',
             'warehouse' => $m->warehouse->name ?? 'Unknown',
             'type' => $m->type->value,
             'quantity' => $m->quantity,
-            'reference' => $m->reference,
+            'reference' => $m->reference_code,
             'created_at' => $m->created_at->format('M j, g:i A'),
         ])->toArray();
     }

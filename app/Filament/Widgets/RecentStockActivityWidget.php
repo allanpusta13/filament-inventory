@@ -36,7 +36,7 @@ final class RecentStockActivityWidget extends TableWidget
     public function table(Table $table): Table
     {
         $query = StockMovement::query()
-            ->with(['product', 'warehouse', 'createdBy'])
+            ->with(['variant.product', 'warehouse', 'creator'])
             ->latest();
 
         $user = auth()->user();
@@ -49,7 +49,7 @@ final class RecentStockActivityWidget extends TableWidget
         return $table
             ->query($query)
             ->columns([
-                TextColumn::make('product.name')
+                TextColumn::make('variant.product.name')
                     ->label('Product')
                     ->searchable()
                     ->sortable()
@@ -80,7 +80,7 @@ final class RecentStockActivityWidget extends TableWidget
                     ->sortable()
                     ->color(fn (StockMovement $record): string => $record->quantity > 0 ? 'success' : 'danger')
                     ->formatStateUsing(fn (StockMovement $record): string => $record->quantity > 0 ? '+'.number_format($record->quantity) : number_format($record->quantity)),
-                TextColumn::make('reference')
+                TextColumn::make('reference_code')
                     ->label('Reference')
                     ->limit(15)
                     ->placeholder('-'),

@@ -1,0 +1,25 @@
+{
+  "features": [
+    "Initialize Laravel 13 application framework",
+    "Install FilamentPHP v5",
+    "Install simplesoftwareio/simple-qrcode for QR Code support",
+    "Install barryvdh/laravel-dompdf for PDF Manifest rendering",
+    "Install pestphp/pest with laravel plugin for Pest Testing Framework",
+    "Install laravel/pint for code formatting",
+    "Configure environment variables in .env and .env.example",
+    "Set up database configuration (PostgreSQL/MySQL)",
+    "Configure cache, sessions, and queue connections",
+    "Implement Guardrail 1: High-precision decimals for financial fields",
+    "Implement Guardrail 2: Try-catch for firstOrCreate in InventoryService::recordMovement",
+    "Implement Guardrail 3: Eloquent observer for TransferRequisition soft-deletes",
+    "Implement Guardrail 4: Dynamic variant ID resolution in dispatchTransfer and scanToReceive",
+    "Implement Guardrail 5: Validation for positive quantities in lockStockForRequisition and dispatchTransfer",
+    "Implement Guardrail 6: Handle omitted items in scanToReceive (treat missing as zero qty)",
+    "Implement Guardrail 7: Custom signed route verification logic with Filament warning",
+    "Implement Guardrail 8: Cache widget sum calculations with 5-minute TTL",
+    "Implement Guardrail 10: CI/CD database isolation (in-memory SQLite for unit tests)",
+    "Run ./vendor/bin/pint for code formatting",
+    "Verify Filament admin console loads at http://localhost:8000/admin",
+    "Run ./vendor/bin/pest for test suite execution"
+  ]
+}

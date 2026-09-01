@@ -7,6 +7,7 @@ use App\Enums\UserRole;
 use App\Filament\Resources\CurrentStock\Pages\ListCurrentStock;
 use App\Filament\Widgets\LowStockAlertWidget;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\InventoryService;
@@ -16,6 +17,9 @@ use function Pest\Livewire\livewire;
 beforeEach(function (): void {
     $this->user = User::factory()->create(['role' => UserRole::Admin->value]);
     $this->product = Product::factory()->create(['reorder_point' => 10]);
+    $this->variant = ProductVariant::factory()->create([
+        'product_id' => $this->product->id,
+    ]);
     $this->warehouse = Warehouse::factory()->create(['is_active' => true]);
 });
 
@@ -30,17 +34,17 @@ it('shows aggregated stock quantities', function (): void {
     $this->actingAs($this->user);
 
     app(InventoryService::class)->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->warehouse->id,
         type: MovementType::Receive,
-        quantity: 50,
+        baseQuantity: 50,
     );
 
     app(InventoryService::class)->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->warehouse->id,
         type: MovementType::Ship,
-        quantity: -20,
+        baseQuantity: -20,
     );
 
     livewire(ListCurrentStock::class)
@@ -54,17 +58,17 @@ it('does not show zero-quantity rows', function (): void {
     $this->actingAs($this->user);
 
     app(InventoryService::class)->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->warehouse->id,
         type: MovementType::Receive,
-        quantity: 50,
+        baseQuantity: 50,
     );
 
     app(InventoryService::class)->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->warehouse->id,
         type: MovementType::Ship,
-        quantity: -50,
+        baseQuantity: -50,
     );
 
     livewire(ListCurrentStock::class)
@@ -83,10 +87,10 @@ it('shows products at or below reorder point in widget', function (): void {
     $this->actingAs($this->user);
 
     app(InventoryService::class)->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->warehouse->id,
         type: MovementType::Receive,
-        quantity: 5,
+        baseQuantity: 5,
     );
 
     Livewire\Livewire::test(LowStockAlertWidget::class)
@@ -98,10 +102,10 @@ it('does not show products above reorder point in widget', function (): void {
     $this->actingAs($this->user);
 
     app(InventoryService::class)->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->warehouse->id,
         type: MovementType::Receive,
-        quantity: 50,
+        baseQuantity: 50,
     );
 
     Livewire\Livewire::test(LowStockAlertWidget::class)
@@ -117,17 +121,17 @@ it('scopes current stock for non-admin users', function (): void {
     $staff->warehouses()->attach($warehouse1->id);
 
     app(InventoryService::class)->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $warehouse1->id,
         type: MovementType::Receive,
-        quantity: 25,
+        baseQuantity: 25,
     );
 
     app(InventoryService::class)->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $warehouse2->id,
         type: MovementType::Receive,
-        quantity: 75,
+        baseQuantity: 75,
     );
 
     $this->actingAs($staff);

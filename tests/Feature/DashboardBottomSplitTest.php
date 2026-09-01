@@ -33,9 +33,10 @@ describe('ProductCatalogWidget', function (): void {
         $this->actingAs($this->admin);
 
         $product = Product::factory()->create(['name' => 'Test Widget Product', 'sku' => 'TST-001']);
+        $variant = App\Models\ProductVariant::factory()->create(['product_id' => $product->id]);
 
         StockMovement::factory()->create([
-            'product_id' => $product->id,
+            'variant_id' => $variant->id,
             'warehouse_id' => $this->warehouse1->id,
             'type' => MovementType::Receive,
             'quantity' => 50,
@@ -51,16 +52,18 @@ describe('ProductCatalogWidget', function (): void {
 
         $product1 = Product::factory()->create(['name' => 'Staff Product']);
         $product2 = Product::factory()->create(['name' => 'Other WH Product']);
+        $variant1 = App\Models\ProductVariant::factory()->create(['product_id' => $product1->id]);
+        $variant2 = App\Models\ProductVariant::factory()->create(['product_id' => $product2->id]);
 
         StockMovement::factory()->create([
-            'product_id' => $product1->id,
+            'variant_id' => $variant1->id,
             'warehouse_id' => $this->warehouse1->id,
             'type' => MovementType::Receive,
             'quantity' => 30,
         ]);
 
         StockMovement::factory()->create([
-            'product_id' => $product2->id,
+            'variant_id' => $variant2->id,
             'warehouse_id' => $this->warehouse2->id,
             'type' => MovementType::Receive,
             'quantity' => 30,
@@ -76,16 +79,17 @@ describe('ProductCatalogWidget', function (): void {
         $this->actingAs($this->admin);
 
         $product = Product::factory()->create(['name' => 'Zero Stock Item']);
+        $variant = App\Models\ProductVariant::factory()->create(['product_id' => $product->id]);
 
         StockMovement::factory()->create([
-            'product_id' => $product->id,
+            'variant_id' => $variant->id,
             'warehouse_id' => $this->warehouse1->id,
             'type' => MovementType::Receive,
             'quantity' => 50,
         ]);
 
         StockMovement::factory()->create([
-            'product_id' => $product->id,
+            'variant_id' => $variant->id,
             'warehouse_id' => $this->warehouse1->id,
             'type' => MovementType::Ship,
             'quantity' => -50,
@@ -125,9 +129,10 @@ describe('WarehouseCapacityWidget', function (): void {
         $this->actingAs($this->admin);
 
         $product = Product::factory()->create(['name' => 'Audit Test Product']);
+        $variant = App\Models\ProductVariant::factory()->create(['product_id' => $product->id]);
 
         StockMovement::factory()->create([
-            'product_id' => $product->id,
+            'variant_id' => $variant->id,
             'warehouse_id' => $this->warehouse1->id,
             'type' => MovementType::Receive,
             'quantity' => 25,

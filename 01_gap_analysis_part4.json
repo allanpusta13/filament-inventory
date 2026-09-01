@@ -1,0 +1,34 @@
+{
+  "items": {
+    "Create seeders for initial product and warehouse data": {
+      "status": "COMPLETE",
+      "plan_path": "docs/00-project/plans/02-03-product-model.md",
+      "code_path": "database/seeders/",
+      "action_summary": "DemoSeeder.php and UserRoleSeeder.php exist for initial data"
+    },
+    "Write unit tests for InvariantStockService": {
+      "status": "MISSING",
+      "plan_path": null,
+      "code_path": null,
+      "action_summary": "Need to create unit tests for InvariantStockService"
+    },
+    "Write feature tests for product catalog endpoints": {
+      "status": "MISSING",
+      "plan_path": null,
+      "code_path": null,
+      "action_summary": "Need to create feature tests for product catalog endpoints"
+    },
+    "Verify pint passes after model creation": {
+      "status": "COMPLETE",
+      "plan_path": "docs/00-project/plans/02-03-product-model.md",
+      "code_path": "app/Models/",
+      "action_summary": "Pint passes after recent model creation/updates"
+    },
+    "Verify pest passes for new tests": {
+      "status": "BROKEN",
+      "plan_path": null,
+      "code_path": null,
+      "action_summary": "Existing tests are failing - need to fix test suite before writing new tests"
+    }
+  }
+}

@@ -4,41 +4,39 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 final class Product extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
-    #[Fillable(['sku', 'name', 'category', 'unit', 'reorder_point'])]
+    /**
+     * The attributes that are mass assignable.
+     */
     protected $fillable = [
         'sku',
         'name',
         'category',
-        'unit',
         'reorder_point',
     ];
 
     /**
-     * @return array<string, string>
+     * @return HasMany<ProductVariant, >
      */
-    protected $casts = [
-        'reorder_point' => 'integer',
-    ];
-
-    /**
-     * @return HasMany<StockMovement, $this>
-     */
-    public function stockMovements(): HasMany
+    public function variants(): HasMany
     {
-        return $this->hasMany(StockMovement::class);
+        return $this->hasMany(ProductVariant::class);
     }
 
-    public function totalQuantity(): int
+    /**
+     * @return HasManyThrough<StockMovement, ProductVariant>
+     */
+    public function stockMovements(): HasManyThrough
     {
-        return (int) $this->stockMovements()->sum('quantity');
+        return $this->hasManyThrough(StockMovement::class, ProductVariant::class, 'product_id', 'variant_id');
     }
 }

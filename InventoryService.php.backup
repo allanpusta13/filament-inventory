@@ -1,0 +1,200 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services;
+
+use App\Enums\MovementType;
+use App\Enums\TransferRequisitionStatus;
+use App\Models\InTransit;
+use App\Models\LossLedger;
+use App\Models\ProductVariant;
+use App\Models\StockMovement;
+use App\Models\TransferRequisition;
+use App\Models\User;
+use App\Models\WarehouseStock;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Database\QueryException;
+
+final class InventoryService
+{
+    public function recordMovement(
+        int $variantId,
+        int $warehouseId,
+        MovementType $type,
+        int|float $baseQuantity,
+        string $unitName,
+        float $unitRatio,
+        string $referenceType,
+        int $referenceId,
+        string $referenceCode,
+        ?int $userId = null
+    ): void {
+        StockMovement::create([
+            'variant_id' => $variantId,
+            'warehouse_id' => $warehouseId,
+            'type' => $type,
+            'quantity' => $baseQuantity,
+            'unit_name_used' => $unitName,
+            'unit_ratio_used' => $unitRatio,
+            'reference_type' => $referenceType,
+            'reference_id' => $referenceId,
+            'reference_code' => $referenceCode,
+            'created_by' => $userId ?? Auth::id(),
+        ]);
+    }
+
+    public function lockStockForRequisition(int $requisitionId): void
+    {
+        DB::transaction(function () use ($requisitionId) {
+            $requisition = TransferRequisition::with('items')->findOrFail($requisitionId);
+
+            foreach ($requisition->items as $item) {
+                $stock = WarehouseStock::where('variant_id', $item->variant_id)
+                    ->where('warehouse_id', $requisition->from_warehouse_id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                $neededBaseQty = $item->approved_base_qty ?? $item->requested_base_qty;
+
+                if (($stock->on_hand_quantity - $stock->reserved_quantity) < $neededBaseQty) {
+                    throw new Exception("Insufficient unreserved stock for variant {$item->variant_id}.");
+                }
+
+                $stock->reserved_quantity += $neededBaseQty;
+                $stock->save();
+            }
+
+            $requisition->update(['status' => TransferRequisitionStatus::Confirmed]);
+        });
+    }
+
+    public function dispatchTransfer(int $requisitionId): void
+    {
+        DB::transaction(function () use ($requisitionId) {
+            $requisition = TransferRequisition::with('items')->findOrFail($requisitionId);
+
+            if ($requisition->status !== TransferRequisitionStatus::Confirmed) {
+                throw new Exception('Requisition must be confirmed before dispatch.');
+            }
+
+            foreach ($requisition->items as $item) {
+                $dispatchQty = $item->approved_base_qty ?? $item->requested_base_qty;
+
+                $stock = WarehouseStock::where('variant_id', $item->variant_id)
+                    ->where('warehouse_id', $requisition->from_warehouse_id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                $stock->reserved_quantity -= $dispatchQty;
+                $stock->on_hand_quantity -= $dispatchQty;
+                $stock->save();
+
+                StockMovement::create([
+                    'variant_id' => $item->variant_id,
+                    'warehouse_id' => $requisition->from_warehouse_id,
+                    'type' => MovementType::TransitOut,
+                    'quantity' => -$dispatchQty,
+                    'unit_name_used' => $item->approved_unit_name ?? $item->requested_unit_name,
+                    'unit_ratio_used' => $item->approved_unit_ratio ?? $item->requested_unit_ratio,
+                    'reference_type' => TransferRequisition::class,
+                    'reference_id' => $requisition->id,
+                    'reference_code' => $requisition->reference_code,
+                    'created_by' => Auth::id(),
+                ]);
+
+                InTransit::create([
+                    'requisition_id' => $requisition->id,
+                    'requisition_item_id' => $item->id,
+                    'variant_id' => $item->variant_id,
+                    'dispatched_base_qty' => $dispatchQty,
+                    'dispatched_at' => now(),
+                    'status' => InTransitStatus::InTransit,
+                ]);
+
+                $item->update(['shipped_base_qty' => $dispatchQty]);
+            }
+
+            $requisition->update([
+                'status' => TransferRequisitionStatus::Dispatched,
+                'dispatched_by' => Auth::id(),
+                'dispatched_at' => now(),
+            ]);
+        });
+    }
+
+    public function scanToReceive(int $requisitionId, array $receivedItemsData, ?int $userId = null): void
+    {
+        DB::transaction(function () use ($requisitionId, $receivedItemsData, $userId) {
+            $requisition = TransferRequisition::with('items')->findOrFail($requisitionId);
+
+            $hasLossOrDamage = false;
+
+            foreach ($requisition->items as $item) {
+                if (! isset($receivedItemsData[$item->id])) {
+                    continue;
+                }
+
+                $entry = $receivedItemsData[$item->id];
+                $ratio = $item->approved_unit_ratio ?? $item->requested_unit_ratio;
+
+                $goodBase = $entry['good_qty'] * $ratio;
+                $damagedBase = $entry['damaged_qty'] * $ratio;
+                $expectedBase = $item->shipped_base_qty;
+
+                $lostBase = $expectedBase - ($goodBase + $damagedBase);
+
+                if ($goodBase > 0) {
+                    $this->recordMovement(
+                        variantId: $item->variant_id,
+                        warehouseId: $requisition->to_warehouse_id,
+                        type: MovementType::TransitIn,
+                        baseQuantity: $goodBase,
+                        unitName: $item->approved_unit_name ?? $item->requested_unit_name,
+                        unitRatio: $ratio,
+                        referenceType: TransferRequisition::class,
+                        referenceId: $requisition->id,
+                        referenceCode: $requisition->reference_code
+                    );
+                }
+
+                if ($damagedBase > 0 || $lostBase > 0) {
+                    $hasLossOrDamage = true;
+                    $variant = ProductVariant::findOrFail($item->variant_id);
+
+                    LossLedger::create([
+                        'requisition_id' => $requisition->id,
+                        'requisition_item_id' => $item->id,
+                        'variant_id' => $item->variant_id,
+                        'warehouse_id' => $requisition->to_warehouse_id,
+                        'lost_base_qty' => max(0, $lostBase),
+                        'damaged_base_qty' => $damagedBase,
+                        'unit_cost_price' => $variant->cost_price,
+                        'total_financial_loss' => (max(0, $lostBase) + $damagedBase) * $variant->cost_price,
+                        'loss_category' => $entry['loss_category'] ?? 'Transit Variance',
+                        'recorded_by' => $userId ?? Auth::id(),
+                        'recorded_at' => now(),
+                    ]);
+                }
+
+                $item->update([
+                    'received_good_base_qty' => $goodBase,
+                    'received_damaged_base_qty' => $damagedBase,
+                ]);
+
+                InTransit::where('requisition_item_id', $item->id)->update([
+                    'received_base_qty' => $goodBase + $damagedBase,
+                    'received_at' => now(),
+                    'status' => InTransitStatus::Received,
+                ]);
+            }
+
+            $requisition->update([
+                'status' => $hasLossOrDamage ? TransferRequisitionStatus::ClosedWithLoss : TransferRequisitionStatus::Completed,
+                'received_by' => $userId ?? Auth::id(),
+                'received_at' => now(),
+            ]);
+        });
+    }
+}

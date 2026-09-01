@@ -9,20 +9,24 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 final class StockMovement extends Model
 {
     use HasFactory;
 
-    #[Fillable(['product_id', 'warehouse_id', 'type', 'quantity', 'related_movement_id', 'reference', 'created_by'])]
+    #[Fillable(['variant_id', 'warehouse_id', 'type', 'quantity', 'unit_name_used', 'unit_ratio_used', 'related_movement_id', 'reference_type', 'reference_id', 'reference_code', 'created_by'])]
     protected $fillable = [
-        'product_id',
+        'variant_id',
         'warehouse_id',
         'type',
         'quantity',
+        'unit_name_used',
+        'unit_ratio_used',
         'related_movement_id',
-        'reference',
+        'reference_type',
+        'reference_id',
+        'reference_code',
         'created_by',
     ];
 
@@ -30,16 +34,17 @@ final class StockMovement extends Model
      * @return array<string, string>
      */
     protected $casts = [
-        'type' => MovementType::class,
         'quantity' => 'integer',
+        'unit_ratio_used' => 'integer',
+        'type' => MovementType::class,
     ];
 
     /**
-     * @return BelongsTo<Product, $this>
+     * @return BelongsTo<ProductVariant, $this>
      */
-    public function product(): BelongsTo
+    public function variant(): BelongsTo
     {
-        return $this->belongsTo(Product::class);
+        return $this->belongsTo(ProductVariant::class);
     }
 
     /**
@@ -58,30 +63,17 @@ final class StockMovement extends Model
         return $this->belongsTo(self::class, 'related_movement_id');
     }
 
+    public function reference(): MorphTo
+    {
+        return $this->morphTo();
+    }
+
     /**
      * @return BelongsTo<User, $this>
      */
-    public function createdBy(): BelongsTo
+    public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
-    }
-
-    public function getCounterpartWarehouseAttribute(): ?string
-    {
-        return match ($this->type) {
-            MovementType::TransferIn => $this->relatedMovement?->warehouse?->name,
-            MovementType::TransferOut => $this->inwardMovement?->warehouse?->name,
-            default => null,
-        };
-    }
-
-    /**
-     * For TransferOut: find the corresponding TransferIn row
-     * where related_movement_id points to this row.
-     */
-    public function inwardMovement(): HasOne
-    {
-        return $this->hasOne(self::class, 'related_movement_id');
     }
 
     protected static function boot(): void

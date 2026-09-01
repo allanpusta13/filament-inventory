@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Database\Factories;
 
 use App\Enums\MovementType;
-use App\Models\Product;
 use App\Models\StockMovement;
 use App\Models\User;
 use App\Models\Warehouse;
@@ -22,11 +21,13 @@ final class StockMovementFactory extends Factory
     public function definition(): array
     {
         return [
-            'product_id' => Product::factory(),
+            'variant_id' => \App\Models\ProductVariant::factory(),
             'warehouse_id' => Warehouse::factory(),
             'type' => MovementType::Receive,
             'quantity' => fake()->numberBetween(1, 100),
-            'reference' => fake()->optional()->words(3, true),
+            'unit_name_used' => 'Base Unit',
+            'unit_ratio_used' => 1,
+            'reference_code' => fake()->optional()->words(3, true),
             'created_by' => User::factory(),
         ];
     }

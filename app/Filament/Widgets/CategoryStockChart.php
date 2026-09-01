@@ -60,7 +60,8 @@ final class CategoryStockChart extends ChartWidget
                 COALESCE(products.category, 'Uncategorized') as category,
                 SUM(stock_movements.quantity) as total_quantity
             ")
-            ->join('products', 'products.id', '=', 'stock_movements.product_id')
+            ->join('product_variants', 'product_variants.id', '=', 'stock_movements.variant_id')
+            ->join('products', 'products.id', '=', 'product_variants.product_id')
             ->groupBy('category')
             ->havingRaw('SUM(stock_movements.quantity) > 0')
             ->orderByDesc('total_quantity');

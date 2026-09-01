@@ -7,6 +7,7 @@ use App\Actions\ReceiveTransferAction;
 use App\Enums\MovementType;
 use App\Enums\TransferOrderStatus;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\StockMovement;
 use App\Models\TransferOrder;
 use App\Models\TransferOrderItem;
@@ -30,14 +31,15 @@ beforeEach(function (): void {
     $this->receiverStaff = User::factory()->warehouseStaff()->create();
     $this->receiverStaff->warehouses()->attach($this->receiverWarehouse->id);
     $this->product = Product::factory()->create();
+    $this->variant = ProductVariant::factory()->create(['product_id' => $this->product->id]);
 });
 
 test('it receives a dispatched order', function (): void {
     $this->service->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->senderWarehouse->id,
         type: MovementType::Receive,
-        quantity: 100,
+        baseQuantity: 100,
     );
 
     $order = TransferOrder::factory()->confirmed()->create([
@@ -67,7 +69,7 @@ test('it receives a dispatched order', function (): void {
         ->and($item->received_quantity)->toBe(30);
 
     assertDatabaseHas(StockMovement::class, [
-        'product_id' => $this->product->id,
+        'variant_id' => $this->variant->id,
         'warehouse_id' => $this->receiverWarehouse->id,
         'type' => MovementType::TransferIn,
         'quantity' => 30,
@@ -76,10 +78,10 @@ test('it receives a dispatched order', function (): void {
 
 test('it sets received_by and received_at', function (): void {
     $this->service->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->senderWarehouse->id,
         type: MovementType::Receive,
-        quantity: 50,
+        baseQuantity: 50,
     );
 
     $order = TransferOrder::factory()->confirmed()->create([
@@ -108,10 +110,10 @@ test('it sets received_by and received_at', function (): void {
 
 test('it handles partial receive with reason', function (): void {
     $this->service->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->senderWarehouse->id,
         type: MovementType::Receive,
-        quantity: 100,
+        baseQuantity: 100,
     );
 
     $order = TransferOrder::factory()->confirmed()->create([
@@ -140,10 +142,10 @@ test('it handles partial receive with reason', function (): void {
 
 test('it allows partial receive without reason', function (): void {
     $this->service->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->senderWarehouse->id,
         type: MovementType::Receive,
-        quantity: 100,
+        baseQuantity: 100,
     );
 
     $order = TransferOrder::factory()->confirmed()->create([
@@ -172,10 +174,10 @@ test('it allows partial receive without reason', function (): void {
 
 test('it rejects over-receiving', function (): void {
     $this->service->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->senderWarehouse->id,
         type: MovementType::Receive,
-        quantity: 100,
+        baseQuantity: 100,
     );
 
     $order = TransferOrder::factory()->confirmed()->create([
@@ -199,18 +201,19 @@ test('it rejects over-receiving', function (): void {
 
 test('it creates transfer_in movements for each item', function (): void {
     $product2 = Product::factory()->create();
+    $variant2 = ProductVariant::factory()->create(['product_id' => $product2->id]);
 
     $this->service->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->senderWarehouse->id,
         type: MovementType::Receive,
-        quantity: 100,
+        baseQuantity: 100,
     );
     $this->service->recordMovement(
-        productId: $product2->id,
+        variantId: $variant2->id,
         warehouseId: $this->senderWarehouse->id,
         type: MovementType::Receive,
-        quantity: 100,
+        baseQuantity: 100,
     );
 
     $order = TransferOrder::factory()->confirmed()->create([
@@ -239,14 +242,14 @@ test('it creates transfer_in movements for each item', function (): void {
     ]);
 
     assertDatabaseHas(StockMovement::class, [
-        'product_id' => $this->product->id,
+        'variant_id' => $this->variant->id,
         'warehouse_id' => $this->receiverWarehouse->id,
         'type' => MovementType::TransferIn,
         'quantity' => 20,
     ]);
 
     assertDatabaseHas(StockMovement::class, [
-        'product_id' => $product2->id,
+        'variant_id' => $variant2->id,
         'warehouse_id' => $this->receiverWarehouse->id,
         'type' => MovementType::TransferIn,
         'quantity' => 15,
@@ -292,10 +295,10 @@ test('it rejects already received order', function (): void {
 
 test('it rejects receive from unauthorized user', function (): void {
     $this->service->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->senderWarehouse->id,
         type: MovementType::Receive,
-        quantity: 100,
+        baseQuantity: 100,
     );
 
     $order = TransferOrder::factory()->confirmed()->create([
@@ -321,10 +324,10 @@ test('it rejects receive from unauthorized user', function (): void {
 
 test('it allows admin to receive any order', function (): void {
     $this->service->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->senderWarehouse->id,
         type: MovementType::Receive,
-        quantity: 100,
+        baseQuantity: 100,
     );
 
     $order = TransferOrder::factory()->confirmed()->create([
@@ -351,10 +354,10 @@ test('it allows admin to receive any order', function (): void {
 
 test('it updates item reason on partial receive', function (): void {
     $this->service->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->senderWarehouse->id,
         type: MovementType::Receive,
-        quantity: 100,
+        baseQuantity: 100,
     );
 
     $order = TransferOrder::factory()->confirmed()->create([

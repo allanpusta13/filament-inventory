@@ -141,7 +141,7 @@ final class ProductPriceResource extends Resource
     public static function getPages(): array
     {
         return [
-        // TODO: Fix the routes for the ProductPriceResource pages. The current routes are commented out and need to be updated to match the correct page classes.
+            // TODO: Fix the routes for the ProductPriceResource pages. The current routes are commented out and need to be updated to match the correct page classes.
             // 'index' => ListProductPrices::route('/'),
             // 'create' => CreateProductPrice::route('/create'),
             // 'edit' => EditProductPrice::route('/{record}/edit'),

@@ -11,6 +11,7 @@ enum InTransitStatus: string implements HasColor, HasLabel
 {
     case InTransit = 'in_transit';
     case PartiallyReceived = 'partially_received';
+    case Received = 'received';
     case Cleared = 'cleared';
 
     public function getColor(): string|array|null
@@ -18,6 +19,7 @@ enum InTransitStatus: string implements HasColor, HasLabel
         return match ($this) {
             self::InTransit => 'info',
             self::PartiallyReceived => 'warning',
+            self::Received => 'success',
             self::Cleared => 'success',
         };
     }
@@ -27,6 +29,7 @@ enum InTransitStatus: string implements HasColor, HasLabel
         return match ($this) {
             self::InTransit => 'In Transit',
             self::PartiallyReceived => 'Partially Received',
+            self::Received => 'Received',
             self::Cleared => 'Cleared',
         };
     }

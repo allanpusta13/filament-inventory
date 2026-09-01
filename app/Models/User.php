@@ -100,6 +100,32 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
         $this->save();
     }
 
+    public function isAuditor(): bool
+    {
+        return ($this->attributes['role'] ?? null) === UserRole::Auditor->value;
+    }
+
+    public function hasAccessToWarehouse(int $warehouseId): bool
+    {
+        return $this->isAdmin() || $this->isAuditor() || $this->warehouses()->where('id', $warehouseId)->exists();
+    }
+
+    /**
+     * Check if the user is a branch manager.
+     */
+    public function isBranchManager(): bool
+    {
+        return ($this->attributes['role'] ?? null) === UserRole::BranchManager->value;
+    }
+
+    /**
+     * Check if the user is a warehouse staff.
+     */
+    public function isWarehouseStaff(): bool
+    {
+        return ($this->attributes['role'] ?? null) === UserRole::WarehouseStaff->value;
+    }
+
     /**
      * Get the attributes that should be cast.
      *

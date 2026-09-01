@@ -24,13 +24,13 @@ final class StockMovementResource extends Resource
 
     protected static ?int $navigationSort = 20;
 
-    protected static ?string $recordTitleAttribute = 'reference';
+    protected static ?string $recordTitleAttribute = 'reference_code';
 
     public static function getGloballySearchableAttributes(): array
     {
         return [
-            'reference',
-            'product.name',
+            'reference_code',
+            'variant.product.name',
             'warehouse.name',
         ];
     }

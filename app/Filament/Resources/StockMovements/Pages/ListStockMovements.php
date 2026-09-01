@@ -60,12 +60,23 @@ final class ListStockMovements extends ListRecords
                     ->maxLength(255),
             ])
             ->action(function (array $data): void {
+                $variant = \App\Models\ProductVariant::where('product_id', $data['product_id'])->first();
+
+                if ($variant === null) {
+                    Notification::make()
+                        ->title('No variant found for selected product')
+                        ->danger()
+                        ->send();
+
+                    return;
+                }
+
                 app(InventoryService::class)->recordMovement(
-                    productId: (int) $data['product_id'],
+                    variantId: $variant->id,
                     warehouseId: (int) $data['warehouse_id'],
                     type: MovementType::Receive,
-                    quantity: (int) $data['quantity'],
-                    reference: $data['reference'] ?? null,
+                    baseQuantity: (int) $data['quantity'],
+                    referenceCode: $data['reference'] ?? null,
                 );
 
                 Notification::make()
@@ -102,11 +113,23 @@ final class ListStockMovements extends ListRecords
             ])
             ->action(function (array $data): void {
                 try {
-                    app(InventoryService::class)->ship(
-                        productId: (int) $data['product_id'],
+                    $variant = \App\Models\ProductVariant::where('product_id', $data['product_id'])->first();
+
+                    if ($variant === null) {
+                        Notification::make()
+                            ->title('No variant found for selected product')
+                            ->danger()
+                            ->send();
+
+                        return;
+                    }
+
+                    app(InventoryService::class)->recordMovement(
+                        variantId: $variant->id,
                         warehouseId: (int) $data['warehouse_id'],
-                        quantity: (int) $data['quantity'],
-                        reference: $data['reference'] ?? null,
+                        type: MovementType::Ship,
+                        baseQuantity: -(int) $data['quantity'],
+                        referenceCode: $data['reference'] ?? null,
                     );
 
                     Notification::make()
@@ -154,12 +177,33 @@ final class ListStockMovements extends ListRecords
                     ->maxLength(255),
             ])
             ->action(function (array $data): void {
-                app(InventoryService::class)->transfer(
-                    productId: (int) $data['product_id'],
-                    fromWarehouseId: (int) $data['from_warehouse_id'],
-                    toWarehouseId: (int) $data['to_warehouse_id'],
-                    quantity: (int) $data['quantity'],
-                    reference: $data['reference'] ?? null,
+                $variant = \App\Models\ProductVariant::where('product_id', $data['product_id'])->first();
+
+                if ($variant === null) {
+                    Notification::make()
+                        ->title('No variant found for selected product')
+                        ->danger()
+                        ->send();
+
+                    return;
+                }
+
+                // Record transfer out from source warehouse
+                app(InventoryService::class)->recordMovement(
+                    variantId: $variant->id,
+                    warehouseId: (int) $data['from_warehouse_id'],
+                    type: MovementType::TransferOut,
+                    baseQuantity: -(int) $data['quantity'],
+                    referenceCode: $data['reference'] ?? null,
+                );
+
+                // Record transfer in to destination warehouse
+                app(InventoryService::class)->recordMovement(
+                    variantId: $variant->id,
+                    warehouseId: (int) $data['to_warehouse_id'],
+                    type: MovementType::TransferIn,
+                    baseQuantity: (int) $data['quantity'],
+                    referenceCode: $data['reference'] ?? null,
                 );
 
                 Notification::make()
@@ -196,12 +240,23 @@ final class ListStockMovements extends ListRecords
                     ->maxLength(255),
             ])
             ->action(function (array $data): void {
+                $variant = \App\Models\ProductVariant::where('product_id', $data['product_id'])->first();
+
+                if ($variant === null) {
+                    Notification::make()
+                        ->title('No variant found for selected product')
+                        ->danger()
+                        ->send();
+
+                    return;
+                }
+
                 app(InventoryService::class)->recordMovement(
-                    productId: (int) $data['product_id'],
+                    variantId: $variant->id,
                     warehouseId: (int) $data['warehouse_id'],
                     type: MovementType::Adjustment,
-                    quantity: (int) $data['quantity'],
-                    reference: $data['reference'],
+                    baseQuantity: (int) $data['quantity'],
+                    referenceCode: $data['reference'],
                 );
 
                 Notification::make()

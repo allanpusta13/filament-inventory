@@ -1,0 +1,34 @@
+{
+  "items": {
+    "Generate Product, ProductVariant, Warehouse, WarehouseStock models": {
+      "status": "COMPLETE",
+      "plan_path": "docs/00-project/plans/02-02-warehouse-model.md",
+      "code_path": "app/Models/",
+      "action_summary": "All required models exist: Product.php, ProductVariant.php, Warehouse.php, WarehouseStock.php"
+    },
+    "Set up relationships between product and variant models": {
+      "status": "COMPLETE",
+      "plan_path": "docs/00-project/plans/02-03-product-model.md",
+      "code_path": "app/Models/Product.php and app/Models/ProductVariant.php",
+      "action_summary": "Product hasMany ProductVariant, ProductVariant belongsTo Product"
+    },
+    "Set up relationships between warehouse and stock models": {
+      "status": "COMPLETE",
+      "plan_path": "docs/00-project/plans/02-02-warehouse-model.md",
+      "code_path": "app/Models/Warehouse.php and app/Models/WarehouseStock.php",
+      "action_summary": "Warehouse hasMany WarehouseStock, WarehouseStock belongsTo Warehouse"
+    },
+    "Create database migrations for all tables": {
+      "status": "COMPLETE",
+      "plan_path": "docs/00-project/plans/02-01-migrations-products-warehouses-stock-movements.md",
+      "code_path": "database/migrations/",
+      "action_summary": "All required migrations exist for products, variants, warehouses, stock movements"
+    },
+    "Run migrations to establish database schema": {
+      "status": "COMPLETE",
+      "plan_path": "docs/00-project/plans/02-01-migrations-products-warehouses-stock-movements.md",
+      "code_path": "database/",
+      "action_summary": "Migrations have been run (verified by migrate:status showing all as Ran)"
+    }
+  }
+}

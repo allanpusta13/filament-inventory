@@ -28,11 +28,11 @@ describe('ProductPolicy', function (): void {
         expect($policy->viewAny($this->admin))->toBeTrue();
     });
 
-    test('non-admin cannot view any products', function (): void {
+    test('non-admin can view any products', function (): void {
         $policy = new App\Policies\ProductPolicy();
-        expect($policy->viewAny($this->staff))->toBeFalse();
-        expect($policy->viewAny($this->auditor))->toBeFalse();
-        expect($policy->viewAny($this->manager))->toBeFalse();
+        expect($policy->viewAny($this->staff))->toBeTrue();
+        expect($policy->viewAny($this->auditor))->toBeTrue();
+        expect($policy->viewAny($this->manager))->toBeTrue();
     });
 
     test('admin can view a product', function (): void {
@@ -41,12 +41,12 @@ describe('ProductPolicy', function (): void {
         expect($policy->view($this->admin, $product))->toBeTrue();
     });
 
-    test('non-admin cannot view a product', function (): void {
+    test('non-admin can view a product', function (): void {
         $policy = new App\Policies\ProductPolicy();
         $product = Product::factory()->create();
-        expect($policy->view($this->staff, $product))->toBeFalse();
-        expect($policy->view($this->auditor, $product))->toBeFalse();
-        expect($policy->view($this->manager, $product))->toBeFalse();
+        expect($policy->view($this->staff, $product))->toBeTrue();
+        expect($policy->view($this->auditor, $product))->toBeTrue();
+        expect($policy->view($this->manager, $product))->toBeTrue();
     });
 
     test('admin can create products', function (): void {
@@ -230,11 +230,13 @@ describe('TransferRequisitionPolicy', function (): void {
         expect($policy->update($this->admin, $requisition))->toBeTrue();
     });
 
-    test('staff can update transfer requisition for assigned warehouse', function (): void {
+test('staff can update transfer requisition for assigned warehouse', function (): void {
         $policy = new App\Policies\TransferRequisitionPolicy();
         $requisition = TransferRequisition::factory()->create([
             'from_warehouse_id' => $this->wh1->id,
             'to_warehouse_id' => $this->wh2->id,
+            'status' => 'draft',
+            'requested_by' => $this->staff->id,
         ]);
         expect($policy->update($this->staff, $requisition))->toBeTrue();
     });

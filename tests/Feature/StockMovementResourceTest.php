@@ -14,6 +14,7 @@ use function Pest\Livewire\livewire;
 beforeEach(function (): void {
     $this->user = User::factory()->create(['role' => 'admin']);
     $this->product = Product::factory()->create();
+    $this->variant = App\Models\ProductVariant::factory()->create(['product_id' => $this->product->id]);
     $this->warehouse = Warehouse::factory()->create();
 });
 
@@ -42,7 +43,7 @@ it('displays movement type as badge', function (): void {
     $this->actingAs($this->user);
 
     StockMovement::factory()->create([
-        'product_id' => $this->product->id,
+        'variant_id' => $this->variant->id,
         'warehouse_id' => $this->warehouse->id,
         'type' => MovementType::Receive,
         'quantity' => 100,
@@ -56,14 +57,14 @@ it('can filter by direction incoming', function (): void {
     $this->actingAs($this->user);
 
     $receive = StockMovement::factory()->create([
-        'product_id' => $this->product->id,
+        'variant_id' => $this->variant->id,
         'warehouse_id' => $this->warehouse->id,
         'type' => MovementType::Receive,
         'quantity' => 100,
     ]);
 
     $ship = StockMovement::factory()->create([
-        'product_id' => $this->product->id,
+        'variant_id' => $this->variant->id,
         'warehouse_id' => $this->warehouse->id,
         'type' => MovementType::Ship,
         'quantity' => -50,
@@ -80,14 +81,14 @@ it('can filter by direction outgoing', function (): void {
     $this->actingAs($this->user);
 
     $receive = StockMovement::factory()->create([
-        'product_id' => $this->product->id,
+        'variant_id' => $this->variant->id,
         'warehouse_id' => $this->warehouse->id,
         'type' => MovementType::Receive,
         'quantity' => 100,
     ]);
 
     $ship = StockMovement::factory()->create([
-        'product_id' => $this->product->id,
+        'variant_id' => $this->variant->id,
         'warehouse_id' => $this->warehouse->id,
         'type' => MovementType::Ship,
         'quantity' => -50,
@@ -113,13 +114,13 @@ it('can sort by type', function (): void {
 
     $records = collect([
         StockMovement::factory()->create([
-            'product_id' => $this->product->id,
+            'variant_id' => $this->variant->id,
             'warehouse_id' => $this->warehouse->id,
             'type' => MovementType::Receive,
             'quantity' => 100,
         ]),
         StockMovement::factory()->create([
-            'product_id' => $this->product->id,
+            'variant_id' => $this->variant->id,
             'warehouse_id' => $this->warehouse->id,
             'type' => MovementType::Ship,
             'quantity' => -50,

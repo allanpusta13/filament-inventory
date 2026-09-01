@@ -16,6 +16,7 @@ use function Pest\Livewire\livewire;
 beforeEach(function (): void {
     $this->user = User::factory()->create(['role' => UserRole::Admin->value]);
     $this->product = Product::factory()->create();
+    $this->variant = App\Models\ProductVariant::factory()->create(['product_id' => $this->product->id]);
     $this->warehouse = Warehouse::factory()->create(['is_active' => true]);
 });
 
@@ -39,11 +40,11 @@ it('can receive stock', function (): void {
         ]);
 
     $this->assertDatabaseHas(StockMovement::class, [
-        'product_id' => $this->product->id,
+        'variant_id' => $this->variant->id,
         'warehouse_id' => $this->warehouse->id,
         'type' => MovementType::Receive,
         'quantity' => 50,
-        'reference' => 'PO-001',
+        'reference_code' => 'PO-001',
     ]);
 });
 
@@ -59,10 +60,10 @@ it('can ship stock', function (): void {
     $this->actingAs($this->user);
 
     app(InventoryService::class)->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->warehouse->id,
         type: MovementType::Receive,
-        quantity: 100,
+        baseQuantity: 100,
     );
 
     livewire(ListStockMovements::class)
@@ -74,11 +75,11 @@ it('can ship stock', function (): void {
         ]);
 
     $this->assertDatabaseHas(StockMovement::class, [
-        'product_id' => $this->product->id,
+        'variant_id' => $this->variant->id,
         'warehouse_id' => $this->warehouse->id,
         'type' => MovementType::Ship,
         'quantity' => -30,
-        'reference' => 'SO-001',
+        'reference_code' => 'SO-001',
     ]);
 });
 
@@ -94,7 +95,7 @@ it('fails ship with insufficient stock', function (): void {
         ]);
 
     $this->assertDatabaseMissing(StockMovement::class, [
-        'product_id' => $this->product->id,
+        'variant_id' => $this->variant->id,
         'type' => MovementType::Ship,
     ]);
 });
@@ -113,10 +114,10 @@ it('can transfer stock', function (): void {
     $toWarehouse = Warehouse::factory()->create(['is_active' => true]);
 
     app(InventoryService::class)->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->warehouse->id,
         type: MovementType::Receive,
-        quantity: 100,
+        baseQuantity: 100,
     );
 
     livewire(ListStockMovements::class)
@@ -129,17 +130,19 @@ it('can transfer stock', function (): void {
         ]);
 
     $this->assertDatabaseHas(StockMovement::class, [
-        'product_id' => $this->product->id,
+        'variant_id' => $this->variant->id,
         'warehouse_id' => $this->warehouse->id,
         'type' => MovementType::TransferOut,
         'quantity' => -25,
+        'reference_code' => 'TR-001',
     ]);
 
     $this->assertDatabaseHas(StockMovement::class, [
-        'product_id' => $this->product->id,
+        'variant_id' => $this->variant->id,
         'warehouse_id' => $toWarehouse->id,
         'type' => MovementType::TransferIn,
         'quantity' => 25,
+        'reference_code' => 'TR-001',
     ]);
 });
 
@@ -163,11 +166,11 @@ it('can make positive adjustment', function (): void {
         ]);
 
     $this->assertDatabaseHas(StockMovement::class, [
-        'product_id' => $this->product->id,
+        'variant_id' => $this->variant->id,
         'warehouse_id' => $this->warehouse->id,
         'type' => MovementType::Adjustment,
         'quantity' => 10,
-        'reference' => 'Annual count +10',
+        'reference_code' => 'Annual count +10',
     ]);
 });
 
@@ -175,10 +178,10 @@ it('can make negative adjustment', function (): void {
     $this->actingAs($this->user);
 
     app(InventoryService::class)->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->warehouse->id,
         type: MovementType::Receive,
-        quantity: 50,
+        baseQuantity: 50,
     );
 
     livewire(ListStockMovements::class)
@@ -190,11 +193,11 @@ it('can make negative adjustment', function (): void {
         ]);
 
     $this->assertDatabaseHas(StockMovement::class, [
-        'product_id' => $this->product->id,
+        'variant_id' => $this->variant->id,
         'warehouse_id' => $this->warehouse->id,
         'type' => MovementType::Adjustment,
         'quantity' => -5,
-        'reference' => 'Damaged goods -5',
+        'reference_code' => 'Damaged goods -5',
     ]);
 });
 

@@ -74,7 +74,7 @@ it('recordMovement throws exception for insufficient stock', function () {
         type: MovementType::Ship,
         baseQuantity: -6000,
     );
-})->throws(Exception::class, 'Insufficient stock available');
+})->throws(Exception::class, 'Insufficient stock for product');
 
 it('recordMovement creates warehouse stock if not exists', function () {
     $wh3 = Warehouse::factory()->create();
@@ -295,7 +295,7 @@ it('scanToReceive handles partial loss and creates loss ledger entry', function 
 
     expect($requisition->fresh()->status->value)->toBe('closed_with_loss');
 
-    $this->assertDatabaseHas('loss_ledger', [
+    $this->assertDatabaseHas('loss_ledgers', [
         'variant_id' => $this->variant->id,
         'damaged_base_qty' => 10,
         'lost_base_qty' => 10,

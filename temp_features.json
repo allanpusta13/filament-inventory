@@ -1,0 +1,12 @@
+{
+  "features": [
+    "Install Laravel 13 application framework",
+    "Install FilamentPHP v5",
+    "Install QR code support (simplesoftwareio/simple-qrcode)",
+    "Install PDF Manifest rendering (barryvdh/laravel-dompdf)",
+    "Install Pest Testing Framework with Laravel Plugin",
+    "Install Laravel Pint for code formatting",
+    "Configure environment variables (.env and .env.example)",
+    "Implement 10 Core Architectural Guardrails"
+  ]
+}

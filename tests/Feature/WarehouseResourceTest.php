@@ -75,6 +75,7 @@ it('admin can create a warehouse', function (): void {
 
     livewire(CreateWarehouse::class)
         ->fillForm([
+            'code' => $warehouse->code,
             'name' => $warehouse->name,
             'location' => $warehouse->location,
             'is_active' => $warehouse->is_active,
@@ -83,6 +84,7 @@ it('admin can create a warehouse', function (): void {
         ->assertNotified();
 
     assertDatabaseHas(Warehouse::class, [
+        'code' => $warehouse->code,
         'name' => $warehouse->name,
         'location' => $warehouse->location,
     ]);

@@ -18,7 +18,7 @@ final class StockMovementsTable
         return $table
             ->deferFilters(false)
             ->columns([
-                TextColumn::make('product.name')
+                TextColumn::make('variant.product.name')
                     ->label('Product')
                     ->sortable()
                     ->searchable(),
@@ -35,7 +35,7 @@ final class StockMovementsTable
                     ->color(function (int $state): string {
                         return $state > 0 ? 'success' : 'danger';
                     }),
-                TextColumn::make('reference')
+                TextColumn::make('reference_code')
                     ->sortable()
                     ->searchable()
                     ->toggleable(),
@@ -46,7 +46,7 @@ final class StockMovementsTable
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable(),
-                TextColumn::make('createdBy.name')
+                TextColumn::make('creator.name')
                     ->label('Created By')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),

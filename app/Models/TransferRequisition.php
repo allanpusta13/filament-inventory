@@ -5,14 +5,16 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\TransferRequisitionStatus;
+use Exception;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 final class TransferRequisition extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'reference_code',
@@ -30,9 +32,6 @@ final class TransferRequisition extends Model
         'notes',
     ];
 
-    /**
-     * @return array<string, string>
-     */
     protected $casts = [
         'status' => TransferRequisitionStatus::class,
         'requested_at' => 'datetime',
@@ -40,18 +39,6 @@ final class TransferRequisition extends Model
         'dispatched_at' => 'datetime',
         'completed_at' => 'datetime',
     ];
-
-    public static function generateReferenceCode(): string
-    {
-        $year = date('Y');
-        $last = self::where('reference_code', 'like', "TRQ-{$year}-%")
-            ->orderByDesc('reference_code')
-            ->value('reference_code');
-
-        $sequence = $last ? ((int) mb_substr($last, -4) + 1) : 1;
-
-        return sprintf('TRQ-%s-%04d', $year, $sequence);
-    }
 
     /**
      * @return BelongsTo<Warehouse, $this>
@@ -107,5 +94,31 @@ final class TransferRequisition extends Model
     public function items(): HasMany
     {
         return $this->hasMany(TransferRequisitionItem::class, 'requisition_id');
+    }
+
+    protected static function booted()
+    {
+        self::deleting(function (TransferRequisition $requisition) {
+            if ($requisition->status === 'dispatched') {
+                throw new Exception('Cannot delete a requisition that is currently in transit (Dispatched status).');
+            }
+
+            if ($requisition->status === 'confirmed') {
+                \Illuminate\Support\Facades\DB::transaction(function () use ($requisition) {
+                    foreach ($requisition->items as $item) {
+                        $stock = WarehouseStock::where('variant_id', $item->variant_id)
+                            ->where('warehouse_id', $requisition->from_warehouse_id)
+                            ->lockForUpdate()
+                            ->first();
+
+                        if ($stock) {
+                            $releaseQty = $item->approved_base_qty ?? $item->requested_base_qty;
+                            $stock->reserved_quantity = max(0, $stock->reserved_quantity - $releaseQty);
+                            $stock->save();
+                        }
+                    }
+                });
+            }
+        });
     }
 }

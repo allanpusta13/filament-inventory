@@ -13,7 +13,7 @@ use Filament\Actions\DeleteAction;
 use Illuminate\Support\Str;
 
 use function Pest\Laravel\assertDatabaseHas;
-use function Pest\Laravel\assertDatabaseMissing;
+use function Pest\Laravel\assertSoftDeleted;
 use function Pest\Livewire\livewire;
 
 beforeEach(function (): void {
@@ -113,7 +113,7 @@ it('can delete a product', function (): void {
         ->assertNotified()
         ->assertRedirect();
 
-    assertDatabaseMissing($product);
+    assertSoftDeleted($product);
 });
 
 it('can validate unique sku', function (): void {
@@ -152,9 +152,10 @@ it('validates the form data', function (array $data, array $errors): void {
 
 it('shows total stock column', function (): void {
     $product = Product::factory()->create();
+    $variant = App\Models\ProductVariant::factory()->create(['product_id' => $product->id]);
     $warehouse = Warehouse::factory()->create();
 
-    $product->stockMovements()->create([
+    $variant->stockMovements()->create([
         'warehouse_id' => $warehouse->id,
         'type' => MovementType::Receive,
         'quantity' => 100,

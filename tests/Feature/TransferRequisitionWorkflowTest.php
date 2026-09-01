@@ -135,7 +135,7 @@ it('handles receiving with loss and writes to loss_ledger', function (): void {
 
     expect($requisition->fresh()->status->value)->toBe('closed_with_loss');
 
-    $this->assertDatabaseHas('loss_ledger', [
+    $this->assertDatabaseHas('loss_ledgers', [
         'variant_id' => $this->variant->id,
         'damaged_base_qty' => 100,
         'loss_category' => 'Damaged in Transit',

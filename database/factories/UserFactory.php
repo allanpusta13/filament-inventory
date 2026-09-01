@@ -53,7 +53,7 @@ final class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => [
             'role' => \App\Enums\UserRole::WarehouseStaff->value,
-        ])->afterCreating(function (User $user) {
+        ])->afterCreating(function (\App\Models\User $user) {
             $user->warehouses()->attach(Warehouse::factory()->create());
         });
     }

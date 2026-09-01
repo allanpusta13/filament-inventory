@@ -27,15 +27,15 @@ final class CurrentStockResource extends Resource
 
     protected static ?string $slug = 'current-stock';
 
-    protected static ?string $recordTitleAttribute = 'product_id';
+    protected static ?string $recordTitleAttribute = 'variant_id';
 
     public static function getEloquentQuery(): Builder
     {
         $query = StockMovement::query()
-            ->selectRaw('MIN(stock_movements.id) as id, stock_movements.product_id, stock_movements.warehouse_id, SUM(stock_movements.quantity) as quantity')
-            ->join('products', 'products.id', '=', 'stock_movements.product_id')
+            ->selectRaw('MIN(stock_movements.id) as id, stock_movements.variant_id, stock_movements.warehouse_id, SUM(stock_movements.quantity) as quantity')
+            ->join('product_variants', 'product_variants.id', '=', 'stock_movements.variant_id')
             ->join('warehouses', 'warehouses.id', '=', 'stock_movements.warehouse_id')
-            ->groupBy('stock_movements.product_id', 'stock_movements.warehouse_id')
+            ->groupBy('stock_movements.variant_id', 'stock_movements.warehouse_id')
             ->havingRaw('SUM(stock_movements.quantity) != 0');
 
         $user = auth()->user();

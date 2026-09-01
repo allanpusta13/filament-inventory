@@ -33,14 +33,15 @@ final class LowStockAlertWidget extends TableWidget
 
         $query = Product::query()
             ->select('products.*')
-            ->join('stock_movements', 'products.id', '=', 'stock_movements.product_id');
+            ->join('product_variants', 'products.id', '=', 'product_variants.product_id')
+            ->join('stock_movements', 'product_variants.id', '=', 'stock_movements.variant_id');
 
         $warehouseIds = $this->getFilterWarehouseIds($user);
         if ($warehouseIds !== null) {
             $query->whereIn('stock_movements.warehouse_id', $warehouseIds);
         }
 
-        $query = $query->groupBy('products.id', 'products.sku', 'products.name', 'products.category', 'products.unit', 'products.reorder_point', 'products.created_at', 'products.updated_at')
+        $query = $query->groupBy('products.id', 'products.sku', 'products.name', 'products.category', 'products.reorder_point', 'products.created_at', 'products.updated_at')
             ->havingRaw('SUM(stock_movements.quantity) <= products.reorder_point')
             ->havingRaw('SUM(stock_movements.quantity) >= 0');
 

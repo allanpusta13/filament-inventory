@@ -27,14 +27,15 @@ beforeEach(function (): void {
     $this->senderWarehouse = Warehouse::factory()->create(['is_active' => true]);
     $this->receiverWarehouse = Warehouse::factory()->create(['is_active' => true]);
     $this->product = Product::factory()->create();
+    $this->variant = App\Models\ProductVariant::factory()->create(['product_id' => $this->product->id]);
 });
 
 test('partial receiving with damage log works end to end', function (): void {
     $this->service->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->senderWarehouse->id,
         type: MovementType::Receive,
-        quantity: 100,
+        baseQuantity: 100,
     );
 
     $order = TransferOrder::factory()->confirmed()->create([
@@ -67,7 +68,7 @@ test('partial receiving with damage log works end to end', function (): void {
         ->and($item->variance_reason)->toBe('5 units damaged during transit');
 
     assertDatabaseHas(StockMovement::class, [
-        'product_id' => $this->product->id,
+        'variant_id' => $this->variant->id,
         'warehouse_id' => $this->receiverWarehouse->id,
         'type' => MovementType::TransferIn,
         'quantity' => 45,
@@ -79,10 +80,10 @@ test('partial receiving with damage log works end to end', function (): void {
 
 test('concurrent dispatch attempts serialize correctly', function (): void {
     $this->service->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->senderWarehouse->id,
         type: MovementType::Receive,
-        quantity: 30,
+        baseQuantity: 30,
     );
 
     $order1 = TransferOrder::factory()->confirmed()->create([
@@ -117,14 +118,14 @@ test('concurrent dispatch attempts serialize correctly', function (): void {
     }
 
     assertDatabaseHas(StockMovement::class, [
-        'product_id' => $this->product->id,
+        'variant_id' => $this->variant->id,
         'warehouse_id' => $this->senderWarehouse->id,
         'type' => MovementType::TransferOut,
         'quantity' => -20,
     ]);
 
     assertDatabaseMissing(StockMovement::class, [
-        'product_id' => $this->product->id,
+        'variant_id' => $this->variant->id,
         'warehouse_id' => $this->senderWarehouse->id,
         'type' => MovementType::TransferOut,
         'quantity' => -40,
@@ -133,10 +134,10 @@ test('concurrent dispatch attempts serialize correctly', function (): void {
 
 test('editing dispatched transfer items is blocked', function (): void {
     $this->service->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->senderWarehouse->id,
         type: MovementType::Receive,
-        quantity: 100,
+        baseQuantity: 100,
     );
 
     $order = TransferOrder::factory()->confirmed()->create([
@@ -158,18 +159,19 @@ test('editing dispatched transfer items is blocked', function (): void {
 
 test('full audit trail across stock movements', function (): void {
     $product2 = Product::factory()->create();
+    $variant2 = App\Models\ProductVariant::factory()->create(['product_id' => $product2->id]);
 
     $this->service->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->senderWarehouse->id,
         type: MovementType::Receive,
-        quantity: 100,
+        baseQuantity: 100,
     );
     $this->service->recordMovement(
-        productId: $product2->id,
+        variantId: $variant2->id,
         warehouseId: $this->senderWarehouse->id,
         type: MovementType::Receive,
-        quantity: 50,
+        baseQuantity: 50,
     );
 
     $order = TransferOrder::factory()->confirmed()->create([
@@ -193,46 +195,46 @@ test('full audit trail across stock movements', function (): void {
 
     $this->dispatchAction->dispatch($order, $this->admin);
 
-    $p1Movement = StockMovement::where('product_id', $this->product->id)
+    $p1Movement = StockMovement::where('variant_id', $this->variant->id)
         ->where('type', MovementType::TransferOut)
         ->where('warehouse_id', $this->senderWarehouse->id)
         ->first();
 
     expect($p1Movement)->not->toBeNull()
         ->and($p1Movement->quantity)->toBe(-25)
-        ->and($p1Movement->reference)->toBe($order->reference_number);
+        ->and($p1Movement->reference_code)->toBe($order->reference_number);
 
-    $p2Movement = StockMovement::where('product_id', $product2->id)
+    $p2Movement = StockMovement::where('variant_id', $variant2->id)
         ->where('type', MovementType::TransferOut)
         ->where('warehouse_id', $this->senderWarehouse->id)
         ->first();
 
     expect($p2Movement)->not->toBeNull()
         ->and($p2Movement->quantity)->toBe(-15)
-        ->and($p2Movement->reference)->toBe($order->reference_number);
+        ->and($p2Movement->reference_code)->toBe($order->reference_number);
 
     $this->receiveAction->receive($order, $this->admin, [
         ['transfer_order_item_id' => $item1->id, 'quantity_received' => 25],
         ['transfer_order_item_id' => $item2->id, 'quantity_received' => 10, 'variance_reason' => '5 damaged'],
     ]);
 
-    $p1Receive = StockMovement::where('product_id', $this->product->id)
+    $p1Receive = StockMovement::where('variant_id', $this->variant->id)
         ->where('type', MovementType::TransferIn)
         ->where('warehouse_id', $this->receiverWarehouse->id)
         ->first();
 
     expect($p1Receive)->not->toBeNull()
         ->and($p1Receive->quantity)->toBe(25)
-        ->and($p1Receive->reference)->toBe($order->reference_number);
+        ->and($p1Receive->reference_code)->toBe($order->reference_number);
 
-    $p2Receive = StockMovement::where('product_id', $product2->id)
+    $p2Receive = StockMovement::where('variant_id', $variant2->id)
         ->where('type', MovementType::TransferIn)
         ->where('warehouse_id', $this->receiverWarehouse->id)
         ->first();
 
     expect($p2Receive)->not->toBeNull()
         ->and($p2Receive->quantity)->toBe(10)
-        ->and($p2Receive->reference)->toBe($order->reference_number);
+        ->and($p2Receive->reference_code)->toBe($order->reference_number);
 
     $order->refresh();
     expect($order->dispatched_by)->toBe($this->admin->id)
@@ -243,10 +245,10 @@ test('full audit trail across stock movements', function (): void {
 
 test('cannot receive already received order', function (): void {
     $this->service->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->senderWarehouse->id,
         type: MovementType::Receive,
-        quantity: 100,
+        baseQuantity: 100,
     );
 
     $order = TransferOrder::factory()->confirmed()->create([
@@ -274,10 +276,10 @@ test('cannot receive already received order', function (): void {
 
 test('cannot dispatch already dispatched order', function (): void {
     $this->service->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->senderWarehouse->id,
         type: MovementType::Receive,
-        quantity: 100,
+        baseQuantity: 100,
     );
 
     $order = TransferOrder::factory()->confirmed()->create([
@@ -298,10 +300,10 @@ test('cannot dispatch already dispatched order', function (): void {
 
 test('inTransitQuantity decreases after partial receive', function (): void {
     $this->service->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->senderWarehouse->id,
         type: MovementType::Receive,
-        quantity: 100,
+        baseQuantity: 100,
     );
 
     $order = TransferOrder::factory()->confirmed()->create([

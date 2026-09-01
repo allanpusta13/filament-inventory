@@ -12,12 +12,17 @@ return new class() extends Migration
     {
         Schema::create('products', function (Blueprint $table) {
             $table->id();
-            $table->string('sku')->unique();
-            $table->string('name');
+            $table->string('sku')->unique(); // Base Product SKU
+            $table->string('name');          // Product family name
             $table->string('category')->nullable();
-            $table->string('unit')->default('each');
-            $table->integer('reorder_point')->default(0);
+            $table->integer('reorder_point')->default(0); // Default threshold in Base Units
+            $table->softDeletes();           // Enforce Soft-Deletes
             $table->timestamps();
         });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('products');
     }
 };

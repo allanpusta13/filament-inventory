@@ -13,8 +13,12 @@ final class CurrentStockTable
     {
         return $table
             ->columns([
-                TextColumn::make('product.name')
+                TextColumn::make('variant.product.name')
                     ->label('Product')
+                    ->sortable()
+                    ->searchable(),
+                TextColumn::make('variant.sku')
+                    ->label('SKU')
                     ->sortable()
                     ->searchable(),
                 TextColumn::make('warehouse.name')
@@ -28,7 +32,7 @@ final class CurrentStockTable
                         return $state > 0 ? 'success' : ($state < 0 ? 'danger' : 'gray');
                     }),
             ])
-            ->defaultSort('product.name')
+            ->defaultSort('variant.product.name')
             ->recordActions([])
             ->toolbarActions([]);
     }

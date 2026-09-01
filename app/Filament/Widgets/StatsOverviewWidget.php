@@ -7,6 +7,7 @@ namespace App\Filament\Widgets;
 use App\Models\Product;
 use App\Models\StockMovement;
 use App\Traits\DashboardFilterable;
+use Illuminate\Support\Facades\Cache;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
@@ -26,49 +27,55 @@ final class StatsOverviewWidget extends BaseWidget
     {
         $user = auth()->user();
         $warehouseIds = $this->getFilterWarehouseIds($user);
+        $cacheKey = 'stats-overview-' . md5(json_encode([
+            'userId' => $user->id,
+            'warehouseIds' => $warehouseIds,
+        ]));
 
-        $totalItems = $this->getTotalSkuCount($warehouseIds);
-        $totalStock = $this->getTotalStockQuantity($warehouseIds);
-        $lowStockCount = $this->getLowStockCount($user);
-        $outOfStockCount = $this->getOutOfStockCount($user);
-        $stockTrend = $this->getStockTrendData($warehouseIds);
+        return Cache::remember($cacheKey, 300, function () use ($user, $warehouseIds) {
+            $totalItems = $this->getTotalSkuCount($warehouseIds);
+            $totalStock = $this->getTotalStockQuantity($warehouseIds);
+            $lowStockCount = $this->getLowStockCount($user);
+            $outOfStockCount = $this->getOutOfStockCount($user);
+            $stockTrend = $this->getStockTrendData($warehouseIds);
 
-        return [
-            Stat::make('Total SKUs', number_format($totalItems))
-                ->description('Products in catalog')
-                ->descriptionIcon('heroicon-m-cube')
-                ->color('primary')
-                ->chart($stockTrend)
-                ->extraAttributes([
-                    'data-testid' => 'kpi-total-skus',
-                ]),
-            Stat::make('Total Units on Hand', number_format($totalStock))
-                ->description('Units across all warehouses')
-                ->descriptionIcon('heroicon-m-arrow-trending-up')
-                ->color('success')
-                ->chart($stockTrend)
-                ->extraAttributes([
-                    'data-testid' => 'kpi-total-stock',
-                ]),
-            Stat::make('Items Below Reorder Point', number_format($lowStockCount))
-                ->description('At or below reorder point')
-                ->descriptionIcon('heroicon-m-exclamation-triangle')
-                ->color($lowStockCount > 0 ? 'warning' : 'success')
-                ->descriptionColor($lowStockCount > 0 ? 'warning' : null)
-                ->extraAttributes([
-                    'class' => $lowStockCount > 0 ? 'ring-1 ring-amber-400/30 bg-amber-50/50 dark:bg-amber-950/20' : '',
-                    'data-testid' => 'kpi-low-stock',
-                ]),
-            Stat::make('Zero Stock SKUs', number_format($outOfStockCount))
-                ->description('Products with zero stock')
-                ->descriptionIcon('heroicon-m-x-circle')
-                ->color($outOfStockCount > 0 ? 'danger' : 'success')
-                ->descriptionColor($outOfStockCount > 0 ? 'danger' : null)
-                ->extraAttributes([
-                    'class' => $outOfStockCount > 0 ? 'ring-1 ring-rose-500/30 bg-rose-50/50 dark:bg-rose-950/20' : '',
-                    'data-testid' => 'kpi-out-of-stock',
-                ]),
-        ];
+            return [
+                Stat::make('Total SKUs', number_format($totalItems))
+                    ->description('Products in catalog')
+                    ->descriptionIcon('heroicon-m-cube')
+                    ->color('primary')
+                    ->chart($stockTrend)
+                    ->extraAttributes([
+                        'data-testid' => 'kpi-total-skus',
+                    ]),
+                Stat::make('Total Units on Hand', number_format($totalStock))
+                    ->description('Units across all warehouses')
+                    ->descriptionIcon('heroicon-m-arrow-trending-up')
+                    ->color('success')
+                    ->chart($stockTrend)
+                    ->extraAttributes([
+                        'data-testid' => 'kpi-total-stock',
+                    ]),
+                Stat::make('Items Below Reorder Point', number_format($lowStockCount))
+                    ->description('At or below reorder point')
+                    ->descriptionIcon('heroicon-m-exclamation-triangle')
+                    ->color($lowStockCount > 0 ? 'warning' : 'success')
+                    ->descriptionColor($lowStockCount > 0 ? 'warning' : null)
+                    ->extraAttributes([
+                        'class' => $lowStockCount > 0 ? 'ring-1 ring-amber-400/30 bg-amber-50/50 dark:bg-amber-950/20' : '',
+                        'data-testid' => 'kpi-low-stock',
+                    ]),
+                Stat::make('Zero Stock SKUs', number_format($outOfStockCount))
+                    ->description('Products with zero stock')
+                    ->descriptionIcon('heroicon-m-x-circle')
+                    ->color($outOfStockCount > 0 ? 'danger' : 'success')
+                    ->descriptionColor($outOfStockCount > 0 ? 'danger' : null)
+                    ->extraAttributes([
+                        'class' => $outOfStockCount > 0 ? 'ring-1 ring-rose-500/30 bg-rose-50/50 dark:bg-rose-950/20' : '',
+                        'data-testid' => 'kpi-out-of-stock',
+                    ]),
+            ];
+        });
     }
 
     private function getTotalSkuCount(?array $warehouseIds): int
@@ -77,10 +84,11 @@ final class StatsOverviewWidget extends BaseWidget
 
         if ($warehouseIds !== null) {
             $query->whereIn('id', function ($query) use ($warehouseIds) {
-                $query->select('product_id')
-                    ->from('stock_movements')
-                    ->whereIn('warehouse_id', $warehouseIds)
-                    ->groupBy('product_id');
+                $query->select('product_variants.product_id')
+                    ->from('product_variants')
+                    ->join('stock_movements', 'product_variants.id', '=', 'stock_movements.variant_id')
+                    ->whereIn('stock_movements.warehouse_id', $warehouseIds)
+                    ->groupBy('product_variants.product_id');
             });
         }
 
@@ -121,7 +129,8 @@ final class StatsOverviewWidget extends BaseWidget
     {
         $query = Product::query()
             ->select('products.id')
-            ->join('stock_movements', 'products.id', '=', 'stock_movements.product_id')
+            ->join('product_variants', 'products.id', '=', 'product_variants.product_id')
+            ->join('stock_movements', 'product_variants.id', '=', 'stock_movements.variant_id')
             ->groupBy('products.id', 'products.reorder_point')
             ->havingRaw('SUM(stock_movements.quantity) <= products.reorder_point')
             ->havingRaw('SUM(stock_movements.quantity) > 0');
@@ -138,7 +147,8 @@ final class StatsOverviewWidget extends BaseWidget
     {
         $query = Product::query()
             ->select('products.id')
-            ->join('stock_movements', 'products.id', '=', 'stock_movements.product_id')
+            ->join('product_variants', 'products.id', '=', 'product_variants.product_id')
+            ->join('stock_movements', 'product_variants.id', '=', 'stock_movements.variant_id')
             ->groupBy('products.id')
             ->havingRaw('SUM(stock_movements.quantity) <= 0');
 

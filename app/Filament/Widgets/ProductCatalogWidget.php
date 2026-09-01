@@ -36,10 +36,11 @@ final class ProductCatalogWidget extends TableWidget
 
         if ($warehouseIds !== null) {
             $query->whereIn('id', function ($q) use ($warehouseIds) {
-                $q->select('product_id')
+                $q->select('product_variants.product_id')
                     ->from('stock_movements')
-                    ->whereIn('warehouse_id', $warehouseIds)
-                    ->groupBy('product_id');
+                    ->join('product_variants', 'product_variants.id', '=', 'stock_movements.variant_id')
+                    ->whereIn('stock_movements.warehouse_id', $warehouseIds)
+                    ->groupBy('product_variants.product_id');
             });
         }
 

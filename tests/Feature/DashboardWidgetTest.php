@@ -65,16 +65,18 @@ describe('StatsOverviewWidget', function (): void {
 
         $product1 = Product::factory()->create(['name' => 'Staff Product']);
         $product2 = Product::factory()->create(['name' => 'Other WH Product']);
+        $variant1 = App\Models\ProductVariant::factory()->create(['product_id' => $product1->id]);
+        $variant2 = App\Models\ProductVariant::factory()->create(['product_id' => $product2->id]);
 
         StockMovement::factory()->create([
-            'product_id' => $product1->id,
+            'variant_id' => $variant1->id,
             'warehouse_id' => $this->warehouse1->id,
             'type' => MovementType::Receive,
             'quantity' => 50,
         ]);
 
         StockMovement::factory()->create([
-            'product_id' => $product2->id,
+            'variant_id' => $variant2->id,
             'warehouse_id' => $this->warehouse2->id,
             'type' => MovementType::Receive,
             'quantity' => 100,
@@ -90,16 +92,18 @@ describe('StatsOverviewWidget', function (): void {
 
         $product1 = Product::factory()->create(['reorder_point' => 50, 'name' => 'Staff Low Item']);
         $product2 = Product::factory()->create(['reorder_point' => 50, 'name' => 'Other WH Low Item']);
+        $variant1 = App\Models\ProductVariant::factory()->create(['product_id' => $product1->id]);
+        $variant2 = App\Models\ProductVariant::factory()->create(['product_id' => $product2->id]);
 
         StockMovement::factory()->create([
-            'product_id' => $product1->id,
+            'variant_id' => $variant1->id,
             'warehouse_id' => $this->warehouse1->id,
             'type' => MovementType::Receive,
             'quantity' => 20,
         ]);
 
         StockMovement::factory()->create([
-            'product_id' => $product2->id,
+            'variant_id' => $variant2->id,
             'warehouse_id' => $this->warehouse2->id,
             'type' => MovementType::Receive,
             'quantity' => 20,
@@ -123,9 +127,10 @@ describe('StatsOverviewWidget', function (): void {
         $this->actingAs($this->admin);
 
         $product = Product::factory()->create();
+        $variant = App\Models\ProductVariant::factory()->create(['product_id' => $product->id]);
 
         StockMovement::factory()->create([
-            'product_id' => $product->id,
+            'variant_id' => $variant->id,
             'warehouse_id' => $this->warehouse1->id,
             'type' => MovementType::Receive,
             'quantity' => 100,
@@ -139,9 +144,10 @@ describe('StatsOverviewWidget', function (): void {
         $this->actingAs($this->admin);
 
         $product = Product::factory()->create(['reorder_point' => 50]);
+        $variant = App\Models\ProductVariant::factory()->create(['product_id' => $product->id]);
 
         StockMovement::factory()->create([
-            'product_id' => $product->id,
+            'variant_id' => $variant->id,
             'warehouse_id' => $this->warehouse1->id,
             'type' => MovementType::Receive,
             'quantity' => 20,
@@ -156,16 +162,17 @@ describe('StatsOverviewWidget', function (): void {
         $this->actingAs($this->admin);
 
         $product = Product::factory()->create();
+        $variant = App\Models\ProductVariant::factory()->create(['product_id' => $product->id]);
 
         StockMovement::factory()->create([
-            'product_id' => $product->id,
+            'variant_id' => $variant->id,
             'warehouse_id' => $this->warehouse1->id,
             'type' => MovementType::Receive,
             'quantity' => 50,
         ]);
 
         StockMovement::factory()->create([
-            'product_id' => $product->id,
+            'variant_id' => $variant->id,
             'warehouse_id' => $this->warehouse1->id,
             'type' => MovementType::Ship,
             'quantity' => -50,
@@ -180,16 +187,17 @@ describe('StatsOverviewWidget', function (): void {
         $this->actingAs($this->admin);
 
         $product = Product::factory()->create();
+        $variant = App\Models\ProductVariant::factory()->create(['product_id' => $product->id]);
 
         StockMovement::factory()->create([
-            'product_id' => $product->id,
+            'variant_id' => $variant->id,
             'warehouse_id' => $this->warehouse1->id,
             'type' => MovementType::Receive,
             'quantity' => 100,
         ]);
 
         StockMovement::factory()->create([
-            'product_id' => $product->id,
+            'variant_id' => $variant->id,
             'warehouse_id' => $this->warehouse2->id,
             'type' => MovementType::Receive,
             'quantity' => 200,
@@ -224,9 +232,10 @@ describe('LowStockAlertWidget', function (): void {
         $this->actingAs($this->admin);
 
         $product = Product::factory()->create(['reorder_point' => 50, 'name' => 'Low Widget Item']);
+        $variant = App\Models\ProductVariant::factory()->create(['product_id' => $product->id]);
 
         StockMovement::factory()->create([
-            'product_id' => $product->id,
+            'variant_id' => $variant->id,
             'warehouse_id' => $this->warehouse1->id,
             'type' => MovementType::Receive,
             'quantity' => 30,
@@ -241,9 +250,10 @@ describe('LowStockAlertWidget', function (): void {
         $this->actingAs($this->admin);
 
         $product = Product::factory()->create(['reorder_point' => 10, 'name' => 'High Stock Item']);
+        $variant = App\Models\ProductVariant::factory()->create(['product_id' => $product->id]);
 
         StockMovement::factory()->create([
-            'product_id' => $product->id,
+            'variant_id' => $variant->id,
             'warehouse_id' => $this->warehouse1->id,
             'type' => MovementType::Receive,
             'quantity' => 100,
@@ -259,16 +269,18 @@ describe('LowStockAlertWidget', function (): void {
 
         $product1 = Product::factory()->create(['reorder_point' => 50, 'name' => 'Staff Low Item']);
         $product2 = Product::factory()->create(['reorder_point' => 50, 'name' => 'Other WH Item']);
+        $variant1 = App\Models\ProductVariant::factory()->create(['product_id' => $product1->id]);
+        $variant2 = App\Models\ProductVariant::factory()->create(['product_id' => $product2->id]);
 
         StockMovement::factory()->create([
-            'product_id' => $product1->id,
+            'variant_id' => $variant1->id,
             'warehouse_id' => $this->warehouse1->id,
             'type' => MovementType::Receive,
             'quantity' => 20,
         ]);
 
         StockMovement::factory()->create([
-            'product_id' => $product2->id,
+            'variant_id' => $variant2->id,
             'warehouse_id' => $this->warehouse2->id,
             'type' => MovementType::Receive,
             'quantity' => 20,
@@ -359,9 +371,10 @@ describe('StockMovementTrendChart', function (): void {
         $this->actingAs($this->admin);
 
         $product = Product::factory()->create();
+        $variant = App\Models\ProductVariant::factory()->create(['product_id' => $product->id]);
 
         StockMovement::factory()->create([
-            'product_id' => $product->id,
+            'variant_id' => $variant->id,
             'warehouse_id' => $this->warehouse1->id,
             'type' => MovementType::Receive,
             'quantity' => 50,
@@ -409,10 +422,11 @@ describe('FastMovingStockChart', function (): void {
         $this->actingAs($this->admin);
 
         $product = Product::factory()->create(['name' => 'Frequent Mover']);
+        $variant = App\Models\ProductVariant::factory()->create(['product_id' => $product->id]);
 
         for ($i = 0; $i < 10; $i++) {
             StockMovement::factory()->create([
-                'product_id' => $product->id,
+                'variant_id' => $variant->id,
                 'warehouse_id' => $this->warehouse1->id,
                 'type' => MovementType::Receive,
                 'quantity' => 10,
@@ -443,9 +457,10 @@ describe('RecentStockActivityWidget', function (): void {
         $this->actingAs($this->admin);
 
         $product = Product::factory()->create(['name' => 'Recent Widget Product']);
+        $variant = App\Models\ProductVariant::factory()->create(['product_id' => $product->id]);
 
         $movement = StockMovement::factory()->create([
-            'product_id' => $product->id,
+            'variant_id' => $variant->id,
             'warehouse_id' => $this->warehouse1->id,
             'type' => MovementType::Receive,
             'quantity' => 75,
@@ -460,16 +475,17 @@ describe('RecentStockActivityWidget', function (): void {
         $this->actingAs($this->staff);
 
         $product = Product::factory()->create();
+        $variant = App\Models\ProductVariant::factory()->create(['product_id' => $product->id]);
 
         $movement1 = StockMovement::factory()->create([
-            'product_id' => $product->id,
+            'variant_id' => $variant->id,
             'warehouse_id' => $this->warehouse1->id,
             'type' => MovementType::Receive,
             'quantity' => 25,
         ]);
 
         $movement2 = StockMovement::factory()->create([
-            'product_id' => $product->id,
+            'variant_id' => $variant->id,
             'warehouse_id' => $this->warehouse2->id,
             'type' => MovementType::Receive,
             'quantity' => 50,

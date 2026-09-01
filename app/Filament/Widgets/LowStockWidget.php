@@ -26,7 +26,8 @@ final class LowStockWidget extends TableWidget
             ->query(
                 Product::query()
                     ->select('products.*')
-                    ->join('stock_movements', 'products.id', '=', 'stock_movements.product_id')
+                    ->join('product_variants', 'products.id', '=', 'product_variants.product_id')
+                    ->join('stock_movements', 'product_variants.id', '=', 'stock_movements.variant_id')
                     ->groupBy('products.id')
                     ->havingRaw('SUM(stock_movements.quantity) <= products.reorder_point')
                     ->havingRaw('SUM(stock_movements.quantity) > 0')

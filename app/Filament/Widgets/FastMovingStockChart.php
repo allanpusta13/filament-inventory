@@ -49,7 +49,8 @@ final class FastMovingStockChart extends ChartWidget
                 SUM(CASE WHEN stock_movements.quantity > 0 THEN stock_movements.quantity ELSE 0 END) as total_in,
                 ABS(SUM(CASE WHEN stock_movements.quantity < 0 THEN stock_movements.quantity ELSE 0 END)) as total_out
             ')
-            ->join('products', 'products.id', '=', 'stock_movements.product_id')
+            ->join('product_variants', 'product_variants.id', '=', 'stock_movements.variant_id')
+            ->join('products', 'products.id', '=', 'product_variants.product_id')
             ->groupBy('products.id', 'products.name')
             ->orderByDesc('movement_count')
             ->limit(10);

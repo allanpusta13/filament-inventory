@@ -7,6 +7,7 @@ use App\Enums\MovementType;
 use App\Enums\TransferOrderStatus;
 use App\Exceptions\InsufficientStockException;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\StockMovement;
 use App\Models\TransferOrder;
 use App\Models\TransferOrderItem;
@@ -28,14 +29,15 @@ beforeEach(function (): void {
     $this->staff = User::factory()->warehouseStaff()->create();
     $this->staff->warehouses()->attach($this->senderWarehouse->id);
     $this->product = Product::factory()->create();
+    $this->variant = ProductVariant::factory()->create(['product_id' => $this->product->id]);
 });
 
 test('it dispatches a confirmed order', function (): void {
     $this->service->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->senderWarehouse->id,
         type: MovementType::Receive,
-        quantity: 100,
+        baseQuantity: 100,
     );
 
     $order = TransferOrder::factory()->confirmed()->create([
@@ -60,11 +62,10 @@ test('it dispatches a confirmed order', function (): void {
         ->and($order->dispatched_at)->not->toBeNull();
 
     assertDatabaseHas(StockMovement::class, [
-        'product_id' => $this->product->id,
+        'variant_id' => $this->variant->id,
         'warehouse_id' => $this->senderWarehouse->id,
         'type' => MovementType::TransferOut,
         'quantity' => -30,
-        'reference' => $order->reference_number,
     ]);
 
     expect($this->service->currentQuantity($this->product->id, $this->senderWarehouse->id))->toBe(70);
@@ -72,10 +73,10 @@ test('it dispatches a confirmed order', function (): void {
 
 test('it sets dispatched_by and dispatched_at', function (): void {
     $this->service->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->senderWarehouse->id,
         type: MovementType::Receive,
-        quantity: 50,
+        baseQuantity: 50,
     );
 
     $order = TransferOrder::factory()->confirmed()->create([
@@ -101,18 +102,19 @@ test('it sets dispatched_by and dispatched_at', function (): void {
 
 test('it creates transfer_out movements for each item', function (): void {
     $product2 = Product::factory()->create();
+    $variant2 = ProductVariant::factory()->create(['product_id' => $product2->id]);
 
     $this->service->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->senderWarehouse->id,
         type: MovementType::Receive,
-        quantity: 100,
+        baseQuantity: 100,
     );
     $this->service->recordMovement(
-        productId: $product2->id,
+        variantId: $variant2->id,
         warehouseId: $this->senderWarehouse->id,
         type: MovementType::Receive,
-        quantity: 100,
+        baseQuantity: 100,
     );
 
     $order = TransferOrder::factory()->confirmed()->create([
@@ -138,14 +140,14 @@ test('it creates transfer_out movements for each item', function (): void {
     $this->action->dispatch($order, $this->admin);
 
     assertDatabaseHas(StockMovement::class, [
-        'product_id' => $this->product->id,
+        'variant_id' => $this->variant->id,
         'warehouse_id' => $this->senderWarehouse->id,
         'type' => MovementType::TransferOut,
         'quantity' => -20,
     ]);
 
     assertDatabaseHas(StockMovement::class, [
-        'product_id' => $product2->id,
+        'variant_id' => $variant2->id,
         'warehouse_id' => $this->senderWarehouse->id,
         'type' => MovementType::TransferOut,
         'quantity' => -15,
@@ -154,10 +156,10 @@ test('it creates transfer_out movements for each item', function (): void {
 
 test('it throws on insufficient stock', function (): void {
     $this->service->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->senderWarehouse->id,
         type: MovementType::Receive,
-        quantity: 10,
+        baseQuantity: 10,
     );
 
     $order = TransferOrder::factory()->confirmed()->create([
@@ -178,18 +180,19 @@ test('it throws on insufficient stock', function (): void {
 
 test('it rolls back all movements on partial failure', function (): void {
     $product2 = Product::factory()->create();
+    $variant2 = ProductVariant::factory()->create(['product_id' => $product2->id]);
 
     $this->service->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->senderWarehouse->id,
         type: MovementType::Receive,
-        quantity: 100,
+        baseQuantity: 100,
     );
     $this->service->recordMovement(
-        productId: $product2->id,
+        variantId: $variant2->id,
         warehouseId: $this->senderWarehouse->id,
         type: MovementType::Receive,
-        quantity: 5,
+        baseQuantity: 5,
     );
 
     $order = TransferOrder::factory()->confirmed()->create([
@@ -219,12 +222,12 @@ test('it rolls back all movements on partial failure', function (): void {
     }
 
     assertDatabaseMissing(StockMovement::class, [
-        'product_id' => $this->product->id,
+        'variant_id' => $this->variant->id,
         'type' => MovementType::TransferOut,
     ]);
 
     assertDatabaseMissing(StockMovement::class, [
-        'product_id' => $product2->id,
+        'variant_id' => $variant2->id,
         'type' => MovementType::TransferOut,
     ]);
 
@@ -263,10 +266,10 @@ test('it rejects draft order from unauthorized user', function (): void {
 
 test('it allows admin to dispatch any order', function (): void {
     $this->service->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->senderWarehouse->id,
         type: MovementType::Receive,
-        quantity: 100,
+        baseQuantity: 100,
     );
 
     $order = TransferOrder::factory()->confirmed()->create([
@@ -299,10 +302,10 @@ test('it rejects order with zero items', function (): void {
 
 test('it validates stock after lock acquisition', function (): void {
     $this->service->recordMovement(
-        productId: $this->product->id,
+        variantId: $this->variant->id,
         warehouseId: $this->senderWarehouse->id,
         type: MovementType::Receive,
-        quantity: 10,
+        baseQuantity: 10,
     );
 
     $order = TransferOrder::factory()->confirmed()->create([
