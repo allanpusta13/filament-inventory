@@ -6,8 +6,9 @@ namespace App\Enums;
 
 use Filament\Support\Contracts\HasColor;
 use Filament\Support\Contracts\HasLabel;
+use Filament\Support\Contracts\HasIcon;
 
-enum TransferRequisitionStatus: string implements HasColor, HasLabel
+enum TransferRequisitionStatus: string implements HasColor, HasLabel, HasIcon
 {
     case Draft = 'draft';
     case Requested = 'requested';
@@ -48,6 +49,21 @@ enum TransferRequisitionStatus: string implements HasColor, HasLabel
             self::PartiallyReceived => 'Partially Received',
             self::Completed => 'Completed',
             self::ClosedWithLoss => 'Closed with Loss',
+        };
+    }
+
+    public function getIcon(): ?string
+    {
+        return match ($this) {
+            self::Draft => 'heroicon-o-document-text',
+            self::Requested => 'heroicon-o-arrow-right',
+            self::UnderReviewFulfiller, self::UnderReviewRequestor => 'heroicon-o-chart-pie',
+            self::Approved => 'heroicon-o-check-circle',
+            self::Confirmed => 'heroicon-o-check-circle',
+            self::Dispatched => 'heroicon-o-truck',
+            self::PartiallyReceived => 'heroicon-o-chart-bar',
+            self::Completed => 'heroicon-o-check-circle',
+            self::ClosedWithLoss => 'heroicon-o-x-circle',
         };
     }
 }

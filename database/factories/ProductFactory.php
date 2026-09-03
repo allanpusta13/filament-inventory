@@ -21,6 +21,7 @@ final class ProductFactory extends Factory
             'sku' => fake()->unique()->uuid(),
             'name' => fake()->words(3, true),
             'category' => fake()->optional()->word(),
+            'unit' => fake()->randomElement(['each', 'box', 'palette']),
             'reorder_point' => 0,
         ];
     }

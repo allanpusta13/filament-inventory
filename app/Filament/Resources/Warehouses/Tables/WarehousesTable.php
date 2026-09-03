@@ -13,6 +13,7 @@ use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -54,7 +55,7 @@ final class WarehousesTable
                 EditAction::make(),
                 Action::make('adjustStock')
                     ->label('Adjust Stock Level')
-                    ->icon('heroicon-o-adjustments-horizontal')
+                    ->icon(Heroicon::OutlinedAdjustmentsHorizontal)
                     ->slideOver()
                     ->form([
                         Select::make('variant_id')

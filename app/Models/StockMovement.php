@@ -15,7 +15,7 @@ final class StockMovement extends Model
 {
     use HasFactory;
 
-    #[Fillable(['variant_id', 'warehouse_id', 'type', 'quantity', 'unit_name_used', 'unit_ratio_used', 'related_movement_id', 'reference_type', 'reference_id', 'reference_code', 'created_by'])]
+    #[Fillable(['variant_id', 'warehouse_id', 'type', 'quantity', 'unit_name_used', 'unit_ratio_used', 'related_movement_id', 'reference_type', 'reference_id', 'reference_code', 'notes', 'created_by'])]
     protected $fillable = [
         'variant_id',
         'warehouse_id',
@@ -27,6 +27,7 @@ final class StockMovement extends Model
         'reference_type',
         'reference_id',
         'reference_code',
+        'notes',
         'created_by',
     ];
 
@@ -74,6 +75,33 @@ final class StockMovement extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Get the counterpart warehouse for transfer movements.
+     * For transfer_out, returns the destination warehouse (transfer_in).
+     * For transfer_in, returns the source warehouse (transfer_out).
+     * For other movements, returns null.
+     */
+    public function getCounterpartWarehouseAttribute()
+    {
+        if ($this->type === MovementType::TransferOut) {
+            // Find the transfer_in that points to this transfer_out (i.e., where related_movement_id equals this movement's id)
+            $transferIn = self::where('related_movement_id', $this->id)
+                ->where('type', MovementType::TransferIn)
+                ->first();
+
+            return $transferIn ? $transferIn->warehouse : null;
+        }
+
+        if ($this->type === MovementType::TransferIn) {
+            // The relatedMovement is the transfer_out (since we set related_movement_id on the transfer_in to point to the transfer_out)
+            $transferOut = $this->relatedMovement;
+
+            return $transferOut ? $transferOut->warehouse : null;
+        }
+
+        return null;
     }
 
     protected static function boot(): void

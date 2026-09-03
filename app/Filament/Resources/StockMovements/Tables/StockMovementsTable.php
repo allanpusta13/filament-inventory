@@ -6,6 +6,7 @@ namespace App\Filament\Resources\StockMovements\Tables;
 
 use App\Enums\MovementType;
 use Filament\Forms\Components\DatePicker;
+use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
@@ -17,6 +18,11 @@ final class StockMovementsTable
     {
         return $table
             ->deferFilters(false)
+            ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->with([
+                'variant.product',
+                'warehouse',
+                'creator',
+            ]))
             ->columns([
                 TextColumn::make('variant.product.name')
                     ->label('Product')
@@ -34,7 +40,8 @@ final class StockMovementsTable
                     ->sortable()
                     ->color(function (int $state): string {
                         return $state > 0 ? 'success' : 'danger';
-                    }),
+                    })
+                    ->summarize(Sum::make()->label('Total')),
                 TextColumn::make('reference_code')
                     ->sortable()
                     ->searchable()

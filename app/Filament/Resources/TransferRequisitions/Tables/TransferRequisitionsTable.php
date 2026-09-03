@@ -8,9 +8,12 @@ use App\Enums\UserRole;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
 final class TransferRequisitionsTable
@@ -37,6 +40,11 @@ final class TransferRequisitionsTable
                         ->orWhereIn('to_warehouse_id', $warehouseIds);
                 });
             })
+            ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->with([
+                'fromWarehouse',
+                'toWarehouse',
+                'requestedBy',
+            ]))
             ->columns([
                 TextColumn::make('reference_code')
                     ->searchable()
@@ -88,6 +96,7 @@ final class TransferRequisitionsTable
                         'closed_with_loss' => 'Closed with Loss',
                         'cancelled' => 'Cancelled',
                     ]),
+                TrashedFilter::make(),
             ])
             ->recordActions([
                 ViewAction::make(),
@@ -96,6 +105,8 @@ final class TransferRequisitionsTable
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                 ]),
             ]);
     }

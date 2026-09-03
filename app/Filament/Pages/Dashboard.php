@@ -32,7 +32,12 @@ final class Dashboard extends BaseDashboard
             return false;
         }
 
-        return in_array($user->role, [UserRole::Admin, UserRole::WarehouseStaff], true);
+        return in_array($user->role, [
+            UserRole::Admin,
+            UserRole::BranchManager,
+            UserRole::WarehouseStaff,
+            UserRole::Auditor,
+        ], true);
     }
 
     public function getColumns(): int|array

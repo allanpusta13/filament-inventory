@@ -7,12 +7,11 @@ namespace App\Filament\Widgets;
 use App\Models\Warehouse;
 use App\Traits\DashboardFilterable;
 use Filament\Widgets\Widget;
+use Livewire\Attributes\Computed;
 
 final class StockByWarehouseWidget extends Widget
 {
     use DashboardFilterable;
-
-    public ?array $warehouses = [];
 
     protected string $view = 'filament.widgets.stock-by-warehouse';
 
@@ -28,48 +27,39 @@ final class StockByWarehouseWidget extends Widget
 
     public static function canView(): bool
     {
-        $user = auth()->user();
-
-        return $user?->isAdmin() ?? false;
+        return in_array(auth()->user()?->role?->value, [
+            'admin',
+            'branch_manager',
+            'warehouse_staff',
+        ]);
     }
 
-    public function mount(): void
-    {
-        $this->loadWarehouses();
-    }
-
-    public function loadWarehouses(): void
+    #[Computed]
+    public function warehouses(): array
     {
         $user = auth()->user();
-
         $warehouseIds = $this->getFilterWarehouseIds($user);
 
         $query = Warehouse::query()
             ->select('warehouses.*')
-            ->withCount(['stockMovements as total_movements']);
+            ->selectRaw('(SELECT COALESCE(SUM(ws.on_hand_quantity), 0) FROM warehouse_stock ws WHERE ws.warehouse_id = warehouses.id) as total_quantity')
+            ->selectRaw('(SELECT COUNT(DISTINCT pv.product_id) FROM warehouse_stock ws JOIN product_variants pv ON pv.id = ws.variant_id WHERE ws.warehouse_id = warehouses.id) as product_count')
+            ->selectRaw('(SELECT COUNT(*) FROM stock_movements sm WHERE sm.warehouse_id = warehouses.id) as total_movements');
 
         if ($warehouseIds !== null) {
             $query->whereIn('warehouses.id', $warehouseIds);
         }
 
-        $warehouses = $query->get();
-
-        $this->warehouses = $warehouses->map(function (Warehouse $warehouse) {
-            $totalQuantity = $warehouse->stockMovements()->sum('quantity');
-            $productCount = $warehouse->stockMovements()
-                ->join('product_variants', 'stock_movements.variant_id', '=', 'product_variants.id')
-                ->distinct()
-                ->count('product_variants.product_id');
-
-            return [
+        return $query->get()
+            ->map(fn (Warehouse $warehouse) => [
                 'id' => $warehouse->id,
                 'name' => $warehouse->name,
                 'location' => $warehouse->location,
                 'is_active' => $warehouse->is_active,
-                'total_quantity' => $totalQuantity,
-                'product_count' => $productCount,
-                'total_movements' => $warehouse->total_movements,
-            ];
-        })->toArray();
+                'total_quantity' => (int) $warehouse->total_quantity,
+                'product_count' => (int) $warehouse->product_count,
+                'total_movements' => (int) $warehouse->total_movements,
+            ])
+            ->toArray();
     }
 }

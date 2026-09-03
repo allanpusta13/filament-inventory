@@ -38,7 +38,7 @@ final class ProductVariant extends Model
 
     public function warehouseStocks()
     {
-        return $this->hasMany(WarehouseStock::class);
+        return $this->hasMany(WarehouseStock::class, 'variant_id');
     }
 
     public function movements()

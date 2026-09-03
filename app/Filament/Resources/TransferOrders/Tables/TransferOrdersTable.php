@@ -37,6 +37,10 @@ final class TransferOrdersTable
                         ->orWhereIn('receiver_branch_id', $warehouseIds);
                 });
             })
+            ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->with([
+                'sender',
+                'receiver',
+            ]))
             ->columns([
                 TextColumn::make('reference_number')
                     ->searchable()

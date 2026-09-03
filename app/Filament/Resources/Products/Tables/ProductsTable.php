@@ -9,8 +9,11 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ExportAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
 final class ProductsTable
@@ -49,6 +52,7 @@ final class ProductsTable
             ->filters([
                 SelectFilter::make('category')
                     ->options(fn () => \App\Models\Product::distinct()->pluck('category', 'category')->filter()->toArray()),
+                TrashedFilter::make(),
             ])
             ->headerActions([
                 ExportAction::make()
@@ -60,6 +64,8 @@ final class ProductsTable
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                 ]),
             ]);
     }

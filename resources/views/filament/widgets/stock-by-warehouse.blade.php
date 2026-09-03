@@ -5,7 +5,7 @@
         </div>
         <div class="fi-card-content p-6">
             <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                @forelse ($warehouses as $warehouse)
+                @forelse ($this->warehouses() as $warehouse)
                     <div class="relative flex flex-col overflow-hidden rounded-lg bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 p-6 transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-white/[0.04]">
                         <div class="flex items-start justify-between">
                             <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10">

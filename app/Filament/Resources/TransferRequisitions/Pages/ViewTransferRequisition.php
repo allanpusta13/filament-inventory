@@ -7,6 +7,7 @@ namespace App\Filament\Resources\TransferRequisitions\Pages;
 use App\Enums\TransferRequisitionStatus;
 use App\Filament\Resources\TransferRequisitions\TransferRequisitionResource;
 use App\Models\TransferRequisition;
+use App\Services\AuditService;
 use App\Services\InventoryService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Action;
@@ -20,6 +21,7 @@ use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\URL;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
@@ -63,16 +65,26 @@ final class ViewTransferRequisition extends ViewRecord
         return [
             Action::make('submit')
                 ->label('Submit Requisition')
-                ->icon('heroicon-o-paper-airplane')
+                ->icon(Heroicon::OutlinedPaperAirplane)
                 ->color('primary')
                 ->visible(fn (TransferRequisition $record): bool => $record->status === TransferRequisitionStatus::Draft)
-                ->action(fn (TransferRequisition $record) => $record->update([
-                    'status' => TransferRequisitionStatus::Requested,
-                ])),
+                ->action(function (TransferRequisition $record): void {
+                    $oldStatus = $record->status->value;
+                    $record->update([
+                        'status' => TransferRequisitionStatus::Requested,
+                    ]);
+
+                    app(AuditService::class)->recordRequisition(
+                        requisition: $record,
+                        user: auth()->user(),
+                        action: 'submitted',
+                        changes: ['status' => ['old' => $oldStatus, 'new' => TransferRequisitionStatus::Requested->value]]
+                    );
+                }),
 
             Action::make('counter_offer')
                 ->label('Counter-Offer')
-                ->icon('heroicon-o-arrows-right-left')
+                ->icon(Heroicon::OutlinedArrowsRightLeft)
                 ->color('warning')
                 ->visible(fn (TransferRequisition $record): bool => in_array($record->status, [TransferRequisitionStatus::UnderReviewFulfiller, TransferRequisitionStatus::UnderReviewRequestor, TransferRequisitionStatus::Requested]))
                 ->schema([
@@ -81,6 +93,7 @@ final class ViewTransferRequisition extends ViewRecord
                         ->rows(3),
                 ])
                 ->action(function (TransferRequisition $record, array $data): void {
+                    $oldStatus = $record->status;
                     $newStatus = $record->status === TransferRequisitionStatus::UnderReviewFulfiller
                         ? TransferRequisitionStatus::UnderReviewRequestor
                         : TransferRequisitionStatus::UnderReviewFulfiller;
@@ -89,11 +102,18 @@ final class ViewTransferRequisition extends ViewRecord
                         'status' => $newStatus,
                         'notes' => $data['notes'] ?? $record->notes,
                     ]);
+
+                    app(AuditService::class)->recordRequisition(
+                        requisition: $record,
+                        user: auth()->user(),
+                        action: 'counter_offered',
+                        changes: ['status' => ['old' => $oldStatus->value, 'new' => $newStatus->value]]
+                    );
                 }),
 
             Action::make('confirm')
                 ->label('Confirm Requisition')
-                ->icon('heroicon-o-check-circle')
+                ->icon(Heroicon::OutlinedCheckCircle)
                 ->color('success')
                 ->visible(fn (TransferRequisition $record): bool => in_array($record->status, [TransferRequisitionStatus::Requested, TransferRequisitionStatus::UnderReviewFulfiller, TransferRequisitionStatus::UnderReviewRequestor]))
                 ->requiresConfirmation()
@@ -108,7 +128,7 @@ final class ViewTransferRequisition extends ViewRecord
 
             Action::make('dispatch')
                 ->label('Dispatch')
-                ->icon('heroicon-o-truck')
+                ->icon(Heroicon::OutlinedTruck)
                 ->color('primary')
                 ->visible(fn (TransferRequisition $record): bool => $record->status === TransferRequisitionStatus::Confirmed)
                 ->requiresConfirmation()
@@ -126,7 +146,7 @@ final class ViewTransferRequisition extends ViewRecord
 
             Action::make('print_stn')
                 ->label('Print STN')
-                ->icon('heroicon-o-document-text')
+                ->icon(Heroicon::OutlinedDocumentText)
                 ->color('gray')
                 ->visible(fn (TransferRequisition $record): bool => in_array($record->status, [TransferRequisitionStatus::Dispatched, TransferRequisitionStatus::PartiallyReceived, TransferRequisitionStatus::Completed, TransferRequisitionStatus::ClosedWithLoss]))
                 ->action(function (TransferRequisition $record): void {
@@ -148,7 +168,7 @@ final class ViewTransferRequisition extends ViewRecord
 
             Action::make('scan_to_receive')
                 ->label('Scan to Receive')
-                ->icon('heroicon-o-qr-code')
+                ->icon(Heroicon::OutlinedQrCode)
                 ->color('success')
                 ->visible(fn (TransferRequisition $record): bool => in_array($record->status, [TransferRequisitionStatus::Dispatched, TransferRequisitionStatus::PartiallyReceived]))
                 ->schema([

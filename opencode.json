@@ -1,5 +1,10 @@
 {
     "$schema": "https://opencode.ai/config.json",
+    "model": "opencode/nemotron-3.5-lightning-free",
+    "permission": {
+        "external_directory": "deny"
+    },
+    "plugin": ["ecc-universal"],
     "mcp": {
         "laravel-boost": {
             "type": "local",
@@ -15,46 +20,46 @@
             "command": ["headroom", "mcp", "run"]
         }
     },
+    "default_agent": "commodore",
     "provider": {
-        "opencode": {
-            "options": {
-                "allow_fallbacks": true
+        "openrouter": {
+            "models": {
+                "anthropic/claude-sonnet-4.6": {
+                    "options": {
+                        "provider": {
+                            "allow_fallbacks": true
+                        }
+                    }
+                },
+                "z-ai/glm-5.2": {
+                    "options": {
+                        "provider": {
+                            "allow_fallbacks": true
+                        }
+                    }
+                },
+                "minimax/minimax-m3": {
+                    "options": {
+                        "provider": {
+                            "allow_fallbacks": true
+                        }
+                    }
+                },
+                "xiaomi/mimo-v2.5": {
+                    "options": {
+                        "provider": {
+                            "allow_fallbacks": true
+                        }
+                    }
+                },
+                "deepseek/deepseek-v4-pro": {
+                    "options": {
+                        "provider": {
+                            "allow_fallbacks": true
+                        }
+                    }
+                }
             }
-        }
-    },
-    "model": "opencode/nemotron-3.5-lightning-free",
-    "agents": {
-        "orchestrator": {
-            "model": "opencode/nemotron-3.5-lightning-free",
-            "fallback": "opencode/mimo-v2.5-free"
-        },
-        "architect": {
-            "model": "opencode/nemotron-3.5-lightning-free",
-            "fallback": "opencode/nemotron-3-ultra-free"
-        },
-        "backend": {
-            "model": "opencode/mimo-v2.5-free",
-            "fallback": "opencode/nemotron-3.5-lightning-free"
-        },
-        "frontend": {
-            "model": "opencode/ling-3.0-flash-fin-free",
-            "fallback": "opencode/mimo-v2.5-free"
-        },
-        "qa": {
-            "model": "opencode/big-pickle-free",
-            "fallback": "opencode/mimo-v2.5-free"
-        },
-        "security": {
-            "model": "opencode/nemotron-3-ultra-free",
-            "fallback": "opencode/nemotron-3.5-lightning-free"
-        },
-        "adversary": {
-            "model": "opencode/nemotron-3-ultra-free",
-            "fallback": "opencode/big-pickle-free"
-        },
-        "docs": {
-            "model": "opencode/muse-spark-1.2-contributor-free",
-            "fallback": "opencode/ling-3.0-flash-fin-free"
         }
     }
 }

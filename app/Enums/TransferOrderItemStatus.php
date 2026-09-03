@@ -6,8 +6,9 @@ namespace App\Enums;
 
 use Filament\Support\Contracts\HasColor;
 use Filament\Support\Contracts\HasLabel;
+use Filament\Support\Contracts\HasIcon;
 
-enum TransferOrderItemStatus: string implements HasColor, HasLabel
+enum TransferOrderItemStatus: string implements HasColor, HasLabel, HasIcon
 {
     case Requested = 'requested';
     case Approved = 'approved';
@@ -34,6 +35,17 @@ enum TransferOrderItemStatus: string implements HasColor, HasLabel
             self::Modified => 'Modified',
             self::Added => 'Added',
             self::Removed => 'Removed',
+        };
+    }
+
+    public function getIcon(): ?string
+    {
+        return match ($this) {
+            self::Requested => 'heroicon-o-clock',
+            self::Approved => 'heroicon-o-check-circle',
+            self::Modified => 'heroicon-o-pencil',
+            self::Added => 'heroicon-o-plus-circle',
+            self::Removed => 'heroicon-o-minus-circle',
         };
     }
 }

@@ -6,8 +6,9 @@ namespace App\Enums;
 
 use Filament\Support\Contracts\HasColor;
 use Filament\Support\Contracts\HasLabel;
+use Filament\Support\Contracts\HasIcon;
 
-enum InTransitStatus: string implements HasColor, HasLabel
+enum InTransitStatus: string implements HasColor, HasLabel, HasIcon
 {
     case InTransit = 'in_transit';
     case PartiallyReceived = 'partially_received';
@@ -31,6 +32,16 @@ enum InTransitStatus: string implements HasColor, HasLabel
             self::PartiallyReceived => 'Partially Received',
             self::Received => 'Received',
             self::Cleared => 'Cleared',
+        };
+    }
+
+    public function getIcon(): ?string
+    {
+        return match ($this) {
+            self::InTransit => 'heroicon-o-truck',
+            self::PartiallyReceived => 'heroicon-o-chart-bar',
+            self::Received => 'heroicon-o-check-circle',
+            self::Cleared => 'heroicon-o-check-circle',
         };
     }
 }

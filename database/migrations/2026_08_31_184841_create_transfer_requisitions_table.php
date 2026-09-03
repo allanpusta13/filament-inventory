@@ -28,7 +28,7 @@ return new class() extends Migration
             $table->timestamp('approved_at')->nullable();
             $table->timestamp('dispatched_at')->nullable();
             $table->timestamp('completed_at')->nullable();
-$table->timestamp('received_at')->nullable();
+            $table->timestamp('received_at')->nullable();
             $table->text('notes')->nullable();
             $table->softDeletes(); // Enable Soft-Deletes for proper trashing & restoration safety
             $table->timestamps();

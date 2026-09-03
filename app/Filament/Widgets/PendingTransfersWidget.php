@@ -35,7 +35,7 @@ final class PendingTransfersWidget extends BaseWidget
                     });
                 }
 
-                return $query->latest('requested_at');
+                return $query->with(['fromWarehouse', 'toWarehouse'])->latest('requested_at');
             })
             ->columns([
                 Tables\Columns\TextColumn::make('reference_code')

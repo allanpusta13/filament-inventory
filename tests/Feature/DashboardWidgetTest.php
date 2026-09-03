@@ -14,9 +14,11 @@ use App\Filament\Widgets\StockByWarehouseWidget;
 use App\Filament\Widgets\StockMovementTrendChart;
 use App\Filament\Widgets\WarehouseFilterWidget;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\StockMovement;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Models\WarehouseStock;
 
 use function Pest\Livewire\livewire;
 
@@ -65,21 +67,21 @@ describe('StatsOverviewWidget', function (): void {
 
         $product1 = Product::factory()->create(['name' => 'Staff Product']);
         $product2 = Product::factory()->create(['name' => 'Other WH Product']);
-        $variant1 = App\Models\ProductVariant::factory()->create(['product_id' => $product1->id]);
-        $variant2 = App\Models\ProductVariant::factory()->create(['product_id' => $product2->id]);
+        $variant1 = ProductVariant::factory()->create(['product_id' => $product1->id]);
+        $variant2 = ProductVariant::factory()->create(['product_id' => $product2->id]);
 
-        StockMovement::factory()->create([
+        WarehouseStock::create([
             'variant_id' => $variant1->id,
             'warehouse_id' => $this->warehouse1->id,
-            'type' => MovementType::Receive,
-            'quantity' => 50,
+            'on_hand_quantity' => 50,
+            'reserved_quantity' => 0,
         ]);
 
-        StockMovement::factory()->create([
+        WarehouseStock::create([
             'variant_id' => $variant2->id,
             'warehouse_id' => $this->warehouse2->id,
-            'type' => MovementType::Receive,
-            'quantity' => 100,
+            'on_hand_quantity' => 100,
+            'reserved_quantity' => 0,
         ]);
 
         livewire(StatsOverviewWidget::class)
@@ -92,21 +94,21 @@ describe('StatsOverviewWidget', function (): void {
 
         $product1 = Product::factory()->create(['reorder_point' => 50, 'name' => 'Staff Low Item']);
         $product2 = Product::factory()->create(['reorder_point' => 50, 'name' => 'Other WH Low Item']);
-        $variant1 = App\Models\ProductVariant::factory()->create(['product_id' => $product1->id]);
-        $variant2 = App\Models\ProductVariant::factory()->create(['product_id' => $product2->id]);
+        $variant1 = ProductVariant::factory()->create(['product_id' => $product1->id]);
+        $variant2 = ProductVariant::factory()->create(['product_id' => $product2->id]);
 
-        StockMovement::factory()->create([
+        WarehouseStock::create([
             'variant_id' => $variant1->id,
             'warehouse_id' => $this->warehouse1->id,
-            'type' => MovementType::Receive,
-            'quantity' => 20,
+            'on_hand_quantity' => 20,
+            'reserved_quantity' => 0,
         ]);
 
-        StockMovement::factory()->create([
+        WarehouseStock::create([
             'variant_id' => $variant2->id,
             'warehouse_id' => $this->warehouse2->id,
-            'type' => MovementType::Receive,
-            'quantity' => 20,
+            'on_hand_quantity' => 20,
+            'reserved_quantity' => 0,
         ]);
 
         livewire(StatsOverviewWidget::class)
@@ -117,7 +119,16 @@ describe('StatsOverviewWidget', function (): void {
     it('admin sees correct total sku count', function (): void {
         $this->actingAs($this->admin);
 
-        Product::factory()->count(5)->create();
+        $products = Product::factory()->count(5)->create();
+        foreach ($products as $product) {
+            $variant = ProductVariant::factory()->create(['product_id' => $product->id]);
+            WarehouseStock::create([
+                'variant_id' => $variant->id,
+                'warehouse_id' => $this->warehouse1->id,
+                'on_hand_quantity' => 10,
+                'reserved_quantity' => 0,
+            ]);
+        }
 
         livewire(StatsOverviewWidget::class)
             ->assertSee('5');
@@ -127,13 +138,13 @@ describe('StatsOverviewWidget', function (): void {
         $this->actingAs($this->admin);
 
         $product = Product::factory()->create();
-        $variant = App\Models\ProductVariant::factory()->create(['product_id' => $product->id]);
+        $variant = ProductVariant::factory()->create(['product_id' => $product->id]);
 
-        StockMovement::factory()->create([
+        WarehouseStock::create([
             'variant_id' => $variant->id,
             'warehouse_id' => $this->warehouse1->id,
-            'type' => MovementType::Receive,
-            'quantity' => 100,
+            'on_hand_quantity' => 100,
+            'reserved_quantity' => 0,
         ]);
 
         livewire(StatsOverviewWidget::class)
@@ -144,13 +155,13 @@ describe('StatsOverviewWidget', function (): void {
         $this->actingAs($this->admin);
 
         $product = Product::factory()->create(['reorder_point' => 50]);
-        $variant = App\Models\ProductVariant::factory()->create(['product_id' => $product->id]);
+        $variant = ProductVariant::factory()->create(['product_id' => $product->id]);
 
-        StockMovement::factory()->create([
+        WarehouseStock::create([
             'variant_id' => $variant->id,
             'warehouse_id' => $this->warehouse1->id,
-            'type' => MovementType::Receive,
-            'quantity' => 20,
+            'on_hand_quantity' => 20,
+            'reserved_quantity' => 0,
         ]);
 
         livewire(StatsOverviewWidget::class)
@@ -162,7 +173,14 @@ describe('StatsOverviewWidget', function (): void {
         $this->actingAs($this->admin);
 
         $product = Product::factory()->create();
-        $variant = App\Models\ProductVariant::factory()->create(['product_id' => $product->id]);
+        $variant = ProductVariant::factory()->create(['product_id' => $product->id]);
+
+        WarehouseStock::create([
+            'variant_id' => $variant->id,
+            'warehouse_id' => $this->warehouse1->id,
+            'on_hand_quantity' => 0,
+            'reserved_quantity' => 0,
+        ]);
 
         StockMovement::factory()->create([
             'variant_id' => $variant->id,
@@ -187,20 +205,20 @@ describe('StatsOverviewWidget', function (): void {
         $this->actingAs($this->admin);
 
         $product = Product::factory()->create();
-        $variant = App\Models\ProductVariant::factory()->create(['product_id' => $product->id]);
+        $variant = ProductVariant::factory()->create(['product_id' => $product->id]);
 
-        StockMovement::factory()->create([
+        WarehouseStock::create([
             'variant_id' => $variant->id,
             'warehouse_id' => $this->warehouse1->id,
-            'type' => MovementType::Receive,
-            'quantity' => 100,
+            'on_hand_quantity' => 100,
+            'reserved_quantity' => 0,
         ]);
 
-        StockMovement::factory()->create([
+        WarehouseStock::create([
             'variant_id' => $variant->id,
             'warehouse_id' => $this->warehouse2->id,
-            'type' => MovementType::Receive,
-            'quantity' => 200,
+            'on_hand_quantity' => 200,
+            'reserved_quantity' => 0,
         ]);
 
         // Set session filter before rendering widget
@@ -232,7 +250,7 @@ describe('LowStockAlertWidget', function (): void {
         $this->actingAs($this->admin);
 
         $product = Product::factory()->create(['reorder_point' => 50, 'name' => 'Low Widget Item']);
-        $variant = App\Models\ProductVariant::factory()->create(['product_id' => $product->id]);
+        $variant = ProductVariant::factory()->create(['product_id' => $product->id]);
 
         StockMovement::factory()->create([
             'variant_id' => $variant->id,
@@ -250,7 +268,7 @@ describe('LowStockAlertWidget', function (): void {
         $this->actingAs($this->admin);
 
         $product = Product::factory()->create(['reorder_point' => 10, 'name' => 'High Stock Item']);
-        $variant = App\Models\ProductVariant::factory()->create(['product_id' => $product->id]);
+        $variant = ProductVariant::factory()->create(['product_id' => $product->id]);
 
         StockMovement::factory()->create([
             'variant_id' => $variant->id,
@@ -269,8 +287,8 @@ describe('LowStockAlertWidget', function (): void {
 
         $product1 = Product::factory()->create(['reorder_point' => 50, 'name' => 'Staff Low Item']);
         $product2 = Product::factory()->create(['reorder_point' => 50, 'name' => 'Other WH Item']);
-        $variant1 = App\Models\ProductVariant::factory()->create(['product_id' => $product1->id]);
-        $variant2 = App\Models\ProductVariant::factory()->create(['product_id' => $product2->id]);
+        $variant1 = ProductVariant::factory()->create(['product_id' => $product1->id]);
+        $variant2 = ProductVariant::factory()->create(['product_id' => $product2->id]);
 
         StockMovement::factory()->create([
             'variant_id' => $variant1->id,
@@ -324,12 +342,12 @@ describe('StockByWarehouseWidget', function (): void {
             ->assertOk();
     });
 
-    it('warehouse staff cannot view stock by warehouse', function (): void {
+    it('warehouse staff can view stock by warehouse', function (): void {
         $this->actingAs($this->staff);
 
         $isVisible = StockByWarehouseWidget::canView();
 
-        expect($isVisible)->toBeFalse();
+        expect($isVisible)->toBeTrue();
     });
 
     it('admin sees all active warehouses', function (): void {
@@ -371,7 +389,7 @@ describe('StockMovementTrendChart', function (): void {
         $this->actingAs($this->admin);
 
         $product = Product::factory()->create();
-        $variant = App\Models\ProductVariant::factory()->create(['product_id' => $product->id]);
+        $variant = ProductVariant::factory()->create(['product_id' => $product->id]);
 
         StockMovement::factory()->create([
             'variant_id' => $variant->id,
@@ -422,7 +440,7 @@ describe('FastMovingStockChart', function (): void {
         $this->actingAs($this->admin);
 
         $product = Product::factory()->create(['name' => 'Frequent Mover']);
-        $variant = App\Models\ProductVariant::factory()->create(['product_id' => $product->id]);
+        $variant = ProductVariant::factory()->create(['product_id' => $product->id]);
 
         for ($i = 0; $i < 10; $i++) {
             StockMovement::factory()->create([
@@ -457,7 +475,7 @@ describe('RecentStockActivityWidget', function (): void {
         $this->actingAs($this->admin);
 
         $product = Product::factory()->create(['name' => 'Recent Widget Product']);
-        $variant = App\Models\ProductVariant::factory()->create(['product_id' => $product->id]);
+        $variant = ProductVariant::factory()->create(['product_id' => $product->id]);
 
         $movement = StockMovement::factory()->create([
             'variant_id' => $variant->id,
@@ -475,7 +493,7 @@ describe('RecentStockActivityWidget', function (): void {
         $this->actingAs($this->staff);
 
         $product = Product::factory()->create();
-        $variant = App\Models\ProductVariant::factory()->create(['product_id' => $product->id]);
+        $variant = ProductVariant::factory()->create(['product_id' => $product->id]);
 
         $movement1 = StockMovement::factory()->create([
             'variant_id' => $variant->id,

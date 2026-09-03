@@ -96,8 +96,22 @@ final class TransferRequisition extends Model
         return $this->hasMany(TransferRequisitionItem::class, 'requisition_id');
     }
 
-    protected static function booted()
+    protected static function booted(): void
     {
+        self::creating(function (TransferRequisition $requisition): void {
+            if (empty($requisition->reference_code)) {
+                $year = date('Y');
+                $last = static::whereYear('created_at', $year)->count() + 1;
+                $requisition->reference_code = 'TRQ-'.$year.'-'.mb_str_pad((string) $last, 4, '0', STR_PAD_LEFT);
+            }
+            if (is_null($requisition->requested_by)) {
+                $requisition->requested_by = auth()->id();
+            }
+            if (is_null($requisition->requested_at)) {
+                $requisition->requested_at = now();
+            }
+        });
+
         self::deleting(function (TransferRequisition $requisition) {
             if ($requisition->status === 'dispatched') {
                 throw new Exception('Cannot delete a requisition that is currently in transit (Dispatched status).');

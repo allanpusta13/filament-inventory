@@ -9,6 +9,8 @@ use App\Models\InTransit;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -17,7 +19,7 @@ final class InTransitResource extends Resource
 {
     protected static ?string $model = InTransit::class;
 
-    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-truck';
+    protected static BackedEnum|string|null $navigationIcon = Heroicon::OutlinedTruck;
 
     protected static bool $canCreate = false;
 
@@ -48,7 +50,8 @@ final class InTransitResource extends Resource
                     ->searchable(),
                 TextColumn::make('dispatched_base_qty')
                     ->label('Dispatched Qty')
-                    ->numeric(),
+                    ->numeric()
+                    ->summarize(Sum::make()->label('Total In Transit')),
                 TextColumn::make('dispatched_at')
                     ->label('Dispatched At')
                     ->dateTime(),

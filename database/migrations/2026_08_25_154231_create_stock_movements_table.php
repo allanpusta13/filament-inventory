@@ -15,12 +15,12 @@ return new class() extends Migration
             $table->foreignId('variant_id')->constrained('product_variants');
             $table->foreignId('warehouse_id')->constrained('warehouses');
             $table->enum('type', [
-                'receive', 'ship', 'transfer_out', 'transfer_in', 
-                'transit_out', 'transit_in', 'adjustment', 'loss'
+                'receive', 'ship', 'transfer_out', 'transfer_in',
+                'transit_out', 'transit_in', 'adjustment', 'loss',
             ]);
             $table->integer('quantity');
-$table->string('unit_name_used')->default('Base Unit');
-$table->integer('unit_ratio_used')->default(1);
+            $table->string('unit_name_used')->default('Base Unit');
+            $table->integer('unit_ratio_used')->default(1);
             $table->foreignId('related_movement_id')->nullable()->constrained('stock_movements')->onDelete('set null');
             $table->string('reference_type')->nullable();
             $table->unsignedBigInteger('reference_id')->nullable();

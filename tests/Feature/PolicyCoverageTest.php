@@ -230,7 +230,7 @@ describe('TransferRequisitionPolicy', function (): void {
         expect($policy->update($this->admin, $requisition))->toBeTrue();
     });
 
-test('staff can update transfer requisition for assigned warehouse', function (): void {
+    test('staff can update transfer requisition for assigned warehouse', function (): void {
         $policy = new App\Policies\TransferRequisitionPolicy();
         $requisition = TransferRequisition::factory()->create([
             'from_warehouse_id' => $this->wh1->id,
@@ -314,6 +314,131 @@ test('staff can update transfer requisition for assigned warehouse', function ()
             'status' => 'draft',
         ]);
         expect($policy->delete($this->admin, $requisition))->toBeFalse();
+    });
+});
+
+describe('TransferOrderPolicy', function (): void {
+    test('all roles can view any transfer orders', function (): void {
+        $policy = new App\Policies\TransferOrderPolicy();
+        expect($policy->viewAny($this->admin))->toBeTrue();
+        expect($policy->viewAny($this->staff))->toBeTrue();
+        expect($policy->viewAny($this->auditor))->toBeTrue();
+        expect($policy->viewAny($this->manager))->toBeTrue();
+    });
+
+    test('admin can view any transfer order', function (): void {
+        $policy = new App\Policies\TransferOrderPolicy();
+        $order = App\Models\TransferOrder::factory()->create([
+            'sender_branch_id' => $this->wh2->id,
+            'receiver_branch_id' => $this->wh2->id,
+        ]);
+        expect($policy->view($this->admin, $order))->toBeTrue();
+    });
+
+    test('auditor can view any transfer order', function (): void {
+        $policy = new App\Policies\TransferOrderPolicy();
+        $order = App\Models\TransferOrder::factory()->create([
+            'sender_branch_id' => $this->wh2->id,
+            'receiver_branch_id' => $this->wh2->id,
+        ]);
+        expect($policy->view($this->auditor, $order))->toBeTrue();
+    });
+
+    test('staff can view transfer order involving assigned warehouse', function (): void {
+        $policy = new App\Policies\TransferOrderPolicy();
+        $order = App\Models\TransferOrder::factory()->create([
+            'sender_branch_id' => $this->wh1->id,
+            'receiver_branch_id' => $this->wh2->id,
+        ]);
+        expect($policy->view($this->staff, $order))->toBeTrue();
+    });
+
+    test('staff cannot view transfer order for unassigned warehouses', function (): void {
+        $policy = new App\Policies\TransferOrderPolicy();
+        $order = App\Models\TransferOrder::factory()->create([
+            'sender_branch_id' => $this->wh2->id,
+            'receiver_branch_id' => $this->wh2->id,
+        ]);
+        expect($policy->view($this->staff, $order))->toBeFalse();
+    });
+
+    test('admin can create transfer orders', function (): void {
+        $policy = new App\Policies\TransferOrderPolicy();
+        expect($policy->create($this->admin))->toBeTrue();
+    });
+
+    test('staff can create transfer orders', function (): void {
+        $policy = new App\Policies\TransferOrderPolicy();
+        expect($policy->create($this->staff))->toBeTrue();
+    });
+
+    test('manager can create transfer orders', function (): void {
+        $policy = new App\Policies\TransferOrderPolicy();
+        expect($policy->create($this->manager))->toBeTrue();
+    });
+
+    test('auditor cannot create transfer orders', function (): void {
+        $policy = new App\Policies\TransferOrderPolicy();
+        expect($policy->create($this->auditor))->toBeFalse();
+    });
+
+    test('admin can update any transfer order', function (): void {
+        $policy = new App\Policies\TransferOrderPolicy();
+        $order = App\Models\TransferOrder::factory()->create([
+            'sender_branch_id' => $this->wh1->id,
+            'receiver_branch_id' => $this->wh2->id,
+        ]);
+        expect($policy->update($this->admin, $order))->toBeTrue();
+    });
+
+    test('staff can update transfer order for assigned warehouse', function (): void {
+        $policy = new App\Policies\TransferOrderPolicy();
+        $order = App\Models\TransferOrder::factory()->create([
+            'sender_branch_id' => $this->wh1->id,
+            'receiver_branch_id' => $this->wh2->id,
+        ]);
+        expect($policy->update($this->staff, $order))->toBeTrue();
+    });
+
+    test('auditor cannot update transfer orders', function (): void {
+        $policy = new App\Policies\TransferOrderPolicy();
+        $order = App\Models\TransferOrder::factory()->create([
+            'sender_branch_id' => $this->wh1->id,
+            'receiver_branch_id' => $this->wh2->id,
+        ]);
+        expect($policy->update($this->auditor, $order))->toBeFalse();
+    });
+
+    test('admin can delete draft transfer order not yet dispatched', function (): void {
+        $policy = new App\Policies\TransferOrderPolicy();
+        $order = App\Models\TransferOrder::factory()->create([
+            'sender_branch_id' => $this->wh1->id,
+            'receiver_branch_id' => $this->wh2->id,
+            'status' => 'draft',
+            'dispatched_by' => null,
+        ]);
+        expect($policy->delete($this->admin, $order))->toBeTrue();
+    });
+
+    test('auditor cannot delete transfer orders', function (): void {
+        $policy = new App\Policies\TransferOrderPolicy();
+        $order = App\Models\TransferOrder::factory()->create([
+            'sender_branch_id' => $this->wh1->id,
+            'receiver_branch_id' => $this->wh2->id,
+            'status' => 'draft',
+            'dispatched_by' => null,
+        ]);
+        expect($policy->delete($this->auditor, $order))->toBeFalse();
+    });
+
+    test('cannot delete non-draft transfer order', function (): void {
+        $policy = new App\Policies\TransferOrderPolicy();
+        $order = App\Models\TransferOrder::factory()->create([
+            'sender_branch_id' => $this->wh1->id,
+            'receiver_branch_id' => $this->wh2->id,
+            'status' => 'dispatched',
+        ]);
+        expect($policy->delete($this->admin, $order))->toBeFalse();
     });
 });
 

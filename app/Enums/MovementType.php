@@ -6,8 +6,9 @@ namespace App\Enums;
 
 use Filament\Support\Contracts\HasColor;
 use Filament\Support\Contracts\HasLabel;
+use Filament\Support\Contracts\HasIcon;
 
-enum MovementType: string implements HasColor, HasLabel
+enum MovementType: string implements HasColor, HasLabel, HasIcon
 {
     case Receive = 'receive';
     case Ship = 'ship';
@@ -39,6 +40,18 @@ enum MovementType: string implements HasColor, HasLabel
             self::TransitIn => 'Transit In',
             self::Adjustment => 'Adjustment',
             self::Loss => 'Loss',
+        };
+    }
+
+    public function getIcon(): ?string
+    {
+        return match ($this) {
+            self::Receive => 'heroicon-o-arrow-down',
+            self::Ship => 'heroicon-o-arrow-up',
+            self::TransferOut, self::TransferIn => 'heroicon-o-arrows-left-right',
+            self::TransitOut, self::TransitIn => 'heroicon-o-arrow-path',
+            self::Adjustment => 'heroicon-o-pencil',
+            self::Loss => 'heroicon-o-exclamation-triangle',
         };
     }
 }

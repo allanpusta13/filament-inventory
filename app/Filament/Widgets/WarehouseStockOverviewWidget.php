@@ -9,6 +9,7 @@ use App\Filament\Resources\TransferRequisitions\TransferRequisitionResource;
 use App\Models\InTransit;
 use App\Models\ProductVariant;
 use App\Models\WarehouseStock;
+use Filament\Support\Icons\Heroicon;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
@@ -27,22 +28,19 @@ final class WarehouseStockOverviewWidget extends StatsOverviewWidget
 
         $totalSkusOnHand = (clone $stockQuery)->where('on_hand_quantity', '>', 0)->count();
 
-        $lowStockCount = 0;
-        $variants = ProductVariant::with('product')->get();
-        foreach ($variants as $variant) {
-            $reorderPoint = $variant->product?->reorder_point ?? 0;
-            if ($reorderPoint <= 0) {
-                continue;
-            }
-            $stockQuery2 = WarehouseStock::where('variant_id', $variant->id);
-            if (! $isAdmin) {
-                $stockQuery2->whereIn('warehouse_id', $warehouseIds);
-            }
-            $totalOnHand = $stockQuery2->sum('on_hand_quantity');
-            if ($totalOnHand <= $reorderPoint) {
-                $lowStockCount++;
-            }
+        $lowStockQuery = ProductVariant::query()
+            ->select('product_variants.id')
+            ->join('products', 'products.id', '=', 'product_variants.product_id')
+            ->join('warehouse_stock', 'warehouse_stock.variant_id', '=', 'product_variants.id')
+            ->where('products.reorder_point', '>', 0)
+            ->groupBy('product_variants.id', 'products.reorder_point')
+            ->havingRaw('SUM(warehouse_stock.on_hand_quantity) <= products.reorder_point');
+
+        if (! $isAdmin) {
+            $lowStockQuery->whereIn('warehouse_stock.warehouse_id', $warehouseIds);
         }
+
+        $lowStockCount = $lowStockQuery->count();
 
         $activeShipments = InTransit::where('status', 'in_transit')
             ->whereHas('requisition', function ($q) use ($isAdmin, $warehouseIds): void {
@@ -56,17 +54,17 @@ final class WarehouseStockOverviewWidget extends StatsOverviewWidget
         return [
             Stat::make('Total SKUs On Hand', $totalSkusOnHand)
                 ->description('Unique variant-warehouse combinations')
-                ->descriptionIcon('heroicon-o-cube')
+                ->descriptionIcon(Heroicon::OutlinedCube)
                 ->color('success')
                 ->url(ProductResource::getUrl('index')),
             Stat::make('Low Stock Alerts', $lowStockCount)
                 ->description('Variants at or below reorder point')
-                ->descriptionIcon('heroicon-o-exclamation-triangle')
+                ->descriptionIcon(Heroicon::OutlinedExclamationTriangle)
                 ->color($lowStockCount > 0 ? 'danger' : 'success')
                 ->url(ProductResource::getUrl('index')),
             Stat::make('Active Shipments', $activeShipments)
                 ->description('Currently in transit')
-                ->descriptionIcon('heroicon-o-truck')
+                ->descriptionIcon(Heroicon::OutlinedTruck)
                 ->color($activeShipments > 0 ? 'warning' : 'success')
                 ->url(TransferRequisitionResource::getUrl('index')),
         ];

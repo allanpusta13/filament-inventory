@@ -89,6 +89,10 @@ final class ProductPriceResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->with([
+                'variant',
+                'warehouse',
+            ]))
             ->columns([
                 TextColumn::make('variant.sku')
                     ->searchable()

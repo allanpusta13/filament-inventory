@@ -15,6 +15,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\Auth;
 
 final class ListStockMovements extends ListRecords
@@ -38,7 +39,7 @@ final class ListStockMovements extends ListRecords
     {
         return Action::make('receiveStock')
             ->label('Receive Stock')
-            ->icon('heroicon-o-arrow-down-tray')
+            ->icon(Heroicon::OutlinedArrowDownTray)
             ->form([
                 Select::make('product_id')
                     ->label('Product')
@@ -90,7 +91,7 @@ final class ListStockMovements extends ListRecords
     {
         return Action::make('shipStock')
             ->label('Ship Stock')
-            ->icon('heroicon-o-arrow-up-tray')
+            ->icon(Heroicon::OutlinedArrowUpTray)
             ->form([
                 Select::make('product_id')
                     ->label('Product')
@@ -150,7 +151,7 @@ final class ListStockMovements extends ListRecords
     {
         return Action::make('transferStock')
             ->label('Transfer Stock')
-            ->icon('heroicon-o-arrows-right-left')
+            ->icon(Heroicon::OutlinedArrowsRightLeft)
             ->form([
                 Select::make('product_id')
                     ->label('Product')
@@ -217,7 +218,7 @@ final class ListStockMovements extends ListRecords
     {
         return Action::make('adjustment')
             ->label('Adjustment')
-            ->icon('heroicon-o-calculator')
+            ->icon(Heroicon::OutlinedCalculator)
             ->form([
                 Select::make('product_id')
                     ->label('Product')

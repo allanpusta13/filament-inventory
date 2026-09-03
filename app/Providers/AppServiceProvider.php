@@ -11,13 +11,17 @@ use Filament\Support\Concerns\Configurable;
 use Filament\Tables\Columns\Column;
 use Filament\Tables\Filters\BaseFilter;
 use Filament\Tables\Table;
+use Illuminate\Contracts\Foundation\MaintenanceMode;
+use Illuminate\Foundation\FileBasedMaintenanceMode;
 use Illuminate\Support\ServiceProvider;
 
 final class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        $this->app->singleton(MaintenanceMode::class, function ($app) {
+            return new FileBasedMaintenanceMode($app['config']);
+        });
     }
 
     public function boot(): void

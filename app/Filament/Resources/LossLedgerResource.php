@@ -8,7 +8,9 @@ use App\Filament\Resources\LossLedgerResource\Pages;
 use App\Models\LossLedger;
 use BackedEnum;
 use Filament\Resources\Resource;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables;
+use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -16,7 +18,7 @@ final class LossLedgerResource extends Resource
 {
     protected static ?string $model = LossLedger::class;
 
-    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentText;
 
     protected static bool $canCreate = false;
 
@@ -53,7 +55,8 @@ final class LossLedgerResource extends Resource
                     ->money('USD', 4),
                 Tables\Columns\TextColumn::make('total_financial_loss')
                     ->label('Financial Loss')
-                    ->money('USD', 4),
+                    ->money('USD', 4)
+                    ->summarize(Sum::make()->label('Total Loss')->money('USD', 4)),
                 Tables\Columns\TextColumn::make('loss_category')
                     ->label('Loss Category')
                     ->searchable(),
@@ -73,18 +76,7 @@ final class LossLedgerResource extends Resource
             ->modifyQueryUsing(function (Builder $query) {
                 return $query
                     ->with(['requisition', 'variant', 'warehouse']);
-            })
-            ->columns([
-                // Aggregate summary footer
-                Tables\Columns\TextColumn::make('total_financial_loss')
-                    ->label('Total Monetary Loss')
-                    ->money('USD', 4)
-                    ->summarize(
-                        Tables\Columns\Summarizers\Sum::make()
-                            ->label('Cumulative Write-offs')
-                            ->money('USD', 4)
-                    ),
-            ]);
+            });
     }
 
     public static function getRelations(): array
@@ -106,6 +98,6 @@ final class LossLedgerResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        return self::getModel()::count();
+        return (string) self::getModel()::count();
     }
 }

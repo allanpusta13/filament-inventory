@@ -82,11 +82,55 @@ it('non-admin sees only assigned warehouse movements', function (): void {
 });
 
 it('returns counterpart warehouse for transfer_in', function (): void {
-    $this->markTestSkipped('counterpart_warehouse accessor not implemented yet');
+    $this->actingAs($this->user);
+
+    $warehouse1 = Warehouse::factory()->create(['is_active' => true]);
+    $warehouse2 = Warehouse::factory()->create(['is_active' => true]);
+
+    // Create a transfer out movement from warehouse1 to warehouse2
+    $outMovement = StockMovement::factory()->create([
+        'variant_id' => $this->variant->id,
+        'warehouse_id' => $warehouse1->id,
+        'type' => MovementType::TransferOut,
+        'quantity' => -50,
+    ]);
+
+    // Create the corresponding transfer in movement (linked by related_movement_id)
+    $inMovement = StockMovement::factory()->create([
+        'variant_id' => $this->variant->id,
+        'warehouse_id' => $warehouse2->id,
+        'type' => MovementType::TransferIn,
+        'quantity' => 50,
+        'related_movement_id' => $outMovement->id,
+    ]);
+
+    $this->assertEquals($warehouse1->id, $inMovement->counterpart_warehouse->id);
 });
 
 it('returns counterpart warehouse for transfer_out', function (): void {
-    $this->markTestSkipped('counterpart_warehouse accessor not implemented yet');
+    $this->actingAs($this->user);
+
+    $warehouse1 = Warehouse::factory()->create(['is_active' => true]);
+    $warehouse2 = Warehouse::factory()->create(['is_active' => true]);
+
+    // Create the transfer out movement
+    $outMovement = StockMovement::factory()->create([
+        'variant_id' => $this->variant->id,
+        'warehouse_id' => $warehouse1->id,
+        'type' => MovementType::TransferOut,
+        'quantity' => -50,
+    ]);
+
+    // Create the corresponding transfer in movement (linked by related_movement_id)
+    $inMovement = StockMovement::factory()->create([
+        'variant_id' => $this->variant->id,
+        'warehouse_id' => $warehouse2->id,
+        'type' => MovementType::TransferIn,
+        'quantity' => 50,
+        'related_movement_id' => $outMovement->id,
+    ]);
+
+    $this->assertEquals($warehouse2->id, $outMovement->counterpart_warehouse->id);
 });
 
 it('returns null counterpart for non-transfer movements', function (): void {

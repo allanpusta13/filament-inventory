@@ -46,7 +46,6 @@ final class TransferOrderForm
                                 ->label('Product')
                                 ->relationship('product', 'name')
                                 ->searchable()
-                                ->preload()
                                 ->required()
                                 ->live(onBlur: true),
                             TextInput::make('requested_quantity')

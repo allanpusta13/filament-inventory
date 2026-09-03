@@ -30,7 +30,7 @@ it('has column', function (string $column): void {
 
     livewire(ListStockMovements::class)
         ->assertTableColumnExists($column);
-})->with(['type', 'quantity', 'reference', 'created_at']);
+})->with(['type', 'quantity', 'reference_code', 'created_at']);
 
 it('can render column', function (string $column): void {
     $this->actingAs($this->user);

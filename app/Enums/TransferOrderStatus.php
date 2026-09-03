@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Enums;
 
 use Filament\Support\Contracts\HasColor;
+use Filament\Support\Contracts\HasLabel;
+use Filament\Support\Contracts\HasIcon;
 
-enum TransferOrderStatus: string implements HasColor
+enum TransferOrderStatus: string implements HasColor, HasLabel, HasIcon
 {
     case Draft = 'draft';
     case Requested = 'requested';
@@ -42,6 +44,20 @@ enum TransferOrderStatus: string implements HasColor
             self::Dispatched => 'Dispatched',
             self::Received => 'Received',
             self::Cancelled => 'Cancelled',
+        };
+    }
+
+    public function getIcon(): ?string
+    {
+        return match ($this) {
+            self::Draft => 'heroicon-o-document-text',
+            self::Requested => 'heroicon-o-clock',
+            self::UnderReviewFulfiller => 'heroicon-o-chart-pie',
+            self::UnderReviewRequestor => 'heroicon-o-chart-pie',
+            self::Confirmed => 'heroicon-o-check-circle',
+            self::Dispatched => 'heroicon-o-truck',
+            self::Received => 'heroicon-o-inbox',
+            self::Cancelled => 'heroicon-o-x-circle',
         };
     }
 

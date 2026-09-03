@@ -17,6 +17,7 @@ use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Throwable;
@@ -29,7 +30,7 @@ final class StockAdjustment extends Page implements HasForms
     /** @var array<string, mixed> */
     public ?array $data = [];
 
-    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-arrow-path-rounded-square';
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowPathRoundedSquare;
 
     protected static ?string $navigationLabel = 'Stock Adjustment';
 
@@ -70,11 +71,11 @@ final class StockAdjustment extends Page implements HasForms
                         }
 
                         return ProductVariant::query()
-                            ->whereHas('warehouseStock', fn (Builder $q) => $q->where('warehouse_id', $state))
+                            ->whereHas('warehouseStocks', fn (Builder $q) => $q->where('warehouse_id', $state))
                             ->with('product')
                             ->get()
                             ->mapWithKeys(function (ProductVariant $v) use ($state) {
-                                $qty = $v->warehouseStock->where('warehouse_id', $state)->first()?->on_hand_quantity ?? 0;
+                                $qty = $v->warehouseStocks->where('warehouse_id', $state)->first()?->on_hand_quantity ?? 0;
                                 $sku = $v->product?->sku ?? 'Unknown';
 
                                 return [$v->id => "{$sku} - {$v->name} ({$qty} on hand)"];
@@ -93,7 +94,9 @@ final class StockAdjustment extends Page implements HasForms
                 Textarea::make('reason')
                     ->label('Reason')
                     ->rows(3)
-                    ->required(),
+                    ->required()
+                    ->minLength(15)
+                    ->helperText('Minimum 15 characters required for audit compliance.'),
             ])
             ->statePath('data');
     }
@@ -121,6 +124,7 @@ final class StockAdjustment extends Page implements HasForms
                 type: MovementType::Adjustment,
                 baseQuantity: $quantity,
                 referenceCode: 'ADJ-'.now()->format('Ymd-His'),
+                notes: $data['reason'],
             );
 
             $this->form->fill();

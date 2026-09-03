@@ -1,0 +1,67 @@
+{
+  "cookies": [
+    {
+      "name": "PHPDEBUGBAR_STACK_DATA",
+      "value": "%5B%5D",
+      "domain": "filament-inventory.test",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "remember_web_59ba36addc2b2f9401580f014c7f58ea4e30989d",
+      "value": "eyJpdiI6Imk4OXo2OWJibzZxVWZ4ay9sWUdnZVE9PSIsInZhbHVlIjoicDExZEFFK1FqckU4cGxIdUV6cVNOSW9pdDc4dWJHNTZ3K3A1aFVlUkJpU1IzT2VRdnRqRERJVzM4SzBLdzMxaCt3RE50NlU1UitnVlV3d2FHU1l6VUtrcEk2RlJ0VXZ4TTk1RW9BdzRJVW84Si9xUDlaYmoxWEowR2ttNmErbllHWjU3Ry9vcTh4OFBCODE2Z0Zjck9RVzBKQkcxdE5UVTgrZlhzOU9SM0d5ME9BQ3BoMjlla2RjWThFNDFjSXFhUjVRSC8wQko2b21oNlBCb2ZCYy8yem9ORkEyODNWcFFydmI2MStwc3ZRdz0iLCJtYWMiOiI3MjAxMjU1OGMyMDg5NmExMTcyNzlkZWQwNDAzMjQ0MzQwYTM0NTEyOGY2OWVhNzk1MDZmNGI3MTI5ZTBjZjdhIiwidGFnIjoiIn0%3D",
+      "domain": "filament-inventory.test",
+      "path": "/",
+      "expires": 1822925673.963529,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "XSRF-TOKEN",
+      "value": "eyJpdiI6Im9HR1Zvcm0vRGk3dmtkemlBN1gyNGc9PSIsInZhbHVlIjoiN0ZOdDI2a3djcGJZUzBkZ2s4dTBYaXZyM29kOWQvRzNFOGdJck41QjdCOXlLeEpFeVpuZWdqRi9FU01ZVmx5RTY4MGJydVNxb3k0MkdqTGdKaFcyWnNuUW9BWENuTzJJdng5eFYyMzE2eGp2SVZsWWVmd0xERE05cXN5SVVhSGsiLCJtYWMiOiJjMjA5NWFjNTQyNzkzOWZjZDllMjZjYWQxZWYxY2ZlYzQ0NGM3OWFiYTMzMjU4Y2MyOTY1ODhiZTU3ZDhiYjdjIiwidGFnIjoiIn0%3D",
+      "domain": "filament-inventory.test",
+      "path": "/",
+      "expires": 1788372874.515411,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "multi-_warehouse_inventory_system_session",
+      "value": "eyJpdiI6IkRJTzlZajMxVDVUNld3MVZCL041Nmc9PSIsInZhbHVlIjoiZTdSUTl0NlowYXhBRkNpbG1lYkM1cS9ielFmVHpmb0E1d0RHQ0oyb0JyV0ZNb2JIbXpudTJJU28zaG9IbDdwNnZnRGQwa3pMT09ENFc1clRuVDQzS3NYblJQSTFsUDNRVzM5MGFnc01aWE40VTJodlBMZnhTYkVteUV6YlFUTFYiLCJtYWMiOiI3MWUyMjc1ZGVhOThkMmEyNWVkMWU3NThkNjRhODg1ZmFiNTA4NTc1MDQzMGYzYzRiY2ZiMjFjMWRlYzk5NDZiIiwidGFnIjoiIn0%3D",
+      "domain": "filament-inventory.test",
+      "path": "/",
+      "expires": 1788372874.515497,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "http://filament-inventory.test",
+      "localStorage": [
+        {
+          "name": "theme",
+          "value": "system"
+        },
+        {
+          "name": "isOpenDesktop",
+          "value": "true"
+        },
+        {
+          "name": "isOpen",
+          "value": "true"
+        },
+        {
+          "name": "collapsedGroups",
+          "value": "[]"
+        }
+      ]
+    }
+  ]
+}

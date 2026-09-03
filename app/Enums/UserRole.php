@@ -6,8 +6,9 @@ namespace App\Enums;
 
 use Filament\Support\Contracts\HasColor;
 use Filament\Support\Contracts\HasLabel;
+use Filament\Support\Contracts\HasIcon;
 
-enum UserRole: string implements HasColor, HasLabel
+enum UserRole: string implements HasColor, HasLabel, HasIcon
 {
     case Admin = 'admin';
     case BranchManager = 'branch_manager';
@@ -31,6 +32,16 @@ enum UserRole: string implements HasColor, HasLabel
             self::BranchManager => 'Branch Manager',
             self::WarehouseStaff => 'Warehouse Staff',
             self::Auditor => 'Auditor',
+        };
+    }
+
+    public function getIcon(): ?string
+    {
+        return match ($this) {
+            self::Admin => 'heroicon-o-user',
+            self::BranchManager => 'heroicon-o-briefcase',
+            self::WarehouseStaff => 'heroicon-o-user-group',
+            self::Auditor => 'heroicon-o-clipboard-list',
         };
     }
 }

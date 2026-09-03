@@ -21,6 +21,7 @@ final class Product extends Model
         'sku',
         'name',
         'category',
+        'unit',
         'reorder_point',
     ];
 

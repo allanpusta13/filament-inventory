@@ -1,29 +1,79 @@
 import { defineConfig, devices } from '@playwright/test';
 
+/**
+ * Read environment variables from file.
+ * https://github.com/motdotla/dotenv
+ */
+// require('dotenv').config();
+
+/**
+ * See https://playwright.dev/docs/test-configuration.
+ */
 export default defineConfig({
   testDir: './tests/playwright',
-  globalSetup: './tests/playwright/global-setup.ts',
-  fullyParallel: false,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: 1,
-  reporter: [['html'], ['list']],
-  timeout: 60000,
-  use: {
-    baseURL: 'http://localhost:8000',
-    trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
+  /* Maximum time one test can run for. */
+  timeout: 120000,
+  expect: {
+    /**
+     * Maximum time expect() should wait for the condition to be met.
+     * For example in `await expect(locator).toHaveText();`
+     */
+    timeout: 5000
   },
+  /* Run tests in files in parallel */
+  fullyParallel: true,
+  /* Fail the build on CI if you accidentally left test.only in the source code. */
+  forbidOnly: !!process.env.CI,
+  /* Retry on CI only */
+  retries: process.env.CI ? 2 : 0,
+  /* Opt out of parallel tests on CI. */
+  workers: process.env.CI ? 1 : undefined,
+  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
+  reporter: 'html',
+  /* Shared settings for all the projects below. See https://playwright.dev/docs/test-classes. */
+  use: {
+    /* Maximum time each action such as `click()` can take. Defaults to 0 (no limit). */
+    actionTimeout: 0,
+    /* Base URL to use in actions like `await page.goto('/')`. */
+    baseURL: 'http://filament-inventory.test',
+    /* Storage state for reuse authentication */
+    storageState: './tests/playwright/.auth/user.json',
+    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
+    trace: 'on-first-retry',
+  },
+
+  /* Configure projects for major environments */
   projects: [
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
+    {
+      name: 'firefox',
+      use: { ...devices['Desktop Firefox'] },
+    },
+    {
+      name: 'webkit',
+      use: { ...devices['Desktop Safari'] },
+    },
+
+    /* Test against mobile viewports. */
+    // {
+    //   name: 'Mobile Chrome',
+    //   use: { ...devices['Pixel 5'] },
+    // },
+    // {
+    //   name: 'Mobile Safari',
+    //   use: { ...devices['iPhone 12'] },
+    // },
   ],
-  webServer: {
-    command: 'php artisan serve --host=0.0.0.0 --port=8000',
-    url: 'http://localhost:8000',
-    reuseExistingServer: true,
-    timeout: 120000,
-  },
+
+  /* Folder for test artifacts such as screenshots, videos, traces, etc. */
+  // outputDir: 'test-results/',
+
+  /* Run your local dev server before starting the tests */
+  // webServer: {
+  //   command: 'npm run start',
+  //   port: 3000,
+  // },
 });

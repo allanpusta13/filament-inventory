@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Traits\StockActions;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
+use Filament\Support\Icons\Heroicon;
 use Filament\Widgets\Widget;
 
 final class QuickActionsWidget extends Widget
@@ -40,7 +41,7 @@ final class QuickActionsWidget extends Widget
     {
         return \Filament\Actions\Action::make('newProduct')
             ->label('New Product')
-            ->icon('heroicon-o-plus-circle')
+            ->icon(Heroicon::OutlinedPlusCircle)
             ->color('primary')
             ->form([
                 TextInput::make('sku')

@@ -13,18 +13,19 @@ use App\Models\LossLedger;
 use App\Models\ProductVariant;
 use App\Models\StockMovement;
 use App\Models\TransferRequisition;
+use App\Models\User;
 use App\Models\WarehouseStock;
 use Exception;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
-use Illuminate\Support\Facades\Auth;
 
 final class InventoryService
 {
     public function lockStockForProduct(int $productId, int $warehouseId): void
     {
-        $variantIds = ProductVariant::where('product_id', $productId)->pluck('id');
+        $variantIds = $this->variantIds($productId);
 
         foreach ($variantIds as $variantId) {
             try {
@@ -46,26 +47,22 @@ final class InventoryService
 
     public function currentQuantity(int $productId, int $warehouseId): int
     {
-        $variantIds = ProductVariant::where('product_id', $productId)->pluck('id');
-
         return WarehouseStock::where('warehouse_id', $warehouseId)
-            ->whereIn('variant_id', $variantIds)
+            ->whereIn('variant_id', $this->variantIds($productId))
             ->sum('on_hand_quantity');
     }
 
     public function availableForNegotiation(int $productId, int $warehouseId): int
     {
-        $variantIds = ProductVariant::where('product_id', $productId)->pluck('id');
+        $stocks = WarehouseStock::where('warehouse_id', $warehouseId)
+            ->whereIn('variant_id', $this->variantIds($productId))
+            ->get();
 
-        $stock = WarehouseStock::where('warehouse_id', $warehouseId)
-            ->whereIn('variant_id', $variantIds)
-            ->first();
-
-        if ($stock === null) {
+        if ($stocks->isEmpty()) {
             return 0;
         }
 
-        return $stock->on_hand_quantity - $stock->reserved_quantity;
+        return $stocks->sum(fn (WarehouseStock $stock) => $stock->on_hand_quantity - $stock->reserved_quantity);
     }
 
     public function recordMovement(
@@ -80,11 +77,12 @@ final class InventoryService
         ?string $referenceCode = null,
         ?int $relatedMovementId = null,
         ?string $reference = null,
+        ?string $notes = null,
     ): StockMovement {
         return DB::transaction(function () use (
             $variantId, $warehouseId, $type, $baseQuantity,
             $unitName, $unitRatio, $referenceType, $referenceId,
-            $referenceCode, $relatedMovementId, $reference
+            $referenceCode, $relatedMovementId, $reference, $notes
         ) {
             try {
                 $stock = WarehouseStock::firstOrCreate(
@@ -122,6 +120,7 @@ final class InventoryService
                 'reference_id' => $referenceId,
                 'reference_code' => $referenceCode ?? $reference,
                 'related_movement_id' => $relatedMovementId,
+                'notes' => $notes,
                 'created_by' => auth()->id(),
             ]);
         });
@@ -129,9 +128,7 @@ final class InventoryService
 
     public function totalQuantity(int $productId): int
     {
-        $variantIds = ProductVariant::where('product_id', $productId)->pluck('id');
-
-        return WarehouseStock::whereIn('variant_id', $variantIds)
+        return WarehouseStock::whereIn('variant_id', $this->variantIds($productId))
             ->sum('on_hand_quantity');
     }
 
@@ -141,9 +138,7 @@ final class InventoryService
             throw new InvalidArgumentException('Ship quantity must be positive.');
         }
 
-        $variantIds = ProductVariant::where('product_id', $productId)->pluck('id');
-
-        foreach ($variantIds as $variantId) {
+        foreach ($this->variantIds($productId) as $variantId) {
             $stock = WarehouseStock::where('variant_id', $variantId)
                 ->where('warehouse_id', $warehouseId)
                 ->first();
@@ -185,7 +180,7 @@ final class InventoryService
             throw new InvalidArgumentException('Cannot transfer to the same warehouse.');
         }
 
-        $variantIds = ProductVariant::where('product_id', $productId)->pluck('id');
+        $variantIds = $this->variantIds($productId);
 
         $outMovement = null;
         $inMovement = null;
@@ -212,16 +207,17 @@ final class InventoryService
         return [$outMovement, $inMovement];
     }
 
-    public function lockStockForRequisition(int $requisitionId): void
+    public function lockStockForRequisition(int $requisitionId, ?User $user = null): void
     {
-        DB::transaction(function () use ($requisitionId) {
+        DB::transaction(function () use ($requisitionId, $user) {
             $requisition = TransferRequisition::with('items')->findOrFail($requisitionId);
+            $auditUser = $user ?? Auth::user();
 
             foreach ($requisition->items as $item) {
                 // Guardrail 5: Validate against negative quantities
                 $neededBaseQty = $item->approved_base_qty ?? $item->requested_base_qty;
                 if ($neededBaseQty <= 0) {
-                    throw new Exception("Requisition item quantity must be strictly greater than zero.");
+                    throw new Exception('Requisition item quantity must be strictly greater than zero.');
                 }
 
                 $stock = WarehouseStock::where('variant_id', $item->variant_id)
@@ -237,14 +233,25 @@ final class InventoryService
                 $stock->save();
             }
 
+            $oldStatus = $requisition->status;
             $requisition->update(['status' => TransferRequisitionStatus::Confirmed]);
+
+            if ($auditUser) {
+                app(AuditService::class)->recordRequisition(
+                    requisition: $requisition,
+                    user: $auditUser,
+                    action: 'confirmed',
+                    changes: ['status' => ['old' => $oldStatus->value, 'new' => TransferRequisitionStatus::Confirmed->value]]
+                );
+            }
         });
     }
 
-    public function dispatchTransfer(int $requisitionId): void
+    public function dispatchTransfer(int $requisitionId, ?User $user = null): void
     {
-        DB::transaction(function () use ($requisitionId) {
+        DB::transaction(function () use ($requisitionId, $user) {
             $requisition = TransferRequisition::with('items')->findOrFail($requisitionId);
+            $auditUser = $user ?? Auth::user();
 
             if ($requisition->status !== TransferRequisitionStatus::Confirmed) {
                 throw new Exception('Requisition must be confirmed before dispatch.');
@@ -253,11 +260,11 @@ final class InventoryService
             foreach ($requisition->items as $item) {
                 // Guardrail 4: Resolve substitute variant ID
                 $actualVariantId = $item->substitute_variant_id ?? $item->variant_id;
-                
+
                 // Guardrail 5: Validate against negative quantities
                 $dispatchQty = $item->approved_base_qty ?? $item->requested_base_qty;
                 if ($dispatchQty <= 0) {
-                    throw new Exception("Requisition item quantity must be strictly greater than zero.");
+                    throw new Exception('Requisition item quantity must be strictly greater than zero.');
                 }
 
                 $stock = WarehouseStock::where('variant_id', $actualVariantId)
@@ -294,17 +301,27 @@ final class InventoryService
                 $item->update(['shipped_base_qty' => $dispatchQty]);
             }
 
+            $oldStatus = $requisition->status;
             $requisition->update([
                 'status' => TransferRequisitionStatus::Dispatched,
                 'dispatched_by' => Auth::id(),
                 'dispatched_at' => now(),
             ]);
+
+            if ($auditUser) {
+                app(AuditService::class)->recordRequisition(
+                    requisition: $requisition,
+                    user: $auditUser,
+                    action: 'dispatched',
+                    changes: ['status' => ['old' => $oldStatus->value, 'new' => TransferRequisitionStatus::Dispatched->value]]
+                );
+            }
         });
     }
 
-    public function scanToReceive(int $requisitionId, array $receivedItemsData, ?int $userId = null): void
+    public function scanToReceive(int $requisitionId, array $receivedItemsData, ?int $userId = null, ?User $user = null): void
     {
-        DB::transaction(function () use ($requisitionId, $receivedItemsData, $userId) {
+        DB::transaction(function () use ($requisitionId, $receivedItemsData, $userId, $user) {
             $requisition = TransferRequisition::with('items')->findOrFail($requisitionId);
 
             $hasLossOrDamage = false;
@@ -312,7 +329,7 @@ final class InventoryService
             foreach ($requisition->items as $item) {
                 // Guardrail 4: Resolve substitute variant ID
                 $actualVariantId = $item->substitute_variant_id ?? $item->variant_id;
-                
+
                 // Guardrail 6: Handle omitted items - do not skip, treat as zero received
                 if (! isset($receivedItemsData[$item->id])) {
                     // Item was not scanned - treat as received zero quantity
@@ -374,11 +391,32 @@ final class InventoryService
                 ]);
             }
 
+            $newStatus = $hasLossOrDamage ? TransferRequisitionStatus::ClosedWithLoss : TransferRequisitionStatus::Completed;
+            $oldStatus = $requisition->status;
+
             $requisition->update([
-                'status' => $hasLossOrDamage ? TransferRequisitionStatus::ClosedWithLoss : TransferRequisitionStatus::Completed,
+                'status' => $newStatus,
                 'received_by' => $userId ?? Auth::id(),
                 'received_at' => now(),
             ]);
+
+            $auditUser = $user ?? Auth::user();
+            if ($auditUser) {
+                app(AuditService::class)->recordRequisition(
+                    requisition: $requisition,
+                    user: $auditUser,
+                    action: 'received',
+                    changes: ['status' => ['old' => $oldStatus->value, 'new' => $newStatus->value]]
+                );
+            }
         });
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, int>
+     */
+    private function variantIds(int $productId): \Illuminate\Support\Collection
+    {
+        return ProductVariant::where('product_id', $productId)->pluck('id');
     }
 }

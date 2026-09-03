@@ -24,6 +24,7 @@ use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 use Throwable;
 
 final class ViewTransferOrder extends ViewRecord
@@ -67,7 +68,7 @@ final class ViewTransferOrder extends ViewRecord
         return [
             Action::make('submit')
                 ->label('Submit Order')
-                ->icon('heroicon-o-paper-airplane')
+                ->icon(Heroicon::OutlinedPaperAirplane)
                 ->color('primary')
                 ->visible(fn (TransferOrder $record): bool => $record->status === TransferOrderStatus::Draft)
                 ->requiresConfirmation()
@@ -90,7 +91,7 @@ final class ViewTransferOrder extends ViewRecord
 
             Action::make('review')
                 ->label('Review Order')
-                ->icon('heroicon-o-magnifying-glass')
+                ->icon(Heroicon::OutlinedMagnifyingGlass)
                 ->color('warning')
                 ->visible(fn (TransferOrder $record): bool => $record->status->canBeReviewed())
                 ->schema([
@@ -147,7 +148,7 @@ final class ViewTransferOrder extends ViewRecord
 
             Action::make('confirm')
                 ->label('Confirm Order')
-                ->icon('heroicon-o-check-circle')
+                ->icon(Heroicon::OutlinedCheckCircle)
                 ->color('success')
                 ->visible(fn (TransferOrder $record): bool => $record->status->canBeConfirmed())
                 ->requiresConfirmation()
@@ -170,7 +171,7 @@ final class ViewTransferOrder extends ViewRecord
 
             Action::make('dispatch')
                 ->label('Dispatch Order')
-                ->icon('heroicon-o-truck')
+                ->icon(Heroicon::OutlinedTruck)
                 ->color('primary')
                 ->visible(fn (TransferOrder $record): bool => $record->status === TransferOrderStatus::Confirmed)
                 ->schema([
@@ -207,7 +208,7 @@ final class ViewTransferOrder extends ViewRecord
 
             Action::make('receive')
                 ->label('Receive Order')
-                ->icon('heroicon-o-clipboard-document-check')
+                ->icon(Heroicon::OutlinedClipboardDocumentCheck)
                 ->color('success')
                 ->visible(fn (TransferOrder $record): bool => $record->status === TransferOrderStatus::Dispatched)
                 ->schema([
@@ -272,7 +273,7 @@ final class ViewTransferOrder extends ViewRecord
 
             Action::make('cancel')
                 ->label('Cancel Order')
-                ->icon('heroicon-o-x-circle')
+                ->icon(Heroicon::OutlinedXCircle)
                 ->color('danger')
                 ->visible(fn (TransferOrder $record): bool => $record->status->canBeCancelled())
                 ->schema([

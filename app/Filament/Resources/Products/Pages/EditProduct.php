@@ -6,6 +6,7 @@ namespace App\Filament\Resources\Products\Pages;
 
 use App\Filament\Resources\Products\ProductResource;
 use Filament\Actions\DeleteAction;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 
 final class EditProduct extends EditRecord
@@ -17,5 +18,13 @@ final class EditProduct extends EditRecord
         return [
             DeleteAction::make(),
         ];
+    }
+
+    protected function getSavedNotification(): ?Notification
+    {
+        return Notification::make()
+            ->success()
+            ->title('Product Saved')
+            ->body('The product has been saved successfully.');
     }
 }

@@ -33,6 +33,7 @@ final class LowStockAlertWidget extends TableWidget
 
         $query = Product::query()
             ->select('products.*')
+            ->selectRaw('SUM(stock_movements.quantity) as stock_quantity')
             ->join('product_variants', 'products.id', '=', 'product_variants.product_id')
             ->join('stock_movements', 'product_variants.id', '=', 'stock_movements.variant_id');
 
@@ -62,7 +63,7 @@ final class LowStockAlertWidget extends TableWidget
                     ->sortable(),
                 TextColumn::make('current_stock')
                     ->label('Current Stock')
-                    ->state(fn (Product $record): int => (int) $record->stockMovements()->sum('quantity'))
+                    ->state(fn (Product $record): int => (int) ($record->stock_quantity ?? $record->stockMovements()->sum('quantity')))
                     ->color(fn (int $state): string => match (true) {
                         $state <= 0 => 'danger',
                         default => 'warning',
@@ -71,12 +72,12 @@ final class LowStockAlertWidget extends TableWidget
                 TextColumn::make('status')
                     ->label('Status')
                     ->state(fn (Product $record): string => match (true) {
-                        (int) $record->stockMovements()->sum('quantity') <= 0 => 'Out of Stock',
+                        (int) ($record->stock_quantity ?? $record->stockMovements()->sum('quantity')) <= 0 => 'Out of Stock',
                         default => 'Low Stock',
                     })
                     ->badge()
                     ->color(fn (Product $record): string => match (true) {
-                        (int) $record->stockMovements()->sum('quantity') <= 0 => 'danger',
+                        (int) ($record->stock_quantity ?? $record->stockMovements()->sum('quantity')) <= 0 => 'danger',
                         default => 'warning',
                     }),
             ])

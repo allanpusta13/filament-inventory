@@ -8,6 +8,7 @@ use App\Models\StockMovement;
 use App\Models\Warehouse;
 use App\Traits\DashboardFilterable;
 use Filament\Widgets\Widget;
+use Livewire\Attributes\Computed;
 
 final class WarehouseCapacityWidget extends Widget
 {
@@ -27,33 +28,34 @@ final class WarehouseCapacityWidget extends Widget
 
     protected string $view = 'filament.widgets.warehouse-capacity';
 
+    #[Computed]
     public function getWarehouses(): array
     {
         $user = auth()->user();
         $warehouseIds = $this->getFilterWarehouseIds($user);
 
-        $query = Warehouse::query()->where('is_active', true);
+        $query = Warehouse::query()
+            ->where('is_active', true)
+            ->select('warehouses.*')
+            ->selectRaw('(SELECT COALESCE(SUM(sm.quantity), 0) FROM stock_movements sm WHERE sm.warehouse_id = warehouses.id) as total_quantity')
+            ->selectRaw('(SELECT COUNT(DISTINCT sm.variant_id) FROM stock_movements sm WHERE sm.warehouse_id = warehouses.id) as product_count');
 
         if ($warehouseIds !== null) {
-            $query->whereIn('id', $warehouseIds);
+            $query->whereIn('warehouses.id', $warehouseIds);
         }
 
-        return $query->get()->map(function (Warehouse $warehouse) {
-            $totalQty = StockMovement::where('warehouse_id', $warehouse->id)->sum('quantity');
-            $productCount = StockMovement::where('warehouse_id', $warehouse->id)
-                ->distinct('variant_id')
-                ->count('variant_id');
-
-            return [
+        return $query->get()
+            ->map(fn (Warehouse $warehouse) => [
                 'id' => $warehouse->id,
                 'name' => $warehouse->name,
                 'location' => $warehouse->location,
-                'total_quantity' => max(0, (int) $totalQty),
-                'product_count' => $productCount,
-            ];
-        })->toArray();
+                'total_quantity' => max(0, (int) $warehouse->total_quantity),
+                'product_count' => (int) $warehouse->product_count,
+            ])
+            ->toArray();
     }
 
+    #[Computed]
     public function getRecentMutations(): array
     {
         $user = auth()->user();

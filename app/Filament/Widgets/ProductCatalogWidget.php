@@ -44,11 +44,14 @@ final class ProductCatalogWidget extends TableWidget
             });
         }
 
-        $query->with(['stockMovements' => function ($q) use ($warehouseIds) {
-            if ($warehouseIds !== null) {
-                $q->whereIn('warehouse_id', $warehouseIds);
-            }
-        }]);
+        $query->with([
+            'stockMovements' => function ($q) use ($warehouseIds) {
+                if ($warehouseIds !== null) {
+                    $q->whereIn('warehouse_id', $warehouseIds);
+                }
+            },
+            'stockMovements.warehouse',
+        ]);
 
         return $table
             ->query($query)
@@ -87,14 +90,12 @@ final class ProductCatalogWidget extends TableWidget
                 TextColumn::make('warehouse_location')
                     ->label('Location')
                     ->state(function (Product $record): string {
-                        $warehouses = $record->stockMovements
-                            ->pluck('warehouse_id')
-                            ->unique()
-                            ->map(fn ($id) => \App\Models\Warehouse::find($id)?->name)
+                        return $record->stockMovements
+                            ->pluck('warehouse.name')
                             ->filter()
-                            ->values();
-
-                        return $warehouses->implode(', ') ?: 'Unassigned';
+                            ->unique()
+                            ->values()
+                            ->implode(', ') ?: 'Unassigned';
                     })
                     ->limit(20),
                 TextColumn::make('status')
