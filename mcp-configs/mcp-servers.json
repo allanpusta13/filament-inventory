@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "laravel-docs": {
+      "description": "Laravel 13 documentation lookup — fetch current docs, changelog, and API references",
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"],
+      "disabled": false
+    },
+    "composer-security": {
+      "description": "Composer package security auditing — check for vulnerabilities in dependencies",
+      "command": "npx",
+      "args": ["-y", "mcp-security-audit"],
+      "disabled": false
+    }
+  }
+}

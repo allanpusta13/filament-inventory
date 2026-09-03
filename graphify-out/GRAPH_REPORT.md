@@ -1,253 +1,232 @@
-# Graph Report - filament-inventory  (2026-08-28)
+# Graph Report - filament-inventory  (2026-09-01)
 
 ## Corpus Check
-- 278 files · ~195,517 words
+- 441 files · ~282,246 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 7553 nodes · 20456 edges · 334 communities (311 shown, 23 thin omitted)
-- Extraction: 89% EXTRACTED · 11% INFERRED · 0% AMBIGUOUS · INFERRED: 2297 edges (avg confidence: 0.85)
+- 8172 nodes · 21878 edges · 359 communities (342 shown, 17 thin omitted)
+- Extraction: 89% EXTRACTED · 11% INFERRED · 0% AMBIGUOUS · INFERRED: 2358 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5b92fc5b`
+- Built from commit: `e934b7a1`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
+- rich-editor.js
 - code-editor.js
 - components/chart.js
-- rich-editor.js
-- stat/chart.js
-- i
-- r
 - constructor
-- fromObject
-- resolve
-- .slice
-- n
-- draw
-- slice
-- r
-- advance
-- support.js
-- toString
-- _update
+- i
 - markdown-editor.js
-- get
-- y
-- g$
-- _update
-- echo.js
-- constructor
-- columns/select.js
-- draw
-- o
-- .append
-- facet
-- getSortedVisibleDatasetMetas
-- fn
-- tables.js
-- updateElements
-- notifications.js
-- StockMovement
-- reduce
-- eq
-- i
-- te
-- O
-- ProductResource
-- create
-- yP
-- Cn
-- next
-- Xt
-- Xt
-- renderOptions
-- Filament\Tables\Table
-- match
-- isHorizontal
-- determineDataLimits
-- add
-- getDatasetMeta
-- ne
-- .forEach
-- ir
-- components/select.js
+- DashboardFilterable.php
 - lineAt
-- Ue
-- slider.js
-- WarehouseResource
-- updateElements
-- isHorizontal
-- Product
-- Ji
-- User
-- qt
-- E
-- Y
-- AdminPanelProvider.php
+- Filament\Tables\Table
+- resolve
+- stat/chart.js
+- create
+- n
+- Illuminate\Database\Eloquent\Relations\BelongsTo
+- Je
+- _update
+- Filament\Resources\Pages\ListRecords
+- y
 - get
-- e
-- filament/app.js
-- file-upload.js
-- invert
-- devDependencies
-- Dashboard.php
-- Illuminate\Database\Migrations\Migration
-- T
-- scripts
+- User
+- .slice
+- apply
+- prop
+- r
+- StockActions.php
+- TransferOrder
+- support.js
+- _handleEvent
+- dx
+- echo.js
+- r
+- Cn
+- O
+- facet
+- fn
+- ae
+- slice
+- reduce
+- notifications.js
+- toString
+- te
+- nodeAt
+- advance
+- tables.js
+- Decisions
+- Xt
+- Illuminate\Database\Seeder
+- Pipeline Orchestrator
+- columns/select.js
 - brandkit/SKILL.md
-- Filament\Schemas\Schema
-- CORE DIRECTIVE: IMAGE-FIRST WEBSITE DESIGN TO CODE
-- selectOption
-- selectRecords
-- require-dev
-- CORE DIRECTIVE: PREMIUM MOBILE APP IMAGE DIRECTION
-- post-create-project-cmd
-- color-picker.js
-- Laravel Boost Guidelines
-- composer.json
-- Laravel Boost Guidelines
-- High-Agency Frontend Skill
-- AppServiceProvider.php
-- oe
-- Design System: Filament Inventory
-- renderOptions
+- components/select.js
 - Illuminate\Database\Eloquent\Factories\Factory
-- date-time-picker.js
-- Local Storage
-- da
-- Local Storage
-- command
-- actions/actions.js
-- ot
-- schemas.js
-- require
-- config
-- psr-4
-- rl
-- $t
-- bootstrap/app.php
-- keywords
-- tolaria
-- xl
-- St
-- components/actions.js
-- clickPercent
-- Welcome
-- post-autoload-dump
-- c
-- console.php
-- rector.php
-- Controller.php
-- Illuminate\Support\Facades\Route
-- hw
-- Um
-- k
-- Dashboard Layout Transformation Plan
-- Browser Session Management
+- jt
+- Detection Checklist
+- Process
+- Detection Checklist
+- create
+- Process
+- next
+- g
+- CORE DIRECTIVE: IMAGE-FIRST WEBSITE DESIGN TO CODE
+- CORE DIRECTIVE: PREMIUM MOBILE APP IMAGE DIRECTION
+- Detection Checklist
+- Process
+- AdminPanelProvider.php
+- q
+- r
+- ir
+- Laravel Boost Guidelines
+- t
+- slider.js
+- _notify
+- ar
+- Im
+- file-upload.js
+- RouteServiceProvider
+- AGENTS.md
+- High-Agency Frontend Skill
+- devDependencies
+- Se
+- Requirements & Specs
+- filament/app.js
+- Endpoint Tests
+- Design System: Filament Inventory
+- g$
+- TransferNoteController.php
+- r
+- eq
+- toString
+- Endpoint Tests
+- Phase 12: Security Hardening & Query Performance Optimization
 - Design Audit
 - Browser Session Management
+- helpers.ts
 - Analysis & Synthesis Instructions
+- Schema
 - Agent Skill: Principal UI/UX Architect & Motion Choreographer (Awwwards-Tier)
-- Pest Testing 4
-- Pest Testing 4
-- Pest Testing 4
-- CORE DIRECTIVE: AWWWARDS-LEVEL IMAGE ART DIRECTION
+- scripts
+- selectRecords
 - SKILL: Industrial Brutalism & Tactical Telemetry UI
 - Test generation (plan → generate → heal)
 - Tracing
-- Test generation (plan → generate → heal)
-- Tracing
+- require-dev
+- closeDropdown
+- fn
+- ce
+- fn
+- Endpoint Tests
+- tasteskill: Anti-Slop Frontend Skill
 - Appendix B - Canonical Sources (read these before reinventing)
 - Design System: Taste Standard
-- Plan
+- post-create-project-cmd
+- HTTP Client Best Practices
+- Wi
+- color-picker.js
+- Mt
+- selectOption
+- CORE DIRECTIVE: AWWWARDS-LEVEL IMAGE ART DIRECTION
 - 2. THE COMBINATORIAL VARIATION ENGINE
+- .agents/skills/laravel-best-practices/SKILL.md
+- Tailwind CSS Development
+- .claude/skills/laravel-best-practices/SKILL.md
 - Browser Automation with playwright-cli
 - Tailwind CSS Development
-- Browser Automation with playwright-cli
+- composer.json
+- Assertions
+- .agents/skills/testing-best-practices/SKILL.md
+- .github/skills/laravel-best-practices/SKILL.md
 - Tailwind CSS Development
-- Plan
-- Plan
-- Tailwind CSS Development
+- oe
+- Fakes, Mocks, and Determinism
+- AppServiceProvider.php
 - Plan → Council → Code → Test → Commit Loop
 - Running Custom Playwright Code
-- Plan → Council → Code → Test → Commit Loop
-- Running Custom Playwright Code
-- Multi-Warehouse Inventory System — Complete Blueprint
+- Storage State
+- 1. Complete Database Schema
 - Product
+- date-time-picker.js
+- renderOptions
 - 4. DESIGN ENGINEERING DIRECTIVES (Bias Correction)
 - Architecture Best Practices
-- .agents/skills/laravel-best-practices/SKILL.md
-- Security Best Practices
 - Architecture Best Practices
-- .claude/skills/laravel-best-practices/SKILL.md
-- Security Best Practices
 - Architecture Best Practices
-- .github/skills/laravel-best-practices/SKILL.md
+- Test Suite Performance
+- Queue and Job Best Practices
 - Security Best Practices
-- tasteskill: Anti-Slop Frontend Skill
-- Queue & Job Best Practices
-- .agents/skills/playwright-cli/SKILL.md
-- Queue & Job Best Practices
-- .claude/skills/playwright-cli/SKILL.md
-- Queue & Job Best Practices
+- Queue and Job Best Practices
+- Security Best Practices
+- playwright-cli/SKILL.md
+- Local Storage
+- Reviewing Tests
+- HTTP Client Best Practices
+- .mcp.json
+- Queue and Job Best Practices
+- Security Best Practices
+- L
 - 10. REFERENCE VOCABULARY (Pattern Names the Agent Should Know)
 - CORE DIRECTIVE: AWWWARDS-LEVEL DESIGN ENGINEERING
 - 22. STYLE VARIATION ENGINE
-- Advanced Query Patterns
+- Advanced Query Best Practices
 - Database Performance Best Practices
-- Events & Notifications Best Practices
+- Events and Notifications Best Practices
 - Protocol: Premium Utilitarian Minimalism UI Architect
-- Commands
-- Advanced Query Patterns
+- Advanced Query Best Practices
 - Database Performance Best Practices
-- Events & Notifications Best Practices
+- Events and Notifications Best Practices
 - Commands
-- Advanced Query Patterns
+- require
+- Assertions
+- Advanced Query Best Practices
 - Database Performance Best Practices
-- Events & Notifications Best Practices
+- Events and Notifications Best Practices
+- PrintStnTest.php
+- agents
+- actions/actions.js
+- schemas.js
 - 11. COMPONENT EXECUTION GUIDELINES
 - 18. EXTRA CREATIVITY & IMPLEMENTATION EDGE
 - Caching Best Practices
 - Eloquent Best Practices
 - Migration Best Practices
-- Cookies
-- Video Recording
 - Execution Rules
 - Caching Best Practices
 - Eloquent Best Practices
 - Migration Best Practices
 - Cookies
 - Video Recording
-- Plan
+- .claude/skills/testing-best-practices/SKILL.md
+- Fakes, Mocks, and Determinism
 - Caching Best Practices
 - Eloquent Best Practices
 - Migration Best Practices
-- ut
-- En
+- se
+- fn
 - 9. AI TELLS (Forbidden Patterns)
 - 12. THE COMBINATORIAL VARIATION ENGINE
 - 8. ANTI-AI-SLOP RULES
-- Blade & Views Best Practices
+- Blade and View Best Practices
 - Error Handling Best Practices
 - Task Scheduling Best Practices
-- Testing Best Practices
+- ProductExporter.php
+- Blade and View Best Practices
+- Error Handling Best Practices
+- Task Scheduling Best Practices
 - Advanced Mocking with run-code
-- Blade & Views Best Practices
+- Test Suite Performance
+- Reviewing Tests
+- Phase 14: Automated CI/CD Pipeline & Isolated Testing Environments
+- HTTP Client Best Practices
+- Blade and View Best Practices
 - Error Handling Best Practices
 - Task Scheduling Best Practices
-- Testing Best Practices
-- Advanced Mocking with run-code
-- Plan
-- Plan
-- Plan
-- Plan
-- Blade & Views Best Practices
-- Error Handling Best Practices
-- Task Scheduling Best Practices
-- Testing Best Practices
 - APPENDICES - Real Source-Backed Reference Material
 - 11. REDESIGN PROTOCOL
 - 3. DEFAULT ARCHITECTURE & CONVENTIONS
@@ -257,46 +236,56 @@
 - 13. COLOR & MATERIAL RULES
 - 4. HERO MINIMALISM RULES
 - Collection Best Practices
-- HTTP Client Best Practices
 - Mail Best Practices
-- Routing & Controllers Best Practices
-- Conventions & Style
-- Validation & Forms Best Practices
+- Routing and Controller Best Practices
+- Convention and Style Best Practices
+- Validation and Forms Best Practices
 - Collection Best Practices
-- HTTP Client Best Practices
 - Mail Best Practices
-- Routing & Controllers Best Practices
-- Conventions & Style
-- Validation & Forms Best Practices
-- Plan
-- Plan
+- Routing and Controller Best Practices
+- Convention and Style Best Practices
+- Validation and Forms Best Practices
+- config
+- psr-4
+- Assertions
+- .github/skills/testing-best-practices/SKILL.md
 - Collection Best Practices
-- HTTP Client Best Practices
 - Mail Best Practices
-- Routing & Controllers Best Practices
-- Conventions & Style
-- Validation & Forms Best Practices
-- Nn
+- Routing and Controller Best Practices
+- Convention and Style Best Practices
+- Validation and Forms Best Practices
+- opencode.json
+- command
+- command
+- sl
 - Audit & Gap Analyzer
 - .agents/skills/debug-using-debugbar/SKILL.md
 - 29. ANTI-AI-SLOP RULES
 - 5. IMAGE COUNT & PAGE SLICING
-- 3. Heal
+- Fakes, Mocks, and Determinism
 - .claude/skills/debug-using-debugbar/SKILL.md
+- Test Suite Performance
 - 3. Heal
-- Plan 02-06: Add warehouses() relationship and role to User model
-- Plan
+- keywords
+- Reviewing Tests
+- Naming and Structure
 - .github/skills/debug-using-debugbar/SKILL.md
-- schemaRules
-- Pt
-- getLabelAndValue
+- Naming and Structure
+- command
+- st
+- T
+- components/actions.js
 - 12. THE BLOCK LIBRARY (Contract - Implementations Land Here Iteratively)
 - 5. CONTEXT-AWARE PROACTIVITY
 - 8. DARK MODE PROTOCOL
 - 21. MOBILE ANTI-AI-TELLS RULE
+- EventServiceProvider
 - Audit & Gap Analyzer
-- Plan
-- 1. THE THREE DIALS (Core Configuration)
+- review
+- Naming and Structure
+- yl
+- clickPercent
+- chart-accessibility.js
 - 7. DIAL DEFINITIONS (Technical Reference)
 - Feature Extractor
 - 33. DEFAULT SECTION PACKS
@@ -306,1211 +295,1331 @@
 - 37. EXAMPLE INTERPRETATIONS
 - 15. DEFAULT SITE PACKS
 - 20. EXAMPLE INTERPRETATIONS
-- Storage State
+- Welcome
+- AuthServiceProvider
 - Feature Extractor
-- Storage State
+- c
+- imagegen-frontend-web/SKILL.md
+- DummyCast
+- Council Skill: Architecture Review
+- Council Skill: QA & Test Review
+- Council Skill: Security Review
+- Factories and Test Data
+- Testing Best Practices
+- Visual Audit Skill: Accessibility (a11y) Review
+- Visual Audit Skill: Design & Layout Review
+- Factories and Test Data
+- Testing Best Practices
+- Factories and Test Data
+- console.php
+- Testing Best Practices
+- architect
+- frontend
+- orchestrator
+- qa
+- rector.php
 - Security Policy
+- GlobalSearchTest.php
 - .agents/skills/gap-executor/SKILL.md
-- 00.md
-- 01.md
-- 02.md
-- 03.md
-- 04.md
-- 05.md
-- 06.md
-- 07.md
-- 08.md
-- 09.md
-- 10.md
-- 11.md
+- DummyObserver.php
+- clearFilter
+- setup.sh
+- 3. Mandatory Architectural Guardrails (Phases 01–14)
+- 1. Database Migrations Specifications
+- Phase 02: Eloquent Models & Relationship Mapping
+- Phase 03: RBAC Roles, Policy Architecture & User Accounts Seeder
+- Phase 04: InventoryService Core Engine
+- Phase 05: Product Catalog Filament Resource
+- Phase 06: Warehouse & Pricing Matrix Resources
+- Phase 07: Inter-Warehouse Requisition Wizard & Negotiation UI
+- Phase 08: Printable STN PDF Manifest & Signed QR Routing
+- Phase 09: Scan-to-Receive Modal & Loss Ledger Integration
+- Phase 10: Audit Ledgers & In-Transit Tracking Resources
+- Phase 11: Feature Delta, Bulk Exports & Playwright E2E Verification
+- take-screenshots.cjs
+- docs
+- Ae
+- Fl
 
 ## God Nodes (most connected - your core abstractions)
 1. `constructor()` - 151 edges
-2. `update()` - 143 edges
-3. `resolve()` - 97 edges
-4. `y()` - 93 edges
-5. `_update()` - 87 edges
-6. `_update()` - 86 edges
-7. `node()` - 78 edges
-8. `te()` - 74 edges
-9. `constructor()` - 73 edges
-10. `o()` - 73 edges
+2. `update()` - 148 edges
+3. `User` - 121 edges
+4. `resolve()` - 94 edges
+5. `y()` - 93 edges
+6. `_update()` - 87 edges
+7. `node()` - 79 edges
+8. `te()` - 78 edges
+9. `constructor()` - 75 edges
+10. `r()` - 73 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Rd()` --indirect_call--> `Wi()`  [INFERRED]
+- `xQ()` --indirect_call--> `ay()`  [INFERRED]
   public/js/filament/forms/components/code-editor.js → public/js/filament/forms/components/rich-editor.js
-- `VariableDefinition()` --indirect_call--> `Zx()`  [INFERRED]
-  public/js/filament/forms/components/code-editor.js → public/js/filament/forms/components/rich-editor.js
-- `addInputRules()` --indirect_call--> `cw()`  [INFERRED]
-  public/js/filament/forms/components/rich-editor.js → public/js/filament/forms/components/code-editor.js
+- `[g]()` --indirect_call--> `tt()`  [INFERRED]
+  public/js/filament/forms/components/color-picker.js → public/js/filament/forms/components/rich-editor.js
 - `[x]()` --indirect_call--> `H()`  [INFERRED]
   public/js/filament/forms/components/color-picker.js → public/js/filament/forms/components/markdown-editor.js
-- `vl()` --indirect_call--> `im()`  [INFERRED]
+- `getExtension()` --indirect_call--> `qt()`  [INFERRED]
+  public/js/filament/forms/components/file-upload.js → public/js/filament/forms/components/rich-editor.js
+- `_getTestState()` --indirect_call--> `qt()`  [INFERRED]
   public/js/filament/forms/components/file-upload.js → public/js/filament/forms/components/rich-editor.js
 
 ## Import Cycles
 - None detected.
 
-## Communities (334 total, 23 thin omitted)
+## Communities (359 total, 17 thin omitted)
 
-### Community 0 - "code-editor.js"
+### Community 0 - "rich-editor.js"
 Cohesion: 0.01
-Nodes (130): Ac(), Ag(), bi(), Blockquote(), blockTiles(), chunk(), clear(), close() (+122 more)
+Nodes (263): aa(), Ad(), add(), addExtensions(), addHackNode(), addNode(), addOptions(), addTextblockHacks() (+255 more)
 
-### Community 1 - "components/chart.js"
+### Community 1 - "code-editor.js"
 Cohesion: 0.01
-Nodes (133): abutsStart(), addControllers(), addPlugins(), addScales(), ah(), alpha(), bd(), Be() (+125 more)
+Nodes (127): Ac(), addActive(), addCompletion(), addCompletions(), addNamespace(), addNamespaceObject(), Ag(), Ar() (+119 more)
 
-### Community 2 - "rich-editor.js"
+### Community 2 - "components/chart.js"
 Cohesion: 0.01
-Nodes (238): $0(), Ab(), add(), addAttributes(), addExtensions(), addGlobalAttributes(), addHackNode(), addNode() (+230 more)
+Nodes (424): im(), _a(), aa(), abutsStart(), ac(), acquireContext(), ad(), addControllers() (+416 more)
 
-### Community 3 - "stat/chart.js"
-Cohesion: 0.02
-Nodes (104): acquireContext(), active(), addControllers(), addElements(), addPlugins(), addScales(), afterDraw(), _animateOptions() (+96 more)
+### Community 3 - "constructor"
+Cohesion: 0.03
+Nodes (129): add(), addChanges(), addChunk(), addEventListener(), addInfoPane(), addInner(), addSelection(), addWindowListeners() (+121 more)
 
 ### Community 4 - "i"
 Cohesion: 0.04
-Nodes (147): a$(), aa(), addElement(), AQ(), attrs(), AX(), B(), b1() (+139 more)
+Nodes (146): a$(), aa(), addElement(), Ah(), attrs(), AX(), b1(), balance() (+138 more)
 
-### Community 5 - "r"
+### Community 5 - "markdown-editor.js"
 Cohesion: 0.05
-Nodes (97): addNodeView(), c(), d(), bl(), h(), chain(), i(), o() (+89 more)
+Nodes (78): ad(), af(), al(), An(), ao(), bc(), bo(), Bt() (+70 more)
 
-### Community 6 - "constructor"
-Cohesion: 0.03
-Nodes (136): add(), addChunk(), addEventListener(), addInfoPane(), addInner(), addWindowListeners(), adjust(), al() (+128 more)
-
-### Community 7 - "fromObject"
-Cohesion: 0.03
-Nodes (108): ac(), ae(), after(), Al(), Am(), before(), bl(), buildFormatParser() (+100 more)
-
-### Community 8 - "resolve"
-Cohesion: 0.06
-Nodes (107): ad(), addKeyboardShortcuts(), after(), as(), Ay(), before(), between(), blockRange() (+99 more)
-
-### Community 9 - ".slice"
-Cohesion: 0.06
-Nodes (100): addCommands(), addInputRules(), addMark(), ak(), allowsMarks(), Ap(), apply(), applyInner() (+92 more)
-
-### Community 10 - "n"
-Cohesion: 0.08
-Nodes (80): _a(), Ae(), ar(), as(), bf(), me(), ue(), u() (+72 more)
-
-### Community 11 - "draw"
-Cohesion: 0.06
-Nodes (67): acquireContext(), adjustHitBoxes(), afterDraw(), bh(), calculateLabelRotation(), clear(), _computeGridLineItems(), _computeLabelArea() (+59 more)
-
-### Community 12 - "slice"
-Cohesion: 0.05
-Nodes (59): addChanges(), addSelection(), addToSet(), childString(), composeDesc(), decompose(), decomposeLeft(), decomposeRight() (+51 more)
-
-### Community 13 - "r"
+### Community 6 - "DashboardFilterable.php"
 Cohesion: 0.04
-Nodes (116): ag(), apply(), ar(), average(), Ba(), beforeDatasetDraw(), beforeDraw(), beforeLayout() (+108 more)
+Nodes (21): StockAdjustment, CategoryStockChart, BaseSectionHeaderWidget, InventoryAnalyticsHeader, OperationsAlertsHeader, PerformanceOverviewHeader, PlanningActivityHeader, WarehouseStatusHeader (+13 more)
 
-### Community 14 - "advance"
+### Community 7 - "lineAt"
+Cohesion: 0.07
+Nodes (42): addBlock(), addLineDeco(), applyChanges(), balanced(), baseIndent(), baseIndentFor(), blankContent(), blockAt() (+34 more)
+
+### Community 8 - "Filament\Tables\Table"
+Cohesion: 0.03
+Nodes (53): CurrentStockResource, Model, CurrentStockTable, InTransitResource, App\Filament\Resources\InTransitResource\Pages, App\Filament\Resources\LossLedgerResource\Pages, Model, ProductPriceResource (+45 more)
+
+### Community 9 - "resolve"
+Cohesion: 0.06
+Nodes (124): addAttributes(), addCommands(), addKeyboardShortcuts(), addNodeMark(), after(), al(), before(), blockRange() (+116 more)
+
+### Community 10 - "stat/chart.js"
+Cohesion: 0.01
+Nodes (505): Image(), themeClasses(), Ga(), Hn(), Ot(), th(), A(), aa() (+497 more)
+
+### Community 11 - "create"
 Cohesion: 0.05
-Nodes (63): addChild(), addGaps(), addLeafElement(), addNode(), advance(), ATXHeading(), blank(), break() (+55 more)
+Nodes (90): addAll(), addDOM(), addElement(), addElementByRule(), addTextNode(), addToSet(), ag(), allowedMarks() (+82 more)
 
-### Community 15 - "support.js"
-Cohesion: 0.04
-Nodes (71): n(), apply(), as(), bo(), bs(), close(), closeQuietly(), co() (+63 more)
-
-### Community 16 - "toString"
+### Community 12 - "n"
 Cohesion: 0.09
-Nodes (30): accepts(), Bi(), check(), checkAttrs(), endIndex(), Fw(), getObj(), go() (+22 more)
+Nodes (68): _a(), Ae(), ar(), as(), bf(), ci(), Cn(), df() (+60 more)
 
-### Community 17 - "_update"
+### Community 13 - "Illuminate\Database\Eloquent\Relations\BelongsTo"
 Cohesion: 0.04
-Nodes (108): $a(), addBox(), addElements(), addEventListener(), afterBuildTicks(), afterCalculateLabelRotation(), afterDataLimits(), afterFit() (+100 more)
+Nodes (26): WarehouseStockOverviewWidget, InTransit, LossLedger, ProductPrice, ProductUnitConversion, ProductVariant, TransferOrderItem, TransferRequisition (+18 more)
 
-### Community 18 - "markdown-editor.js"
+### Community 14 - "Je"
 Cohesion: 0.04
-Nodes (84): Ac(), ad(), af(), ai(), ao(), Ba(), bc(), bo() (+76 more)
+Nodes (90): _0(), addGlobalAttributes(), addInputRules(), addMark(), addPasteRules(), addStoredMark(), Ah(), Ax() (+82 more)
 
-### Community 19 - "get"
+### Community 15 - "_update"
+Cohesion: 0.02
+Nodes (266): addBox(), addEventListener(), adjustHitBoxes(), afterBuildTicks(), afterCalculateLabelRotation(), afterDataLimits(), afterFit(), afterSetDimensions() (+258 more)
+
+### Community 16 - "Filament\Resources\Pages\ListRecords"
+Cohesion: 0.03
+Nodes (40): ListCurrentStock, CreateInTransit, EditInTransit, ListInTransits, ViewInTransit, LossLedgerResource, CreateLossLedger, EditLossLedger (+32 more)
+
+### Community 17 - "y"
+Cohesion: 0.18
+Nodes (53): at(), Be(), ca(), Cr(), Ct(), de(), dr(), dt() (+45 more)
+
+### Community 18 - "get"
 Cohesion: 0.04
-Nodes (90): addBlockWidget(), addBreak(), addComposition(), addDelimiter(), addInlineWidget(), addLine(), addLineStart(), addLineStartIfNotCovered() (+82 more)
+Nodes (91): addBlockWidget(), addBreak(), addComposition(), addDelimiter(), addInlineWidget(), addLine(), addLineStart(), addLineStartIfNotCovered() (+83 more)
 
-### Community 20 - "y"
+### Community 19 - "User"
+Cohesion: 0.04
+Nodes (25): StatsOverviewWidget, WarehouseCapacityWidget, Product, StockMovement, User, Warehouse, LossLedgerPolicy, ProductPolicy (+17 more)
+
+### Community 20 - ".slice"
+Cohesion: 0.05
+Nodes (60): accepts(), addMaps(), addStep(), addTransform(), appendMap(), appendMapping(), appendMappingInverted(), apply() (+52 more)
+
+### Community 21 - "apply"
+Cohesion: 0.17
+Nodes (16): apply(), Ca(), ge(), getAfterBody(), getBeforeBody(), getBody(), getFooter(), getTitle() (+8 more)
+
+### Community 22 - "prop"
+Cohesion: 0.06
+Nodes (66): AQ(), au(), child(), childAfter(), childBefore(), cursor(), cursorAt(), dX() (+58 more)
+
+### Community 23 - "r"
+Cohesion: 0.05
+Nodes (117): addInner(), addNodeView(), af(), append(), B0(), c1(), Cc(), cf() (+109 more)
+
+### Community 24 - "StockActions.php"
+Cohesion: 0.10
+Nodes (29): ListStockMovements, Action, Collection, Action, QuickActionsWidget, adjustmentAction(), getWarehouseOptions(), Action (+21 more)
+
+### Community 25 - "TransferOrder"
+Cohesion: 0.06
+Nodes (14): CancelTransferAction, ConfirmTransferAction, DispatchTransferAction, ReceiveTransferAction, ReviewTransferAction, SubmitTransferAction, InsufficientStockException, TransferOrder (+6 more)
+
+### Community 26 - "support.js"
+Cohesion: 0.06
+Nodes (75): acquireScrollLock(), ai(), e(), Bi(), br(), Bt(), ca(), close() (+67 more)
+
+### Community 27 - "_handleEvent"
+Cohesion: 0.12
+Nodes (19): An(), Dt(), _getLegendItemAt(), _handleEvent(), invalidate(), inXRange(), inYRange(), ma() (+11 more)
+
+### Community 28 - "dx"
+Cohesion: 0.10
+Nodes (36): Ei(), Aa(), ai(), Ba(), Bi(), cf(), da(), fa() (+28 more)
+
+### Community 29 - "echo.js"
+Cohesion: 0.08
+Nodes (22): a(), ar(), Ce(), cr(), De(), Dt(), Fe(), H() (+14 more)
+
+### Community 30 - "r"
 Cohesion: 0.15
-Nodes (54): Dg(), Ig(), Se(), al(), at(), Be(), Cr(), Ct() (+46 more)
+Nodes (43): _a(), ar(), c(), f(), d(), di(), g(), Hi() (+35 more)
 
-### Community 21 - "g$"
-Cohesion: 0.04
-Nodes (86): acceptToken(), addCompletion(), addCompletions(), addNamespace(), addNamespaceObject(), allows(), atLastNode(), au() (+78 more)
+### Community 31 - "Cn"
+Cohesion: 0.12
+Nodes (47): Cn(), b(), Be(), Ce(), De(), dn(), _e(), Fe() (+39 more)
 
-### Community 22 - "_update"
-Cohesion: 0.04
-Nodes (90): afterBuildTicks(), afterCalculateLabelRotation(), afterDataLimits(), afterFit(), afterSetDimensions(), afterTickToLabelConversion(), afterUpdate(), beforeBuildTicks() (+82 more)
+### Community 32 - "O"
+Cohesion: 0.24
+Nodes (31): b(), $c(), X(), me(), D(), _e(), se(), G() (+23 more)
 
-### Community 23 - "echo.js"
+### Community 33 - "facet"
 Cohesion: 0.05
-Nodes (48): a(), ar(), b(), Be(), Ce(), cr(), d(), De() (+40 more)
+Nodes (78): accept(), activateHover(), active(), apply(), applyTransaction(), asSingle(), B(), baseTheme() (+70 more)
 
-### Community 24 - "constructor"
-Cohesion: 0.09
-Nodes (23): Bc(), bg(), chartOptionScopes(), constructor(), data(), dg(), el(), features() (+15 more)
+### Community 34 - "fn"
+Cohesion: 0.17
+Nodes (20): Ck(), De(), fn(), Gh(), ip(), Ja(), Jh(), Ji() (+12 more)
 
-### Community 25 - "columns/select.js"
-Cohesion: 0.07
-Nodes (49): A(), Ae(), Ai(), An(), applyDisabledState(), be(), bn(), Bt() (+41 more)
-
-### Community 26 - "draw"
-Cohesion: 0.07
-Nodes (54): adjustHitBoxes(), At(), beforeDatasetDraw(), beforeDatasetsDraw(), beforeDraw(), bi(), bo(), clear() (+46 more)
-
-### Community 27 - "o"
-Cohesion: 0.06
-Nodes (72): bl(), ch(), cn(), cs(), data(), determineDataLimits(), l(), dh() (+64 more)
-
-### Community 28 - ".append"
-Cohesion: 0.09
-Nodes (54): allowedMarks(), append(), au(), clearIncompatible(), close(), closeFrontierNode(), computeWrapping(), connectSelection() (+46 more)
-
-### Community 29 - "facet"
-Cohesion: 0.04
-Nodes (96): accept(), activateHover(), active(), Ah(), applyTransaction(), asSingle(), baseTheme(), between() (+88 more)
-
-### Community 30 - "getSortedVisibleDatasetMetas"
-Cohesion: 0.08
-Nodes (28): ad(), applyStack(), beforeDatasetsDraw(), _drawDatasets(), first(), generateLabels(), getDataVisibility(), _getSortedDatasetMetas() (+20 more)
-
-### Community 31 - "fn"
-Cohesion: 0.14
-Nodes (47): _a(), m(), O(), x(), aa(), Ai(), c(), d() (+39 more)
-
-### Community 32 - "tables.js"
+### Community 35 - "ae"
 Cohesion: 0.11
-Nodes (50): A(), ae(), B(), be(), C(), ce(), E(), ee() (+42 more)
+Nodes (25): ae(), Ao(), as(), cs(), Ee(), he(), Io(), kn() (+17 more)
 
-### Community 33 - "updateElements"
-Cohesion: 0.05
-Nodes (65): Ao(), aspectRatio(), _calculateBarIndexPixels(), _calculateBarValuePixels(), _computeAngle(), countVisibleElements(), Cs(), datasetAnimationScopeKeys() (+57 more)
+### Community 36 - "slice"
+Cohesion: 0.06
+Nodes (48): cd(), decompose(), decomposeLeft(), decomposeRight(), defineModifier(), fd(), FO(), fromTransaction() (+40 more)
 
-### Community 34 - "notifications.js"
+### Community 37 - "reduce"
+Cohesion: 0.07
+Nodes (49): addActions(), advanceFully(), advanceStack(), allActions(), c0(), canShift(), deadEnd(), dynamicPrecedence() (+41 more)
+
+### Community 38 - "notifications.js"
 Cohesion: 0.06
 Nodes (31): actions(), button(), c(), close(), configureAnimations(), configureTransitions(), constructor(), danger() (+23 more)
 
-### Community 35 - "StockMovement"
-Cohesion: 0.08
-Nodes (18): InsufficientStockException, ListStockMovements, StockMovement, Warehouse, InventoryService, StockMovementFactory, Filament\Support\Contracts\HasColor, Illuminate\Database\Eloquent\Attributes\Fillable (+10 more)
-
-### Community 36 - "reduce"
-Cohesion: 0.08
-Nodes (44): addActions(), advanceFully(), advanceStack(), allActions(), apply(), b0(), c0(), canShift() (+36 more)
-
-### Community 37 - "eq"
-Cohesion: 0.06
-Nodes (61): addAll(), addDOM(), addElement(), addElementByRule(), addNodeMark(), addStoredMark(), addTextNode(), addToSet() (+53 more)
-
-### Community 38 - "i"
-Cohesion: 0.05
-Nodes (76): _a(), addMaps(), addProseMirrorPlugins(), af(), ag(), An(), Bg(), buildProps() (+68 more)
-
-### Community 39 - "te"
-Cohesion: 0.05
-Nodes (10): Ud(), Bi(), Bn(), br(), ji(), qd(), te(), Vi() (+2 more)
-
-### Community 40 - "O"
-Cohesion: 0.16
-Nodes (48): b(), $c(), X(), ca(), D(), _e(), Ea(), f() (+40 more)
-
-### Community 41 - "ProductResource"
-Cohesion: 0.11
-Nodes (12): CurrentStockResource, Model, Model, ProductResource, Model, StockMovementResource, UserResource, BackedEnum (+4 more)
-
-### Community 42 - "create"
-Cohesion: 0.05
-Nodes (60): Cl(), clone(), create(), Ct(), dc(), dtFormatter(), Ea(), Ec() (+52 more)
-
-### Community 43 - "yP"
-Cohesion: 0.18
-Nodes (13): Ex(), getChild(), gX(), ImportStatement(), ln(), measureVisibleLineHeights(), OP(), Pc() (+5 more)
-
-### Community 44 - "Cn"
+### Community 39 - "toString"
 Cohesion: 0.15
-Nodes (38): Cn(), b(), Be(), Ce(), De(), dn(), _e(), F() (+30 more)
+Nodes (18): addToSet(), bd(), Bh(), childString(), clearDelayedAndroidKey(), delayAndroidKey(), flushIOSKey(), forceFlush() (+10 more)
 
-### Community 45 - "next"
-Cohesion: 0.06
-Nodes (50): addActive(), Ar(), as(), baseDirAt(), bidiIn(), bidiSpans(), bidiSpansAt(), bP() (+42 more)
-
-### Community 46 - "Xt"
-Cohesion: 0.13
-Nodes (43): At(), b(), bi(), Ce(), ci(), cn(), ct(), di() (+35 more)
-
-### Community 47 - "Xt"
-Cohesion: 0.14
-Nodes (40): At(), b(), bi(), Ce(), ci(), cn(), ct(), di() (+32 more)
-
-### Community 48 - "renderOptions"
-Cohesion: 0.12
-Nodes (40): addBadgesForSelectedOptions(), addSingleBadge(), addSingleSelectionDisplay(), closeDropdown(), constructor(), createBadgeElement(), createOptionElement(), createRemoveButton() (+32 more)
-
-### Community 49 - "Filament\Tables\Table"
-Cohesion: 0.10
-Nodes (17): CurrentStockTable, ProductsTable, StockMovementsTable, UsersTable, WarehousesTable, LowStockWidget, RecentStockActivityWidget, Filament\Actions\BulkActionGroup (+9 more)
-
-### Community 50 - "match"
-Cohesion: 0.07
-Nodes (41): aO(), bd(), Bh(), charCategorizer(), clearDelayedAndroidKey(), d0(), De(), delayAndroidKey() (+33 more)
-
-### Community 51 - "isHorizontal"
-Cohesion: 0.06
-Nodes (48): afterAutoSkip(), buildLookupTable(), buildTicks(), calculateCircumference(), _calculatePadding(), _circumference(), _computeLabelItems(), computeTickLimit() (+40 more)
-
-### Community 52 - "determineDataLimits"
-Cohesion: 0.09
-Nodes (27): af(), at(), Bf(), br(), determineDataLimits(), Di(), Gd(), _getLabelBounds() (+19 more)
-
-### Community 53 - "add"
-Cohesion: 0.07
-Nodes (41): _a(), aa(), add(), alpha(), ba(), br(), ca(), ci() (+33 more)
-
-### Community 54 - "getDatasetMeta"
-Cohesion: 0.08
-Nodes (37): themeClasses(), afterDatasetsUpdate(), bc(), beforeLayout(), fc(), gc(), generateLabels(), getDatasetMeta() (+29 more)
-
-### Community 55 - "ne"
-Cohesion: 0.07
-Nodes (58): Ei(), An(), bl(), cd(), ee(), ce(), cl(), Cn() (+50 more)
-
-### Community 56 - ".forEach"
+### Community 40 - "te"
 Cohesion: 0.05
-Nodes (58): addInner(), addPasteRules(), Ah(), at(), b0(), Ba(), bu(), Ch() (+50 more)
+Nodes (9): Bn(), br(), ji(), qd(), Ri(), te(), Vi(), Xc() (+1 more)
 
-### Community 57 - "ir"
-Cohesion: 0.12
-Nodes (32): ar(), De(), et(), ir(), be(), Ct(), de(), Dt() (+24 more)
-
-### Community 58 - "components/select.js"
-Cohesion: 0.10
-Nodes (30): Ae(), Ai(), An(), applyDisabledState(), De(), disable(), ei(), en() (+22 more)
-
-### Community 59 - "lineAt"
+### Community 41 - "nodeAt"
 Cohesion: 0.06
-Nodes (52): activeForPoint(), addBlock(), addLineDeco(), applyChanges(), balanced(), baseIndent(), baseIndentFor(), blankContent() (+44 more)
+Nodes (82): Ac(), addProseMirrorPlugins(), ak(), AS(), at(), Bf(), bk(), c() (+74 more)
 
-### Community 60 - "Ue"
+### Community 42 - "advance"
+Cohesion: 0.05
+Nodes (59): addChild(), addGaps(), addLeafElement(), addNode(), advance(), ATXHeading(), blank(), break() (+51 more)
+
+### Community 43 - "tables.js"
+Cohesion: 0.10
+Nodes (53): pe(), X(), A(), ae(), B(), be(), C(), ce() (+45 more)
+
+### Community 44 - "Decisions"
 Cohesion: 0.12
-Nodes (32): Ax(), bx(), c(), ct(), dx(), ex(), Fh(), Gh() (+24 more)
+Nodes (16): 1. Reserved Stock: DERIVED, Not Stored, 2. In-Transit Quantity: DERIVED, Not Stored, 3. Variance Formula: Validate Non-Negative Lost Quantity, 4. Negotiation State Machine: Explicit Exit Paths, 5. Concurrency: lockForUpdate Covers Reservation Checks, 6. Audit Trail: Atomic with Item Mutations, 7. Item Soft-Deletion: Status-Based, Never Hard-Deleted, 8. Role-Based Visibility: Both Branches See Full Record (+8 more)
 
-### Community 61 - "slider.js"
-Cohesion: 0.13
-Nodes (30): We(), Be(), Ce(), _e(), Ee(), er(), Fe(), G() (+22 more)
+### Community 45 - "Xt"
+Cohesion: 0.11
+Nodes (45): ae(), At(), b(), bi(), bn(), ci(), ct(), de() (+37 more)
 
-### Community 62 - "WarehouseResource"
-Cohesion: 0.07
-Nodes (19): ListCurrentStock, CreateProduct, EditProduct, ListProducts, CreateUser, EditUser, ListUsers, CreateWarehouse (+11 more)
+### Community 46 - "Illuminate\Database\Seeder"
+Cohesion: 0.19
+Nodes (6): Carbon\Carbon, DatabaseSeeder, TestSeeder, UserRoleSeeder, WarehouseAndCatalogSeeder, Illuminate\Database\Seeder
 
-### Community 63 - "updateElements"
-Cohesion: 0.07
-Nodes (46): ac(), Ao(), applyStack(), _calculateBarIndexPixels(), _calculateBarValuePixels(), _computeAngle(), _computeGridLineItems(), countVisibleElements() (+38 more)
-
-### Community 64 - "isHorizontal"
-Cohesion: 0.07
-Nodes (49): bh(), buildTicks(), calculateCircumference(), calculateLabelRotation(), _calculatePadding(), _circumference(), _computeLabelItems(), _computeLabelSizes() (+41 more)
-
-### Community 65 - "Product"
-Cohesion: 0.14
-Nodes (18): LowStockAlertWidget, Action, QuickActionsWidget, StatsOverviewWidget, Product, adjustmentAction(), getWarehouseOptions(), Action (+10 more)
-
-### Community 66 - "Ji"
-Cohesion: 0.18
-Nodes (31): br(), Bt(), Ca(), ct(), Da(), Ea(), ei(), Fi() (+23 more)
-
-### Community 67 - "User"
-Cohesion: 0.10
-Nodes (12): User, DatabaseSeeder, Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication, Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery, Filament\GlobalSearch\GlobalSearchResult, Filament\Livewire\GlobalSearch, Filament\Models\Contracts\FilamentUser, Illuminate\Database\Seeder (+4 more)
-
-### Community 68 - "qt"
-Cohesion: 0.14
-Nodes (33): ae(), B(), Ft(), He(), Me(), wt(), xe(), Zt() (+25 more)
-
-### Community 69 - "E"
-Cohesion: 0.07
-Nodes (39): aa(), afterDatasetsUpdate(), B(), bs(), cd(), _computeLabelSizes(), describe(), E() (+31 more)
-
-### Community 70 - "Y"
-Cohesion: 0.06
-Nodes (46): afterAutoSkip(), Ar(), average(), buildLookupTable(), cc(), dataset(), first(), Ge() (+38 more)
-
-### Community 71 - "AdminPanelProvider.php"
-Cohesion: 0.07
-Nodes (21): Login, Dashboard, AdminPanelProvider, Filament\Auth\MultiFactor\App\AppAuthentication, Filament\Auth\Pages\Login, Filament\Facades\Filament, Filament\Http\Middleware\Authenticate, Filament\Http\Middleware\AuthenticateSession (+13 more)
-
-### Community 72 - "get"
-Cohesion: 0.08
-Nodes (35): active(), add(), _animateOptions(), bo(), _cachedScopes(), cancel(), Ch(), _createAnimations() (+27 more)
-
-### Community 73 - "e"
-Cohesion: 0.10
-Nodes (28): addEventListener(), al(), apply(), bindEvents(), bindResponsiveEvents(), bindUserEvents(), bs(), cl() (+20 more)
-
-### Community 74 - "filament/app.js"
-Cohesion: 0.13
-Nodes (19): B(), close(), E(), G(), I(), L(), q(), T() (+11 more)
-
-### Community 75 - "file-upload.js"
-Cohesion: 0.09
-Nodes (9): Vm(), Cg(), getExtension(), om(), pm(), qe(), rm(), vl() (+1 more)
-
-### Community 76 - "invert"
-Cohesion: 0.16
-Nodes (19): addStep(), addTransform(), appendMap(), appendMapping(), appendMappingInverted(), compress(), emptyItemCount(), getMap() (+11 more)
-
-### Community 77 - "devDependencies"
-Cohesion: 0.08
-Nodes (23): axios, concurrently, laravel-vite-plugin, devDependencies, axios, concurrently, laravel-vite-plugin, tailwindcss (+15 more)
-
-### Community 78 - "Dashboard.php"
-Cohesion: 0.09
-Nodes (8): CategoryStockChart, FastMovingStockChart, StockByWarehouseWidget, StockMovementTrendChart, Filament\Widgets\AccountWidget, Filament\Widgets\ChartWidget, Filament\Widgets\Widget, Illuminate\Support\Carbon
-
-### Community 79 - "Illuminate\Database\Migrations\Migration"
+### Community 47 - "Pipeline Orchestrator"
 Cohesion: 0.15
-Nodes (3): Illuminate\Database\Migrations\Migration, Illuminate\Database\Schema\Blueprint, Illuminate\Support\Facades\Schema
+Nodes (12): Context & Output Efficiency Rules (Mandatory for All Subagents), Mode A: Single Implementer (Default), Mode B: Decomposed / Parallel Implementers (For Larger Tasks), Parallel Test Execution Strategy, Pipeline Orchestrator, Stage 0 — Graphify Context & Prior Decisions, Stage 1 — Plan, Stage 2 — Plan Council Review (Parallel Subagents) (+4 more)
 
-### Community 80 - "T"
-Cohesion: 0.11
-Nodes (24): ae(), dc(), ga(), getPadding(), gh(), ka(), Ma(), pa() (+16 more)
+### Community 48 - "columns/select.js"
+Cohesion: 0.06
+Nodes (67): A(), addBadgesForSelectedOptions(), addSingleBadge(), addSingleSelectionDisplay(), An(), applyDisabledState(), Bt(), closeDropdown() (+59 more)
 
-### Community 81 - "scripts"
-Cohesion: 0.11
-Nodes (19): scripts, dev, pest, phpstan, pint, post-update-cmd, rector, review (+11 more)
-
-### Community 82 - "brandkit/SKILL.md"
+### Community 49 - "brandkit/SKILL.md"
 Cohesion: 0.05
 Nodes (43): 1. Logo Cover, 1. Monogram + Meaning, 2 × 3 REFERENCE-STYLE LAYOUT, 2. Logo Construction, 2. Product Action, 3. Digital Application, 3. Metaphor Fusion, 4. Brand Essence (+35 more)
 
-### Community 83 - "Filament\Schemas\Schema"
-Cohesion: 0.16
-Nodes (9): ProductForm, UserForm, WarehouseForm, Filament\Forms\Components\Select, Filament\Forms\Components\TextInput, Filament\Forms\Components\Toggle, Filament\Schemas\Schema, Illuminate\Support\Facades\Hash (+1 more)
+### Community 50 - "components/select.js"
+Cohesion: 0.09
+Nodes (36): A(), An(), b(), Cn(), D(), Dn(), dt(), E() (+28 more)
 
-### Community 84 - "CORE DIRECTIVE: IMAGE-FIRST WEBSITE DESIGN TO CODE"
+### Community 51 - "Illuminate\Database\Eloquent\Factories\Factory"
+Cohesion: 0.07
+Nodes (12): ProductFactory, ProductVariantFactory, static, TransferOrderFactory, static, TransferOrderItemFactory, static, UserFactory (+4 more)
+
+### Community 52 - "jt"
+Cohesion: 0.13
+Nodes (40): ae(), At(), bi(), bn(), ci(), ct(), de(), di() (+32 more)
+
+### Community 53 - "Detection Checklist"
+Cohesion: 0.17
+Nodes (11): A. Validation & HTTP input, B. Controllers & routing, C. Authorization, D. Eloquent & models, Detection Checklist, E. Architecture & organization, F. Frontend & views, G. Database & migrations (+3 more)
+
+### Community 54 - "Process"
+Cohesion: 0.17
+Nodes (11): Edge cases, Glob mapping, Ground Rules (read before you start), Infer Conventions, Process, Step 0: Orient, Step 1: Predefined sweep, Step 2: Open-ended pass (+3 more)
+
+### Community 55 - "Detection Checklist"
+Cohesion: 0.17
+Nodes (11): A. Validation & HTTP input, B. Controllers & routing, C. Authorization, D. Eloquent & models, Detection Checklist, E. Architecture & organization, F. Frontend & views, G. Database & migrations (+3 more)
+
+### Community 56 - "create"
+Cohesion: 0.08
+Nodes (36): baseDirAt(), bidiIn(), bidiSpans(), bidiSpansAt(), checkHover(), coordsAtPos(), create(), Df() (+28 more)
+
+### Community 57 - "Process"
+Cohesion: 0.17
+Nodes (11): Edge cases, Glob mapping, Ground Rules (read before you start), Infer Conventions, Process, Step 0: Orient, Step 1: Predefined sweep, Step 2: Open-ended pass (+3 more)
+
+### Community 58 - "next"
+Cohesion: 0.10
+Nodes (27): activeForPoint(), as(), boundChange(), chunkEnd(), comparePoint(), compareRange(), Ds(), Er() (+19 more)
+
+### Community 59 - "g"
+Cohesion: 0.05
+Nodes (59): af(), afterAutoSkip(), afterDatasetsUpdate(), at(), buildLookupTable(), buildOrUpdateControllers(), cf(), _d() (+51 more)
+
+### Community 60 - "CORE DIRECTIVE: IMAGE-FIRST WEBSITE DESIGN TO CODE"
 Cohesion: 0.06
 Nodes (34): 10. IMAGE-FIRST CODEX WEBSITE WORKFLOW, 11. WHEN TO TRIGGER IMAGE GENERATION FIRST, 13. WEBSITE REFERENCE RULE, 15. RESPONSIVE FIRST-VIEW RULE, 16. ANTI-NESTED-BOX RULE, 17. REDUCE MICRO-UI CLUTTER RULE, 18. SECTION IMAGE GENERATION RULE, 19. WEBSITE IMAGE SYSTEM RULE (+26 more)
 
-### Community 85 - "selectOption"
-Cohesion: 0.15
-Nodes (27): addBadgesForSelectedOptions(), addSingleBadge(), addSingleSelectionDisplay(), closeDropdown(), constructor(), createBadgeElement(), createRemoveButton(), destroy() (+19 more)
-
-### Community 86 - "selectRecords"
-Cohesion: 0.21
-Nodes (17): areRecordsSelected(), areRecordsToggleable(), canSelectAllRecords(), deselectAllRecords(), deselectRecords(), getRecordsOnPage(), getSelectedRecordsCount(), handleCheckboxClick() (+9 more)
-
-### Community 87 - "require-dev"
-Cohesion: 0.12
-Nodes (16): require-dev, fakerphp/faker, fruitcake/laravel-debugbar, larastan/larastan, laravel/boost, laravel/pail, laravel/pint, laravel/sail (+8 more)
-
-### Community 88 - "CORE DIRECTIVE: PREMIUM MOBILE APP IMAGE DIRECTION"
+### Community 61 - "CORE DIRECTIVE: PREMIUM MOBILE APP IMAGE DIRECTION"
 Cohesion: 0.06
 Nodes (34): 10. DEVICE MOCKUP FRAME RULE, 11. ONBOARDING FLOW RULE, 12. FIRST SCREEN CLEANLINESS RULE, 13. SAFE AREA AND SYSTEM REGION RULE, 14. NAVIGATION RULE, 15. CLEAN LAYOUT RULE, 16. CREATIVE IMAGE DIRECTION RULE, 17. BACKGROUND TEXTURE AND SURFACE RULE (+26 more)
 
-### Community 89 - "post-create-project-cmd"
-Cohesion: 0.14
-Nodes (15): post-create-project-cmd, post-root-package-install, setup, composer install, npm install, npm run build, @php artisan app:welcome, @php artisan db:seed --ansi (+7 more)
+### Community 62 - "Detection Checklist"
+Cohesion: 0.17
+Nodes (11): A. Validation & HTTP input, B. Controllers & routing, C. Authorization, D. Eloquent & models, Detection Checklist, E. Architecture & organization, F. Frontend & views, G. Database & migrations (+3 more)
 
-### Community 90 - "color-picker.js"
-Cohesion: 0.13
-Nodes (4): [g](), style(), update(), [x]()
+### Community 63 - "Process"
+Cohesion: 0.17
+Nodes (11): Edge cases, Glob mapping, Ground Rules (read before you start), Infer Conventions, Process, Step 0: Orient, Step 1: Predefined sweep, Step 2: Open-ended pass (+3 more)
 
-### Community 91 - "Laravel Boost Guidelines"
+### Community 64 - "AdminPanelProvider.php"
+Cohesion: 0.06
+Nodes (24): Login, Dashboard, AdminPanelProvider, Filament\Auth\MultiFactor\App\AppAuthentication, Filament\Auth\Pages\Login, Filament\Facades\Filament, Filament\Http\Middleware\Authenticate, Filament\Http\Middleware\AuthenticateSession (+16 more)
+
+### Community 65 - "q"
+Cohesion: 0.20
+Nodes (12): H(), J(), L(), q(), k(), b(), d(), f() (+4 more)
+
+### Community 66 - "r"
+Cohesion: 0.17
+Nodes (12): Be(), ei(), ii(), le(), ni(), oi(), r(), ri() (+4 more)
+
+### Community 67 - "ir"
+Cohesion: 0.15
+Nodes (19): De(), et(), ir(), Dt(), ee(), Et(), ge(), he() (+11 more)
+
+### Community 68 - "Laravel Boost Guidelines"
 Cohesion: 0.06
 Nodes (34): APIs & Eloquent Resources, Application Structure & Architecture, Artisan, Artisan, Common Mistakes, Conventions, Correct Namespaces, Deployment (+26 more)
 
-### Community 92 - "composer.json"
-Cohesion: 0.14
-Nodes (13): autoload-dev, psr-4, description, extra, laravel, dont-discover, license, minimum-stability (+5 more)
+### Community 69 - "t"
+Cohesion: 0.22
+Nodes (9): di(), e(), Ht(), Ie(), Re(), t(), w(), xr() (+1 more)
 
-### Community 93 - "Laravel Boost Guidelines"
-Cohesion: 0.06
-Nodes (32): APIs & Eloquent Resources, Application Structure & Architecture, Artisan, Artisan, Common Mistakes, Conventions, Correct Namespaces, Deployment (+24 more)
+### Community 70 - "slider.js"
+Cohesion: 0.13
+Nodes (28): ar(), Be(), Ce(), _e(), Ee(), er(), Fe(), G() (+20 more)
 
-### Community 94 - "High-Agency Frontend Skill"
+### Community 71 - "_notify"
+Cohesion: 0.22
+Nodes (13): active(), _animateOptions(), cancel(), _createAnimations(), _createDescriptors(), _descriptors(), _notify(), _notifyStateChanges() (+5 more)
+
+### Community 72 - "ar"
+Cohesion: 0.05
+Nodes (56): add(), ar(), average(), Ba(), beforeDatasetDraw(), beforeDatasetsDraw(), beforeDraw(), bu() (+48 more)
+
+### Community 73 - "Im"
+Cohesion: 0.31
+Nodes (10): Bm(), eat(), err(), Im(), Lm(), $m(), o1(), pc() (+2 more)
+
+### Community 74 - "file-upload.js"
+Cohesion: 0.07
+Nodes (11): hc(), cm(), constructor(), define(), dm(), getExtension(), _getTestState(), gm() (+3 more)
+
+### Community 75 - "RouteServiceProvider"
+Cohesion: 0.31
+Nodes (3): RouteServiceProvider, Illuminate\Foundation\Support\Providers\RouteServiceProvider, Illuminate\Support\Facades\Route
+
+### Community 76 - "AGENTS.md"
+Cohesion: 0.05
+Nodes (43): Adaptive delivery, APIs & Eloquent Resources, Application Structure & Architecture, armada/ledgers/{feature}/ADVERSARIAL_REVIEW.md — the adversary's findings, armada/ledgers/{feature}/DEFECTS.md — the defect ledger, armada/ledgers/{feature}/SECURITY_FINDINGS.md — security findings, Artisan, Artisan (+35 more)
+
+### Community 77 - "High-Agency Frontend Skill"
 Cohesion: 0.06
 Nodes (30): 10. FINAL PRE-FLIGHT CHECK, 1. ACTIVE BASELINE CONFIGURATION, 2. DEFAULT ARCHITECTURE & CONVENTIONS, 3. DESIGN ENGINEERING DIRECTIVES (Bias Correction), 4. CREATIVE PROACTIVITY (Anti-Slop Implementation), 5. PERFORMANCE GUARDRAILS, 6. TECHNICAL REFERENCE (Dial Definitions), 7. AI TELLS (Forbidden Patterns) (+22 more)
 
-### Community 95 - "AppServiceProvider.php"
-Cohesion: 0.19
-Nodes (8): AppServiceProvider, Filament\Forms\Components\Field, Filament\Infolists\Components\Entry, Filament\Support\Components\Component, Filament\Support\Concerns\Configurable, Filament\Tables\Columns\Column, Filament\Tables\Filters\BaseFilter, Illuminate\Support\ServiceProvider
+### Community 78 - "devDependencies"
+Cohesion: 0.07
+Nodes (28): axios, chart.js, concurrently, laravel-vite-plugin, dependencies, chart.js, devDependencies, axios (+20 more)
 
-### Community 96 - "oe"
-Cohesion: 0.23
-Nodes (13): cm(), De(), dm(), Ee(), Ht(), me(), nm(), oe() (+5 more)
+### Community 79 - "Se"
+Cohesion: 0.08
+Nodes (36): acceptToken(), allows(), between(), d0(), De(), Dg(), E$(), f0() (+28 more)
 
-### Community 97 - "Design System: Filament Inventory"
+### Community 80 - "Requirements & Specs"
+Cohesion: 0.22
+Nodes (8): 1. Clean Panel Bootstrapping (`app/Providers/Filament/AdminPanelProvider.php`), 2. Scoped Filtering Dashboard (`app/Filament/Pages/Dashboard.php`), 3. Guardrail 8: High-Performance Cached Stats Widget (`app/Filament/Widgets/InventoryStatsWidget.php`), 4. Location-Scoped Urgent Actions Table (`app/Filament/Widgets/PendingRequisitionsWidget.php`), Objective, Output Verification, Phase 13: Clean, Role-Scoped Dashboard & Widgets, Requirements & Specs
+
+### Community 81 - "filament/app.js"
+Cohesion: 0.14
+Nodes (16): B(), close(), E(), F(), G(), init(), P(), setUpResizeObserver() (+8 more)
+
+### Community 82 - "Endpoint Tests"
+Cohesion: 0.25
+Nodes (7): Endpoint Coverage, Endpoint Tests, How to Write the Test, Tenant Isolation, Test Authorization at the Policy Level, Testing Validation, Which Layer Owns Which Case
+
+### Community 83 - "Design System: Filament Inventory"
 Cohesion: 0.07
 Nodes (27): Action Modals (Signature Pattern), Buttons, Cards / Containers, Chips / Badges, Colors, Components, Design System: Filament Inventory, Do: (+19 more)
 
-### Community 98 - "renderOptions"
-Cohesion: 0.37
-Nodes (13): createOptionElement(), deferPositionDropdown(), filterOptions(), handleSearch(), hideLoadingState(), openDropdown(), populateLabelRepositoryFromOptions(), positionDropdown() (+5 more)
+### Community 84 - "g$"
+Cohesion: 0.05
+Nodes (56): aO(), bi(), ch(), charCategorizer(), cO(), configure(), _d(), eh() (+48 more)
 
-### Community 99 - "Illuminate\Database\Eloquent\Factories\Factory"
-Cohesion: 0.21
-Nodes (5): ProductFactory, UserFactory, WarehouseFactory, Illuminate\Database\Eloquent\Factories\Factory, static
+### Community 85 - "TransferNoteController.php"
+Cohesion: 0.15
+Nodes (8): Controller, TransferNoteController, Illuminate\Foundation\Application, Illuminate\Foundation\Configuration\Exceptions, Illuminate\Foundation\Configuration\Middleware, Illuminate\Http\Request, Illuminate\Support\Facades\Gate, SimpleSoftwareIO\QrCode\Facades\QrCode
 
-### Community 100 - "date-time-picker.js"
-Cohesion: 0.29
-Nodes (7): d(), e(), i(), m(), r(), s(), t()
+### Community 86 - "r"
+Cohesion: 0.12
+Nodes (31): u(), r(), dd(), f(), a(), A(), ir(), jl() (+23 more)
 
-### Community 101 - "Local Storage"
-Cohesion: 0.09
-Nodes (22): Advanced: Multiple Operations, Authentication State Reuse, Clear All localStorage, Clear sessionStorage, Common Patterns, Delete Database, Delete Single Item, Delete Single Item (+14 more)
-
-### Community 102 - "da"
-Cohesion: 0.14
-Nodes (20): Aa(), cf(), da(), fa(), Gr(), Jc(), Kr(), Ln() (+12 more)
-
-### Community 103 - "Local Storage"
-Cohesion: 0.09
-Nodes (22): Advanced: Multiple Operations, Authentication State Reuse, Clear All localStorage, Clear sessionStorage, Common Patterns, Delete Database, Delete Single Item, Delete Single Item (+14 more)
-
-### Community 104 - "command"
+### Community 87 - "eq"
 Cohesion: 0.20
-Nodes (9): command, enabled, type, mcp, laravel-boost, $schema, artisan, boost:mcp (+1 more)
+Nodes (14): ao(), bt(), Cr(), eq(), ey(), hasMarkup(), localCompositionInfo(), move() (+6 more)
 
-### Community 105 - "actions/actions.js"
-Cohesion: 0.53
-Nodes (8): closeModal(), generateModalId(), getActionNestingIndexFromModalId(), init(), openModal(), rememberPreviouslyFocusedElement(), restorePreviouslyFocusedElement(), syncActionModals()
+### Community 88 - "toString"
+Cohesion: 0.11
+Nodes (23): Bc(), checkContent(), computeAttrs(), createChecked(), endIndex(), getObj(), hasProtocol(), i1() (+15 more)
 
-### Community 106 - "ot"
-Cohesion: 0.28
-Nodes (9): ba(), _e(), It(), jt(), ot(), sa(), tm(), xa() (+1 more)
-
-### Community 108 - "require"
+### Community 89 - "Endpoint Tests"
 Cohesion: 0.25
-Nodes (8): require, filament/filament, laravel/framework, laravel/tinker, nunomaduro/essentials, php, psy/psysh, symfony/process
+Nodes (7): Endpoint Coverage, Endpoint Tests, How to Write the Test, Tenant Isolation, Test Authorization at the Policy Level, Testing Validation, Which Layer Owns Which Case
 
-### Community 109 - "config"
-Cohesion: 0.29
-Nodes (7): pestphp/pest-plugin, php-http/discovery, config, allow-plugins, optimize-autoloader, preferred-install, sort-packages
+### Community 90 - "Phase 12: Security Hardening & Query Performance Optimization"
+Cohesion: 0.25
+Nodes (7): 1. Database Indexing Scheme Audit, 2. N+1 Query Auditing & Eager Loading, 3. Route Security Throttling & HTTP Headers, Objective, Output Verification, Phase 12: Security Hardening & Query Performance Optimization, Requirements & Specs
 
-### Community 110 - "psr-4"
-Cohesion: 0.29
-Nodes (7): autoload, files, psr-4, App\\, Database\\Factories\\, Database\\Seeders\\, app/Helpers.php
-
-### Community 111 - "rl"
-Cohesion: 0.33
-Nodes (7): Bp(), ca(), Cp(), Dp(), Fp(), kp(), rl()
-
-### Community 112 - "$t"
-Cohesion: 0.28
-Nodes (9): at(), ce(), ge(), Gt(), Mt(), nt(), $t(), wt() (+1 more)
-
-### Community 113 - "bootstrap/app.php"
-Cohesion: 0.33
-Nodes (4): Illuminate\Foundation\Application, Illuminate\Foundation\Configuration\Exceptions, Illuminate\Foundation\Configuration\Middleware, Illuminate\Http\Request
-
-### Community 114 - "keywords"
-Cohesion: 0.33
-Nodes (6): keywords, filamentphp, framework, larament, laravel, starter-kit
-
-### Community 115 - "tolaria"
-Cohesion: 0.33
-Nodes (5): WS_UI_PORT, C:\Program Files\nodejs\node.exe, php, laravel-boost, tolaria
-
-### Community 116 - "xl"
-Cohesion: 0.33
-Nodes (6): am(), ol(), Op(), Pp(), xl(), yl()
-
-### Community 117 - "St"
-Cohesion: 0.33
-Nodes (6): constructor(), define(), _getTestState(), getType(), registerListeners(), St()
-
-### Community 119 - "clickPercent"
-Cohesion: 0.60
-Nodes (5): clickPercent(), getPosition(), mouseUp(), movePlayhead(), timelineClicked()
-
-### Community 121 - "post-autoload-dump"
-Cohesion: 0.50
-Nodes (4): post-autoload-dump, Illuminate\\Foundation\\ComposerScripts::postAutoloadDump, @php artisan filament:upgrade, @php artisan package:discover --ansi
-
-### Community 122 - "c"
-Cohesion: 0.67
-Nodes (4): c(), o(), p(), s()
-
-### Community 152 - "k"
-Cohesion: 0.13
-Nodes (22): P(), A(), be(), bn(), Bt(), e(), gt(), jn() (+14 more)
-
-### Community 153 - "Dashboard Layout Transformation Plan"
-Cohesion: 0.10
-Nodes (20): Accessibility, Color System, Council Approval Status, Council Summary, Dashboard Layout Transformation Plan, Dashboard.php, Detailed Widget Configuration, Exact Files to be Created/Modified (+12 more)
-
-### Community 154 - "Browser Session Management"
-Cohesion: 0.10
-Nodes (20): 1. Name Browser Sessions Semantically, 2. Always Clean Up, 3. Delete Stale Browser Data, A/B Testing Sessions, Attach by channel name, Attach via browser extension, Attach via CDP endpoint, Attaching to a Running Browser (+12 more)
-
-### Community 155 - "Design Audit"
+### Community 91 - "Design Audit"
 Cohesion: 0.10
 Nodes (19): Code Quality, Color and Surfaces, Component Patterns, Content, Design Audit, Fix Priority, How This Works, Iconography (+11 more)
 
-### Community 156 - "Browser Session Management"
+### Community 92 - "Browser Session Management"
 Cohesion: 0.10
 Nodes (20): 1. Name Browser Sessions Semantically, 2. Always Clean Up, 3. Delete Stale Browser Data, A/B Testing Sessions, Attach by channel name, Attach via browser extension, Attach via CDP endpoint, Attaching to a Running Browser (+12 more)
 
-### Community 157 - "Analysis & Synthesis Instructions"
+### Community 93 - "helpers.ts"
+Cohesion: 0.29
+Nodes (6): clearLoginThrottle(), login(), logout(), selectFilamentOption(), test, USERS
+
+### Community 94 - "Analysis & Synthesis Instructions"
 Cohesion: 0.11
 Nodes (18): 1. Define the Atmosphere, 2. Map the Color Palette, 3. Establish Typography Rules, 4. Define the Hero Section, 5. Describe Component Stylings, 6. Define Layout Principles, 7. Define Responsive Rules, 8. Encode Motion Philosophy (+10 more)
 
-### Community 158 - "Agent Skill: Principal UI/UX Architect & Motion Choreographer (Awwwards-Tier)"
+### Community 95 - "Schema"
+Cohesion: 0.06
+Nodes (53): Schema, down(), up(), down(), up(), down(), up(), down() (+45 more)
+
+### Community 96 - "Agent Skill: Principal UI/UX Architect & Motion Choreographer (Awwwards-Tier)"
 Cohesion: 0.11
 Nodes (17): 1. Meta Information & Core Directive, 2. THE "ABSOLUTE ZERO" DIRECTIVE (STRICT ANTI-PATTERNS), 3. THE CREATIVE VARIANCE ENGINE, 4. HAPTIC MICRO-AESTHETICS (COMPONENT MASTERY), 5. MOTION CHOREOGRAPHY (FLUID DYNAMICS), 6. PERFORMANCE GUARDRAILS, 7. EXECUTION PROTOCOL, 8. PRE-OUTPUT CHECKLIST (+9 more)
 
-### Community 159 - "Pest Testing 4"
+### Community 97 - "scripts"
 Cohesion: 0.11
-Nodes (17): Architecture Testing, Assertions, Basic Test Structure, Basic Usage, Browser Test Example, Common Pitfalls, Creating Tests, Datasets (+9 more)
+Nodes (18): scripts, dev, pest, phpstan, pint, post-autoload-dump, post-update-cmd, rector (+10 more)
 
-### Community 160 - "Pest Testing 4"
-Cohesion: 0.11
-Nodes (17): Architecture Testing, Assertions, Basic Test Structure, Basic Usage, Browser Test Example, Common Pitfalls, Creating Tests, Datasets (+9 more)
+### Community 98 - "selectRecords"
+Cohesion: 0.20
+Nodes (18): areRecordsPartiallySelected(), areRecordsSelected(), areRecordsToggleable(), canSelectAllRecords(), deselectAllRecords(), deselectRecords(), getRecordsOnPage(), getSelectedRecordsCount() (+10 more)
 
-### Community 161 - "Pest Testing 4"
-Cohesion: 0.11
-Nodes (17): Architecture Testing, Assertions, Basic Test Structure, Basic Usage, Browser Test Example, Common Pitfalls, Creating Tests, Datasets (+9 more)
-
-### Community 162 - "CORE DIRECTIVE: AWWWARDS-LEVEL IMAGE ART DIRECTION"
-Cohesion: 0.12
-Nodes (16): 10. SECTION RHYTHM RULE, 12. DENSITY & SPACING DISCIPLINE, 14. IMAGE / MEDIA DIRECTION, 16. MULTI-IMAGE CONSISTENCY RULE, 17. CLARITY CHECK, 19. RESPONSE BEHAVIOR, 1. ACTIVE BASELINE CONFIGURATION, 21. FINAL GOAL (+8 more)
-
-### Community 163 - "SKILL: Industrial Brutalism & Tactical Telemetry UI"
+### Community 99 - "SKILL: Industrial Brutalism & Tactical Telemetry UI"
 Cohesion: 0.12
 Nodes (16): 1. Skill Meta, 2.1 Swiss Industrial Print, 2.2 Tactical Telemetry & CRT Terminal, 2. Visual Archetypes, 3.1 Macro-Typography (Structural Headers), 3.2 Micro-Typography (Data & Telemetry), 3.3 Textural Contrast (Artistic Disruption), 3. Typographic Architecture (+8 more)
 
-### Community 164 - "Test generation (plan → generate → heal)"
+### Community 100 - "Test generation (plan → generate → heal)"
 Cohesion: 0.12
 Nodes (17): 0. How generation works, 1.1 Prerequisite: workspace, 1.2 Prerequisite: seed test, 1.3 Explore the app, 1.4 Write the spec file, 1. Planning, 2.1 Inputs, 2.2 Generate one scenario (+9 more)
 
-### Community 165 - "Tracing"
+### Community 101 - "Tracing"
 Cohesion: 0.12
 Nodes (16): 1. Start Tracing Before the Problem, 2. Clean Up Old Traces, Analyzing Performance, Basic Usage, Best Practices, Capturing Evidence, Debugging Failed Actions, Limitations (+8 more)
 
-### Community 166 - "Test generation (plan → generate → heal)"
+### Community 102 - "require-dev"
 Cohesion: 0.12
-Nodes (17): 0. How generation works, 1.1 Prerequisite: workspace, 1.2 Prerequisite: seed test, 1.3 Explore the app, 1.4 Write the spec file, 1. Planning, 2.1 Inputs, 2.2 Generate one scenario (+9 more)
+Nodes (17): require-dev, fakerphp/faker, fruitcake/laravel-debugbar, larastan/larastan, laravel/boost, laravel/pail, laravel/pint, laravel/sail (+9 more)
 
-### Community 167 - "Tracing"
-Cohesion: 0.12
-Nodes (16): 1. Start Tracing Before the Problem, 2. Clean Up Old Traces, Analyzing Performance, Basic Usage, Best Practices, Capturing Evidence, Debugging Failed Actions, Limitations (+8 more)
+### Community 103 - "closeDropdown"
+Cohesion: 0.23
+Nodes (17): applyDisabledState(), closeDropdown(), constructor(), destroy(), disable(), enable(), focusNextOption(), focusPreviousOption() (+9 more)
 
-### Community 168 - "Appendix B - Canonical Sources (read these before reinventing)"
+### Community 104 - "fn"
+Cohesion: 0.20
+Nodes (19): Ce(), $e(), ei(), fn(), Ft(), Ie(), i(), Le() (+11 more)
+
+### Community 105 - "ce"
+Cohesion: 0.09
+Nodes (40): Ac(), bl(), cd(), ee(), ue(), ce(), cl(), Dc() (+32 more)
+
+### Community 106 - "fn"
+Cohesion: 0.24
+Nodes (16): Ce(), ei(), fn(), Ie(), i(), Kt(), ln(), ni() (+8 more)
+
+### Community 107 - "Endpoint Tests"
+Cohesion: 0.25
+Nodes (7): Endpoint Coverage, Endpoint Tests, How to Write the Test, Tenant Isolation, Test Authorization at the Policy Level, Testing Validation, Which Layer Owns Which Case
+
+### Community 108 - "tasteskill: Anti-Slop Frontend Skill"
+Cohesion: 0.13
+Nodes (15): 0.A Read these signals first, 0.B Output a one-line "Design Read" before generating, 0. BRIEF INFERENCE (Read the Room Before Anything Else), 0.C If the brief is ambiguous, ask one question, do not guess, 0.D Anti-Default Discipline, 13. OUT OF SCOPE, 14. FINAL PRE-FLIGHT CHECK, 1.A Dial Inference (design read → dial values) (+7 more)
+
+### Community 109 - "Appendix B - Canonical Sources (read these before reinventing)"
 Cohesion: 0.13
 Nodes (15): Appendix B - Canonical Sources (read these before reinventing), Apple Liquid Glass (Apple platforms only), Atlassian, Bootstrap, Carbon, Fluent UI, GOV.UK, Material Web (+7 more)
 
-### Community 169 - "Design System: Taste Standard"
+### Community 110 - "Design System: Taste Standard"
 Cohesion: 0.13
 Nodes (14): 1. Visual Theme & Atmosphere, 2. Color Palette & Roles, 3. Typography Rules, 4. Component Stylings, 5. Hero Section, 6. Layout Principles, 7. Responsive Rules, 8. Motion & Interaction (Code-Phase Intent) (+6 more)
 
-### Community 170 - "Plan"
-Cohesion: 0.13
-Nodes (14): Approach: Shared Action Trait, Council Summary, Expected Behavior After Change, Files to Create, Files to Modify, Implementation Details, Key Findings, LowStockAlertWidget Inline Action (+6 more)
+### Community 111 - "post-create-project-cmd"
+Cohesion: 0.14
+Nodes (15): post-create-project-cmd, post-root-package-install, setup, composer install, npm install, npm run build, @php artisan app:welcome, @php artisan db:seed --ansi (+7 more)
 
-### Community 171 - "2. THE COMBINATORIAL VARIATION ENGINE"
+### Community 112 - "HTTP Client Best Practices"
+Cohesion: 0.29
+Nodes (6): Fake HTTP Requests in Tests, Handle Errors Explicitly, HTTP Client Best Practices, Pool Independent Requests, Retry Only Safe Operations, Set Explicit Timeouts
+
+### Community 113 - "Wi"
+Cohesion: 0.20
+Nodes (15): Rd(), $a(), closest(), Fx(), $h(), Ha(), ik(), jx() (+7 more)
+
+### Community 114 - "color-picker.js"
+Cohesion: 0.13
+Nodes (4): [g](), style(), update(), [x]()
+
+### Community 115 - "Mt"
+Cohesion: 0.18
+Nodes (14): Ra(), apply(), At(), fs(), go(), Hr(), T(), ir() (+6 more)
+
+### Community 116 - "selectOption"
+Cohesion: 0.20
+Nodes (15): addBadgesForSelectedOptions(), addSingleBadge(), addSingleSelectionDisplay(), bt(), createBadgeElement(), createRemoveButton(), getLabelForSingleSelection(), getLabelsForMultipleSelection() (+7 more)
+
+### Community 117 - "CORE DIRECTIVE: AWWWARDS-LEVEL IMAGE ART DIRECTION"
+Cohesion: 0.14
+Nodes (14): 10. SECTION RHYTHM RULE, 12. DENSITY & SPACING DISCIPLINE, 14. IMAGE / MEDIA DIRECTION, 16. MULTI-IMAGE CONSISTENCY RULE, 17. CLARITY CHECK, 19. RESPONSE BEHAVIOR, 1. ACTIVE BASELINE CONFIGURATION, 21. FINAL GOAL (+6 more)
+
+### Community 118 - "2. THE COMBINATORIAL VARIATION ENGINE"
 Cohesion: 0.14
 Nodes (14): 2. THE COMBINATORIAL VARIATION ENGINE, Background Character, Background Mode (per-section), Composition Anchor (per-section), CTA Variation, Hero Architecture, Hero Scale (per-page), Motion-Implied Language (+6 more)
 
-### Community 172 - "Browser Automation with playwright-cli"
+### Community 119 - ".agents/skills/laravel-best-practices/SKILL.md"
+Cohesion: 0.17
+Nodes (10): Configuration Best Practices, Name Repeated Domain Values, Protect Production Secrets, Read Environment Variables in Configuration Files, Use `App::environment()` for Environment Checks, Consistency First, Decision Rules, How to Apply (+2 more)
+
+### Community 120 - "Tailwind CSS Development"
+Cohesion: 0.18
+Nodes (10): Basic Usage, Common Pitfalls, CSS-First Configuration, Dark Mode, Documentation, Import Syntax, Replaced Utilities, Spacing (+2 more)
+
+### Community 121 - ".claude/skills/laravel-best-practices/SKILL.md"
+Cohesion: 0.17
+Nodes (10): Configuration Best Practices, Name Repeated Domain Values, Protect Production Secrets, Read Environment Variables in Configuration Files, Use `App::environment()` for Environment Checks, Consistency First, Decision Rules, How to Apply (+2 more)
+
+### Community 122 - "Browser Automation with playwright-cli"
 Cohesion: 0.14
 Nodes (14): Browser Automation with playwright-cli, Browser Sessions, Example: Debugging with DevTools, Example: Form submission, Example: Interactive session, Example: Multi-tab workflow, Installation, Open parameters (+6 more)
 
-### Community 173 - "Tailwind CSS Development"
-Cohesion: 0.14
-Nodes (13): Basic Usage, Common Patterns, Common Pitfalls, CSS-First Configuration, Dark Mode, Documentation, Flexbox Layout, Grid Layout (+5 more)
+### Community 123 - "Tailwind CSS Development"
+Cohesion: 0.18
+Nodes (10): Basic Usage, Common Pitfalls, CSS-First Configuration, Dark Mode, Documentation, Import Syntax, Replaced Utilities, Spacing (+2 more)
 
-### Community 174 - "Browser Automation with playwright-cli"
+### Community 124 - "composer.json"
 Cohesion: 0.14
-Nodes (14): Browser Automation with playwright-cli, Browser Sessions, Example: Debugging with DevTools, Example: Form submission, Example: Interactive session, Example: Multi-tab workflow, Installation, Open parameters (+6 more)
+Nodes (13): autoload-dev, psr-4, description, extra, laravel, dont-discover, license, minimum-stability (+5 more)
 
-### Community 175 - "Tailwind CSS Development"
-Cohesion: 0.14
-Nodes (13): Basic Usage, Common Patterns, Common Pitfalls, CSS-First Configuration, Dark Mode, Documentation, Flexbox Layout, Grid Layout (+5 more)
+### Community 125 - "Assertions"
+Cohesion: 0.29
+Nodes (6): Arrange, Act, Assert, Assert a Known Value, Assert the Complete Result, Assertions, How to Find the Correct Assertion, Named Response Assertions
 
-### Community 176 - "Plan"
-Cohesion: 0.14
-Nodes (13): 1. StatsOverviewWidget (4 KPI Cards), 2. RecentStockActivityWidget, 3. StockByWarehouseWidget, 4. LowStockAlertWidget (Enhanced), Expected Behavior After Change, Files to Create, Files to Modify, Key Findings (+5 more)
+### Community 126 - ".agents/skills/testing-best-practices/SKILL.md"
+Cohesion: 0.29
+Nodes (3): Built-in Laravel Assertion Methods, How to Find Test Framework Features, Security Tests
 
-### Community 177 - "Plan"
-Cohesion: 0.14
-Nodes (13): 1. StockMovementTrendChart (Line/Area), 2. CategoryStockChart (Doughnut), 3. FastMovingStockChart (Horizontal Bar), Chart Design Details, Dashboard Layout (After), Files to Create, Files to Modify, Key Findings (+5 more)
+### Community 127 - ".github/skills/laravel-best-practices/SKILL.md"
+Cohesion: 0.17
+Nodes (10): Configuration Best Practices, Name Repeated Domain Values, Protect Production Secrets, Read Environment Variables in Configuration Files, Use `App::environment()` for Environment Checks, Consistency First, Decision Rules, How to Apply (+2 more)
 
-### Community 178 - "Tailwind CSS Development"
-Cohesion: 0.14
-Nodes (13): Basic Usage, Common Patterns, Common Pitfalls, CSS-First Configuration, Dark Mode, Documentation, Flexbox Layout, Grid Layout (+5 more)
+### Community 128 - "Tailwind CSS Development"
+Cohesion: 0.18
+Nodes (10): Basic Usage, Common Pitfalls, CSS-First Configuration, Dark Mode, Documentation, Import Syntax, Replaced Utilities, Spacing (+2 more)
 
-### Community 179 - "Plan → Council → Code → Test → Commit Loop"
+### Community 129 - "oe"
+Cohesion: 0.26
+Nodes (12): Ce(), Dp(), $e(), mm(), oe(), pe(), q(), rm() (+4 more)
+
+### Community 130 - "Fakes, Mocks, and Determinism"
+Cohesion: 0.29
+Nodes (7): Database, Fakes, Mocks, and Determinism, Framework Fakes, How to Isolate a Dependency, Mocking, Outbound HTTP Testing, Time and Randomness
+
+### Community 131 - "AppServiceProvider.php"
+Cohesion: 0.16
+Nodes (10): AppServiceProvider, Filament\Forms\Components\Field, Filament\Infolists\Components\Entry, Filament\Support\Components\Component, Filament\Support\Concerns\Configurable, Filament\Tables\Columns\Column, Filament\Tables\Filters\BaseFilter, Illuminate\Contracts\Foundation\MaintenanceMode (+2 more)
+
+### Community 132 - "Plan → Council → Code → Test → Commit Loop"
 Cohesion: 0.15
 Nodes (12): Notes, Plan → Council → Code → Test → Commit Loop, Step 0 — Check for Déjà Vu, Step 1 — Plan, Step 2 — Council Review, Step 2a — Revise, Step 2b — Save the Approved Plan, Step 3 — Code (+4 more)
 
-### Community 180 - "Running Custom Playwright Code"
+### Community 133 - "Running Custom Playwright Code"
 Cohesion: 0.15
 Nodes (13): Clipboard, Complex Workflows, Error Handling, File Downloads, Frames and Iframes, Geolocation, JavaScript Execution, Media Emulation (+5 more)
 
-### Community 181 - "Plan → Council → Code → Test → Commit Loop"
-Cohesion: 0.15
-Nodes (12): Notes, Plan → Council → Code → Test → Commit Loop, Step 0 — Check for Déjà Vu, Step 1 — Plan, Step 2 — Council Review, Step 2a — Revise, Step 2b — Save the Approved Plan, Step 3 — Code (+4 more)
+### Community 134 - "Storage State"
+Cohesion: 0.50
+Nodes (4): Restore Storage State, Save Storage State, Storage State, Storage State File Format
 
-### Community 182 - "Running Custom Playwright Code"
-Cohesion: 0.15
-Nodes (13): Clipboard, Complex Workflows, Error Handling, File Downloads, Frames and Iframes, Geolocation, JavaScript Execution, Media Emulation (+5 more)
+### Community 135 - "1. Complete Database Schema"
+Cohesion: 0.07
+Nodes (29): 1. Complete Database Schema, 1. Multi-Variant Product Catalog, 1. Web Route Definition with Custom Exception Recovery (`routes/web.php`), 2. Access Control & Authorization (RBAC), 2. Inter-Warehouse Requisitions & Two-Way Negotiations, 2. PDF Manifest QR Generation Logic, 3. Dispatch, Logistics & Scan-to-Receive, 3. Web-Routed STN QR Code Pipeline (+21 more)
 
-### Community 183 - "Multi-Warehouse Inventory System — Complete Blueprint"
-Cohesion: 0.15
-Nodes (12): 1. Final Data Model, 2. Access Rules (locked in), 3. Core Service Logic, 4. Filament v5 File Structure (per resource), 5. Build Order (11 stages), 6. Build Prompts, Multi-Warehouse Inventory System — Complete Blueprint, `products` (+4 more)
-
-### Community 184 - "Product"
+### Community 136 - "Product"
 Cohesion: 0.15
 Nodes (12): Accessibility & Inclusion, Brand Commitments, Capabilities and Constraints, Evidence on Hand, Operating Context, Platform, Positioning, Product (+4 more)
 
-### Community 185 - "4. DESIGN ENGINEERING DIRECTIVES (Bias Correction)"
+### Community 137 - "date-time-picker.js"
+Cohesion: 0.29
+Nodes (7): d(), e(), i(), m(), r(), s(), t()
+
+### Community 138 - "renderOptions"
+Cohesion: 0.37
+Nodes (13): createOptionElement(), deferPositionDropdown(), filterOptions(), handleSearch(), hideLoadingState(), openDropdown(), populateLabelRepositoryFromOptions(), positionDropdown() (+5 more)
+
+### Community 139 - "4. DESIGN ENGINEERING DIRECTIVES (Bias Correction)"
 Cohesion: 0.17
 Nodes (12): 4.10 Quotes & Testimonials, 4.11 Page Theme Lock (Light / Dark Mode Consistency), 4.1 Typography, 4.2 Color Calibration, 4.3 Layout Diversification, 4.4 Materiality, Shadows, Cards, 4.5 Interactive UI States, 4.6 Data & Form Patterns (+4 more)
 
-### Community 186 - "Architecture Best Practices"
+### Community 140 - "Architecture Best Practices"
 Cohesion: 0.17
-Nodes (11): Architecture Best Practices, Code to Interfaces, Convention Over Configuration, Default Sort by Descending, Single-Purpose Action Classes, Use Atomic Locks for Race Conditions, Use `Concurrency::run()` for Parallel Execution, Use `Context` for Request-Scoped Data (+3 more)
+Nodes (11): Architecture Best Practices, Depend on Contracts at Boundaries, Extract Focused Business Operations, Follow Framework Conventions, Inject Required Dependencies, Specify a Deterministic Sort Order, Use Atomic Locks for Race Conditions, Use `Concurrency::run()` for Parallel Execution (+3 more)
 
-### Community 187 - ".agents/skills/laravel-best-practices/SKILL.md"
+### Community 141 - "Architecture Best Practices"
 Cohesion: 0.17
-Nodes (10): Configuration Best Practices, `env()` Only in Config Files, Use `App::environment()` for Environment Checks, Use Constants and Language Files, Use Encrypted Env or External Secrets, Consistency First, Decision Rules, How to Apply (+2 more)
+Nodes (11): Architecture Best Practices, Depend on Contracts at Boundaries, Extract Focused Business Operations, Follow Framework Conventions, Inject Required Dependencies, Specify a Deterministic Sort Order, Use Atomic Locks for Race Conditions, Use `Concurrency::run()` for Parallel Execution (+3 more)
 
-### Community 188 - "Security Best Practices"
+### Community 142 - "Architecture Best Practices"
 Cohesion: 0.17
-Nodes (11): Audit Dependencies, Authorize Every Action, CSRF Protection, Encrypt Sensitive Database Fields, Escape Output to Prevent XSS, Keep Secrets Out of Code, Mass Assignment Protection, Prevent SQL Injection (+3 more)
+Nodes (11): Architecture Best Practices, Depend on Contracts at Boundaries, Extract Focused Business Operations, Follow Framework Conventions, Inject Required Dependencies, Specify a Deterministic Sort Order, Use Atomic Locks for Race Conditions, Use `Concurrency::run()` for Parallel Execution (+3 more)
 
-### Community 189 - "Architecture Best Practices"
+### Community 143 - "Test Suite Performance"
+Cohesion: 0.29
+Nodes (6): Common Errors, Global Fakes, How to Find a Slow Test, How to Run the Suite in Parallel, Test Environment, Test Suite Performance
+
+### Community 144 - "Queue and Job Best Practices"
+Cohesion: 0.20
+Nodes (9): Back Off Transient Failures, Batch Jobs for Group Coordination, Configure Time-Based Retry Limits Deliberately, Handle Terminal Failure When Needed, Keep Reservation Time Longer Than Execution Time, Queue and Job Best Practices, Rate Limit External Calls, Use Horizon for Redis Queue Operations (+1 more)
+
+### Community 145 - "Security Best Practices"
 Cohesion: 0.17
-Nodes (11): Architecture Best Practices, Code to Interfaces, Convention Over Configuration, Default Sort by Descending, Single-Purpose Action Classes, Use Atomic Locks for Race Conditions, Use `Concurrency::run()` for Parallel Execution, Use `Context` for Request-Scoped Data (+3 more)
+Nodes (11): Apply Cross-Site Request Forgery Protection, Audit Dependencies, Authorize Protected Actions, Bind Query Parameters, Control Mass Assignment, Encrypt Sensitive Attributes When Appropriate, Escape Output in Its Context, Keep Secrets Out of Application Code (+3 more)
 
-### Community 190 - ".claude/skills/laravel-best-practices/SKILL.md"
+### Community 146 - "Queue and Job Best Practices"
+Cohesion: 0.20
+Nodes (9): Back Off Transient Failures, Batch Jobs for Group Coordination, Configure Time-Based Retry Limits Deliberately, Handle Terminal Failure When Needed, Keep Reservation Time Longer Than Execution Time, Queue and Job Best Practices, Rate Limit External Calls, Use Horizon for Redis Queue Operations (+1 more)
+
+### Community 147 - "Security Best Practices"
 Cohesion: 0.17
-Nodes (10): Configuration Best Practices, `env()` Only in Config Files, Use `App::environment()` for Environment Checks, Use Constants and Language Files, Use Encrypted Env or External Secrets, Consistency First, Decision Rules, How to Apply (+2 more)
+Nodes (11): Apply Cross-Site Request Forgery Protection, Audit Dependencies, Authorize Protected Actions, Bind Query Parameters, Control Mass Assignment, Encrypt Sensitive Attributes When Appropriate, Escape Output in Its Context, Keep Secrets Out of Application Code (+3 more)
 
-### Community 191 - "Security Best Practices"
-Cohesion: 0.17
-Nodes (11): Audit Dependencies, Authorize Every Action, CSRF Protection, Encrypt Sensitive Database Fields, Escape Output to Prevent XSS, Keep Secrets Out of Code, Mass Assignment Protection, Prevent SQL Injection (+3 more)
-
-### Community 192 - "Architecture Best Practices"
-Cohesion: 0.17
-Nodes (11): Architecture Best Practices, Code to Interfaces, Convention Over Configuration, Default Sort by Descending, Single-Purpose Action Classes, Use Atomic Locks for Race Conditions, Use `Concurrency::run()` for Parallel Execution, Use `Context` for Request-Scoped Data (+3 more)
-
-### Community 193 - ".github/skills/laravel-best-practices/SKILL.md"
-Cohesion: 0.17
-Nodes (10): Configuration Best Practices, `env()` Only in Config Files, Use `App::environment()` for Environment Checks, Use Constants and Language Files, Use Encrypted Env or External Secrets, Consistency First, Decision Rules, How to Apply (+2 more)
-
-### Community 194 - "Security Best Practices"
-Cohesion: 0.17
-Nodes (11): Audit Dependencies, Authorize Every Action, CSRF Protection, Encrypt Sensitive Database Fields, Escape Output to Prevent XSS, Keep Secrets Out of Code, Mass Assignment Protection, Prevent SQL Injection (+3 more)
-
-### Community 195 - "tasteskill: Anti-Slop Frontend Skill"
-Cohesion: 0.18
-Nodes (11): 0.A Read these signals first, 0.B Output a one-line "Design Read" before generating, 0. BRIEF INFERENCE (Read the Room Before Anything Else), 0.C If the brief is ambiguous, ask one question, do not guess, 0.D Anti-Default Discipline, 13. OUT OF SCOPE, 14. FINAL PRE-FLIGHT CHECK, 2.A When to reach for a real design system (use official packages) (+3 more)
-
-### Community 196 - "Queue & Job Best Practices"
-Cohesion: 0.18
-Nodes (10): Always Implement `failed()`, Batch Related Jobs, Implement `ShouldBeUnique`, Queue & Job Best Practices, Rate Limit External API Calls in Jobs, `retryUntil()` Needs `$tries = 0`, Set `retry_after` Greater Than `timeout`, Use Exponential Backoff (+2 more)
-
-### Community 197 - ".agents/skills/playwright-cli/SKILL.md"
+### Community 148 - "playwright-cli/SKILL.md"
 Cohesion: 0.24
 Nodes (4): Examples, Inspecting Element Attributes, Debugging Playwright Tests, Running Playwright Tests
 
-### Community 198 - "Queue & Job Best Practices"
+### Community 149 - "Local Storage"
+Cohesion: 0.09
+Nodes (22): Advanced: Multiple Operations, Authentication State Reuse, Clear All localStorage, Clear sessionStorage, Common Patterns, Delete Database, Delete Single Item, Delete Single Item (+14 more)
+
+### Community 150 - "Reviewing Tests"
+Cohesion: 0.29
+Nodes (6): Assertions, Coverage, Data and Determinism, Names and Structure, Reviewing Tests, Test Value
+
+### Community 151 - "HTTP Client Best Practices"
+Cohesion: 0.29
+Nodes (6): Fake HTTP Requests in Tests, Handle Errors Explicitly, HTTP Client Best Practices, Pool Independent Requests, Retry Only Safe Operations, Set Explicit Timeouts
+
+### Community 152 - ".mcp.json"
 Cohesion: 0.18
-Nodes (10): Always Implement `failed()`, Batch Related Jobs, Implement `ShouldBeUnique`, Queue & Job Best Practices, Rate Limit External API Calls in Jobs, `retryUntil()` Needs `$tries = 0`, Set `retry_after` Greater Than `timeout`, Use Exponential Backoff (+2 more)
+Nodes (10): WS_UI_PORT, C:\Program Files\nodejs\node.exe, C:\Users\Eizkie - ASUS\AppData\Local\Programs\Python\Python312\Scripts\headroom.exe, npx, php, headroom, laravel-boost, playwright (+2 more)
 
-### Community 199 - ".claude/skills/playwright-cli/SKILL.md"
-Cohesion: 0.24
-Nodes (4): Examples, Inspecting Element Attributes, Debugging Playwright Tests, Running Playwright Tests
+### Community 153 - "Queue and Job Best Practices"
+Cohesion: 0.20
+Nodes (9): Back Off Transient Failures, Batch Jobs for Group Coordination, Configure Time-Based Retry Limits Deliberately, Handle Terminal Failure When Needed, Keep Reservation Time Longer Than Execution Time, Queue and Job Best Practices, Rate Limit External Calls, Use Horizon for Redis Queue Operations (+1 more)
 
-### Community 200 - "Queue & Job Best Practices"
-Cohesion: 0.18
-Nodes (10): Always Implement `failed()`, Batch Related Jobs, Implement `ShouldBeUnique`, Queue & Job Best Practices, Rate Limit External API Calls in Jobs, `retryUntil()` Needs `$tries = 0`, Set `retry_after` Greater Than `timeout`, Use Exponential Backoff (+2 more)
+### Community 154 - "Security Best Practices"
+Cohesion: 0.17
+Nodes (11): Apply Cross-Site Request Forgery Protection, Audit Dependencies, Authorize Protected Actions, Bind Query Parameters, Control Mass Assignment, Encrypt Sensitive Attributes When Appropriate, Escape Output in Its Context, Keep Secrets Out of Application Code (+3 more)
 
-### Community 201 - "10. REFERENCE VOCABULARY (Pattern Names the Agent Should Know)"
+### Community 155 - "L"
+Cohesion: 0.28
+Nodes (9): ae(), A(), E(), at(), Gt(), i(), Jt(), Wt() (+1 more)
+
+### Community 156 - "10. REFERENCE VOCABULARY (Pattern Names the Agent Should Know)"
 Cohesion: 0.20
 Nodes (10): 10. REFERENCE VOCABULARY (Pattern Names the Agent Should Know), Animation Library Choice, Cards & Containers, Galleries & Media, Hero Paradigms, Layout & Grids, Micro-Interactions & Effects, Navigation & Menus (+2 more)
 
-### Community 202 - "CORE DIRECTIVE: AWWWARDS-LEVEL DESIGN ENGINEERING"
+### Community 157 - "CORE DIRECTIVE: AWWWARDS-LEVEL DESIGN ENGINEERING"
 Cohesion: 0.20
 Nodes (9): 1. PYTHON-DRIVEN TRUE RANDOMIZATION (BREAKING THE LOOP), 2. AIDA STRUCTURE & SPACING, 3. HERO ARCHITECTURE & THE 2-LINE IRON RULE, 4. THE GAPLESS BENTO GRID, 5. ADVANCED GSAP MOTION & HOVER PHYSICS, 6. COMPONENT ARSENAL & CREATIVITY, 7. CONTENT, ASSETS & STRICT BANS, 8. MANDATORY PRE-FLIGHT <design_plan> (+1 more)
 
-### Community 203 - "22. STYLE VARIATION ENGINE"
+### Community 158 - "22. STYLE VARIATION ENGINE"
 Cohesion: 0.20
 Nodes (10): 22. STYLE VARIATION ENGINE, Decorative Asset Set, Image Art Direction Bias, Motion-Implied Language, Palette Logic, Signature Component Set, Structure Bias, Texture / Surface Treatment (+2 more)
 
-### Community 204 - "Advanced Query Patterns"
+### Community 159 - "Advanced Query Best Practices"
 Cohesion: 0.20
-Nodes (9): Advanced Query Patterns, Create Dynamic Relationships via Subquery FK, Prefer `whereIn` + Subquery Over `whereHas`, Sometimes Two Simple Queries Beat One Complex Query, Use `addSelect()` Subqueries for Single Values from Has-Many, Use Compound Indexes Matching `orderBy` Column Order, Use Conditional Aggregates Instead of Multiple Count Queries, Use Correlated Subqueries for Has-Many Ordering (+1 more)
+Nodes (9): Advanced Query Best Practices, Combine Related Counts with Conditional Aggregates, Compare `whereHas()` with an `IN` Subquery, Consider a Correlated Subquery for Has-Many Ordering, Create Dynamic Relationships with a Subquery Foreign Key, Design Composite Indexes for the Query, Measure Two Simple Queries Against One Complex Query, Reuse Loaded Parent Models with `setRelation()` (+1 more)
 
-### Community 205 - "Database Performance Best Practices"
+### Community 160 - "Database Performance Best Practices"
+Cohesion: 0.22
+Nodes (8): Add Indexes for Measured Query Patterns, Count Relationships Without Loading Them, Database Performance Best Practices, Eager Load Relationships Before Iterating, Keep Queries Out of Blade Templates, Prevent Lazy Loading in Development, Process Large Data Sets Incrementally, Select Only Needed Columns
+
+### Community 161 - "Events and Notifications Best Practices"
 Cohesion: 0.20
-Nodes (9): Add Database Indexes, Always Eager Load Relationships, Chunk Large Datasets, Database Performance Best Practices, No Queries in Blade Templates, Prevent Lazy Loading in Development, Select Only Needed Columns, Use `cursor()` for Memory-Efficient Iteration (+1 more)
+Nodes (9): Cache Event Discovery During Production Deployment, Dispatch Queued Notifications After Commit, Events and Notifications Best Practices, Implement `HasLocalePreference` on Notifiable Models, Queue Slow Notifications, Rely on Event Discovery, Route Notification Channels to Dedicated Queues, Use On-Demand Notifications for Non-User Recipients (+1 more)
 
-### Community 206 - "Events & Notifications Best Practices"
-Cohesion: 0.20
-Nodes (9): Always Queue Notifications, Events & Notifications Best Practices, Implement `HasLocalePreference` on Notifiable Models, Rely on Event Discovery, Route Notification Channels to Dedicated Queues, Run `event:cache` in Production Deploy, Use `afterCommit()` on Notifications in Transactions, Use On-Demand Notifications for Non-User Recipients (+1 more)
-
-### Community 207 - "Protocol: Premium Utilitarian Minimalism UI Architect"
+### Community 162 - "Protocol: Premium Utilitarian Minimalism UI Architect"
 Cohesion: 0.20
 Nodes (9): 1. Protocol Overview, 2. Absolute Negative Constraints (Banned Elements), 3. Typographic Architecture, 4. Color Palette (Warm Monochrome + Spot Pastels), 5. Component Specifications, 6. Iconography & Imagery Directives, 7. Subtle Motion & Micro-Animations, 8. Execution Protocol (+1 more)
 
-### Community 208 - "Commands"
+### Community 163 - "Advanced Query Best Practices"
+Cohesion: 0.20
+Nodes (9): Advanced Query Best Practices, Combine Related Counts with Conditional Aggregates, Compare `whereHas()` with an `IN` Subquery, Consider a Correlated Subquery for Has-Many Ordering, Create Dynamic Relationships with a Subquery Foreign Key, Design Composite Indexes for the Query, Measure Two Simple Queries Against One Complex Query, Reuse Loaded Parent Models with `setRelation()` (+1 more)
+
+### Community 164 - "Database Performance Best Practices"
+Cohesion: 0.22
+Nodes (8): Add Indexes for Measured Query Patterns, Count Relationships Without Loading Them, Database Performance Best Practices, Eager Load Relationships Before Iterating, Keep Queries Out of Blade Templates, Prevent Lazy Loading in Development, Process Large Data Sets Incrementally, Select Only Needed Columns
+
+### Community 165 - "Events and Notifications Best Practices"
+Cohesion: 0.20
+Nodes (9): Cache Event Discovery During Production Deployment, Dispatch Queued Notifications After Commit, Events and Notifications Best Practices, Implement `HasLocalePreference` on Notifiable Models, Queue Slow Notifications, Rely on Event Discovery, Route Notification Channels to Dedicated Queues, Use On-Demand Notifications for Non-User Recipients (+1 more)
+
+### Community 166 - "Commands"
 Cohesion: 0.20
 Nodes (10): Commands, Core, DevTools, Keyboard, Mouse, Navigation, Network, Save as (+2 more)
 
-### Community 209 - "Advanced Query Patterns"
+### Community 167 - "require"
 Cohesion: 0.20
-Nodes (9): Advanced Query Patterns, Create Dynamic Relationships via Subquery FK, Prefer `whereIn` + Subquery Over `whereHas`, Sometimes Two Simple Queries Beat One Complex Query, Use `addSelect()` Subqueries for Single Values from Has-Many, Use Compound Indexes Matching `orderBy` Column Order, Use Conditional Aggregates Instead of Multiple Count Queries, Use Correlated Subqueries for Has-Many Ordering (+1 more)
+Nodes (10): require, barryvdh/laravel-dompdf, filament/filament, laravel/framework, laravel/tinker, nunomaduro/essentials, php, psy/psysh (+2 more)
 
-### Community 210 - "Database Performance Best Practices"
+### Community 168 - "Assertions"
+Cohesion: 0.29
+Nodes (6): Arrange, Act, Assert, Assert a Known Value, Assert the Complete Result, Assertions, How to Find the Correct Assertion, Named Response Assertions
+
+### Community 169 - "Advanced Query Best Practices"
 Cohesion: 0.20
-Nodes (9): Add Database Indexes, Always Eager Load Relationships, Chunk Large Datasets, Database Performance Best Practices, No Queries in Blade Templates, Prevent Lazy Loading in Development, Select Only Needed Columns, Use `cursor()` for Memory-Efficient Iteration (+1 more)
+Nodes (9): Advanced Query Best Practices, Combine Related Counts with Conditional Aggregates, Compare `whereHas()` with an `IN` Subquery, Consider a Correlated Subquery for Has-Many Ordering, Create Dynamic Relationships with a Subquery Foreign Key, Design Composite Indexes for the Query, Measure Two Simple Queries Against One Complex Query, Reuse Loaded Parent Models with `setRelation()` (+1 more)
 
-### Community 211 - "Events & Notifications Best Practices"
+### Community 170 - "Database Performance Best Practices"
+Cohesion: 0.22
+Nodes (8): Add Indexes for Measured Query Patterns, Count Relationships Without Loading Them, Database Performance Best Practices, Eager Load Relationships Before Iterating, Keep Queries Out of Blade Templates, Prevent Lazy Loading in Development, Process Large Data Sets Incrementally, Select Only Needed Columns
+
+### Community 171 - "Events and Notifications Best Practices"
 Cohesion: 0.20
-Nodes (9): Always Queue Notifications, Events & Notifications Best Practices, Implement `HasLocalePreference` on Notifiable Models, Rely on Event Discovery, Route Notification Channels to Dedicated Queues, Run `event:cache` in Production Deploy, Use `afterCommit()` on Notifications in Transactions, Use On-Demand Notifications for Non-User Recipients (+1 more)
+Nodes (9): Cache Event Discovery During Production Deployment, Dispatch Queued Notifications After Commit, Events and Notifications Best Practices, Implement `HasLocalePreference` on Notifiable Models, Queue Slow Notifications, Rely on Event Discovery, Route Notification Channels to Dedicated Queues, Use On-Demand Notifications for Non-User Recipients (+1 more)
 
-### Community 212 - "Commands"
+### Community 172 - "PrintStnTest.php"
+Cohesion: 0.29
+Nodes (6): Illuminate\Foundation\Testing\RefreshDatabase, Illuminate\Foundation\Testing\TestCase, Illuminate\Support\Facades\View, stdClass, PrintStnTest, TestCase
+
+### Community 173 - "agents"
 Cohesion: 0.20
-Nodes (10): Commands, Core, DevTools, Keyboard, Mouse, Navigation, Network, Save as (+2 more)
+Nodes (10): fallback, model, agents, adversary, backend, security, fallback, model (+2 more)
 
-### Community 213 - "Advanced Query Patterns"
-Cohesion: 0.20
-Nodes (9): Advanced Query Patterns, Create Dynamic Relationships via Subquery FK, Prefer `whereIn` + Subquery Over `whereHas`, Sometimes Two Simple Queries Beat One Complex Query, Use `addSelect()` Subqueries for Single Values from Has-Many, Use Compound Indexes Matching `orderBy` Column Order, Use Conditional Aggregates Instead of Multiple Count Queries, Use Correlated Subqueries for Has-Many Ordering (+1 more)
+### Community 174 - "actions/actions.js"
+Cohesion: 0.44
+Nodes (8): closeModal(), generateModalId(), getActionNestingIndexFromModalId(), init(), openModal(), rememberPreviouslyFocusedElement(), restorePreviouslyFocusedElement(), syncActionModals()
 
-### Community 214 - "Database Performance Best Practices"
-Cohesion: 0.20
-Nodes (9): Add Database Indexes, Always Eager Load Relationships, Chunk Large Datasets, Database Performance Best Practices, No Queries in Blade Templates, Prevent Lazy Loading in Development, Select Only Needed Columns, Use `cursor()` for Memory-Efficient Iteration (+1 more)
-
-### Community 215 - "Events & Notifications Best Practices"
-Cohesion: 0.20
-Nodes (9): Always Queue Notifications, Events & Notifications Best Practices, Implement `HasLocalePreference` on Notifiable Models, Rely on Event Discovery, Route Notification Channels to Dedicated Queues, Run `event:cache` in Production Deploy, Use `afterCommit()` on Notifications in Transactions, Use On-Demand Notifications for Non-User Recipients (+1 more)
-
-### Community 216 - "11. COMPONENT EXECUTION GUIDELINES"
+### Community 176 - "11. COMPONENT EXECUTION GUIDELINES"
 Cohesion: 0.22
 Nodes (9): 11. COMPONENT EXECUTION GUIDELINES, 3D Cascading Card Deck, Diagonal Staggered Square Masonry, Hover-Accordion Slice Layout, Off-Grid Editorial Layout, Pristine Gapless Bento Grid, Product UI Panel Stack, Turning Polaroid Arc (+1 more)
 
-### Community 217 - "18. EXTRA CREATIVITY & IMPLEMENTATION EDGE"
+### Community 177 - "18. EXTRA CREATIVITY & IMPLEMENTATION EDGE"
 Cohesion: 0.22
 Nodes (9): 18. EXTRA CREATIVITY & IMPLEMENTATION EDGE, Composition variety check, Conversion focus, Cross-section contrast, CTA specificity, Cultural / tonal alignment, Data-viz restraint, Image variety inside one comp (+1 more)
 
-### Community 218 - "Caching Best Practices"
+### Community 178 - "Caching Best Practices"
 Cohesion: 0.22
-Nodes (8): Caching Best Practices, Configure Failover Cache Stores in Production, Use `Cache::add()` for Atomic Conditional Writes, Use `Cache::flexible()` for Stale-While-Revalidate, Use `Cache::memo()` to Avoid Redundant Hits Within a Request, Use `Cache::remember()` Instead of Manual Get/Put, Use Cache Tags to Invalidate Related Groups, Use `once()` for Per-Request Memoization
+Nodes (8): Caching Best Practices, Configure Failover Cache Stores in Production, Consider `Cache::flexible()` for Stale-While-Revalidate, Use `Cache::add()` for Atomic Conditional Writes, Use `Cache::memo()` to Avoid Redundant Hits Within an Execution, Use `Cache::remember()` for Cache-Aside Reads, Use Cache Tags to Invalidate Related Groups, Use `once()` for In-Process Memoization
 
-### Community 219 - "Eloquent Best Practices"
+### Community 179 - "Eloquent Best Practices"
 Cohesion: 0.22
-Nodes (8): Apply Global Scopes Sparingly, Avoid Hardcoded Table Names in Queries, Cast Date Columns Properly, Define Attribute Casts, Eloquent Best Practices, Use Correct Relationship Types, Use Local Scopes for Reusable Queries, Use `whereBelongsTo()` for Relationship Queries
+Nodes (8): Apply Global Scopes Sparingly, Cast Date and Time Attributes, Define Attribute Casts, Define Precise Relationship Types, Eloquent Best Practices, Keep Application Queries Model-Aware, Use Local Scopes for Reusable Queries, Use `whereBelongsTo()` for Relationship Queries
 
-### Community 220 - "Migration Best Practices"
-Cohesion: 0.22
-Nodes (8): Add Indexes in the Migration, Generate Migrations with Artisan, Keep Migrations Focused, Migration Best Practices, Mirror Defaults in Model `$attributes`, Never Modify Deployed Migrations, Use `constrained()` for Foreign Keys, Write Reversible `down()` Methods by Default
+### Community 180 - "Migration Best Practices"
+Cohesion: 0.20
+Nodes (9): Define Foreign-Key Constraints Deliberately, Design Indexes for Real Queries, Generate Migrations with Artisan, Keep Migrations Focused, Make Rollbacks Honest, Migration Best Practices, Mirror Defaults Only When Unsaved Models Need Them, Stage Changes That Affect Existing Rows (+1 more)
 
-### Community 221 - "Cookies"
-Cohesion: 0.22
-Nodes (9): Advanced: Multiple Cookies or Custom Options, Clear All Cookies, Cookies, Delete a Cookie, Filter Cookies by Domain, Filter Cookies by Path, Get Specific Cookie, List All Cookies (+1 more)
-
-### Community 222 - "Video Recording"
-Cohesion: 0.22
-Nodes (8): 1. Use Descriptive Filenames, 2. Record entire hero scripts., Basic Recording, Best Practices, Limitations, Overlay API Summary, Tracing vs Video, Video Recording
-
-### Community 223 - "Execution Rules"
+### Community 181 - "Execution Rules"
 Cohesion: 0.22
 Nodes (8): Execution Rules, Gap Executor, If `BROKEN`:, If `MISALIGNED` (plan exists, code exists, tests pass, but they disagree):, If `MISSING`:, If `UNPLANNED` (code exists, tests pass, no plan):, Input, Output
 
-### Community 224 - "Caching Best Practices"
+### Community 182 - "Caching Best Practices"
 Cohesion: 0.22
-Nodes (8): Caching Best Practices, Configure Failover Cache Stores in Production, Use `Cache::add()` for Atomic Conditional Writes, Use `Cache::flexible()` for Stale-While-Revalidate, Use `Cache::memo()` to Avoid Redundant Hits Within a Request, Use `Cache::remember()` Instead of Manual Get/Put, Use Cache Tags to Invalidate Related Groups, Use `once()` for Per-Request Memoization
+Nodes (8): Caching Best Practices, Configure Failover Cache Stores in Production, Consider `Cache::flexible()` for Stale-While-Revalidate, Use `Cache::add()` for Atomic Conditional Writes, Use `Cache::memo()` to Avoid Redundant Hits Within an Execution, Use `Cache::remember()` for Cache-Aside Reads, Use Cache Tags to Invalidate Related Groups, Use `once()` for In-Process Memoization
 
-### Community 225 - "Eloquent Best Practices"
+### Community 183 - "Eloquent Best Practices"
 Cohesion: 0.22
-Nodes (8): Apply Global Scopes Sparingly, Avoid Hardcoded Table Names in Queries, Cast Date Columns Properly, Define Attribute Casts, Eloquent Best Practices, Use Correct Relationship Types, Use Local Scopes for Reusable Queries, Use `whereBelongsTo()` for Relationship Queries
+Nodes (8): Apply Global Scopes Sparingly, Cast Date and Time Attributes, Define Attribute Casts, Define Precise Relationship Types, Eloquent Best Practices, Keep Application Queries Model-Aware, Use Local Scopes for Reusable Queries, Use `whereBelongsTo()` for Relationship Queries
 
-### Community 226 - "Migration Best Practices"
-Cohesion: 0.22
-Nodes (8): Add Indexes in the Migration, Generate Migrations with Artisan, Keep Migrations Focused, Migration Best Practices, Mirror Defaults in Model `$attributes`, Never Modify Deployed Migrations, Use `constrained()` for Foreign Keys, Write Reversible `down()` Methods by Default
+### Community 184 - "Migration Best Practices"
+Cohesion: 0.20
+Nodes (9): Define Foreign-Key Constraints Deliberately, Design Indexes for Real Queries, Generate Migrations with Artisan, Keep Migrations Focused, Make Rollbacks Honest, Migration Best Practices, Mirror Defaults Only When Unsaved Models Need Them, Stage Changes That Affect Existing Rows (+1 more)
 
-### Community 227 - "Cookies"
+### Community 185 - "Cookies"
 Cohesion: 0.22
 Nodes (9): Advanced: Multiple Cookies or Custom Options, Clear All Cookies, Cookies, Delete a Cookie, Filter Cookies by Domain, Filter Cookies by Path, Get Specific Cookie, List All Cookies (+1 more)
 
-### Community 228 - "Video Recording"
+### Community 186 - "Video Recording"
 Cohesion: 0.22
 Nodes (8): 1. Use Descriptive Filenames, 2. Record entire hero scripts., Basic Recording, Best Practices, Limitations, Overlay API Summary, Tracing vs Video, Video Recording
 
-### Community 229 - "Plan"
+### Community 187 - ".claude/skills/testing-best-practices/SKILL.md"
+Cohesion: 0.29
+Nodes (3): Built-in Laravel Assertion Methods, How to Find Test Framework Features, Security Tests
+
+### Community 188 - "Fakes, Mocks, and Determinism"
+Cohesion: 0.29
+Nodes (7): Database, Fakes, Mocks, and Determinism, Framework Fakes, How to Isolate a Dependency, Mocking, Outbound HTTP Testing, Time and Randomness
+
+### Community 189 - "Caching Best Practices"
 Cohesion: 0.22
-Nodes (8): 1. Products Table, 2. Warehouses Table, 3. Stock Movements Table, Council Summary, Expected Behavior, Key Implementation Details, Plan, Plan 02-01: Create products, warehouses, and stock_movements migrations
+Nodes (8): Caching Best Practices, Configure Failover Cache Stores in Production, Consider `Cache::flexible()` for Stale-While-Revalidate, Use `Cache::add()` for Atomic Conditional Writes, Use `Cache::memo()` to Avoid Redundant Hits Within an Execution, Use `Cache::remember()` for Cache-Aside Reads, Use Cache Tags to Invalidate Related Groups, Use `once()` for In-Process Memoization
 
-### Community 230 - "Caching Best Practices"
+### Community 190 - "Eloquent Best Practices"
 Cohesion: 0.22
-Nodes (8): Caching Best Practices, Configure Failover Cache Stores in Production, Use `Cache::add()` for Atomic Conditional Writes, Use `Cache::flexible()` for Stale-While-Revalidate, Use `Cache::memo()` to Avoid Redundant Hits Within a Request, Use `Cache::remember()` Instead of Manual Get/Put, Use Cache Tags to Invalidate Related Groups, Use `once()` for Per-Request Memoization
+Nodes (8): Apply Global Scopes Sparingly, Cast Date and Time Attributes, Define Attribute Casts, Define Precise Relationship Types, Eloquent Best Practices, Keep Application Queries Model-Aware, Use Local Scopes for Reusable Queries, Use `whereBelongsTo()` for Relationship Queries
 
-### Community 231 - "Eloquent Best Practices"
-Cohesion: 0.22
-Nodes (8): Apply Global Scopes Sparingly, Avoid Hardcoded Table Names in Queries, Cast Date Columns Properly, Define Attribute Casts, Eloquent Best Practices, Use Correct Relationship Types, Use Local Scopes for Reusable Queries, Use `whereBelongsTo()` for Relationship Queries
+### Community 191 - "Migration Best Practices"
+Cohesion: 0.20
+Nodes (9): Define Foreign-Key Constraints Deliberately, Design Indexes for Real Queries, Generate Migrations with Artisan, Keep Migrations Focused, Make Rollbacks Honest, Migration Best Practices, Mirror Defaults Only When Unsaved Models Need Them, Stage Changes That Affect Existing Rows (+1 more)
 
-### Community 232 - "Migration Best Practices"
-Cohesion: 0.22
-Nodes (8): Add Indexes in the Migration, Generate Migrations with Artisan, Keep Migrations Focused, Migration Best Practices, Mirror Defaults in Model `$attributes`, Never Modify Deployed Migrations, Use `constrained()` for Foreign Keys, Write Reversible `down()` Methods by Default
+### Community 192 - "se"
+Cohesion: 0.27
+Nodes (11): be(), Ct(), de(), kt(), lt(), ot(), Q(), se() (+3 more)
 
-### Community 233 - "ut"
-Cohesion: 0.42
-Nodes (9): Ft(), fe(), ft(), le(), oe(), P(), ut(), Vt() (+1 more)
+### Community 193 - "fn"
+Cohesion: 0.11
+Nodes (38): aa(), B(), ba(), cr(), da(), de(), dt(), ei() (+30 more)
 
-### Community 234 - "En"
-Cohesion: 0.28
-Nodes (9): At(), En(), Me(), Hr(), On(), ua(), un(), vr() (+1 more)
-
-### Community 235 - "9. AI TELLS (Forbidden Patterns)"
+### Community 194 - "9. AI TELLS (Forbidden Patterns)"
 Cohesion: 0.25
 Nodes (8): 9.A Visual & CSS, 9. AI TELLS (Forbidden Patterns), 9.B Typography, 9.C Layout & Spacing, 9.D Content & Data ("Jane Doe" Effect), 9.E External Resources & Components, 9.F Production-Test Tells (banned outright), 9.G EM-DASH BAN (the single most-violated Tell)
 
-### Community 236 - "12. THE COMBINATORIAL VARIATION ENGINE"
+### Community 195 - "12. THE COMBINATORIAL VARIATION ENGINE"
 Cohesion: 0.25
 Nodes (8): 12. THE COMBINATORIAL VARIATION ENGINE, Background Character, Hero Architecture, Motion-Implied Language, Section System, Signature Component Set, Theme Paradigm, Typography Character
 
-### Community 237 - "8. ANTI-AI-SLOP RULES"
+### Community 196 - "8. ANTI-AI-SLOP RULES"
 Cohesion: 0.25
 Nodes (8): 8. ANTI-AI-SLOP RULES, Carousel / marquee slop (layout), Content slop, Data / KPI slop, Density slop, Layout slop, Typography slop, Visual slop
 
-### Community 238 - "Blade & Views Best Practices"
+### Community 197 - "Blade and View Best Practices"
 Cohesion: 0.25
-Nodes (7): Blade & Views Best Practices, Prefer Blade Components Over `@include`, Use `$attributes->merge()` in Component Templates, Use `@aware` for Deeply Nested Component Props, Use Blade Fragments for Partial Re-Renders (htmx/Turbo), Use `@pushOnce` for Per-Component Scripts, Use View Composers for Shared View Data
+Nodes (7): Blade and View Best Practices, Prefer Components for Explicit Interfaces, Return Blade Fragments for Partial Rendering, Share Compatible View Data with a View Composer, Share Parent Component Props with `@aware`, Use `$attributes->merge()` in Component Templates, Use `@pushOnce` for Per-Component Scripts
 
-### Community 239 - "Error Handling Best Practices"
+### Community 198 - "Error Handling Best Practices"
 Cohesion: 0.25
-Nodes (7): Add Context to Exception Classes, Enable `dontReportDuplicates()`, Error Handling Best Practices, Exception Reporting and Rendering, Force JSON Error Rendering for API Routes, Throttle High-Volume Exceptions, Use `ShouldntReport` for Exceptions That Should Never Log
+Nodes (7): Add Context to Exception Classes, Choose Where to Report and Render Exceptions, Define JSON Rendering for API Routes, Error Handling Best Practices, Mark Exceptions the Handler Should Not Report, Prevent Duplicate Reports of One Exception Instance, Throttle High-Volume Exception Reports
 
-### Community 240 - "Task Scheduling Best Practices"
+### Community 199 - "Task Scheduling Best Practices"
 Cohesion: 0.25
-Nodes (7): Task Scheduling Best Practices, Use `environments()` to Restrict Tasks, Use `onOneServer()` on Multi-Server Deployments, Use `runInBackground()` for Concurrent Long Tasks, Use Schedule Groups for Shared Configuration, Use `takeUntilTimeout()` for Time-Bounded Processing, Use `withoutOverlapping()` on Variable-Duration Tasks
+Nodes (7): Bound Work Inside the Task, Group Shared Configuration, Prevent Unwanted Overlap, Restrict Tasks by Environment, Run a Task on One Server, Run Eligible Commands in the Background, Task Scheduling Best Practices
 
-### Community 241 - "Testing Best Practices"
+### Community 200 - "ProductExporter.php"
+Cohesion: 0.32
+Nodes (5): ProductExporter, Filament\Actions\Exports\ExportColumn, Filament\Actions\Exports\Exporter, Filament\Actions\Exports\Models\Export, Illuminate\Support\Number
+
+### Community 201 - "Blade and View Best Practices"
 Cohesion: 0.25
-Nodes (7): Call `Event::fake()` After Factory Setup, Testing Best Practices, Use `Exceptions::fake()` to Assert Exception Reporting, Use Factory States and Sequences, Use `LazilyRefreshDatabase` Over `RefreshDatabase`, Use Model Assertions Over Raw Database Assertions, Use `recycle()` to Share Relationship Instances Across Factories
+Nodes (7): Blade and View Best Practices, Prefer Components for Explicit Interfaces, Return Blade Fragments for Partial Rendering, Share Compatible View Data with a View Composer, Share Parent Component Props with `@aware`, Use `$attributes->merge()` in Component Templates, Use `@pushOnce` for Per-Component Scripts
 
-### Community 242 - "Advanced Mocking with run-code"
+### Community 202 - "Error Handling Best Practices"
 Cohesion: 0.25
-Nodes (8): Advanced Mocking with run-code, CLI Route Commands, Conditional Response Based on Request, Delayed Response, Modify Real Response, Request Mocking, Simulate Network Failures, URL Patterns
+Nodes (7): Add Context to Exception Classes, Choose Where to Report and Render Exceptions, Define JSON Rendering for API Routes, Error Handling Best Practices, Mark Exceptions the Handler Should Not Report, Prevent Duplicate Reports of One Exception Instance, Throttle High-Volume Exception Reports
 
-### Community 243 - "Blade & Views Best Practices"
+### Community 203 - "Task Scheduling Best Practices"
 Cohesion: 0.25
-Nodes (7): Blade & Views Best Practices, Prefer Blade Components Over `@include`, Use `$attributes->merge()` in Component Templates, Use `@aware` for Deeply Nested Component Props, Use Blade Fragments for Partial Re-Renders (htmx/Turbo), Use `@pushOnce` for Per-Component Scripts, Use View Composers for Shared View Data
+Nodes (7): Bound Work Inside the Task, Group Shared Configuration, Prevent Unwanted Overlap, Restrict Tasks by Environment, Run a Task on One Server, Run Eligible Commands in the Background, Task Scheduling Best Practices
 
-### Community 244 - "Error Handling Best Practices"
-Cohesion: 0.25
-Nodes (7): Add Context to Exception Classes, Enable `dontReportDuplicates()`, Error Handling Best Practices, Exception Reporting and Rendering, Force JSON Error Rendering for API Routes, Throttle High-Volume Exceptions, Use `ShouldntReport` for Exceptions That Should Never Log
-
-### Community 245 - "Task Scheduling Best Practices"
-Cohesion: 0.25
-Nodes (7): Task Scheduling Best Practices, Use `environments()` to Restrict Tasks, Use `onOneServer()` on Multi-Server Deployments, Use `runInBackground()` for Concurrent Long Tasks, Use Schedule Groups for Shared Configuration, Use `takeUntilTimeout()` for Time-Bounded Processing, Use `withoutOverlapping()` on Variable-Duration Tasks
-
-### Community 246 - "Testing Best Practices"
-Cohesion: 0.25
-Nodes (7): Call `Event::fake()` After Factory Setup, Testing Best Practices, Use `Exceptions::fake()` to Assert Exception Reporting, Use Factory States and Sequences, Use `LazilyRefreshDatabase` Over `RefreshDatabase`, Use Model Assertions Over Raw Database Assertions, Use `recycle()` to Share Relationship Instances Across Factories
-
-### Community 247 - "Advanced Mocking with run-code"
+### Community 204 - "Advanced Mocking with run-code"
 Cohesion: 0.25
 Nodes (8): Advanced Mocking with run-code, CLI Route Commands, Conditional Response Based on Request, Delayed Response, Modify Real Response, Request Mocking, Simulate Network Failures, URL Patterns
 
-### Community 248 - "Plan"
-Cohesion: 0.25
-Nodes (7): Council Summary, Expected Behavior, File, Key Implementation Details, Plan, Plan 02-02: Create Warehouse model with relationships, Structure
+### Community 205 - "Test Suite Performance"
+Cohesion: 0.29
+Nodes (6): Common Errors, Global Fakes, How to Find a Slow Test, How to Run the Suite in Parallel, Test Environment, Test Suite Performance
 
-### Community 249 - "Plan"
-Cohesion: 0.25
-Nodes (7): Council Summary, Expected Behavior, File, Key Implementation Details, Plan, Plan 02-03: Create Product model with relationships, Structure
+### Community 206 - "Reviewing Tests"
+Cohesion: 0.29
+Nodes (6): Assertions, Coverage, Data and Determinism, Names and Structure, Reviewing Tests, Test Value
 
-### Community 250 - "Plan"
-Cohesion: 0.25
-Nodes (7): Council Summary, Expected Behavior, File, Key Implementation Details, Plan, Plan 02-04: Create StockMovement model with relationships, Structure
+### Community 207 - "Phase 14: Automated CI/CD Pipeline & Isolated Testing Environments"
+Cohesion: 0.29
+Nodes (6): 1. Isolated GitHub Actions Workflow Configuration (`.github/workflows/ci.yml`), 2. Production Deployment Shell Script (`deploy.sh`), Objective, Output Verification, Phase 14: Automated CI/CD Pipeline & Isolated Testing Environments, Requirements & Specs
 
-### Community 251 - "Plan"
-Cohesion: 0.25
-Nodes (7): 1. Add Role Column to Users, 2. Create user_warehouse Pivot Table, Council Summary, Expected Behavior, Key Implementation Details, Plan, Plan 02-05: Add role column migration + user_warehouse pivot migration
+### Community 208 - "HTTP Client Best Practices"
+Cohesion: 0.29
+Nodes (6): Fake HTTP Requests in Tests, Handle Errors Explicitly, HTTP Client Best Practices, Pool Independent Requests, Retry Only Safe Operations, Set Explicit Timeouts
 
-### Community 252 - "Blade & Views Best Practices"
+### Community 209 - "Blade and View Best Practices"
 Cohesion: 0.25
-Nodes (7): Blade & Views Best Practices, Prefer Blade Components Over `@include`, Use `$attributes->merge()` in Component Templates, Use `@aware` for Deeply Nested Component Props, Use Blade Fragments for Partial Re-Renders (htmx/Turbo), Use `@pushOnce` for Per-Component Scripts, Use View Composers for Shared View Data
+Nodes (7): Blade and View Best Practices, Prefer Components for Explicit Interfaces, Return Blade Fragments for Partial Rendering, Share Compatible View Data with a View Composer, Share Parent Component Props with `@aware`, Use `$attributes->merge()` in Component Templates, Use `@pushOnce` for Per-Component Scripts
 
-### Community 253 - "Error Handling Best Practices"
+### Community 210 - "Error Handling Best Practices"
 Cohesion: 0.25
-Nodes (7): Add Context to Exception Classes, Enable `dontReportDuplicates()`, Error Handling Best Practices, Exception Reporting and Rendering, Force JSON Error Rendering for API Routes, Throttle High-Volume Exceptions, Use `ShouldntReport` for Exceptions That Should Never Log
+Nodes (7): Add Context to Exception Classes, Choose Where to Report and Render Exceptions, Define JSON Rendering for API Routes, Error Handling Best Practices, Mark Exceptions the Handler Should Not Report, Prevent Duplicate Reports of One Exception Instance, Throttle High-Volume Exception Reports
 
-### Community 254 - "Task Scheduling Best Practices"
+### Community 211 - "Task Scheduling Best Practices"
 Cohesion: 0.25
-Nodes (7): Task Scheduling Best Practices, Use `environments()` to Restrict Tasks, Use `onOneServer()` on Multi-Server Deployments, Use `runInBackground()` for Concurrent Long Tasks, Use Schedule Groups for Shared Configuration, Use `takeUntilTimeout()` for Time-Bounded Processing, Use `withoutOverlapping()` on Variable-Duration Tasks
+Nodes (7): Bound Work Inside the Task, Group Shared Configuration, Prevent Unwanted Overlap, Restrict Tasks by Environment, Run a Task on One Server, Run Eligible Commands in the Background, Task Scheduling Best Practices
 
-### Community 255 - "Testing Best Practices"
-Cohesion: 0.25
-Nodes (7): Call `Event::fake()` After Factory Setup, Testing Best Practices, Use `Exceptions::fake()` to Assert Exception Reporting, Use Factory States and Sequences, Use `LazilyRefreshDatabase` Over `RefreshDatabase`, Use Model Assertions Over Raw Database Assertions, Use `recycle()` to Share Relationship Instances Across Factories
-
-### Community 256 - "APPENDICES - Real Source-Backed Reference Material"
+### Community 212 - "APPENDICES - Real Source-Backed Reference Material"
 Cohesion: 0.29
 Nodes (6): APPENDICES - Real Source-Backed Reference Material, Appendix A - Install Commands per Design System, Appendix C - Apple Liquid Glass: Honest Web Approximation, Safer web approximation skeleton, What is NOT official, What is official
 
-### Community 257 - "11. REDESIGN PROTOCOL"
+### Community 213 - "11. REDESIGN PROTOCOL"
 Cohesion: 0.29
 Nodes (7): 11.A Detect the Mode (first action), 11.B Audit Before Touching, 11.C Preservation Rules, 11.D Modernisation Levers (priority order), 11.E Decision Tree: Targeted Evolution vs Full Redesign, 11.F What Never Changes Silently, 11. REDESIGN PROTOCOL
 
-### Community 258 - "3. DEFAULT ARCHITECTURE & CONVENTIONS"
+### Community 214 - "3. DEFAULT ARCHITECTURE & CONVENTIONS"
 Cohesion: 0.29
 Nodes (7): 3.A Stack, 3.B State, 3.C Icons, 3.D Emoji Policy, 3. DEFAULT ARCHITECTURE & CONVENTIONS, 3.E Responsiveness & Layout Mechanics, 3.F Dependency Verification (mandatory)
 
-### Community 259 - "6. PERFORMANCE & ACCESSIBILITY GUARDRAILS"
+### Community 215 - "6. PERFORMANCE & ACCESSIBILITY GUARDRAILS"
 Cohesion: 0.29
 Nodes (7): 6.A Hardware Acceleration, 6.B Reduced Motion (mandatory), 6.C Dark Mode (mandatory for any consumer-facing page), 6.D Core Web Vitals Targets, 6.E DOM Cost, 6.F Z-Index Restraint, 6. PERFORMANCE & ACCESSIBILITY GUARDRAILS
 
-### Community 260 - "Full-Output Enforcement"
+### Community 216 - "Full-Output Enforcement"
 Cohesion: 0.29
 Nodes (6): Banned Output Patterns, Baseline, Execution Process, Full-Output Enforcement, Handling Long Outputs, Quick Check
 
-### Community 261 - "33. CATEGORY-SPECIFIC BIAS"
+### Community 217 - "33. CATEGORY-SPECIFIC BIAS"
 Cohesion: 0.29
 Nodes (7): 33. CATEGORY-SPECIFIC BIAS, Commerce, Fintech, Health / Fitness, Productivity, Social, Wellness / Lifestyle
 
-### Community 262 - "13. COLOR & MATERIAL RULES"
+### Community 218 - "13. COLOR & MATERIAL RULES"
 Cohesion: 0.29
 Nodes (7): 13. COLOR & MATERIAL RULES, Background Confidence Rule, Background-image harmony, Gradient Discipline, Materiality, Palette Discipline, Strong guidance
 
-### Community 263 - "4. HERO MINIMALISM RULES"
+### Community 219 - "4. HERO MINIMALISM RULES"
 Cohesion: 0.29
 Nodes (7): 4. HERO MINIMALISM RULES, Absolute Hero Rules, Graphic Restraint, Headline Rule, Hero Composition Bias, Pre-output check, Typography Execution
 
-### Community 264 - "Collection Best Practices"
+### Community 220 - "Collection Best Practices"
 Cohesion: 0.29
-Nodes (6): Choose `cursor()` vs. `lazy()` Correctly, Collection Best Practices, Use `#[CollectedBy]` for Custom Collection Classes, Use Higher-Order Messages for Simple Operations, Use `lazyById()` When Updating Records While Iterating, Use `toQuery()` for Bulk Operations on Collections
+Nodes (6): Choose Between `cursor()` and `lazy()`, Collection Best Practices, Use `#[CollectedBy]` for Custom Collection Classes, Use Higher-Order Messages for Simple Operations, Use `lazyById()` When Updating Records While Iterating, Use `toQuery()` for Bulk Operations on Collections
 
-### Community 265 - "HTTP Client Best Practices"
+### Community 221 - "Mail Best Practices"
 Cohesion: 0.29
-Nodes (6): Always Set Explicit Timeouts, Fake HTTP Calls in Tests, Handle Errors Explicitly, HTTP Client Best Practices, Use Request Pooling for Concurrent Requests, Use Retry with Backoff for External APIs
+Nodes (6): Assert the Delivery Mode, Dispatch Queued Mail After Commit, Mail Best Practices, Queue Slow Mail Delivery, Separate Content and Delivery Tests, Use Markdown Mailables When They Fit
 
-### Community 266 - "Mail Best Practices"
+### Community 222 - "Routing and Controller Best Practices"
 Cohesion: 0.29
-Nodes (6): Implement `ShouldQueue` on the Mailable Class, Mail Best Practices, Separate Content Tests from Sending Tests, Use `afterCommit()` on Mailables Inside Transactions, Use `assertQueued()` Not `assertSent()` for Queued Mailables, Use Markdown Mailables for Transactional Emails
+Nodes (6): Keep Controllers Focused on HTTP Concerns, Organize Controllers Around Resources, Routing and Controller Best Practices, Scope Nested Bindings, Use Implicit Route Model Binding, Use Resource Routes for Resourceful Actions
 
-### Community 267 - "Routing & Controllers Best Practices"
+### Community 223 - "Convention and Style Best Practices"
 Cohesion: 0.29
-Nodes (6): Keep Controllers Thin, Routing & Controllers Best Practices, Type-Hint Form Requests, Use Implicit Route Model Binding, Use Resource Controllers, Use Scoped Bindings for Nested Resources
+Nodes (6): Convention and Style Best Practices, Follow Project Naming Conventions, Keep Presentation Code Maintainable, Prefer Clear, Idiomatic Syntax, Use Utilities When They Clarify Intent, Write Comments That Explain Why
 
-### Community 268 - "Conventions & Style"
+### Community 224 - "Validation and Forms Best Practices"
 Cohesion: 0.29
-Nodes (6): Conventions & Style, Follow Laravel Naming Conventions, No Inline JS/CSS in Blade, No Unnecessary Comments, Prefer Shorter Readable Syntax, Use Laravel String & Array Helpers
+Nodes (6): Add Cross-Field Validation After Base Rules, Express Conditional Rules Clearly, Extract Validation When It Improves the Boundary, Prefer Readable Rule Syntax, Use Only Intended Validated Data, Validation and Forms Best Practices
 
-### Community 269 - "Validation & Forms Best Practices"
+### Community 225 - "Collection Best Practices"
 Cohesion: 0.29
-Nodes (6): Always Use `validated()`, Array vs. String Notation for Rules, Use Form Request Classes, Use `Rule::when()` for Conditional Validation, Use the `after()` Method for Custom Validation, Validation & Forms Best Practices
+Nodes (6): Choose Between `cursor()` and `lazy()`, Collection Best Practices, Use `#[CollectedBy]` for Custom Collection Classes, Use Higher-Order Messages for Simple Operations, Use `lazyById()` When Updating Records While Iterating, Use `toQuery()` for Bulk Operations on Collections
 
-### Community 270 - "Collection Best Practices"
+### Community 226 - "Mail Best Practices"
 Cohesion: 0.29
-Nodes (6): Choose `cursor()` vs. `lazy()` Correctly, Collection Best Practices, Use `#[CollectedBy]` for Custom Collection Classes, Use Higher-Order Messages for Simple Operations, Use `lazyById()` When Updating Records While Iterating, Use `toQuery()` for Bulk Operations on Collections
+Nodes (6): Assert the Delivery Mode, Dispatch Queued Mail After Commit, Mail Best Practices, Queue Slow Mail Delivery, Separate Content and Delivery Tests, Use Markdown Mailables When They Fit
 
-### Community 271 - "HTTP Client Best Practices"
+### Community 227 - "Routing and Controller Best Practices"
 Cohesion: 0.29
-Nodes (6): Always Set Explicit Timeouts, Fake HTTP Calls in Tests, Handle Errors Explicitly, HTTP Client Best Practices, Use Request Pooling for Concurrent Requests, Use Retry with Backoff for External APIs
+Nodes (6): Keep Controllers Focused on HTTP Concerns, Organize Controllers Around Resources, Routing and Controller Best Practices, Scope Nested Bindings, Use Implicit Route Model Binding, Use Resource Routes for Resourceful Actions
 
-### Community 272 - "Mail Best Practices"
+### Community 228 - "Convention and Style Best Practices"
 Cohesion: 0.29
-Nodes (6): Implement `ShouldQueue` on the Mailable Class, Mail Best Practices, Separate Content Tests from Sending Tests, Use `afterCommit()` on Mailables Inside Transactions, Use `assertQueued()` Not `assertSent()` for Queued Mailables, Use Markdown Mailables for Transactional Emails
+Nodes (6): Convention and Style Best Practices, Follow Project Naming Conventions, Keep Presentation Code Maintainable, Prefer Clear, Idiomatic Syntax, Use Utilities When They Clarify Intent, Write Comments That Explain Why
 
-### Community 273 - "Routing & Controllers Best Practices"
+### Community 229 - "Validation and Forms Best Practices"
 Cohesion: 0.29
-Nodes (6): Keep Controllers Thin, Routing & Controllers Best Practices, Type-Hint Form Requests, Use Implicit Route Model Binding, Use Resource Controllers, Use Scoped Bindings for Nested Resources
+Nodes (6): Add Cross-Field Validation After Base Rules, Express Conditional Rules Clearly, Extract Validation When It Improves the Boundary, Prefer Readable Rule Syntax, Use Only Intended Validated Data, Validation and Forms Best Practices
 
-### Community 274 - "Conventions & Style"
+### Community 230 - "config"
 Cohesion: 0.29
-Nodes (6): Conventions & Style, Follow Laravel Naming Conventions, No Inline JS/CSS in Blade, No Unnecessary Comments, Prefer Shorter Readable Syntax, Use Laravel String & Array Helpers
+Nodes (7): pestphp/pest-plugin, php-http/discovery, config, allow-plugins, optimize-autoloader, preferred-install, sort-packages
 
-### Community 275 - "Validation & Forms Best Practices"
+### Community 231 - "psr-4"
 Cohesion: 0.29
-Nodes (6): Always Use `validated()`, Array vs. String Notation for Rules, Use Form Request Classes, Use `Rule::when()` for Conditional Validation, Use the `after()` Method for Custom Validation, Validation & Forms Best Practices
+Nodes (7): autoload, files, psr-4, App\\, Database\\Factories\\, Database\\Seeders\\, app/Helpers.php
 
-### Community 276 - "Plan"
+### Community 232 - "Assertions"
 Cohesion: 0.29
-Nodes (6): 1. UserRole Enum, 2. User Model Updates, 3. Tests, Council Summary, Plan, Plan 03-01: UserRole enum, isAdmin(), canAccessWarehouse()
+Nodes (6): Arrange, Act, Assert, Assert a Known Value, Assert the Complete Result, Assertions, How to Find the Correct Assertion, Named Response Assertions
 
-### Community 277 - "Plan"
+### Community 233 - ".github/skills/testing-best-practices/SKILL.md"
 Cohesion: 0.29
-Nodes (6): Council Summary, Methods, Plan, Plan 04-01: InventoryService, Security Fixes (from council), Supporting Files
+Nodes (3): Built-in Laravel Assertion Methods, How to Find Test Framework Features, Security Tests
 
-### Community 278 - "Collection Best Practices"
+### Community 234 - "Collection Best Practices"
 Cohesion: 0.29
-Nodes (6): Choose `cursor()` vs. `lazy()` Correctly, Collection Best Practices, Use `#[CollectedBy]` for Custom Collection Classes, Use Higher-Order Messages for Simple Operations, Use `lazyById()` When Updating Records While Iterating, Use `toQuery()` for Bulk Operations on Collections
+Nodes (6): Choose Between `cursor()` and `lazy()`, Collection Best Practices, Use `#[CollectedBy]` for Custom Collection Classes, Use Higher-Order Messages for Simple Operations, Use `lazyById()` When Updating Records While Iterating, Use `toQuery()` for Bulk Operations on Collections
 
-### Community 279 - "HTTP Client Best Practices"
+### Community 235 - "Mail Best Practices"
 Cohesion: 0.29
-Nodes (6): Always Set Explicit Timeouts, Fake HTTP Calls in Tests, Handle Errors Explicitly, HTTP Client Best Practices, Use Request Pooling for Concurrent Requests, Use Retry with Backoff for External APIs
+Nodes (6): Assert the Delivery Mode, Dispatch Queued Mail After Commit, Mail Best Practices, Queue Slow Mail Delivery, Separate Content and Delivery Tests, Use Markdown Mailables When They Fit
 
-### Community 280 - "Mail Best Practices"
+### Community 236 - "Routing and Controller Best Practices"
 Cohesion: 0.29
-Nodes (6): Implement `ShouldQueue` on the Mailable Class, Mail Best Practices, Separate Content Tests from Sending Tests, Use `afterCommit()` on Mailables Inside Transactions, Use `assertQueued()` Not `assertSent()` for Queued Mailables, Use Markdown Mailables for Transactional Emails
+Nodes (6): Keep Controllers Focused on HTTP Concerns, Organize Controllers Around Resources, Routing and Controller Best Practices, Scope Nested Bindings, Use Implicit Route Model Binding, Use Resource Routes for Resourceful Actions
 
-### Community 281 - "Routing & Controllers Best Practices"
+### Community 237 - "Convention and Style Best Practices"
 Cohesion: 0.29
-Nodes (6): Keep Controllers Thin, Routing & Controllers Best Practices, Type-Hint Form Requests, Use Implicit Route Model Binding, Use Resource Controllers, Use Scoped Bindings for Nested Resources
+Nodes (6): Convention and Style Best Practices, Follow Project Naming Conventions, Keep Presentation Code Maintainable, Prefer Clear, Idiomatic Syntax, Use Utilities When They Clarify Intent, Write Comments That Explain Why
 
-### Community 282 - "Conventions & Style"
+### Community 238 - "Validation and Forms Best Practices"
 Cohesion: 0.29
-Nodes (6): Conventions & Style, Follow Laravel Naming Conventions, No Inline JS/CSS in Blade, No Unnecessary Comments, Prefer Shorter Readable Syntax, Use Laravel String & Array Helpers
+Nodes (6): Add Cross-Field Validation After Base Rules, Express Conditional Rules Clearly, Extract Validation When It Improves the Boundary, Prefer Readable Rule Syntax, Use Only Intended Validated Data, Validation and Forms Best Practices
 
-### Community 283 - "Validation & Forms Best Practices"
+### Community 239 - "opencode.json"
 Cohesion: 0.29
-Nodes (6): Always Use `validated()`, Array vs. String Notation for Rules, Use Form Request Classes, Use `Rule::when()` for Conditional Validation, Use the `after()` Method for Custom Validation, Validation & Forms Best Practices
+Nodes (6): model, options, allow_fallbacks, provider, opencode, $schema
 
-### Community 284 - "Nn"
+### Community 240 - "command"
+Cohesion: 0.29
+Nodes (7): command, enabled, type, laravel-boost, artisan, boost:mcp, php
+
+### Community 241 - "command"
 Cohesion: 0.33
-Nodes (7): ar(), q(), Nn(), sr(), wn(), Xr(), Yt()
+Nodes (6): playwright, command, type, npx, @playwright/mcp@latest, -y
 
-### Community 285 - "Audit & Gap Analyzer"
+### Community 242 - "sl"
+Cohesion: 0.33
+Nodes (7): Cp(), da(), Gp(), kp(), Np(), sl(), Vp()
+
+### Community 243 - "Audit & Gap Analyzer"
 Cohesion: 0.33
 Nodes (5): Audit & Gap Analyzer, Decision Matrix (Extended), Input Parameters, Output, Steps
 
-### Community 286 - ".agents/skills/debug-using-debugbar/SKILL.md"
-Cohesion: 0.33
-Nodes (5): Analyzing queries, Debugging and optimizing workflow, Finding requests, Gotchas, Inspecting a request
+### Community 244 - ".agents/skills/debug-using-debugbar/SKILL.md"
+Cohesion: 0.29
+Nodes (6): Analyzing queries, Debugging and optimizing workflow, Finding requests, Gotchas, Inspecting a request, JSON output
 
-### Community 287 - "29. ANTI-AI-SLOP RULES"
+### Community 245 - "29. ANTI-AI-SLOP RULES"
 Cohesion: 0.33
 Nodes (6): 29. ANTI-AI-SLOP RULES, Content slop, Density slop, Layout slop, Typography slop, Visual slop
 
-### Community 288 - "5. IMAGE COUNT & PAGE SLICING"
+### Community 246 - "5. IMAGE COUNT & PAGE SLICING"
 Cohesion: 0.33
 Nodes (6): 5. IMAGE COUNT & PAGE SLICING, Continuity Rule, Counting rule, Format, Section size variety, THIS IS THE PRIMARY OUTPUT RULE
 
-### Community 289 - "3. Heal"
+### Community 247 - "Fakes, Mocks, and Determinism"
+Cohesion: 0.29
+Nodes (7): Database, Fakes, Mocks, and Determinism, Framework Fakes, How to Isolate a Dependency, Mocking, Outbound HTTP Testing, Time and Randomness
+
+### Community 248 - ".claude/skills/debug-using-debugbar/SKILL.md"
+Cohesion: 0.29
+Nodes (6): Analyzing queries, Debugging and optimizing workflow, Finding requests, Gotchas, Inspecting a request, JSON output
+
+### Community 249 - "Test Suite Performance"
+Cohesion: 0.29
+Nodes (6): Common Errors, Global Fakes, How to Find a Slow Test, How to Run the Suite in Parallel, Test Environment, Test Suite Performance
+
+### Community 250 - "3. Heal"
 Cohesion: 0.33
 Nodes (6): 3.1 Find failing tests, 3.2 Debug one failure, 3.3 Apply the fix, 3.4 Reconcile with the spec, 3.5 Iteration and giving up, 3. Heal
 
-### Community 290 - ".claude/skills/debug-using-debugbar/SKILL.md"
+### Community 251 - "keywords"
 Cohesion: 0.33
-Nodes (5): Analyzing queries, Debugging and optimizing workflow, Finding requests, Gotchas, Inspecting a request
+Nodes (6): keywords, filamentphp, framework, larament, laravel, starter-kit
 
-### Community 291 - "3. Heal"
+### Community 252 - "Reviewing Tests"
+Cohesion: 0.29
+Nodes (6): Assertions, Coverage, Data and Determinism, Names and Structure, Reviewing Tests, Test Value
+
+### Community 253 - "Naming and Structure"
 Cohesion: 0.33
-Nodes (6): 3.1 Find failing tests, 3.2 Debug one failure, 3.3 Apply the fix, 3.4 Reconcile with the spec, 3.5 Iteration and giving up, 3. Heal
+Nodes (5): File Layout, Grouping, Naming and Structure, Naming Tests, Test Function
 
-### Community 292 - "Plan 02-06: Add warehouses() relationship and role to User model"
+### Community 254 - ".github/skills/debug-using-debugbar/SKILL.md"
+Cohesion: 0.29
+Nodes (6): Analyzing queries, Debugging and optimizing workflow, Finding requests, Gotchas, Inspecting a request, JSON output
+
+### Community 255 - "Naming and Structure"
 Cohesion: 0.33
-Nodes (5): Council Summary, Expected Behavior, Files Modified, Plan, Plan 02-06: Add warehouses() relationship and role to User model
+Nodes (5): File Layout, Grouping, Naming and Structure, Naming Tests, Test Function
 
-### Community 293 - "Plan"
-Cohesion: 0.33
-Nodes (5): Council Summary, Files, Key Implementation Details, Plan, Plan 05-01: ProductResource with form, table, and pages
+### Community 256 - "command"
+Cohesion: 0.29
+Nodes (7): command, type, mcp, headroom, headroom, mcp, run
 
-### Community 294 - ".github/skills/debug-using-debugbar/SKILL.md"
-Cohesion: 0.33
-Nodes (5): Analyzing queries, Debugging and optimizing workflow, Finding requests, Gotchas, Inspecting a request
-
-### Community 295 - "schemaRules"
-Cohesion: 0.40
-Nodes (5): ac(), fromSchema(), marksFromSchema(), nodesFromSchema(), schemaRules()
-
-### Community 296 - "Pt"
-Cohesion: 0.33
-Nodes (6): Ae(), Bt(), ne(), Pt(), ue(), jt()
-
-### Community 297 - "getLabelAndValue"
+### Community 257 - "st"
 Cohesion: 0.47
-Nodes (6): Ea(), format(), getLabelAndValue(), getLabelForValue(), ne(), numeric()
+Nodes (6): ca(), Ea(), nm(), st(), ya(), yt()
 
-### Community 298 - "12. THE BLOCK LIBRARY (Contract - Implementations Land Here Iteratively)"
+### Community 258 - "T"
+Cohesion: 0.24
+Nodes (17): Ft(), ce(), fe(), ft(), le(), nt(), oe(), P() (+9 more)
+
+### Community 260 - "12. THE BLOCK LIBRARY (Contract - Implementations Land Here Iteratively)"
 Cohesion: 0.40
 Nodes (5): 12.A File Location, 12.B Required Frontmatter, 12.C Required Body Sections, 12.D Block-Library Discipline, 12. THE BLOCK LIBRARY (Contract - Implementations Land Here Iteratively)
 
-### Community 299 - "5. CONTEXT-AWARE PROACTIVITY"
+### Community 261 - "5. CONTEXT-AWARE PROACTIVITY"
 Cohesion: 0.40
 Nodes (5): 5.A Sticky-Stack - Canonical Skeleton, 5.B Horizontal-Pan - Canonical Skeleton, 5.C Scroll-Reveal Stagger - Canonical Skeleton (lighter alternative), 5. CONTEXT-AWARE PROACTIVITY, 5.D Forbidden Animation Patterns
 
-### Community 300 - "8. DARK MODE PROTOCOL"
+### Community 262 - "8. DARK MODE PROTOCOL"
 Cohesion: 0.40
 Nodes (5): 8.A Token Strategy (pick one, stick to it), 8.B Do Not Prescribe Specific Colors Here, 8.C Default Mode, 8.D Test in Both Modes Before Finishing, 8. DARK MODE PROTOCOL
 
-### Community 301 - "21. MOBILE ANTI-AI-TELLS RULE"
+### Community 263 - "21. MOBILE ANTI-AI-TELLS RULE"
 Cohesion: 0.40
 Nodes (5): 21. MOBILE ANTI-AI-TELLS RULE, Copy AI tells, Layout AI tells, UI clutter tells, Visual AI tells
 
-### Community 302 - "Audit & Gap Analyzer"
+### Community 265 - "Audit & Gap Analyzer"
 Cohesion: 0.40
 Nodes (4): Audit & Gap Analyzer, Decision Matrix, Input Parameters, Output
 
-### Community 303 - "Plan"
+### Community 266 - "review"
 Cohesion: 0.40
-Nodes (4): Files, Key Implementation Details, Plan, Plan 06-01: WarehouseResource with admin-only access and user assignment
+Nodes (5): review, @pest, @phpstan, @pint, @rector
 
-### Community 304 - "1. THE THREE DIALS (Core Configuration)"
-Cohesion: 0.50
-Nodes (4): 1.A Dial Inference (design read → dial values), 1.B Use-Case Presets, 1.C How the Dials Drive Output, 1. THE THREE DIALS (Core Configuration)
+### Community 267 - "Naming and Structure"
+Cohesion: 0.33
+Nodes (5): File Layout, Grouping, Naming and Structure, Naming Tests, Test Function
 
-### Community 305 - "7. DIAL DEFINITIONS (Technical Reference)"
+### Community 268 - "yl"
+Cohesion: 0.40
+Nodes (5): Bp(), om(), Op(), rl(), yl()
+
+### Community 269 - "clickPercent"
+Cohesion: 0.60
+Nodes (5): clickPercent(), getPosition(), mouseUp(), movePlayhead(), timelineClicked()
+
+### Community 270 - "chart-accessibility.js"
+Cohesion: 0.60
+Nodes (4): accessibilityPlugin, generateChartDataTable(), initChartKeyboardNavigation(), showChartDataTable()
+
+### Community 271 - "7. DIAL DEFINITIONS (Technical Reference)"
 Cohesion: 0.50
 Nodes (4): 7. DIAL DEFINITIONS (Technical Reference), DESIGN_VARIANCE (Level 1-10), MOTION_INTENSITY (Level 1-10), VISUAL_DENSITY (Level 1-10)
 
-### Community 306 - "Feature Extractor"
+### Community 272 - "Feature Extractor"
 Cohesion: 0.50
 Nodes (3): Feature Extractor, Input, Steps
 
-### Community 307 - "33. DEFAULT SECTION PACKS"
+### Community 273 - "33. DEFAULT SECTION PACKS"
 Cohesion: 0.50
 Nodes (4): 12-section pack, 33. DEFAULT SECTION PACKS, 4-section pack, 8-section pack
 
-### Community 308 - "14. HERO MINIMALISM RULES"
+### Community 274 - "14. HERO MINIMALISM RULES"
 Cohesion: 0.50
 Nodes (4): 14. HERO MINIMALISM RULES, Absolute Hero Rules, Headline Rule, Hero Cleanliness Rule
 
-### Community 309 - "37. EXAMPLE INTERPRETATIONS"
+### Community 275 - "37. EXAMPLE INTERPRETATIONS"
 Cohesion: 0.50
 Nodes (4): 37. EXAMPLE INTERPRETATIONS, Example 1, Example 2, Example 3
 
-### Community 310 - "2. PLATFORM MODE RULE"
+### Community 276 - "2. PLATFORM MODE RULE"
 Cohesion: 0.50
 Nodes (4): 2. PLATFORM MODE RULE, Android-native premium, Cross-platform premium neutral, iOS-native premium
 
-### Community 311 - "37. EXAMPLE INTERPRETATIONS"
+### Community 277 - "37. EXAMPLE INTERPRETATIONS"
 Cohesion: 0.50
 Nodes (4): 37. EXAMPLE INTERPRETATIONS, Example 1, Example 2, Example 3
 
-### Community 312 - "15. DEFAULT SITE PACKS"
+### Community 278 - "15. DEFAULT SITE PACKS"
 Cohesion: 0.50
 Nodes (4): 12-section pack, 15. DEFAULT SITE PACKS, 4-section pack, 8-section pack
 
-### Community 313 - "20. EXAMPLE INTERPRETATIONS"
+### Community 279 - "20. EXAMPLE INTERPRETATIONS"
 Cohesion: 0.50
 Nodes (4): 20. EXAMPLE INTERPRETATIONS, Example 1, Example 2, Example 3
 
-### Community 314 - "Storage State"
-Cohesion: 0.50
-Nodes (4): Restore Storage State, Save Storage State, Storage State, Storage State File Format
-
-### Community 315 - "Feature Extractor"
+### Community 282 - "Feature Extractor"
 Cohesion: 0.50
 Nodes (3): Feature Extractor, Input, Steps
 
-### Community 316 - "Storage State"
-Cohesion: 0.50
-Nodes (4): Restore Storage State, Save Storage State, Storage State, Storage State File Format
+### Community 283 - "c"
+Cohesion: 0.67
+Nodes (4): c(), o(), p(), s()
+
+### Community 286 - "Council Skill: Architecture Review"
+Cohesion: 0.40
+Nodes (4): Context & Output Rules, Council Skill: Architecture Review, Evaluation Checklist, Output Requirement
+
+### Community 287 - "Council Skill: QA & Test Review"
+Cohesion: 0.40
+Nodes (4): Context & Output Rules, Council Skill: QA & Test Review, Evaluation Checklist, Output Requirement
+
+### Community 288 - "Council Skill: Security Review"
+Cohesion: 0.40
+Nodes (4): Context & Output Rules, Council Skill: Security Review, Evaluation Checklist, Output Requirement
+
+### Community 289 - "Factories and Test Data"
+Cohesion: 0.40
+Nodes (4): Datasets, Each Test Makes Its Own Data, Factories and Test Data, Record Construction
+
+### Community 290 - "Testing Best Practices"
+Cohesion: 0.40
+Nodes (5): Consistency First, How to Apply, Rule Index, Testing Best Practices, What to Test
+
+### Community 291 - "Visual Audit Skill: Accessibility (a11y) Review"
+Cohesion: 0.40
+Nodes (4): Audit Checklist, Context & Output Rules, Output Requirement, Visual Audit Skill: Accessibility (a11y) Review
+
+### Community 292 - "Visual Audit Skill: Design & Layout Review"
+Cohesion: 0.40
+Nodes (4): Audit Checklist, Context & Output Rules, Output Requirement, Visual Audit Skill: Design & Layout Review
+
+### Community 293 - "Factories and Test Data"
+Cohesion: 0.40
+Nodes (4): Datasets, Each Test Makes Its Own Data, Factories and Test Data, Record Construction
+
+### Community 294 - "Testing Best Practices"
+Cohesion: 0.40
+Nodes (5): Consistency First, How to Apply, Rule Index, Testing Best Practices, What to Test
+
+### Community 295 - "Factories and Test Data"
+Cohesion: 0.40
+Nodes (4): Datasets, Each Test Makes Its Own Data, Factories and Test Data, Record Construction
+
+### Community 297 - "Testing Best Practices"
+Cohesion: 0.40
+Nodes (5): Consistency First, How to Apply, Rule Index, Testing Best Practices, What to Test
+
+### Community 298 - "architect"
+Cohesion: 0.67
+Nodes (3): architect, fallback, model
+
+### Community 299 - "frontend"
+Cohesion: 0.67
+Nodes (3): frontend, fallback, model
+
+### Community 300 - "orchestrator"
+Cohesion: 0.67
+Nodes (3): orchestrator, fallback, model
+
+### Community 301 - "qa"
+Cohesion: 0.67
+Nodes (3): qa, fallback, model
+
+### Community 310 - "3. Mandatory Architectural Guardrails (Phases 01–14)"
+Cohesion: 0.11
+Nodes (18): 1. Objective, 2. Technical Scaffolding & Dependencies, 3. Mandatory Architectural Guardrails (Phases 01–14), 4. Output Verification & Formatting, Formatting Check, Guardrail 10: CI/CD Testing Database Isolation (Phase 14), Guardrail 1: Price and Cost Precision Schema (Phase 01 & 06), Guardrail 2: Concurrency & `firstOrCreate` Race Conditions (Phase 01 & 04) (+10 more)
+
+### Community 311 - "1. Database Migrations Specifications"
+Cohesion: 0.10
+Nodes (19): 10. `create_in_transit_table`, 11. `create_loss_ledger_table`, 12. `update_users_table_for_rbac`, 13. `create_user_warehouse_pivot_table`, 1. `create_products_table`, 1. Database Migrations Specifications, 2. Base Inventory Seeder (`WarehouseAndCatalogSeeder.php`), 2. `create_product_variants_table` (+11 more)
+
+### Community 312 - "Phase 02: Eloquent Models & Relationship Mapping"
+Cohesion: 0.29
+Nodes (6): 1. Model Specifications & Precision Casts, 2. Soft-Delete Safety Observer (Crucial Concurrency Guard), Objective, Output Verification, Phase 02: Eloquent Models & Relationship Mapping, Requirements & Specs
+
+### Community 313 - "Phase 03: RBAC Roles, Policy Architecture & User Accounts Seeder"
+Cohesion: 0.25
+Nodes (7): 1. User & Role Seeder (`database/seeders/UserRoleSeeder.php`), 2. Scoped Laravel Authorization Policies, 3. Registering the Security Seeds, Objective, Output Verification, Phase 03: RBAC Roles, Policy Architecture & User Accounts Seeder, Requirements & Specs
+
+### Community 314 - "Phase 04: InventoryService Core Engine"
+Cohesion: 0.33
+Nodes (5): 1. Full Core Service Implementation Class (`app/Services/InventoryService.php`), Objective, Output Verification, Phase 04: InventoryService Core Engine, Requirements & Specs
+
+### Community 315 - "Phase 05: Product Catalog Filament Resource"
+Cohesion: 0.25
+Nodes (7): 1. Main Resource Definition (`app/Filament/Resources/ProductResource.php`), 2. Variants Relation Manager (`app/Filament/Resources/ProductResource/RelationManagers/VariantsRelationManager.php`), 3. Conversions Relation Manager (`app/Filament/Resources/ProductResource/RelationManagers/ConversionsRelationManager.php`), Objective, Output Verification, Phase 05: Product Catalog Filament Resource, Requirements & Specs
+
+### Community 316 - "Phase 06: Warehouse & Pricing Matrix Resources"
+Cohesion: 0.29
+Nodes (6): 1. Warehouse Resource & Manual Stock Overrides (`app/Filament/Resources/WarehouseResource.php`), 2. Pricing Matrix Resource (`app/Filament/Resources/ProductPriceResource.php`), Objective, Output Verification, Phase 06: Warehouse & Pricing Matrix Resources, Requirements & Specs
+
+### Community 317 - "Phase 07: Inter-Warehouse Requisition Wizard & Negotiation UI"
+Cohesion: 0.29
+Nodes (6): 1. Creation Wizard Structure (`app/Filament/Resources/TransferRequisitionResource.php`), 2. Negotiation Header Actions (`app/Filament/Resources/TransferRequisitionResource/Pages/ViewTransferRequisition.php`), Objective, Output Verification, Phase 07: Inter-Warehouse Requisition Wizard & Negotiation UI, Requirements & Specs
+
+### Community 318 - "Phase 08: Printable STN PDF Manifest & Signed QR Routing"
+Cohesion: 0.25
+Nodes (7): 1. Secure Signed Routing (`routes/web.php`), 2. PDF Document Layout & QR Injection (`app/Actions/GenerateSTNManifest.php`), 3. View-Page Print Action (`app/Filament/Resources/TransferRequisitionResource/Pages/ViewTransferRequisition.php`), Objective, Output Verification, Phase 08: Printable STN PDF Manifest & Signed QR Routing, Requirements & Specs
+
+### Community 319 - "Phase 09: Scan-to-Receive Modal & Loss Ledger Integration"
+Cohesion: 0.29
+Nodes (6): 1. Mounting Query Listener (`app/Filament/Resources/TransferRequisitionResource/Pages/ViewTransferRequisition.php`), 2. Scan-to-Receive Modal Component Form (`app/Filament/Resources/TransferRequisitionResource/Pages/ViewTransferRequisition.php`), Objective, Output Verification, Phase 09: Scan-to-Receive Modal & Loss Ledger Integration, Requirements & Specs
+
+### Community 320 - "Phase 10: Audit Ledgers & In-Transit Tracking Resources"
+Cohesion: 0.25
+Nodes (7): 1. Virtual In-Transit Monitor (`app/Filament/Resources/InTransitResource.php`), 2. Immutable Movement Ledger (`app/Filament/Resources/StockMovementResource.php`), 3. Financial Loss Auditor (`app/Filament/Resources/LossLedgerResource.php`), Objective, Output Verification, Phase 10: Audit Ledgers & In-Transit Tracking Resources, Requirements & Specs
+
+### Community 321 - "Phase 11: Feature Delta, Bulk Exports & Playwright E2E Verification"
+Cohesion: 0.25
+Nodes (7): 1. Logical Constraints & Action Delta, 2. Demo Logistics State Seeder (`database/seeders/DemoWorkflowSeeder.php`), 3. Automated Browser Testing Specification (`tests/Browser/RequisitionLifecycleTest.php`), Objective, Output Verification, Phase 11: Feature Delta, Bulk Exports & Playwright E2E Verification, Requirements & Specs
+
+### Community 334 - "docs"
+Cohesion: 0.67
+Nodes (3): docs, fallback, model
+
+### Community 335 - "Ae"
+Cohesion: 0.67
+Nodes (3): Ae(), Bt(), ne()
 
 ## Knowledge Gaps
-- **1498 isolated node(s):** `php`, `C:\Program Files\nodejs\node.exe`, `WS_UI_PORT`, `Controller`, `$schema` (+1493 more)
+- **1561 isolated node(s):** `setup.sh script`, `php`, `C:\Program Files\nodejs\node.exe`, `WS_UI_PORT`, `npx` (+1556 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **23 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **17 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `constructor()` connect `constructor` to `code-editor.js`, `i`, `n`, `draw`, `slice`, `advance`, `markdown-editor.js`, `get`, `y`, `g$`, `facet`, `reduce`, `next`, `match`, `determineDataLimits`, `ne`, `lineAt`, `Ji`, `E`?**
-  _High betweenness centrality (0.024) - this node is a cross-community bridge._
-- **Why does `update()` connect `constructor` to `code-editor.js`, `rich-editor.js`, `i`, `.slice`, `n`, `draw`, `slice`, `markdown-editor.js`, `get`, `g$`, `facet`, `reduce`, `i`, `O`, `next`, `Xt`, `match`, `getDatasetMeta`, `ne`, `lineAt`, `Ue`, `E`?**
-  _High betweenness centrality (0.021) - this node is a cross-community bridge._
-- **Why does `Ts()` connect `draw` to `components/chart.js`, `rich-editor.js`?**
-  _High betweenness centrality (0.019) - this node is a cross-community bridge._
+- **Why does `Wi()` connect `Wi` to `rich-editor.js`, `facet`, `code-editor.js`, `constructor`, `columns/select.js`, `components/select.js`?**
+  _High betweenness centrality (0.033) - this node is a cross-community bridge._
+- **Why does `update()` connect `constructor` to `rich-editor.js`, `code-editor.js`, `components/chart.js`, `i`, `markdown-editor.js`, `lineAt`, `resolve`, `stat/chart.js`, `n`, `Je`, `get`, `.slice`, `prop`, `dx`, `echo.js`, `O`, `facet`, `slice`, `reduce`, `toString`, `te`, `create`, `next`, `Se`, `g$`, `Wi`?**
+  _High betweenness centrality (0.028) - this node is a cross-community bridge._
+- **Why does `Is()` connect `_update` to `rich-editor.js`, `components/chart.js`?**
+  _High betweenness centrality (0.016) - this node is a cross-community bridge._
 - **Are the 17 inferred relationships involving `constructor()` (e.g. with `a()` and `h()`) actually correct?**
   _`constructor()` has 17 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 21 inferred relationships involving `update()` (e.g. with `a()` and `h()`) actually correct?**
-  _`update()` has 21 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 26 inferred relationships involving `update()` (e.g. with `Pr()` and `a()`) actually correct?**
+  _`update()` has 26 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 2 inferred relationships involving `resolve()` (e.g. with `s()` and `i()`) actually correct?**
   _`resolve()` has 2 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 19 inferred relationships involving `y()` (e.g. with `$c()` and `D()`) actually correct?**

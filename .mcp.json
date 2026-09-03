@@ -21,6 +21,16 @@
         "headroom": {
             "command": "C:\\Users\\Eizkie - ASUS\\AppData\\Local\\Programs\\Python\\Python312\\Scripts\\headroom.exe",
             "args": ["mcp", "serve"]
+        },
+        "laraskills": {
+            "command": "laraskills-mcp",
+            "args": []
+        },
+        "ecc-memory-vault": {
+            "command": "ecc-memory-mcp",
+            "env": {
+                "ECC_MEMORY_HARNESS": "opencode"
+            }
         }
     }
 }

@@ -26,6 +26,7 @@ Thumbs.db
 /graphify-out
 /playwright-report
 /playwright-screenshots
+/.playwright*
 /test-results
 
 # armada:start
@@ -34,3 +35,13 @@ Thumbs.db
 /opencode.json
 # armada:end
 .aider*
+
+# Playwright
+node_modules/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+/skills
+/.opencode
+/.laraskills
+.laraskills*

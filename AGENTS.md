@@ -419,14 +419,14 @@ doubt, armada/REQUIREMENTS.md wins.
 
 ## The team
 
-- **orchestrator** — Delivery lead / scheduler. Model `opencode-go/hy3`.
-- **backend-dev** — Backend implementation. Model `opencode/deepseek-v4-flash-free`.
-- **frontend-dev** — Frontend implementation. Model `opencode/mimo-v2.5-free`.
-- **qa** — Quality assurance. Model `opencode/mimo-v2.5-free`.
-- **adversary** — Adversarial reviewer. Model `opencode/deepseek-v4-flash-free`.
-- **security** — Security auditor. Model `opencode/big-pickle`.
-- **docs** — Technical writer. Model `opencode/deepseek-v4-flash-free`.
-- **architect** — Architecture / code review. Model `opencode/big-pickle`.
+- **orchestrator** — Delivery lead / scheduler. Model `opencode/nemotron-3.5-lightning-free`.
+- **backend-dev** — Backend implementation. Model `opencode/mimo-v2.5-free`.
+- **frontend-dev** — Frontend implementation. Model `opencode/ling-3.0-flash-fin-free`.
+- **qa** — Quality assurance. Model `opencode/big-pickle-free`.
+- **adversary** — Adversarial reviewer. Model `opencode/nemotron-3-ultra-free`.
+- **security** — Security auditor. Model `opencode/nemotron-3-ultra-free`.
+- **docs** — Technical writer. Model `opencode/muse-spark-1.2-contributor-free`.
+- **architect** — Architecture / code review. Model `opencode/nemotron-3.5-lightning-free`.
 
 Role boundaries are enforced by permissions and are absolute. Do not work around them with
 shell commands: if the edit tool would deny a file, do not modify that file any other way.
@@ -440,6 +440,7 @@ shell commands: if the edit tool would deny a file, do not modify that file any 
 - Prefer popular, well-supported libraries over custom code.
 - **Shipnames title format**: When invoking `task`, set `description` to the work-only title. Do not manually prefix `<Ship>` or `[role]`; the shipnames plugin auto-prefixes them.
 - **Evidence-based receipts**: Subagent tasks require pasted evidence in the receipt `Evidence` block. No claim of done is accepted without evidence.
+
 
 ## Adaptive delivery
 
@@ -550,3 +551,4 @@ phase starts as soon as the phases it depends on have passed; independent phases
 parallel as background subagents.
 
 <!-- armada:end -->
+
