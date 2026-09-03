@@ -31,11 +31,12 @@ final class CurrentStockResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $query = StockMovement::query()
+$query = StockMovement::query()
             ->selectRaw('MIN(stock_movements.id) as id, stock_movements.variant_id, stock_movements.warehouse_id, SUM(stock_movements.quantity) as quantity')
             ->join('product_variants', 'product_variants.id', '=', 'stock_movements.variant_id')
             ->join('warehouses', 'warehouses.id', '=', 'stock_movements.warehouse_id')
-            ->groupBy('stock_movements.variant_id', 'stock_movements.warehouse_id')
+            ->join('products', 'products.id', '=', 'product_variants.product_id')
+            ->groupBy('stock_movements.variant_id', 'stock_movements.warehouse_id', 'products.name')
             ->havingRaw('SUM(stock_movements.quantity) != 0');
 
         $user = auth()->user();

@@ -13,10 +13,6 @@ final class CurrentStockTable
     public static function configure(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->with([
-                'variant.product',
-                'warehouse',
-            ]))
             ->columns([
                 TextColumn::make('variant.product.name')
                     ->label('Product')

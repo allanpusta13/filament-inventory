@@ -57,18 +57,6 @@ final class TransferRequisitionsTable
                     ->sortable(),
                 TextColumn::make('status')
                     ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'draft' => 'gray',
-                        'requested' => 'info',
-                        'under_review_fulfiller', 'under_review_requestor' => 'warning',
-                        'confirmed' => 'success',
-                        'dispatched' => 'primary',
-                        'partially_received' => 'warning',
-                        'completed' => 'success',
-                        'closed_with_loss' => 'danger',
-                        'cancelled' => 'danger',
-                        default => 'gray',
-                    })
                     ->sortable(),
                 TextColumn::make('requestedBy.name')
                     ->label('Requested By')

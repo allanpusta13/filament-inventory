@@ -21,6 +21,10 @@ final class WarehouseFactory extends Factory
     public function definition(): array
     {
         $code = Str::upper(Str::random(3));
+        // Avoid reserving codes used by WarehouseAndCatalogSeeder
+        while (in_array($code, ['WH-MNL', 'WH-CEB', 'WH-DVO'])) {
+            $code = Str::upper(Str::random(3));
+        }
 
         return [
             'code' => $code,
