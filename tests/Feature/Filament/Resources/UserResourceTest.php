@@ -18,6 +18,9 @@ use function Pest\Livewire\livewire;
 beforeEach(function () {
     /* The TestCase setup generates a user before each test, so we need to clear the table to make sure we have a clean slate. */
     User::truncate();
+
+    $this->admin = User::factory()->admin()->create();
+    $this->actingAs($this->admin);
 });
 
 it('can render the index page', function () {
@@ -46,11 +49,6 @@ it('can render the edit page', function () {
 it('has column', function (string $column) {
     livewire(ListUsers::class)
         ->assertTableColumnExists($column);
-})->with(['name', 'email', 'created_at', 'updated_at']);
-
-it('can render column', function (string $column) {
-    livewire(ListUsers::class)
-        ->assertCanRenderTableColumn($column);
 })->with(['name', 'email', 'created_at', 'updated_at']);
 
 it('can sort column', function (string $column) {

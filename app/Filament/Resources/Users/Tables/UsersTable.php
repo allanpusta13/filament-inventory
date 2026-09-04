@@ -21,6 +21,13 @@ final class UsersTable
                     ->searchable(),
                 TextColumn::make('email')
                     ->searchable(),
+                TextColumn::make('role')
+                    ->badge()
+                    ->sortable(),
+                TextColumn::make('warehouses.name')
+                    ->badge()
+                    ->color('info')
+                    ->placeholder('All'),
                 TextColumn::make('email_verified_at')
                     ->dateTime()
                     ->sortable()

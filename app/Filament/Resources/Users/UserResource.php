@@ -7,6 +7,7 @@ namespace App\Filament\Resources\Users;
 use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
+use App\Filament\Resources\Users\RelationManagers\WarehousesRelationManager;
 use App\Filament\Resources\Users\Schemas\UserForm;
 use App\Filament\Resources\Users\Tables\UsersTable;
 use App\Models\User;
@@ -50,7 +51,7 @@ final class UserResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            WarehousesRelationManager::class,
         ];
     }
 
