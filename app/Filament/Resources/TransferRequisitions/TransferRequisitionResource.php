@@ -12,12 +12,12 @@ use App\Filament\Resources\TransferRequisitions\Tables\TransferRequisitionsTable
 use App\Models\TransferRequisition;
 use BackedEnum;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use UnitEnum;
+use Illuminate\Database\Eloquent\Builder;
 
 final class TransferRequisitionResource extends Resource
 {
@@ -30,6 +30,19 @@ final class TransferRequisitionResource extends Resource
     protected static ?int $navigationSort = 25;
 
     protected static ?string $recordTitleAttribute = 'reference_code';
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with(['fromWarehouse', 'toWarehouse', 'requestedBy', 'items']);
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            //
+        ];
+    }
 
     public static function canCreate(): bool
     {

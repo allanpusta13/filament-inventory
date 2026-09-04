@@ -17,6 +17,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use UnitEnum;
+use Illuminate\Database\Eloquent\Builder;
 
 final class WarehouseResource extends Resource
 {
@@ -30,7 +31,7 @@ final class WarehouseResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
-    public static function getGloballySearchableAttributes(): array
+public static function getGloballySearchableAttributes(): array
     {
         return [
             'name',
@@ -38,10 +39,13 @@ final class WarehouseResource extends Resource
         ];
     }
 
-    public static function canViewAny(): bool
+    public static function getEloquentQuery(): Builder
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return parent::getEloquentQuery()
+            ->with(['users', 'warehouseStocks']);
     }
+
+    public static function canViewAny(): bool
 
     public static function canCreate(): bool
     {
