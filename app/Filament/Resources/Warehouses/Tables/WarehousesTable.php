@@ -53,7 +53,7 @@ final class WarehousesTable
             ])
             ->recordActions([
                 EditAction::make(),
-                Action::make('adjustStock')
+                Action::make('manualStockAdjustment')
                     ->label('Adjust Stock Level')
                     ->icon(Heroicon::OutlinedAdjustmentsHorizontal)
                     ->slideOver()
@@ -75,7 +75,7 @@ final class WarehousesTable
                             ->minLength(15)
                             ->rule(function () {
                                 return function (string $attribute, $value, $fail) {
-                                    if (preg_match('/^(.)\1+$/', mb_trim($value)) || in_array(mb_strtolower(mb_trim($value)), ['manual override', 'stock adjustment', 'test notes', 'temporary adjustment'])) {
+                                    if (preg_match('/^(?!(.)\1+$)(?!\b(test|dummy|notes|adjust|none)\b)/i', mb_trim($value)) !== 1) {
                                         $fail('The audit reason must contain a genuine, non-repetitive descriptive explanation.');
                                     }
                                 };

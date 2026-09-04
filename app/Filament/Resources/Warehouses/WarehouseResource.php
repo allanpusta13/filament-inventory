@@ -7,6 +7,7 @@ namespace App\Filament\Resources\Warehouses;
 use App\Filament\Resources\Warehouses\Pages\CreateWarehouse;
 use App\Filament\Resources\Warehouses\Pages\EditWarehouse;
 use App\Filament\Resources\Warehouses\Pages\ListWarehouses;
+use App\Filament\Resources\Warehouses\RelationManagers\WarehouseStocksRelationManager;
 use App\Filament\Resources\Warehouses\Schemas\WarehouseForm;
 use App\Filament\Resources\Warehouses\Tables\WarehousesTable;
 use App\Models\Warehouse;
@@ -70,7 +71,7 @@ final class WarehouseResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            WarehouseStocksRelationManager::class,
         ];
     }
 
