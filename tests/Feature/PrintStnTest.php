@@ -96,8 +96,8 @@ it('renders empty items table when no items', function () {
 
     $this->assertStringContainsString('STN-EMPTY-001', $html);
     $this->assertStringContainsString('No items', $html);
-    $this->assertStringContainsString('Dispatched by', $html);
-    $this->assertStringContainsString('Received by', $html);
+    $this->assertStringContainsString('Origin Warehouse Manager', $html);
+    $this->assertStringContainsString('Destination Warehouse Manager', $html);
 });
 
 it('renders requested and approved quantities correctly', function () {

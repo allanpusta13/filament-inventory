@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock Transfer Note — {{ $requisition->reference_code }}</title>
+    <title>Direct Transfer — {{ $transfer->reference_code }}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 12px; color: #1a1a1a; padding: 20px; }
@@ -17,14 +17,9 @@
         .qr-section img, .qr-section svg { width: 120px; height: 120px; }
         .qr-section p { font-size: 9px; color: #999; margin-top: 2px; }
         .status { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; }
-        .status-draft { background: #f3f4f6; color: #374151; }
-        .status-requested { background: #fef3c7; color: #92400e; }
-        .status-under_review_fulfiller, .status-under_review_requestor { background: #dbeafe; color: #1d4ed8; }
-        .status-confirmed { background: #d1fae5; color: #065f46; }
-        .status-dispatched { background: #dbeafe; color: #1d4ed8; }
-        .status-partially_received { background: #fef3c7; color: #92400e; }
+        .status-pending { background: #fef3c7; color: #92400e; }
         .status-completed { background: #d1fae5; color: #065f46; }
-        .status-closed_with_loss { background: #fee2e2; color: #991b1b; }
+        .status-failed { background: #fee2e2; color: #991b1b; }
         .warehouses { display: flex; gap: 40px; margin-bottom: 24px; }
         .warehouse { flex: 1; }
         .warehouse h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #666; margin-bottom: 4px; }
@@ -38,8 +33,6 @@
         th { background: #f9fafb; border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; }
         td { border: 1px solid #e5e7eb; padding: 8px 12px; font-size: 12px; }
         .qty { text-align: right; font-variant-numeric: tabular-nums; }
-        .substitute-alert { background: #fef3c7; border-left: 3px solid #f59e0b; padding: 6px 10px; margin-top: 4px; font-size: 10px; color: #92400e; }
-        .substitute-alert strong { color: #b45309; }
         .notes { margin-bottom: 24px; padding: 12px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb; }
         .notes h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; margin-bottom: 4px; }
         .notes p { font-size: 12px; line-height: 1.5; }
@@ -61,22 +54,19 @@
 <body>
     <div class="header">
         <div class="header-left">
-            <h1>Stock Transfer Note</h1>
-            <p>Branch-to-branch inventory transfer</p>
+            <h1>Direct Transfer Note</h1>
+            <p>Instant warehouse-to-warehouse transfer</p>
         </div>
         <div class="header-right">
-            <div class="ref">{{ $requisition->reference_code }}</div>
+            <div class="ref">{{ $transfer->reference_code }}</div>
             <div class="date">
-                @if($requisition->dispatched_at)
-                    Dispatched: {{ $requisition->dispatched_at->format('M d, Y g:i A') }}<br>
-                @endif
-                @if($requisition->completed_at)
-                    Completed: {{ $requisition->completed_at->format('M d, Y g:i A') }}
+                @if($transfer->executed_at)
+                    Transferred: {{ $transfer->executed_at->format('M d, Y g:i A') }}
                 @endif
             </div>
             <div style="margin-top: 8px;">
-                <span class="status status-{{ $requisition->status->value }}">
-                    {{ $requisition->status->getLabel() }}
+                <span class="status status-{{ $transfer->status->value }}">
+                    {{ $transfer->status->getLabel() }}
                 </span>
             </div>
             @if(isset($qrCode) && $qrCode)
@@ -90,32 +80,29 @@
 
     <div class="warehouses">
         <div class="warehouse">
-            <h3>From (Sender)</h3>
-            <div class="name">{{ $requisition->fromWarehouse->name }}</div>
-            <div class="code">{{ $requisition->fromWarehouse->code }}</div>
-            @if($requisition->fromWarehouse->location)
-                <div class="location">{{ $requisition->fromWarehouse->location }}</div>
+            <h3>From (Source)</h3>
+            <div class="name">{{ $transfer->fromWarehouse->name }}</div>
+            <div class="code">{{ $transfer->fromWarehouse->code }}</div>
+            @if($transfer->fromWarehouse->location)
+                <div class="location">{{ $transfer->fromWarehouse->location }}</div>
             @endif
         </div>
         <div class="warehouse">
-            <h3>To (Receiver)</h3>
-            <div class="name">{{ $requisition->toWarehouse->name }}</div>
-            <div class="code">{{ $requisition->toWarehouse->code }}</div>
-            @if($requisition->toWarehouse->location)
-                <div class="location">{{ $requisition->toWarehouse->location }}</div>
+            <h3>To (Destination)</h3>
+            <div class="name">{{ $transfer->toWarehouse->name }}</div>
+            <div class="code">{{ $transfer->toWarehouse->code }}</div>
+            @if($transfer->toWarehouse->location)
+                <div class="location">{{ $transfer->toWarehouse->location }}</div>
             @endif
         </div>
     </div>
 
     <div class="info-row">
         <div class="field">
-            <strong>Requested by:</strong> {{ $requisition->requestedBy?->name ?? '—' }}
+            <strong>Executed by:</strong> {{ $transfer->executedByUser?->name ?? '—' }}
         </div>
         <div class="field">
-            <strong>Requested at:</strong> {{ $requisition->requested_at?->format('M d, Y g:i A') ?? '—' }}
-        </div>
-        <div class="field">
-            <strong>Dispatched by:</strong> {{ $requisition->dispatchedBy?->name ?? '—' }}
+            <strong>Executed at:</strong> {{ $transfer->executed_at?->format('M d, Y g:i A') ?? '—' }}
         </div>
     </div>
 
@@ -126,28 +113,21 @@
                 <th>SKU</th>
                 <th>Product</th>
                 <th>Unit</th>
-                <th class="qty">Requested</th>
-                <th class="qty">Approved</th>
-                <th class="qty">Shipped</th>
+                <th class="qty">Quantity</th>
+                <th class="qty">Base Qty</th>
+                <th>Audit Reason</th>
             </tr>
         </thead>
         <tbody>
-            @forelse($requisition->items as $index => $item)
+            @forelse($transfer->items as $index => $item)
                 <tr>
                     <td>{{ $index + 1 }}</td>
                     <td>{{ $item->variant->sku }}</td>
-                    <td>
-                        {{ $item->variant->name }}
-                        @if($item->substitute_variant_id && $item->substituteVariant)
-                            <div class="substitute-alert">
-                                <strong>SUBSTITUTED:</strong> Original {{ $item->variant->sku }} ({{ $item->variant->name }}) replaced with {{ $item->substituteVariant->sku }} ({{ $item->substituteVariant->name }})
-                            </div>
-                        @endif
-                    </td>
-                    <td>{{ $item->approved_unit_name ?? $item->variant->base_unit_name }}</td>
-                    <td class="qty">{{ number_format($item->requested_base_qty, 0) }}</td>
-                    <td class="qty">{{ number_format($item->approved_base_qty, 0) }}</td>
-                    <td class="qty">{{ number_format($item->shipped_base_qty ?? 0, 0) }}</td>
+                    <td>{{ $item->variant->name }}</td>
+                    <td>{{ $item->unit_name }}</td>
+                    <td class="qty">{{ number_format($item->quantity, 0) }}</td>
+                    <td class="qty">{{ number_format($item->base_quantity, 0) }}</td>
+                    <td>{{ $item->audit_reason ?? '—' }}</td>
                 </tr>
             @empty
                 <tr>
@@ -157,10 +137,10 @@
         </tbody>
     </table>
 
-    @if($requisition->notes)
+    @if($transfer->notes)
         <div class="notes">
             <h3>Notes</h3>
-            <p>{{ $requisition->notes }}</p>
+            <p>{{ $transfer->notes }}</p>
         </div>
     @endif
 
@@ -168,14 +148,14 @@
         <div class="signature">
             <div class="label">Origin Warehouse Manager</div>
             <div class="line">
-                <span class="name">{{ $requisition->dispatchedBy?->name ?? '__________________________' }}</span>
+                <span class="name">{{ $transfer->executedByUser?->name ?? '__________________________' }}</span>
                 <br>Signature / Date
             </div>
         </div>
         <div class="signature">
             <div class="label">Destination Warehouse Manager</div>
             <div class="line">
-                <span class="name">{{ $requisition->receivedBy?->name ?? '__________________________' }}</span>
+                <span class="name">__________________________</span>
                 <br>Signature / Date
             </div>
         </div>
@@ -193,7 +173,7 @@
     </div>
 
     <div class="footer">
-        Printed: {{ now()->format('M d, Y g:i A') }} &mdash; {{ $requisition->reference_code }}
+        Printed: {{ now()->format('M d, Y g:i A') }} &mdash; {{ $transfer->reference_code }}
         &mdash; {{ config('app.name', 'Inventory System') }}
     </div>
 </body>

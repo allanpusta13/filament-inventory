@@ -9,7 +9,6 @@ use App\Filament\Resources\TransferRequisitions\TransferRequisitionResource;
 use App\Models\TransferRequisition;
 use App\Services\AuditService;
 use App\Services\InventoryService;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Forms\Components\Repeater;
@@ -22,8 +21,6 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Illuminate\Support\Facades\URL;
-use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 final class ViewTransferRequisition extends ViewRecord
 {
@@ -145,26 +142,11 @@ final class ViewTransferRequisition extends ViewRecord
                 ->visible(fn (TransferRequisition $record): bool => $record->status === TransferRequisitionStatus::Draft && $record->requested_by === auth()->id()),
 
             Action::make('print_stn')
-                ->label('Print STN')
+                ->label('Print STN Manifest')
                 ->icon(Heroicon::OutlinedDocumentText)
                 ->color('gray')
                 ->visible(fn (TransferRequisition $record): bool => in_array($record->status, [TransferRequisitionStatus::Dispatched, TransferRequisitionStatus::PartiallyReceived, TransferRequisitionStatus::Completed, TransferRequisitionStatus::ClosedWithLoss]))
-                ->action(function (TransferRequisition $record): void {
-                    $scanUrl = URL::temporarySignedRoute(
-                        'stn.scan',
-                        now()->addDays(30),
-                        ['transferRequisition' => $record->id]
-                    );
-
-                    $qrCode = QrCode::size(140)->generate($scanUrl);
-
-                    $pdf = Pdf::loadView('pdf.stn-manifest', [
-                        'requisition' => $record->load(['items.variant', 'fromWarehouse', 'toWarehouse', 'requestedBy']),
-                        'qrCode' => $qrCode,
-                    ]);
-
-                    $pdf->stream("STN-{$record->reference_code}.pdf");
-                }),
+                ->url(fn (TransferRequisition $record): string => route('stn.print', $record), shouldOpenInNewTab: true),
 
             Action::make('scan_to_receive')
                 ->label('Scan to Receive')
