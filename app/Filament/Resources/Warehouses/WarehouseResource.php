@@ -31,7 +31,7 @@ final class WarehouseResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
-public static function getGloballySearchableAttributes(): array
+    public static function getGloballySearchableAttributes(): array
     {
         return [
             'name',
@@ -46,6 +46,9 @@ public static function getGloballySearchableAttributes(): array
     }
 
     public static function canViewAny(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
 
     public static function canCreate(): bool
     {
