@@ -11,7 +11,7 @@ return new class() extends Migration
     public function up(): void
     {
         Schema::create('warehouses', function (Blueprint $table) {
-            $table->id();
+             $table->id();
             $table->string('code')->unique();   // Branch short code (e.g. 'WH-MNL')
             $table->string('name');
             $table->string('location')->nullable();

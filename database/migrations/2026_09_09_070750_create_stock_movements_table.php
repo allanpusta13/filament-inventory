@@ -11,7 +11,7 @@ return new class() extends Migration
     public function up(): void
     {
         Schema::create('stock_movements', function (Blueprint $table) {
-            $table->id();
+            $  $table->id();
             $table->foreignId('product_variant_id')->constrained('product_variants')->cascadeOnDelete();
             $table->foreignId('warehouse_id')->constrained('warehouses')->cascadeOnDelete();
 

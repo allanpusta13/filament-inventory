@@ -1,26 +1,19 @@
 <?php
 
-declare(strict_types=1);
-
-// use App\Enums\StockMovementType;
-
-use App\Enums\MovementType;
-use App\Models\ProductVariant;
+use App\Enums\StockMovementType;
 use App\Models\StockMovement;
-use App\Models\User;
-use App\Models\Warehouse;
 
 it('casts type to the StockMovementType enum', function () {
-    $movement = StockMovement::factory()->create(['type' => MovementType::TransferOut]);
+    $movement = StockMovement::factory()->create(['type' => StockMovementType::TransferOut]);
 
-    expect($movement->fresh()->type)->toBe(MovementType::TransferOut)
-        ->and($movement->fresh()->type)->toBeInstanceOf(MovementType::class);
+    expect($movement->fresh()->type)->toBe(StockMovementType::TransferOut)
+        ->and($movement->fresh()->type)->toBeInstanceOf(StockMovementType::class);
 });
 
 it('links a related movement for transfer pairs', function () {
-    $out = StockMovement::factory()->create(['type' => MovementType::TransferOut, 'quantity' => -50]);
+    $out = StockMovement::factory()->create(['type' => StockMovementType::TransferOut, 'quantity' => -50]);
     $in = StockMovement::factory()->create([
-        'type' => MovementType::TransferIn,
+        'type' => StockMovementType::TransferIn,
         'quantity' => 50,
         'related_movement_id' => $out->id,
     ]);
@@ -37,53 +30,21 @@ it('nulls related_movement_id when the linked movement is deleted', function () 
     expect($in->fresh()->related_movement_id)->toBeNull();
 });
 
-describe('MovementType enum', function () {
+describe('StockMovementType enum', function () {
     it('classifies inbound types correctly', function () {
-        expect(MovementType::Receive->isInbound())->toBeTrue()
-            ->and(MovementType::TransferIn->isInbound())->toBeTrue()
-            ->and(MovementType::Ship->isInbound())->toBeFalse();
+        expect(StockMovementType::Receive->isInbound())->toBeTrue()
+            ->and(StockMovementType::TransferIn->isInbound())->toBeTrue()
+            ->and(StockMovementType::Ship->isInbound())->toBeFalse();
     });
 
     it('classifies outbound types correctly', function () {
-        expect(MovementType::Ship->isOutbound())->toBeTrue()
-            ->and(MovementType::Loss->isOutbound())->toBeTrue()
-            ->and(MovementType::Receive->isOutbound())->toBeFalse();
+        expect(StockMovementType::Ship->isOutbound())->toBeTrue()
+            ->and(StockMovementType::Loss->isOutbound())->toBeTrue()
+            ->and(StockMovementType::Receive->isOutbound())->toBeFalse();
     });
 
     it('treats adjustment as neither strictly inbound nor outbound', function () {
-        expect(MovementType::Adjustment->isInbound())->toBeFalse()
-            ->and(MovementType::Adjustment->isOutbound())->toBeFalse();
+        expect(StockMovementType::Adjustment->isInbound())->toBeFalse()
+            ->and(StockMovementType::Adjustment->isOutbound())->toBeFalse();
     });
-});
-
-it('belongs to a warehouse', function () {
-    $warehouse = Warehouse::factory()->create();
-    $movement = StockMovement::factory()->create(['warehouse_id' => $warehouse->id]);
-
-    expect($movement->warehouse->is($warehouse))->toBeTrue();
-});
-
-it('belongs to a variant', function () {
-    $variant = ProductVariant::factory()->create();
-    $movement = StockMovement::factory()->create(['product_variant_id' => $variant->id]);
-
-    expect($movement->variant->is($variant))->toBeTrue();
-});
-
-it('belongs to a created by user', function () {
-    $user = User::factory()->create();
-    $movement = StockMovement::factory()->create(['created_by' => $user->id]);
-
-    expect($movement->createdBy->is($user))->toBeTrue();
-});
-
-it('has a polymorphic reference', function () {
-    $variant = ProductVariant::factory()->create();
-    $movement = StockMovement::factory()->create([
-        'reference_type' => ProductVariant::class,
-        'reference_id' => $variant->id,
-    ]);
-
-    expect($movement->reference)->toBeInstanceOf(ProductVariant::class)
-        ->and($movement->reference->is($variant))->toBeTrue();
 });

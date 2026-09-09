@@ -30,7 +30,7 @@ final class ScanReceiptController extends Controller
 
         // Restrict access: only users authorized at destination warehouse can access
         $user = Auth::user();
-        if (! $user->hasAccessToWarehouse($transferRequisition->to_warehouse_id)) {
+        if (! $user->canAccessWarehouse($transferRequisition->toWarehouse)) {
             session()->flash('notification', [
                 'title' => 'Access Denied',
                 'body' => 'You are not assigned to the destination warehouse linked to this transfer requisition.',
@@ -78,7 +78,7 @@ final class ScanReceiptController extends Controller
 
         // Restrict access: only users authorized at destination warehouse can access
         $user = Auth::user();
-        if (! $user->hasAccessToWarehouse($transferRequisition->to_warehouse_id)) {
+        if (! $user->canAccessWarehouse($transferRequisition->toWarehouse)) {
             session()->flash('notification', [
                 'title' => 'Access Denied',
                 'body' => 'You are not assigned to the destination warehouse linked to this transfer requisition.',
@@ -91,7 +91,7 @@ final class ScanReceiptController extends Controller
         // Validate the request
         $validated = $request->validate([
             'received_items' => 'required|array',
-            'received_items.*.item_id' => 'required|exists:requisition_items,id',
+            'received_items.*.item_id' => 'required|exists:transfer_requisition_items,id',
             'received_items.*.good_qty' => 'required|integer|min:0',
             'received_items.*.damaged_qty' => 'required|integer|min:0',
             'received_items.*.loss_category' => 'sometimes|string',
@@ -110,9 +110,7 @@ final class ScanReceiptController extends Controller
         // Execute the receiving transaction (reuses existing service method)
         app(InventoryService::class)->scanToReceive(
             $transferRequisition->id,
-            $receivedData,
-            auth()->id(),
-            auth()->user()
+            $receivedData
         );
 
         session()->flash('notification', [

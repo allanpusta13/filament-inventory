@@ -9,39 +9,53 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 
 final class UserForm
 {
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make()
+            Section::make('USER CREDENTIALS & RBAC SCOPE')
+                ->icon(Heroicon::User)
+                ->columns(2)
+                ->columnSpanFull()
                 ->schema([
                     TextInput::make('name')
                         ->label('FULL NAME')
                         ->required()
                         ->maxLength(255)
-                        ->placeholder('John Doe'),
+                        ->placeholder('Jane Doe'),
 
                     TextInput::make('email')
                         ->label('EMAIL ADDRESS')
-                        ->required()
                         ->email()
+                        ->required()
                         ->maxLength(255)
-                        ->unique(ignoreRecord: true)
-                        ->placeholder('john@example.com'),
+                        ->unique(ignorable: fn ($record) => $record)
+                        ->placeholder('jane.doe@inventory.com'),
 
                     TextInput::make('password')
                         ->label('PASSWORD')
-                        ->required(fn (string $operation): bool => $operation === 'create')
-                        ->dehydrated(fn ($state): bool => filled($state))
                         ->password()
-                        ->placeholder('********'),
+                        ->required(fn ($operation) => $operation === 'create')
+                        ->dehydrated(fn ($state) => filled($state))
+                        ->maxLength(255),
 
                     Select::make('role')
-                        ->label('ROLE')
+                        ->label('SYSTEM ACCESS ROLE')
+                        ->options(UserRole::class)
                         ->required()
-                        ->options(collect(UserRole::cases())->mapWithKeys(fn (UserRole $role) => [$role->value => $role->getLabel()])),
+                        ->default(UserRole::WAREHOUSE_STAFF)
+                        ->searchable(),
+
+                    Select::make('warehouses')
+                        ->label('AUTHORIZED PHYSICAL WAREHOUSES')
+                        ->multiple()
+                        ->relationship('warehouses', 'name')
+                        ->preload()
+                        ->searchable()
+                        ->columnSpanFull(),
                 ]),
         ]);
     }

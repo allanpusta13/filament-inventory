@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 use App\Enums\NegotiationSide;
 use App\Enums\RevisionStatus;
 use App\Models\TransferRequisitionItem;

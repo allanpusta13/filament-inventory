@@ -31,6 +31,17 @@ class TransferRequisitionItemRevision extends Model
         'responded_at',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'proposed_qty' => 'integer',
+            'proposed_base_qty' => 'integer',
+            'side' => NegotiationSide::class,
+            'status' => RevisionStatus::class,
+            'responded_at' => 'datetime',
+        ];
+    }
+
     public function item(): BelongsTo
     {
         return $this->belongsTo(TransferRequisitionItem::class, 'transfer_requisition_item_id');
@@ -41,12 +52,12 @@ class TransferRequisitionItemRevision extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function variant(): BelongsTo
+    public function productVariant(): BelongsTo
     {
         return $this->belongsTo(ProductVariant::class, 'product_variant_id');
     }
 
-    public function substituteVariant(): BelongsTo
+    public function substituteProductVariant(): BelongsTo
     {
         return $this->belongsTo(ProductVariant::class, 'substitute_product_variant_id');
     }
@@ -104,16 +115,5 @@ class TransferRequisitionItemRevision extends Model
         }
 
         return $node;
-    }
-
-    protected function casts(): array
-    {
-        return [
-            'proposed_qty' => 'integer',
-            'proposed_base_qty' => 'integer',
-            'side' => NegotiationSide::class,
-            'status' => RevisionStatus::class,
-            'responded_at' => 'datetime',
-        ];
     }
 }

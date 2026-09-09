@@ -21,6 +21,13 @@ class Warehouse extends Model
         'is_active',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'is_active' => 'boolean',
+        ];
+    }
+
     public function stockMovements(): HasMany
     {
         return $this->hasMany(StockMovement::class);
@@ -39,12 +46,5 @@ class Warehouse extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'user_warehouse');
-    }
-
-    protected function casts(): array
-    {
-        return [
-            'is_active' => 'boolean',
-        ];
     }
 }

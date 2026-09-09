@@ -32,6 +32,17 @@ class TransferRequisition extends Model
         'notes',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'status' => TransferRequisitionStatus::class,
+            'requested_at' => 'datetime',
+            'approved_at' => 'datetime',
+            'dispatched_at' => 'datetime',
+            'completed_at' => 'datetime',
+        ];
+    }
+
     public function fromWarehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class, 'from_warehouse_id');
@@ -80,16 +91,5 @@ class TransferRequisition extends Model
     public function isTerminal(): bool
     {
         return $this->status->isTerminal();
-    }
-
-    protected function casts(): array
-    {
-        return [
-            'status' => TransferRequisitionStatus::class,
-            'requested_at' => 'datetime',
-            'approved_at' => 'datetime',
-            'dispatched_at' => 'datetime',
-            'completed_at' => 'datetime',
-        ];
     }
 }

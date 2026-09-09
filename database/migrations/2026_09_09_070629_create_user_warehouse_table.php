@@ -13,8 +13,8 @@ return new class() extends Migration
     public function up(): void
     {
         Schema::create('user_warehouse', function (Blueprint $table) {
-            $table->foreignIdFor(User::class)->constrained()->cascadeOnDelete();
-            $table->foreignIdFor(Warehouse::class)->constrained()->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('warehouse_id')->constrained('warehouses')->cascadeOnDelete();
             $table->primary(['user_id', 'warehouse_id']);
         });
     }

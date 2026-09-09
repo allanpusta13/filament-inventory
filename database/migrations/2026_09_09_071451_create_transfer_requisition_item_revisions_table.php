@@ -12,16 +12,10 @@ return new class() extends Migration
     {
         Schema::create('transfer_requisition_item_revisions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('transfer_requisition_item_id')
-                ->constrained('transfer_requisition_items', indexName: 'tr_item_rev_tr_item_id_fk')
-                ->cascadeOnDelete();
+            $table->foreignId('transfer_requisition_item_id')->constrained('transfer_requisition_items')->cascadeOnDelete();
             $table->foreignId('user_id')->constrained('users');
-
-            $table->foreignId('product_variant_id')
-                ->constrained('product_variants', indexName: 'tr_item_rev_prod_var_fk');
-
-            $table->foreignId('substitute_product_variant_id')->nullable()
-                ->constrained('product_variants', indexName: 'tr_item_rev_sub_prod_var_fk');
+            $table->foreignId('product_variant_id')->constrained('product_variants');
+            $table->foreignId('substitute_product_variant_id')->nullable()->constrained('product_variants');
 
             $table->string('proposed_unit_name');
             $table->integer('proposed_qty');
@@ -29,20 +23,23 @@ return new class() extends Migration
             $table->text('negotiation_reason')->nullable();
 
             // Negotiation tracking
+            // String + PHP backed enum (App\Enums\NegotiationSide) - which party proposed this revision.
             $table->string('side');
+
+            // String + PHP backed enum (App\Enums\RevisionStatus) - outcome of this specific proposal.
             $table->string('status')->default('pending');
 
-            // Self-reference
+            // Self-reference: the revision this one is countering/responding to, if any.
+            // Null means this is the opening proposal in the thread for this item.
             $table->foreignId('responds_to_revision_id')->nullable()
-                ->constrained('transfer_requisition_item_revisions', indexName: 'tr_item_rev_responds_to_fk')
-                ->nullOnDelete();
+                ->constrained('transfer_requisition_item_revisions')->nullOnDelete();
 
-            $table->timestamp('responded_at')->nullable();
+            $table->timestamp('responded_at')->nullable(); // When status moved out of pending
+
             $table->timestamps();
 
-            // Custom index names (prevents 1059 errors on index generation)
-            $table->index('transfer_requisition_item_id', 'tr_item_rev_item_idx');
-            $table->index(['transfer_requisition_item_id', 'status'], 'tr_item_rev_item_status_idx');
+            $table->index('transfer_requisition_item_id');
+            $table->index(['transfer_requisition_item_id', 'status']);
         });
     }
 

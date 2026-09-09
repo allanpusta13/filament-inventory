@@ -25,6 +25,8 @@ final class UserResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
+    protected static ?int $navigationSort = 2;
+
     public static function form(Schema $schema): Schema
     {
         return Schemas\UserForm::configure($schema);
@@ -33,6 +35,11 @@ final class UserResource extends Resource
     public static function table(Table $table): Table
     {
         return Tables\UsersTable::configure($table);
+    }
+
+    public static function infolist(Schema $schema): Schema
+    {
+        return Schemas\UserInfolist::configure($schema);
     }
 
     public static function getPages(): array

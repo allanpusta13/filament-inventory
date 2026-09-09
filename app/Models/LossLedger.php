@@ -13,7 +13,7 @@ class LossLedger extends Model
     /** @use HasFactory<\Database\Factories\LossLedgerFactory> */
     use HasFactory;
 
-    protected $fillable = [
+     protected $fillable = [
         'transfer_requisition_id',
         'transfer_requisition_item_id',
         'product_variant_id',
@@ -27,14 +27,15 @@ class LossLedger extends Model
         'recorded_at',
     ];
 
-    /**
-     * unit_cost_price is a snapshot taken at incident time — pull it from the
-     * variant's ProductVariantPrice::currentPrice() when creating this record, since
-     * ProductVariant no longer carries cost_price directly.
-     */
-    public static function snapshotUnitCostFrom(ProductVariant $variant): ?string
+    protected function casts(): array
     {
-        return $variant->currentPrice?->cost_price;
+        return [
+            'lost_base_qty' => 'integer',
+            'damaged_base_qty' => 'integer',
+            'unit_cost_price' => 'decimal:4',
+            'total_financial_loss' => 'decimal:4',
+            'recorded_at' => 'datetime',
+        ];
     }
 
     public function transferRequisition(): BelongsTo
@@ -47,7 +48,7 @@ class LossLedger extends Model
         return $this->belongsTo(TransferRequisitionItem::class, 'transfer_requisition_item_id');
     }
 
-    public function variant(): BelongsTo
+    public function productVariant(): BelongsTo
     {
         return $this->belongsTo(ProductVariant::class, 'product_variant_id');
     }
@@ -62,14 +63,13 @@ class LossLedger extends Model
         return $this->belongsTo(User::class, 'recorded_by');
     }
 
-    protected function casts(): array
+    /**
+     * unit_cost_price is a snapshot taken at incident time — pull it from the
+     * variant's ProductVariantPrice::currentPrice() when creating this record, since
+     * ProductVariant no longer carries cost_price directly.
+     */
+    public static function snapshotUnitCostFrom(ProductVariant $variant): ?string
     {
-        return [
-            'lost_base_qty' => 'integer',
-            'damaged_base_qty' => 'integer',
-            'unit_cost_price' => 'decimal:4',
-            'total_financial_loss' => 'decimal:4',
-            'recorded_at' => 'datetime',
-        ];
+        return $variant->currentPrice?->cost_price;
     }
 }

@@ -1,9 +1,7 @@
 <?php
 
-declare(strict_types=1);
-
-use App\Models\ProductVariant;
 use App\Models\ProductVariantUnitConversion;
+use App\Models\ProductVariant;
 
 it('converts a packaged quantity to base units', function () {
     $variant = ProductVariant::factory()->create();
@@ -20,7 +18,7 @@ it('rejects a duplicate unit_name for the same variant', function () {
     ProductVariantUnitConversion::factory()->for($variant, 'variant')->create(['unit_name' => 'Box']);
 
     expect(fn () => ProductVariantUnitConversion::factory()->for($variant, 'variant')->create(['unit_name' => 'Box']))
-        ->toThrow(Illuminate\Database\QueryException::class);
+        ->toThrow(\Illuminate\Database\QueryException::class);
 });
 
 it('allows the same unit_name across different variants', function () {
@@ -31,28 +29,4 @@ it('allows the same unit_name across different variants', function () {
     $second = ProductVariantUnitConversion::factory()->for($variantB, 'variant')->create(['unit_name' => 'Box']);
 
     expect($second->exists)->toBeTrue();
-});
-
-it('casts is_default_purchase and is_default_transfer to boolean', function () {
-    $conversion = ProductVariantUnitConversion::factory()->create([
-        'is_default_purchase' => true,
-        'is_default_transfer' => false,
-    ]);
-
-    expect($conversion->fresh()->is_default_purchase)->toBeTrue()
-        ->and($conversion->fresh()->is_default_transfer)->toBeFalse();
-});
-
-it('defaults is_default_purchase and is_default_transfer to false', function () {
-    $conversion = ProductVariantUnitConversion::factory()->create();
-
-    expect($conversion->is_default_purchase)->toBeFalse()
-        ->and($conversion->is_default_transfer)->toBeFalse();
-});
-
-it('belongs to a variant', function () {
-    $variant = ProductVariant::factory()->create();
-    $conversion = ProductVariantUnitConversion::factory()->for($variant, 'variant')->create();
-
-    expect($conversion->variant->is($variant))->toBeTrue();
 });

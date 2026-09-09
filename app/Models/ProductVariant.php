@@ -5,22 +5,16 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class ProductVariant extends Pivot
+class ProductVariant extends Model
 {
     /** @use HasFactory<\Database\Factories\ProductVariantFactory> */
     use HasFactory, SoftDeletes;
-
-    public $incrementing = true;
-
-    protected $table = 'product_variants';
-
-    protected $keyType = 'int';
 
     protected $fillable = [
         'product_id',
@@ -31,8 +25,16 @@ class ProductVariant extends Pivot
         'reorder_point',
         'attributes',
         'images',
-        'is_active',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'attributes' => 'array',
+            'images' => 'array',
+            'reorder_point' => 'integer',
+        ];
+    }
 
     public function product(): BelongsTo
     {
@@ -41,12 +43,12 @@ class ProductVariant extends Pivot
 
     public function unitConversions(): HasMany
     {
-        return $this->hasMany(ProductVariantUnitConversion::class, 'product_variant_id', 'id');
+        return $this->hasMany(ProductVariantUnitConversion::class);
     }
 
     public function prices(): HasMany
     {
-        return $this->hasMany(ProductVariantPrice::class, 'product_variant_id', 'id');
+        return $this->hasMany(ProductVariantPrice::class);
     }
 
     public function stockMovements(): HasMany
@@ -61,21 +63,11 @@ class ProductVariant extends Pivot
      */
     public function currentPrice(): HasOne
     {
-        return $this->hasOne(ProductVariantPrice::class, 'product_variant_id', 'id')->where('is_current', true);
+        return $this->hasOne(ProductVariantPrice::class)->where('is_current', true);
     }
 
     public function isBelowReorderPoint(int $currentBaseQty): bool
     {
         return $currentBaseQty <= $this->reorder_point;
-    }
-
-    protected function casts(): array
-    {
-        return [
-            'attributes' => 'array',
-            'images' => 'array',
-            'reorder_point' => 'integer',
-            'is_active' => 'boolean',
-        ];
     }
 }

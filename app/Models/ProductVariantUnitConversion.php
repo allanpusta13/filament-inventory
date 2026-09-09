@@ -21,16 +21,6 @@ class ProductVariantUnitConversion extends Model
         'is_default_transfer',
     ];
 
-    public function variant(): BelongsTo
-    {
-        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
-    }
-
-    public function toBaseUnits(int $qtyInThisUnit): int
-    {
-        return $qtyInThisUnit * $this->base_unit_ratio;
-    }
-
     protected function casts(): array
     {
         return [
@@ -38,5 +28,15 @@ class ProductVariantUnitConversion extends Model
             'is_default_purchase' => 'boolean',
             'is_default_transfer' => 'boolean',
         ];
+    }
+
+    public function productVariant(): BelongsTo
+    {
+        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
+    }
+
+    public function toBaseUnits(int $qtyInThisUnit): int
+    {
+        return $qtyInThisUnit * $this->base_unit_ratio;
     }
 }

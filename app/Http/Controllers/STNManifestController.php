@@ -35,7 +35,7 @@ final class STNManifestController extends Controller
         $qrCodeSvg = QrCode::size(120)->generate($signedUrl);
 
         return view('pdf.stn-manifest', [
-            'requisition' => $requisition->load('items.variant', 'fromWarehouse', 'toWarehouse', 'requestedBy'),
+            'requisition' => $requisition->load('items.productVariant', 'fromWarehouse', 'toWarehouse', 'requestedBy'),
             'qrCode' => $qrCodeSvg,
         ]);
     }

@@ -14,7 +14,6 @@ enum TransferRequisitionStatus: string implements HasColor, HasIcon, HasLabel
     case Requested = 'requested';
     case UnderReviewFulfiller = 'under_review_fulfiller';
     case UnderReviewRequestor = 'under_review_requestor';
-    case Approved = 'approved';
     case Confirmed = 'confirmed';
     case Dispatched = 'dispatched';
     case PartiallyReceived = 'partially_received';
@@ -40,7 +39,6 @@ enum TransferRequisitionStatus: string implements HasColor, HasIcon, HasLabel
             self::Draft => 'gray',
             self::Requested => 'info',
             self::UnderReviewFulfiller, self::UnderReviewRequestor => 'warning',
-            self::Approved => 'success',
             self::Confirmed => 'success',
             self::Dispatched => 'primary',
             self::PartiallyReceived => 'warning',
@@ -56,7 +54,6 @@ enum TransferRequisitionStatus: string implements HasColor, HasIcon, HasLabel
             self::Requested => 'Requested',
             self::UnderReviewFulfiller => 'Under Review (Fulfiller)',
             self::UnderReviewRequestor => 'Under Review (Requestor)',
-            self::Approved => 'Approved',
             self::Confirmed => 'Confirmed',
             self::Dispatched => 'Dispatched',
             self::PartiallyReceived => 'Partially Received',
@@ -68,10 +65,9 @@ enum TransferRequisitionStatus: string implements HasColor, HasIcon, HasLabel
     public function getIcon(): ?string
     {
         return match ($this) {
-            self::Draft => 'heroicon-o-document-text',
+            self::Draft => 'heroicon-o-document',
             self::Requested => 'heroicon-o-arrow-right',
             self::UnderReviewFulfiller, self::UnderReviewRequestor => 'heroicon-o-chart-pie',
-            self::Approved => 'heroicon-o-check-circle',
             self::Confirmed => 'heroicon-o-check-circle',
             self::Dispatched => 'heroicon-o-truck',
             self::PartiallyReceived => 'heroicon-o-chart-bar',

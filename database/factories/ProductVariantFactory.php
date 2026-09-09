@@ -26,6 +26,8 @@ class ProductVariantFactory extends Factory
             'barcode' => fake()->unique()->ean13(),
             'name' => fake()->words(2, true),
             'base_unit_name' => fake()->randomElement(['piece', 'gram', 'ml']),
+            'cost_price' => fake()->randomFloat(4, 1, 100),
+            'sale_price' => fake()->randomFloat(4, 5, 200),
             'reorder_point' => fake()->numberBetween(0, 100),
             'attributes' => ['roast' => fake()->randomElement(['Light', 'Medium', 'Dark'])],
             'images' => [],

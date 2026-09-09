@@ -15,7 +15,7 @@ class TransferRequisitionItem extends Model
     /** @use HasFactory<\Database\Factories\TransferRequisitionItemFactory> */
     use HasFactory;
 
-    protected $fillable = [
+   protected $fillable = [
         'transfer_requisition_id',
         'product_variant_id',
         'substitute_product_variant_id',
@@ -34,17 +34,33 @@ class TransferRequisitionItem extends Model
         'notes',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'requested_unit_ratio' => 'integer',
+            'requested_qty' => 'integer',
+            'requested_base_qty' => 'integer',
+            'approved_unit_ratio' => 'integer',
+            'approved_qty' => 'integer',
+            'approved_base_qty' => 'integer',
+            'shipped_base_qty' => 'integer',
+            'received_good_base_qty' => 'integer',
+            'received_damaged_base_qty' => 'integer',
+            'received_qty' => 'integer',
+        ];
+    }
+
     public function transferRequisition(): BelongsTo
     {
         return $this->belongsTo(TransferRequisition::class);
     }
 
-    public function variant(): BelongsTo
+    public function productVariant(): BelongsTo
     {
         return $this->belongsTo(ProductVariant::class, 'product_variant_id');
     }
 
-    public function substituteVariant(): BelongsTo
+    public function substituteProductVariant(): BelongsTo
     {
         return $this->belongsTo(ProductVariant::class, 'substitute_product_variant_id');
     }
@@ -90,21 +106,5 @@ class TransferRequisitionItem extends Model
         $expected = $this->approved_base_qty ?? $this->requested_base_qty;
 
         return max(0, $expected - $this->received_good_base_qty);
-    }
-
-    protected function casts(): array
-    {
-        return [
-            'requested_unit_ratio' => 'integer',
-            'requested_qty' => 'integer',
-            'requested_base_qty' => 'integer',
-            'approved_unit_ratio' => 'integer',
-            'approved_qty' => 'integer',
-            'approved_base_qty' => 'integer',
-            'shipped_base_qty' => 'integer',
-            'received_good_base_qty' => 'integer',
-            'received_damaged_base_qty' => 'integer',
-            'received_qty' => 'integer',
-        ];
     }
 }

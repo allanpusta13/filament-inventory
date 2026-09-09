@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Users\Tables;
 
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
+use App\Enums\UserRole;
+use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
+use Filament\Support\Enums\FontWeight;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 final class UsersTable
@@ -16,26 +20,48 @@ final class UsersTable
         return $table
             ->columns([
                 TextColumn::make('name')
-                    ->label('FULL NAME')
+                    ->label('OPERATOR NAME')
+                    ->weight(FontWeight::Bold)
                     ->searchable()
                     ->sortable(),
+
                 TextColumn::make('email')
                     ->label('EMAIL ADDRESS')
+                    ->icon(Heroicon::Envelope)
                     ->searchable()
-                    ->sortable(),
+                    ->copyable(),
+
+                TextColumn::make('role')
+                    ->label('SYSTEM ROLE')
+                    ->badge(), // Automatically calls getLabel(), getColor(), and getIcon() on UserRole Enum
+
+                TextColumn::make('warehouses.name')
+                    ->label('AUTHORIZED BRANCHES')
+                    ->badge()
+                    ->color('gray')
+                    ->placeholder('No Branch Assigned'),
+
                 TextColumn::make('created_at')
-                    ->label('CREATED')
-                    ->dateTime()
-                    ->sortable(),
-                TextColumn::make('updated_at')
-                    ->label('UPDATED')
-                    ->dateTime()
-                    ->sortable(),
+                    ->label('REGISTERED DATE')
+                    ->dateTime('M d, Y')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
+            ->filters([
+                SelectFilter::make('role')
+                    ->label('SYSTEM ROLE')
+                    ->options(UserRole::class),
+            ])
+            ->actions([
+                ViewAction::make()
+                    ->slideOver()
+                    ->icon(Heroicon::Eye)
+                    ->closeModalByClickingAway(false),
+
+                EditAction::make()
+                    ->slideOver()
+                    ->icon(Heroicon::PencilSquare)
+                    ->closeModalByClickingAway(false),
             ]);
     }
 }

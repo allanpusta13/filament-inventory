@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\MovementType;
+use App\Enums\StockMovementType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -29,7 +30,16 @@ class StockMovement extends Model
         'created_by',
     ];
 
-    public function variant(): BelongsTo
+    protected function casts(): array
+    {
+        return [
+            'type' => StockMovementType::class,
+            'quantity' => 'integer',
+            'unit_ratio_used' => 'integer',
+        ];
+    }
+
+    public function productVariant(): BelongsTo
     {
         return $this->belongsTo(ProductVariant::class, 'product_variant_id');
     }
@@ -57,14 +67,5 @@ class StockMovement extends Model
     public function reference(): MorphTo
     {
         return $this->morphTo();
-    }
-
-    protected function casts(): array
-    {
-        return [
-            'type' => MovementType::class,
-            'quantity' => 'integer',
-            'unit_ratio_used' => 'integer',
-        ];
     }
 }

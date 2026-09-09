@@ -1,10 +1,8 @@
 <?php
 
-declare(strict_types=1);
-
 use App\Models\LossLedger;
-use App\Models\ProductVariant;
 use App\Models\ProductVariantPrice;
+use App\Models\ProductVariant;
 
 it('casts financial columns to decimal strings', function () {
     $ledger = LossLedger::factory()->create([

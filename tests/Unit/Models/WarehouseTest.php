@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 use App\Models\TransferRequisition;
 use App\Models\User;
 use App\Models\Warehouse;
@@ -10,7 +8,7 @@ it('enforces unique warehouse code', function () {
     Warehouse::factory()->create(['code' => 'WH-MNL']);
 
     expect(fn () => Warehouse::factory()->create(['code' => 'WH-MNL']))
-        ->toThrow(Illuminate\Database\QueryException::class);
+        ->toThrow(\Illuminate\Database\QueryException::class);
 });
 
 it('separates outgoing and incoming transfers', function () {
@@ -36,7 +34,7 @@ it('prevents deleting a warehouse referenced by a transfer requisition', functio
     TransferRequisition::factory()->create(['from_warehouse_id' => $warehouse->id]);
 
     expect(fn () => $warehouse->delete())
-        ->toThrow(Illuminate\Database\QueryException::class);
+        ->toThrow(\Illuminate\Database\QueryException::class);
 });
 
 it('attaches users through the pivot table', function () {

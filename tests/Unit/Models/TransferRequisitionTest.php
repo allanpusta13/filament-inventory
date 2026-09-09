@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 use App\Enums\TransferRequisitionStatus;
 use App\Models\TransferRequisition;
 
@@ -21,7 +19,7 @@ it('enforces unique reference_code', function () {
     TransferRequisition::factory()->create(['reference_code' => 'DTR-DUPE']);
 
     expect(fn () => TransferRequisition::factory()->create(['reference_code' => 'DTR-DUPE']))
-        ->toThrow(Illuminate\Database\QueryException::class);
+        ->toThrow(\Illuminate\Database\QueryException::class);
 });
 
 it('soft deletes without removing the row', function () {
@@ -35,6 +33,7 @@ describe('TransferRequisitionStatus enum', function () {
     it('identifies terminal states', function () {
         expect(TransferRequisitionStatus::Completed->isTerminal())->toBeTrue()
             ->and(TransferRequisitionStatus::ClosedWithLoss->isTerminal())->toBeTrue()
+            ->and(TransferRequisitionStatus::Cancelled->isTerminal())->toBeTrue()
             ->and(TransferRequisitionStatus::Draft->isTerminal())->toBeFalse()
             ->and(TransferRequisitionStatus::Dispatched->isTerminal())->toBeFalse();
     });
