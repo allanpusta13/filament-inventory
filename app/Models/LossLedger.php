@@ -29,7 +29,7 @@ class LossLedger extends Model
 
     /**
      * unit_cost_price is a snapshot taken at incident time — pull it from the
-     * variant's ProductPrice::currentPrice() when creating this record, since
+     * variant's ProductVariantPrice::currentPrice() when creating this record, since
      * ProductVariant no longer carries cost_price directly.
      */
     public static function snapshotUnitCostFrom(ProductVariant $variant): ?string

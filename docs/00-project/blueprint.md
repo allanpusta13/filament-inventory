@@ -26,7 +26,7 @@
 ## 🗄️ Section 1: Complete Database Schema (12 Migrations)
 
 ```
-products ──< product_variants ──< product_unit_conversions
+products ──< product_variants ──< product_variant_unit_conversions
                     │        └──< stock_movements >── warehouses
                     │
                     └──< transfer_requisition_items >── transfer_requisitions >── warehouses (from/to)
@@ -66,7 +66,7 @@ users ──< user_warehouse >── warehouses
 | `deleted_at` | timestamp | Soft deletes support |
 | `timestamps` | timestamp | Created / Updated |
 
-### 3. `product_unit_conversions`
+### 3. `product_variant_unit_conversions`
 | Column | Type | Modifiers / Notes |
 | :--- | :--- | :--- |
 | `id` | bigint | PK |
@@ -240,7 +240,7 @@ class ProductVariant extends Model
 
     public function unitConversions(): HasMany
     {
-        return $this->hasMany(ProductUnitConversion::class);
+        return $this->hasMany(ProductVariantUnitConversion::class);
     }
 
     public function stockMovements(): HasMany

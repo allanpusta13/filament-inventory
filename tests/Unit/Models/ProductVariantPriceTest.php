@@ -10,7 +10,7 @@ it('defaults cost_price and sale_price to 0.0000 at the DB level', function () {
 
     // Bypass the model's fillable/casts by inserting directly, to prove the
     // default lives on the column itself, not just in application code.
-    $id = Illuminate\Support\Facades\DB::table('product_prices')->insertGetId([
+    $id = Illuminate\Support\Facades\DB::table('product_variant_prices')->insertGetId([
         'product_variant_id' => $variant->id,
         'effective_from' => now(),
         'is_current' => true,
@@ -18,7 +18,7 @@ it('defaults cost_price and sale_price to 0.0000 at the DB level', function () {
         'updated_at' => now(),
     ]);
 
-    $row = Illuminate\Support\Facades\DB::table('product_prices')->find($id);
+    $row = Illuminate\Support\Facades\DB::table('product_variant_prices')->find($id);
 
     expect((float) $row->cost_price)->toBe(0.0)
         ->and((float) $row->sale_price)->toBe(0.0);

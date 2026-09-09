@@ -1,381 +1,159 @@
-# Phase 2: Code Commit & Documentation Sync (Post-Audit)
+# Filament Inventory (v3.0): Model, Migration, Factory & Test Repair Protocol
 
-## CONTEXT (Carry Forward from Phase 1)
-- Phase 1 completed: Blueprint audit ✅ | Redundancy elimination ✅ | Missing features implemented ✅ | Plan documents updated ✅
-- Test suites passing: `vendor/bin/pest` 100% ✅ | `npx playwright test` 100% ✅
-- All code changes written to disk and verified
-- All plan documents in `docs/00-project/plans/` updated and accurate
-- Git repository is clean and ready for commits
+You are an autonomous Senior Laravel Architect and Quality Assurance Lead. Your task is to audit, refactor, and repair all database migrations, Eloquent models, model factories, enums, and Pest unit/feature tests for the **Filament Inventory (v3.0)** multi-warehouse platform. 
+
+You must run real execution commands (`vendor/bin/pest`, `php artisan migrate:fresh --seed`), inspect failure tracebacks, diagnose root causes, and refactor code until 100% of tests pass cleanly with ZERO schema or relationship gaps.
 
 ---
 
-## TASK
-Prepare, commit, and document all architecture audit changes from Phase 1 in a single, well-organized commit with detailed messages and summary.
+## 🧭 Non-Negotiable Architectural Laws (v3.0 Schema Standards)
 
-**Scope:**
-1. Stage all modified/new files (application code + plan documents)
-2. Verify nothing was accidentally missed or left uncommitted
-3. Create comprehensive, semantic commit message(s)
-4. Push changes to remote repository
-5. Generate post-commit summary documenting what was changed
+Every fix you apply on disk MUST strictly comply with the following 10 system laws:
 
----
+1. **Pure Derived Stock Model (NO Cached Tables)**:
+   - The `warehouse_stock` table and columns (`on_hand_quantity`, `reserved_quantity`) MUST NOT exist in migrations or models.
+   - Physical stock levels MUST be calculated dynamically on `ProductVariant` via `StockMovement::where('product_variant_id', $this->id)->where('warehouse_id', $warehouseId)->sum('quantity')`.
+   - Reserved quantity MUST be computed on `ProductVariant` as the sum of `approved_base_qty` on `TransferRequisitionItem` records where the parent `TransferRequisition` has `from_warehouse_id = $warehouseId` and status in `['confirmed', 'dispatched']`.
+   - Available stock MUST be computed dynamically as `$this->onHandQuantity($warehouseId) - $this->reservedQuantity($warehouseId)`.
 
-## CRITICAL EXECUTION CONSTRAINTS (MANDATORY)
+2. **Variant-Only SKU & Safety Thresholds**:
+   - `sku` and `reorder_point` MUST exist EXCLUSIVELY on `product_variants`.
+   - The parent `products` table MUST act purely as a family container holding `id`, `name`, `category`, `softDeletes()`, and `timestamps()`.
 
-### Operational Rules
-- **No destructive history rewriting**: Use standard `git commit` + `git push`; no `--force` flags
-- **Atomic commits**: All Phase 1 changes in single commit (or 2-3 logical commits if separating docs from code)
-- **Semantic messages**: Commit messages must explain WHAT changed and WHY (not just "update files")
-- **Verify before commit**: Run tests one final time to confirm 100% pass post-audit
-- **Stop before pushing**: Ask before pushing to main/production branch; confirm branch name first
+3. **Consolidated Pricing on Variants**:
+   - There is NO separate `product_variant_prices` table.
+   - `cost_price` and `sale_price` MUST exist directly on `product_variants` as `decimal(15,4)` columns with a default value of `0.0000`.
 
-### Commit Message Standards
-- **Format**: Conventional Commits (type: scope: message)
-- **Types**: `feat:` (new features), `refactor:` (code cleanup/redundancy elimination), `docs:` (plan updates), `test:` (test fixes)
-- **Scope**: `audit`, `architecture`, `dashboard`, `resources`, etc.
-- **Body**: Detailed explanation of changes, rationale, and tests verified
+4. **Explicit Foreign Key Contracts**:
+   - All table names MUST be plural `snake_case`: `products`, `product_variants`, `product_variant_unit_conversions`, `warehouses`, `stock_movements`, `transfer_requisitions`, `transfer_requisition_items`, `transfer_requisition_item_revisions`, `in_transits`, `loss_ledgers`, `users`, `user_warehouse`.
+   - All foreign keys MUST match explicit parent entity names: `product_id`, `product_variant_id`, `substitute_product_variant_id`, `warehouse_id`, `from_warehouse_id`, `to_warehouse_id`, `transfer_requisition_id`, `transfer_requisition_item_id`, `user_id`, `created_by`, `recorded_by`.
 
-### Enum Standards (Filament v5 Auto-Integration)
-- **All enums must implement Filament v5 contracts**: `HasLabel`, `HasIcon`, `HasColor`
-- **Required methods**:
-  - `getLabel(): string` — Human-readable label for enum case
-  - `getIcon(): ?string` — Heroicon name (e.g., `'heroicon-o-clock'`)
-  - `getColor(): ?string` — Semantic color (success/danger/warning/info)
-- **Automatic Integration**: Once enum implements these interfaces, Filament v5 automatically renders icons and colors in:
-  - Table badge columns (no manual closure needed, just use `BadgeColumn::make('status')`)
-  - Action buttons and dropdowns
-  - Select options
-  - All UI contexts that use the enum
-- **No manual integration code required**: Filament v5 automatically picks up icon/color from enum methods
-- **All enums follow Filament v5 best practices**: Implement interfaces, define methods, let Filament handle the rest
-
-### Git State Verification
-- All uncommitted changes staged or ignored
-- No merge conflicts
-- Local branch up-to-date with remote (if applicable)
-- `.gitignore` respects sensitive files (`.env`, `/storage/logs`, `/node_modules`)
+5. **Canonical 4-Role RBAC**:
+   - `users.role` MUST be cast to the `UserRole` Enum (`admin`, `auditor`, `branch_manager`, `warehouse_staff`).
 
 ---
 
-## EXECUTION FLOW
+## 🛠️ Step-by-Step Execution Plan
 
-### Step 1: Pre-Commit Verification
-- Display current git status: `git status`
-- List all modified/new files that will be committed
-- Confirm no sensitive files are staged (`.env`, `database.sqlite`, API keys)
-- **Verify all Enums follow Filament v5 Standards:**
-  - Check `app/Enums/` directory for all enum files
-  - Confirm each enum implements `Filament\Contracts\HasLabel` and `Filament\Contracts\HasIcon`
-  - Confirm each enum has:
-    - `getLabel()` method returning human-readable label
-    - `getIcon()` method returning valid Heroicon name (e.g., `'heroicon-o-cube'`)
-    - `getColor()` method returning semantic color (optional but recommended)
-  - **Note**: Once enum implements `HasIcon` (+ `HasLabel`, `HasColor`), Filament v5 automatically integrates icons/colors in all UI contexts (tables, badges, buttons, etc.) — no manual integration code required
-  - Example (Filament v5 compliant):
-    ```php
-    namespace App\Enums;
-    
-    use Filament\Contracts\HasLabel;
-    use Filament\Contracts\HasIcon;
-    use Filament\Contracts\HasColor;
-    
-    enum RequisitionStatus: string implements HasLabel, HasIcon, HasColor
-    {
-        case Pending = 'pending';
-        case Approved = 'approved';
-        case Rejected = 'rejected';
-        
-        public function getLabel(): string
-        {
-            return match ($this) {
-                self::Pending => 'Pending Payment',
-                self::Approved => 'Payment Received',
-                self::Rejected => 'Refunded',
-            };
-        }
-        
-        public function getIcon(): ?string
-        {
-            return match ($this) {
-                self::Pending => 'heroicon-o-clock',
-                self::Approved => 'heroicon-o-check-circle',
-                self::Rejected => 'heroicon-o-x-circle',
-            };
-        }
-        
-        public function getColor(): ?string
-        {
-            return match ($this) {
-                self::Pending => 'warning',
-                self::Approved => 'success',
-                self::Rejected => 'danger',
-            };
-        }
-    }
-    ```
-  - **Automatic Integration**: Simply use enum in table columns/actions — Filament v5 automatically displays icons and colors via `BadgeColumn`:
-    ```php
-    Tables\Columns\BadgeColumn::make('status')
-    ```
-    Filament automatically renders with enum icon/color without explicit closures needed.
-  - If new/modified enums found not implementing v5 interfaces/methods, flag for implementation before commit
-- Re-run both test suites one final time:
-  - `vendor/bin/pest` → confirm 100% pass
-  - `npx playwright test` → confirm 100% pass
-- Verify all plan documents in `docs/00-project/plans/` have been updated and saved
+Execute the following 5 phases sequentially. Do not stop until all tests pass with zero failures.
 
-### Step 2: Stage Changes
-- Stage all application code changes:
-  ```bash
-  git add app/
-  git add database/migrations/
-  git add routes/
-  git add resources/
-  git add config/
-  ```
-- Stage all test updates:
-  ```bash
-  git add tests/
-  ```
-- Stage all documentation updates:
-  ```bash
-  git add docs/00-project/plans/
-  git add docs/00-project/blueprint.md (if updated)
-  ```
-- **Verify staged files**: `git diff --cached --name-only` (review list)
+### Phase 1: Migration Audit & Schema Realignment
+Scan every migration file in `database/migrations/` and verify the execution sequence and table definitions:
+1. `create_products_table`: `id`, `name`, `category` (nullable), `softDeletes()`, `timestamps()`. (Ensure `sku` and `reorder_point` are removed).
+2. `create_product_variants_table`: `id`, `product_id` (FK → `products`), `sku` (unique), `barcode` (nullable, unique), `name`, `base_unit_name`, `cost_price` (`decimal:15,4`, default `0.0000`), `sale_price` (`decimal:15,4`, default `0.0000`), `reorder_point` (`integer`, default `0`), `attributes` (`json`, nullable), `images` (`json`, nullable), `is_active` (`boolean`, default `true`), `softDeletes()`, `timestamps()`.
+3. `create_product_variant_unit_conversions_table`: `id`, `product_variant_id` (FK → `product_variants`), `unit_name`, `base_unit_ratio`, `is_default_purchase`, `is_default_transfer`, `timestamps()`.
+4. `create_warehouses_table`: `id`, `code` (unique), `name`, `location` (nullable), `is_active` (default `true`), `timestamps()`.
+5. `update_users_table_for_rbac`: `role` (`string`, default `'warehouse_staff'`).
+6. `create_user_warehouse_table`: `user_id` (FK), `warehouse_id` (FK), composite primary key `['user_id', 'warehouse_id']`.
+7. `create_stock_movements_table`: `id`, `product_variant_id` (FK), `warehouse_id` (FK), `type` (enum), `quantity` (`signed integer`), `unit_name_used`, `unit_ratio_used`, `related_movement_id` (nullable FK), `reference_type` (nullable), `reference_id` (nullable), `reference_code` (nullable), `created_by` (nullable FK), `timestamps()`. Add composite index `['product_variant_id', 'warehouse_id']`.
+8. `create_transfer_requisitions_table`: `id`, `reference_code` (unique), `from_warehouse_id` (FK), `to_warehouse_id` (FK), `status` (enum), `requested_by` (FK), `approved_by` (nullable FK), `dispatched_by` (nullable FK), `received_by` (nullable FK), `requested_at`, `approved_at`, `dispatched_at`, `completed_at`, `notes`, `softDeletes()`, `timestamps()`.
+9. `create_transfer_requisition_items_table`: `id`, `transfer_requisition_id` (FK), `product_variant_id` (FK), `substitute_product_variant_id` (nullable FK), `requested_unit_name`, `requested_unit_ratio`, `requested_qty`, `requested_base_qty`, `approved_unit_name` (nullable), `approved_unit_ratio` (nullable), `approved_qty` (nullable), `approved_base_qty` (nullable), `shipped_base_qty` (default 0), `received_good_base_qty` (default 0), `received_damaged_base_qty` (default 0), `received_qty` (nullable), `notes`, `timestamps()`.
+10. `create_transfer_requisition_item_revisions_table`: `id`, `transfer_requisition_item_id` (FK), `user_id` (FK), `product_variant_id` (FK), `substitute_product_variant_id` (nullable FK), `proposed_unit_name`, `proposed_qty`, `proposed_base_qty`, `negotiation_reason` (nullable), `side` (enum), `status` (enum), `responds_to_revision_id` (nullable FK), `responded_at` (nullable), `timestamps()`.
+11. `create_in_transits_table`: `id`, `transfer_requisition_id` (FK), `transfer_requisition_item_id` (FK), `product_variant_id` (FK), `dispatched_base_qty`, `dispatched_at`, `status` (enum), `timestamps()`.
+12. `create_loss_ledgers_table`: `id`, `transfer_requisition_id` (FK), `transfer_requisition_item_id` (nullable FK), `product_variant_id` (FK), `warehouse_id` (FK), `lost_base_qty` (default 0), `damaged_base_qty` (default 0), `unit_cost_price` (`decimal:15,4`), `total_financial_loss` (`decimal:15,4`), `loss_category`, `recorded_by` (nullable FK), `recorded_at`, `timestamps()`.
 
-### Step 3: Create Commit Message(s)
+*Action*: Delete any obsolete migration files (like `create_warehouse_stock_table` or `create_product_variant_prices_table`).
 
-#### Option A: Single Atomic Commit (Recommended for small audits)
-```
-refactor(architecture): audit and align codebase with blueprint v2.0
+---
 
-- Implemented all missing Filament Resources, Custom Pages, RelationManagers defined in blueprint.md
-- Eliminated redundant code across Models, Controllers, Filament Resources, Livewire components
-- Consolidated duplicate Eloquent queries into reusable scopes and service classes
-- Refactored test helpers to eliminate repeated setup code (DRY)
-- Removed orphaned routes, dead code, and unused imports
-- Updated all plan documents in docs/00-project/plans/ to reflect current architecture
+### Phase 2: Eloquent Models & Relationship Realignment
+Inspect and update all models in `app/Models/`:
+- **`Product`**:
+  - `$fillable = ['name', 'category']`
+  - Relationship: `variants(): HasMany` → `ProductVariant` (`product_id`)
+- **`ProductVariant`**:
+  - `$fillable = ['product_id', 'sku', 'barcode', 'name', 'base_unit_name', 'cost_price', 'sale_price', 'reorder_point', 'attributes', 'images', 'is_active']`
+  - `$casts = ['cost_price' => 'decimal:4', 'sale_price' => 'decimal:4', 'attributes' => 'array', 'images' => 'array', 'is_active' => 'boolean']`
+  - Relationships: `product(): BelongsTo`, `unitConversions(): HasMany`, `stockMovements(): HasMany` (`product_variant_id`), `transferRequisitionItems(): HasMany` (`product_variant_id`)
+  - Methods: `onHandQuantity(int $warehouseId): int`, `reservedQuantity(int $warehouseId): int`, `availableQuantity(int $warehouseId): int`.
+- **`ProductVariantUnitConversion`**:
+  - `$fillable = ['product_variant_id', 'unit_name', 'base_unit_ratio', 'is_default_purchase', 'is_default_transfer']`
+  - Relationship: `productVariant(): BelongsTo` → `ProductVariant` (`product_variant_id`)
+- **`StockMovement`**:
+  - `$fillable = ['product_variant_id', 'warehouse_id', 'type', 'quantity', 'unit_name_used', 'unit_ratio_used', 'related_movement_id', 'reference_type', 'reference_id', 'reference_code', 'created_by']`
+  - Relationships: `productVariant(): BelongsTo`, `warehouse(): BelongsTo`, `creator(): BelongsTo` (`created_by`), `relatedMovement(): BelongsTo`
+- **`TransferRequisition`**:
+  - `$fillable = ['reference_code', 'from_warehouse_id', 'to_warehouse_id', 'status', 'requested_by', 'approved_by', 'dispatched_by', 'received_by', 'requested_at', 'approved_at', 'dispatched_at', 'completed_at', 'notes']`
+  - Relationships: `fromWarehouse(): BelongsTo`, `toWarehouse(): BelongsTo`, `requestedBy(): BelongsTo`, `items(): HasMany` → `TransferRequisitionItem` (`transfer_requisition_id`)
+  - Observers / Boot Listener: Ensure `deleting` observer automatically returns locked reservations if status is `confirmed` or `dispatched`.
+- **`TransferRequisitionItem`**:
+  - `$fillable = ['transfer_requisition_id', 'product_variant_id', 'substitute_product_variant_id', 'requested_unit_name', 'requested_unit_ratio', 'requested_qty', 'requested_base_qty', 'approved_unit_name', 'approved_unit_ratio', 'approved_qty', 'approved_base_qty', 'shipped_base_qty', 'received_good_base_qty', 'received_damaged_base_qty', 'received_qty', 'notes']`
+  - Relationships: `transferRequisition(): BelongsTo`, `productVariant(): BelongsTo` (`product_variant_id`), `substituteProductVariant(): BelongsTo` (`substitute_product_variant_id`)
+- **`InTransit`**:
+  - `$fillable = ['transfer_requisition_id', 'transfer_requisition_item_id', 'product_variant_id', 'dispatched_base_qty', 'dispatched_at', 'status']`
+  - Relationships: `transferRequisition(): BelongsTo`, `transferRequisitionItem(): BelongsTo`, `productVariant(): BelongsTo`
+- **`LossLedger`**:
+  - `$fillable = ['transfer_requisition_id', 'transfer_requisition_item_id', 'product_variant_id', 'warehouse_id', 'lost_base_qty', 'damaged_base_qty', 'unit_cost_price', 'total_financial_loss', 'loss_category', 'recorded_by', 'recorded_at']`
+  - `$casts = ['unit_cost_price' => 'decimal:4', 'total_financial_loss' => 'decimal:4']`
+  - Relationships: `transferRequisition(): BelongsTo`, `transferRequisitionItem(): BelongsTo`, `productVariant(): BelongsTo`, `warehouse(): BelongsTo`, `recorder(): BelongsTo`
+- **`User`**:
+  - `$casts = ['role' => UserRole::class]`
+  - Relationships: `warehouses(): BelongsToMany` (`user_warehouse`)
+  - Helpers: `isAdmin(): bool`, `isAuditor(): bool`, `isBranchManager(): bool`, `canAccessWarehouse(Warehouse $warehouse): bool`
 
-Enums & UI Components:
-- Updated all enums to implement Filament v5 `HasLabel`, `HasIcon`, `HasColor` interfaces
-- Added getLabel(), getIcon(), getColor() methods following Filament v5 contracts
-- Filament v5 automatically integrates enum icons and colors across all UI contexts (tables, badges, buttons, dropdowns)
-- No manual integration code required — Filament handles rendering via enum interfaces
+---
 
-Bug Fixes:
-- Fixed N+1 queries in inventory listings via eager loading
-- Resolved Livewire state hydration issues in custom components
-- Added missing policy authorization gates on resource actions
+### Phase 3: Database Factories Audit & Repair
+Inspect all files in `database/factories/` and refactor definitions to match updated models and foreign keys:
+- `ProductFactory`: generates `name` and `category`. (Remove `sku` / `reorder_point`).
+- `ProductVariantFactory`: generates `product_id` (`Product::factory()`), `sku` (unique), `barcode`, `name`, `base_unit_name`, `cost_price` (e.g. `10.5000`), `sale_price` (e.g. `15.0000`), `reorder_point` (e.g. `10`).
+- `ProductVariantUnitConversionFactory`: generates `product_variant_id`, `unit_name`, `base_unit_ratio`.
+- `StockMovementFactory`: generates `product_variant_id`, `warehouse_id`, `type`, `quantity` (signed), `unit_name_used`, `unit_ratio_used`.
+- `TransferRequisitionFactory`: generates `reference_code`, `from_warehouse_id`, `to_warehouse_id`, `status`, `requested_by`.
+- `TransferRequisitionItemFactory`: generates `transfer_requisition_id`, `product_variant_id`, `requested_unit_name`, `requested_unit_ratio`, `requested_qty`, `requested_base_qty`.
+- `InTransitFactory`: generates `transfer_requisition_id`, `transfer_requisition_item_id`, `product_variant_id`, `dispatched_base_qty`, `dispatched_at`, `status`.
+- `LossLedgerFactory`: generates `transfer_requisition_id`, `transfer_requisition_item_id`, `product_variant_id`, `warehouse_id`, `lost_base_qty`, `unit_cost_price`, `total_financial_loss`.
 
-Tests Verified:
-- vendor/bin/pest: 100% pass (all backend tests)
-- npx playwright test: 100% pass (all E2E specs, zero flaky retries)
+---
 
-Documentation:
-- docs/00-project/plans/architecture.md: updated with all implementation milestones
-- docs/00-project/plans/testing-strategy.md: updated with new test coverage
-- docs/00-project/plans/deployment.md: updated with schema migration sequence
+### Phase 4: Pest Unit & Model Test Refactoring
+Inspect every test file in `tests/Unit/` and `tests/Feature/Models/`:
+1. Fix any references to old foreign key names (`variant_id` → `product_variant_id`, `requisition_id` → `transfer_requisition_id`).
+2. Fix any tests trying to query or assert against a physical `warehouse_stock` or `product_variant_prices` table.
+3. Update assertions testing `ProductVariant` methods:
+   - Test `onHandQuantity()` sums `stock_movements.quantity` for that `product_variant_id` and `warehouse_id`.
+   - Test `reservedQuantity()` correctly sums `approved_base_qty` for active confirmed/dispatched requisitions.
+   - Test `availableQuantity()` equals `onHandQuantity() - reservedQuantity()`.
+4. Update assertions testing `TransferRequisition` soft-deletion observer releasing reserved stock.
+5. Update tests for `User::canAccessWarehouse()`.
 
-Closes: [issue number if applicable]
-```
+---
 
-#### Option B: Multiple Logical Commits (For larger audits)
+### Phase 5: Test Execution & Diagnostic Repair Loop
+1. Run fresh database migrations and seeders:
+   ```bash
+   php artisan migrate:fresh --seed
+   ```
+2. Run the Pest test suite:
+   ```bash
+   vendor/bin/pest
+   ```
+3. If any test fails:
+   - Read the traceback error message carefully.
+   - Identify whether the failure is due to a migration mismatch, model relationship/cast error, factory array discrepancy, or outdated test assertion.
+   - Refactor the code on disk to fix the underlying issue.
+   - Re-run `vendor/bin/pest` until 100% of unit, feature, and model tests pass cleanly with zero errors or warnings.
 
-**Commit 1: Feature Implementation**
-```
-feat(architecture): implement missing blueprint components and Filament v5 enums
+---
 
-- Added WarehouseResource with relation managers
-- Added RequisitionResource with custom actions
-- Added WriteOffResource with policy authorization
-- Added custom Dashboard page with HasFiltersForm
-- Implemented BentoStatsWidget and PendingRequisitionsWidget
+## 📋 Required Final Output
 
-Enums (Filament v5 Auto-Integration):
-- All enums implement HasLabel, HasIcon, HasColor interfaces
-- Added getLabel(), getIcon(), getColor() methods to all enums
-- Filament v5 automatically renders enum icons/colors in tables, badges, buttons, dropdowns
-- No manual integration closures required — Filament handles via enum interfaces
-
-Tests: vendor/bin/pest 100%, npx playwright test 100%
-```
-
-**Commit 2: Code Redundancy Elimination**
-```
-refactor(codebase): eliminate duplicate code and consolidate logic
-
-- Consolidated N+1 query patterns into Eloquent scopes (inventory.php, requisition.php)
-- Extracted duplicate form definitions into base Filament classes
-- Refactored test helpers to reduce setup boilerplate
-- Removed 12 orphaned routes and 8 unused controller methods
-- Removed dead code from legacy components
-
-Tests: vendor/bin/pest 100%, npx playwright test 100%
-```
-
-**Commit 3: Documentation Alignment**
-```
-docs(plans): update documentation to reflect architecture audit results
-
-- docs/00-project/plans/architecture.md: new implementation milestones, schema updates
-- docs/00-project/plans/testing-strategy.md: updated test coverage and E2E scenarios
-- docs/00-project/plans/deployment.md: updated migration sequence
-- docs/00-project/plans/performance.md: documented caching strategy and query optimization
-
-No code changes. Documentation-only commit.
-```
-
-### Step 4: Verify Staged Changes
-- Review diff: `git diff --cached` (scroll through, verify each change is intentional)
-- Confirm no sensitive data in diff (API keys, secrets, passwords)
-- Check file count: `git diff --cached --stat` (confirms expected number of files changed)
-
-### Step 5: Commit Changes
-- Execute single atomic commit OR multiple logical commits (from Step 3)
-- Example:
-  ```bash
-  git commit -m "refactor(architecture): audit and align codebase with blueprint v2.0
-
-  - Implemented all missing Filament Resources...
-  [full body message from Step 3]
-  "
-  ```
-- Verify commit succeeded: `git log --oneline -3` (shows new commit at top)
-
-### Step 6: Verify Branch & Push (With Approval)
-- Display current branch: `git branch -a` (confirm you're on correct branch, not detached)
-- Display commit(s) to be pushed: `git log origin/[branch]..HEAD` (shows commits not yet on remote)
-
-**STOP HERE & ASK:**
-> "Ready to push to `[branch-name]`. Confirm:
-> - Branch name is correct (not main/production if not intended)
-> - Commits look accurate (use `git log --oneline -5` to review)
-> - This is the right time to push (no ongoing work on this branch)
-> 
-> Proceed with push? (yes/no)"
-
-### Step 7: Push Changes (After Approval)
-```bash
-git push origin [branch-name]
-```
-- Verify successful push: `git log --oneline -3 --decorate` (shows `origin/[branch]` tag on commit)
-- If PR required: Create PR with link to remote branch
-
-### Step 8: Generate Commit Summary Report
-
-After successful commit/push, output:
-
-```
-═══════════════════════════════════════════════════════════════
-POST-COMMIT SUMMARY — Architecture Audit Phase 1 → Phase 2
-═══════════════════════════════════════════════════════════════
-
-Commit(s) Created:
-  • [SHA1] refactor(architecture): audit and align codebase with blueprint v2.0
-    Time: [timestamp]
-    Author: [your name]
-
-Files Changed:
-  • Application Code: +N files, -X files, ~Y modified
-  • Plan Documents: +Z plan updates, ~W modified
-  • Test Specs: ~V modified
-
-Changes Committed:
-
-  FEATURES IMPLEMENTED:
-    ✅ WarehouseResource (app/Filament/Resources/WarehouseResource.php)
-    ✅ RequisitionResource (app/Filament/Resources/RequisitionResource.php)
-    ✅ BentoStatsWidget (app/Filament/Widgets/BentoStatsWidget.php)
-    ✅ Custom Dashboard (app/Filament/Pages/Dashboard.php)
-    [... full list]
-
-  ENUMS WITH FILAMENT V5 AUTO-INTEGRATION:
-    ✅ RequisitionStatus enum implements HasLabel, HasIcon, HasColor (app/Enums/RequisitionStatus.php)
-       → Methods: getLabel(), getIcon(), getColor()
-       → Icons: heroicon-o-clock (Pending), heroicon-o-check-circle (Approved), heroicon-o-x-circle (Rejected)
-       → Colors: warning (Pending), success (Approved), danger (Rejected)
-       → Auto-Integration: Filament v5 renders icons/colors in tables, badges, actions (no manual code needed)
-    ✅ MovementType enum implements HasLabel, HasIcon, HasColor (app/Enums/MovementType.php)
-       → Methods: getLabel(), getIcon(), getColor()
-       → Icons: heroicon-o-arrow-down (Receive), heroicon-o-arrow-up (Ship), heroicon-o-arrow-right (Transfer)
-       → Colors: success (Receive), danger (Ship), warning (Transfer)
-       → Auto-Integration: Filament v5 automatically renders across UI contexts
-    ✅ WriteOffReason enum implements HasLabel, HasIcon, HasColor (app/Enums/WriteOffReason.php)
-       → Methods: getLabel(), getIcon(), getColor()
-       → Icons: heroicon-o-exclamation-triangle (Damaged), heroicon-o-trash (Obsolete)
-       → Colors: danger for all (loss-related)
-       → Auto-Integration: Filament v5 handles all UI rendering automatically
-    [... full list with Filament v5 auto-integration confirmation]
-
-  REDUNDANCY ELIMINATED:
-    ✅ Consolidated N+1 queries into scopes (saved ~40 lines, 3 files)
-    ✅ Extracted base Filament class for resource forms (saved ~120 lines, 5 files)
-    ✅ Refactored test helpers (saved ~60 lines, 8 tests)
-    ✅ Removed 12 orphaned routes
-    ✅ Removed 8 unused controller methods
-    [... full list with line counts]
-
-  PLAN DOCUMENTS UPDATED:
-    ✅ docs/00-project/plans/architecture.md
-    ✅ docs/00-project/plans/testing-strategy.md
-    ✅ docs/00-project/plans/deployment.md
-    ✅ docs/00-project/plans/performance.md
-
-Test Results (Final Verification):
-  ✅ vendor/bin/pest: XXX tests, 100% pass, 0 skipped
-  ✅ npx playwright test: YY specs, 100% pass, 0 flaky retries
-
-Branch Status:
-  Current Branch: [branch-name]
-  Remote: [remote-url]
-  Status: ✅ Pushed successfully
-
-Next Steps:
-  1. Create PR for code review (if applicable)
-  2. Schedule Phase 2 deployment planning
-  3. Notify team of new architecture updates
-  4. Update deployment runbook if schema migrations present
-
-═══════════════════════════════════════════════════════════════
+Once execution is complete, report:
+1. **Summary of Schema Fixes**: List of migrations, models, and factories modified.
+2. **Pest Test Results**: Full output of `vendor/bin/pest` confirming 100% passing tests.
+3. **Verification Confirmation**: Confirmation that `warehouse_stock` and `product_variant_prices` tables are zeroed out and derived stock math functions perfectly.
 ```
 
 ---
 
-## SUCCESS CRITERIA (Binary Pass/Fail)
+### 🔍 Summary of the 5-Pass Audit Behind This Prompt
 
-- ✅ All Phase 1 changes staged and committed (no files left uncommitted)
-- ✅ **All enums implement Filament v5 HasLabel, HasIcon, HasColor interfaces** (verified in Step 1)
-- ✅ **All enums have getLabel(), getIcon(), getColor() methods defined** following Filament v5 contracts
-- ✅ **Filament v5 auto-integrates enum icons and colors** across all UI contexts (tables, badges, buttons, dropdowns)
-- ✅ Commit message is semantic and detailed (explains WHAT + WHY)
-- ✅ No sensitive data in commit (`.env`, secrets, keys excluded)
-- ✅ Both test suites pass 100% after commit (final verification)
-- ✅ Commit pushed to correct remote branch successfully
-- ✠ Git log shows new commit(s) with correct metadata
-- ✅ Post-commit summary generated and accurate (includes Filament v5 auto-integration confirmation)
-- ✅ No merge conflicts or push rejections
-- ✅ CI/CD workflows (if any) triggered successfully
+1. **Pass 1 (Migration Alignment)**: Corrects column placements (shifting `sku` and `reorder_point` to variants) and enforces exact plural table and FK names.
+2. **Pass 2 (Model & Method Realignment)**: Implements dynamic query-time stock accessors (`onHandQuantity`, `reservedQuantity`, `availableQuantity`) directly on `ProductVariant` with zero DB table caching.
+3. **Pass 3 (Factory Integrity)**: Ensures all synthetic seed data generated during testing aligns with the updated foreign key relationships and high-precision `decimal(15,4)` data types.
+4. **Pass 4 (Test Logic Refactoring)**: Replaces outdated test assertions expecting static `WarehouseStock` rows with pure derived ledger assertions.
+5. **Pass 5 (Execution Diagnostics)**: Establishes an iterative `migrate:fresh` and `vendor/bin/pest` repair loop to systematically resolve any runtime tracebacks.
 
----
+***
 
-## WORKFLOW CHECKPOINTS
-
-After each step, output:
-✅ **[Step name] completed** — Brief status update
-
-Stop and ask before:
-- Pushing to main/production branch
-- Amending or rewriting commit history
-- Deleting any branches
-- Merging or rebasing
-
----
-
-**Ready to execute. First action: Verify git state, confirm all Filament v5 enums have required interfaces/methods, and confirm all Phase 1 changes are ready to commit. (Note: Once enums implement HasIcon interface, Filament v5 automatically integrates icons/colors — no manual code needed.)**
-
----
-
-**⚠️ Agentic Tool Notice**
-This prompt assumes you have git access and proper branch permissions. Filament v5 enum standards require implementations of HasLabel, HasIcon, HasColor interfaces. Once these interfaces are implemented, Filament v5 automatically integrates icons and colors across all UI contexts — no manual integration code required. Review stop conditions before execution. Ask for confirmation before pushing to production branches. Confirm remote URL and branch name match your actual repository setup.
+💡 **Would you like me to write a corresponding Playwright E2E browser repair prompt to audit and fix your front-end wizard and scan-to-receive browser specs as well?**

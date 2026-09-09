@@ -174,7 +174,7 @@ app/
 ├── Models/
 │   ├── Product.php
 │   ├── ProductVariant.php                     # Pure derived query calculations + SKU + Pricing + Reorder Point
-│   ├── ProductUnitConversion.php
+│   ├── ProductVariantUnitConversion.php
 │   ├── Warehouse.php
 │   ├── StockMovement.php                      # Single transaction source of truth
 │   ├── TransferRequisition.php
@@ -225,7 +225,7 @@ class ProductVariant extends Model
 
     public function unitConversions(): HasMany
     {
-        return $this->hasMany(ProductUnitConversion::class);
+        return $this->hasMany(ProductVariantUnitConversion::class);
     }
 
     public function stockMovements(): HasMany
