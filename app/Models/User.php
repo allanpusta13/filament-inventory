@@ -51,22 +51,22 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
         return ($this->attributes['role'] ?? null) === UserRole::ADMIN->value;
     }
 
-    // public function canAccessWarehouse(Warehouse $warehouse): bool
-    // {
-    //     if ($this->isAdmin()) {
-    //         return true;
-    //     }
+    public function canAccessWarehouse(Warehouse $warehouse): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
 
-    //     return $this->warehouses->contains($warehouse);
-    // }
+        return $this->warehouses->contains($warehouse);
+    }
 
-    // /**
-    //  * @return BelongsToMany<Warehouse, $this>
-    //  */
-    // public function warehouses(): BelongsToMany
-    // {
-    //     return $this->belongsToMany(Warehouse::class, 'user_warehouse');
-    // }
+    /**
+     * @return BelongsToMany<Warehouse, $this>
+     */
+    public function warehouses(): BelongsToMany
+    {
+        return $this->belongsToMany(Warehouse::class, 'user_warehouse');
+    }
 
     public function getAppAuthenticationSecret(): ?string
     {

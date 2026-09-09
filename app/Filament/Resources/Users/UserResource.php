@@ -23,6 +23,8 @@ final class UserResource extends Resource
 
     protected static BackedEnum|string|null $navigationIcon = Heroicon::OutlinedUsers;
 
+    protected static ?string $recordTitleAttribute = 'name';
+
     public static function form(Schema $schema): Schema
     {
         return Schemas\UserForm::configure($schema);
@@ -49,9 +51,14 @@ final class UserResource extends Resource
         ];
     }
 
-    // public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
-    // {
-    //     return parent::getEloquentQuery()
-    //         ->with(['warehouses']);
-    // }
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['name', 'email'];
+    }
+
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        return parent::getEloquentQuery()
+            ->with(['warehouses']);
+    }
 }

@@ -21,7 +21,7 @@ class ProductVariantPriceFactory extends Factory
     public function definition(): array
     {
         return [
-             'product_variant_id' => ProductVariant::factory(),
+            'product_variant_id' => ProductVariant::factory(),
             'cost_price' => fake()->randomFloat(4, 10, 500),
             'sale_price' => fake()->randomFloat(4, 20, 1000),
             'effective_from' => now(),
@@ -31,8 +31,15 @@ class ProductVariantPriceFactory extends Factory
         ];
     }
 
-     public function notCurrent(): static
+    public function notCurrent(): static
     {
         return $this->state(fn () => ['is_current' => false]);
+    }
+
+    public function forVariant(ProductVariant $variant): static
+    {
+        return $this->state(fn () => [
+            'product_variant_id' => $variant->id,
+        ]);
     }
 }

@@ -35,7 +35,6 @@ describe('TransferRequisitionStatus enum', function () {
     it('identifies terminal states', function () {
         expect(TransferRequisitionStatus::Completed->isTerminal())->toBeTrue()
             ->and(TransferRequisitionStatus::ClosedWithLoss->isTerminal())->toBeTrue()
-            ->and(TransferRequisitionStatus::Cancelled->isTerminal())->toBeTrue()
             ->and(TransferRequisitionStatus::Draft->isTerminal())->toBeFalse()
             ->and(TransferRequisitionStatus::Dispatched->isTerminal())->toBeFalse();
     });

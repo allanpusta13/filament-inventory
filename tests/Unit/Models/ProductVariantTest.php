@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\ProductVariantPrice;
+use App\Models\ProductVariantUnitConversion;
 
 it('belongs to a product', function () {
     $product = Product::factory()->create();
@@ -47,4 +48,28 @@ it('enforces unique sku', function () {
 
     expect(fn () => ProductVariant::factory()->create(['sku' => 'DUPE-SKU']))
         ->toThrow(Illuminate\Database\QueryException::class);
+});
+
+it('has many unit conversions', function () {
+    $variant = ProductVariant::factory()->create();
+    ProductVariantUnitConversion::factory()->for($variant, 'variant')->box()->create();
+    ProductVariantUnitConversion::factory()->for($variant, 'variant')->case()->create();
+
+    expect($variant->unitConversions)->toHaveCount(2);
+});
+
+it('has many prices', function () {
+    $variant = ProductVariant::factory()->create();
+    ProductVariantPrice::factory()->for($variant, 'variant')->create();
+    ProductVariantPrice::factory()->notCurrent()->for($variant, 'variant')->create();
+    ProductVariantPrice::factory()->notCurrent()->for($variant, 'variant')->create();
+
+    expect($variant->prices)->toHaveCount(3);
+});
+
+it('casts images to array', function () {
+    $variant = ProductVariant::factory()->create(['images' => ['img1.jpg', 'img2.png']]);
+
+    expect($variant->fresh()->images)->toBeArray()
+        ->and($variant->fresh()->images)->toBe(['img1.jpg', 'img2.png']);
 });

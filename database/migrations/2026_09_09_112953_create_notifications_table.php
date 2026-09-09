@@ -10,17 +10,18 @@ return new class() extends Migration
 {
     public function up(): void
     {
-        Schema::create('products', function (Blueprint $table) {
+        Schema::create('notifications', function (Blueprint $table) {
             $table->id();
-            $table->string('name');            // Product family name (e.g. "Arabica Specialty Coffee")
-            $table->string('category')->nullable();
+            $table->morphs('notifiable');
+            $table->string('type');
+            $table->json('data');
+            $table->timestamp('read_at')->nullable();
             $table->timestamps();
-            $table->softDeletes();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('products');
+        Schema::dropIfExists('notifications');
     }
 };

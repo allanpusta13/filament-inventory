@@ -47,17 +47,17 @@ final class UserFactory extends Factory
         ]);
     }
 
-    // /**
-    //  * Indicate that the model is a warehouse staff.
-    //  */
-    // public function warehouseStaff(): static
-    // {
-    //     return $this->state(fn (array $attributes): array => [
-    //         'role' => UserRole::WAREHOUSE_STAFF->value,
-    //     ])->afterCreating(function (\App\Models\User $user) {
-    //         $user->warehouses()->attach(Warehouse::factory()->create());
-    //     });
-    // }
+    /**
+     * Indicate that the model is a warehouse staff.
+     */
+    public function warehouseStaff(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'role' => UserRole::WAREHOUSE_STAFF->value,
+        ])->afterCreating(function (\App\Models\User $user) {
+            $user->warehouses()->attach(Warehouse::factory()->create());
+        });
+    }
 
     /**
      * Indicate that the model is an admin.

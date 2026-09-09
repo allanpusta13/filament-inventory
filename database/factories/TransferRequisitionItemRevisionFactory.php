@@ -37,4 +37,24 @@ class TransferRequisitionItemRevisionFactory extends Factory
             'responds_to_revision_id' => null,
         ];
     }
+
+    public function fromRequestor(): static
+    {
+        return $this->state(fn () => ['side' => NegotiationSide::Requestor]);
+    }
+
+    public function fromFulfiller(): static
+    {
+        return $this->state(fn () => ['side' => NegotiationSide::Fulfiller]);
+    }
+
+    public function accepted(): static
+    {
+        return $this->state(fn () => ['status' => RevisionStatus::Accepted]);
+    }
+
+    public function rejected(): static
+    {
+        return $this->state(fn () => ['status' => RevisionStatus::Rejected]);
+    }
 }

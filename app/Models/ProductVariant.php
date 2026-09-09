@@ -16,6 +16,12 @@ class ProductVariant extends Pivot
     /** @use HasFactory<\Database\Factories\ProductVariantFactory> */
     use HasFactory, SoftDeletes;
 
+    public $incrementing = true;
+
+    protected $table = 'product_variants';
+
+    protected $keyType = 'int';
+
     protected $fillable = [
         'product_id',
         'sku',
@@ -25,6 +31,7 @@ class ProductVariant extends Pivot
         'reorder_point',
         'attributes',
         'images',
+        'is_active',
     ];
 
     public function product(): BelongsTo
@@ -34,12 +41,12 @@ class ProductVariant extends Pivot
 
     public function unitConversions(): HasMany
     {
-        return $this->hasMany(ProductVariantUnitConversion::class);
+        return $this->hasMany(ProductVariantUnitConversion::class, 'product_variant_id', 'id');
     }
 
     public function prices(): HasMany
     {
-        return $this->hasMany(ProductVariantPrice::class);
+        return $this->hasMany(ProductVariantPrice::class, 'product_variant_id', 'id');
     }
 
     public function stockMovements(): HasMany
@@ -54,7 +61,7 @@ class ProductVariant extends Pivot
      */
     public function currentPrice(): HasOne
     {
-        return $this->hasOne(ProductVariantPrice::class)->where('is_current', true);
+        return $this->hasOne(ProductVariantPrice::class, 'product_variant_id', 'id')->where('is_current', true);
     }
 
     public function isBelowReorderPoint(int $currentBaseQty): bool
@@ -68,6 +75,7 @@ class ProductVariant extends Pivot
             'attributes' => 'array',
             'images' => 'array',
             'reorder_point' => 'integer',
+            'is_active' => 'boolean',
         ];
     }
 }

@@ -21,11 +21,43 @@ class ProductVariantUnitConversionFactory extends Factory
     public function definition(): array
     {
         return [
-             'product_variant_id' => ProductVariant::factory(),
+            'product_variant_id' => ProductVariant::factory(),
             'unit_name' => fake()->randomElement(['Box', 'Pallet', 'Case']),
             'base_unit_ratio' => fake()->numberBetween(6, 48),
             'is_default_purchase' => false,
             'is_default_transfer' => false,
         ];
+    }
+
+    public function piece(): static
+    {
+        return $this->state(fn () => [
+            'unit_name' => 'Piece',
+            'base_unit_ratio' => 1,
+        ]);
+    }
+
+    public function box(): static
+    {
+        return $this->state(fn () => [
+            'unit_name' => 'Box',
+            'base_unit_ratio' => 24,
+        ]);
+    }
+
+    public function case(): static
+    {
+        return $this->state(fn () => [
+            'unit_name' => 'Case',
+            'base_unit_ratio' => 12,
+        ]);
+    }
+
+    public function pallet(): static
+    {
+        return $this->state(fn () => [
+            'unit_name' => 'Pallet',
+            'base_unit_ratio' => 48,
+        ]);
     }
 }

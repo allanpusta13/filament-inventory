@@ -20,7 +20,7 @@ class ProductFactory extends Factory
     public function definition(): array
     {
         return [
-             'name' => fake()->words(3, true),
+            'name' => fake()->words(3, true),
             'category' => fake()->randomElement(['Beverages', 'Snacks', 'Office Supplies']),
         ];
     }

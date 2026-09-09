@@ -5,7 +5,10 @@ declare(strict_types=1);
 // use App\Enums\StockMovementType;
 
 use App\Enums\MovementType;
+use App\Models\ProductVariant;
 use App\Models\StockMovement;
+use App\Models\User;
+use App\Models\Warehouse;
 
 it('casts type to the StockMovementType enum', function () {
     $movement = StockMovement::factory()->create(['type' => MovementType::TransferOut]);
@@ -51,4 +54,36 @@ describe('MovementType enum', function () {
         expect(MovementType::Adjustment->isInbound())->toBeFalse()
             ->and(MovementType::Adjustment->isOutbound())->toBeFalse();
     });
+});
+
+it('belongs to a warehouse', function () {
+    $warehouse = Warehouse::factory()->create();
+    $movement = StockMovement::factory()->create(['warehouse_id' => $warehouse->id]);
+
+    expect($movement->warehouse->is($warehouse))->toBeTrue();
+});
+
+it('belongs to a variant', function () {
+    $variant = ProductVariant::factory()->create();
+    $movement = StockMovement::factory()->create(['product_variant_id' => $variant->id]);
+
+    expect($movement->variant->is($variant))->toBeTrue();
+});
+
+it('belongs to a created by user', function () {
+    $user = User::factory()->create();
+    $movement = StockMovement::factory()->create(['created_by' => $user->id]);
+
+    expect($movement->createdBy->is($user))->toBeTrue();
+});
+
+it('has a polymorphic reference', function () {
+    $variant = ProductVariant::factory()->create();
+    $movement = StockMovement::factory()->create([
+        'reference_type' => ProductVariant::class,
+        'reference_id' => $variant->id,
+    ]);
+
+    expect($movement->reference)->toBeInstanceOf(ProductVariant::class)
+        ->and($movement->reference->is($variant))->toBeTrue();
 });

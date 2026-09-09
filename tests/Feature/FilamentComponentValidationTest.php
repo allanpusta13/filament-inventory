@@ -150,6 +150,41 @@ dataset('filamentPhpFilesWithContent', function (): array {
     return $files;
 });
 
+/*
+|--------------------------------------------------------------------------
+| Global Search Availability Check
+|--------------------------------------------------------------------------
+|
+| If no Filament PHP files exist yet, skip all validation.
+| This prevents false failures during early development phases.
+|
+*/
+
+test('skip Filament component validation when no searchable resources exist', function (): void {
+    $projectRoot = dirname(__DIR__, 2);
+    $directory = $projectRoot.'/app/Filament';
+
+    if (! is_dir($directory)) {
+        $this->markTestSkipped('No app/Filament directory found.');
+    }
+
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($directory, RecursiveDirectoryIterator::SKIP_DOTS),
+    );
+    $phpFileCount = 0;
+    foreach ($iterator as $file) {
+        if ($file->getExtension() === 'php') {
+            $phpFileCount++;
+        }
+    }
+
+    if ($phpFileCount === 0) {
+        $this->markTestSkipped('No Filament PHP files found — skipping component validation.');
+    }
+
+    expect($phpFileCount)->toBeGreaterThan(0);
+});
+
 // ── Helpers ──────────────────────────────────────────────────────────────────────
 
 function extractClassName(string $filePath): string

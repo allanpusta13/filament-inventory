@@ -19,6 +19,22 @@ enum MovementType: string implements HasColor, HasIcon, HasLabel
     case Adjustment = 'adjustment';
     case Loss = 'loss';
 
+    public function isInbound(): bool
+    {
+        return match ($this) {
+            self::Receive, self::TransferIn, self::TransitIn => true,
+            default => false,
+        };
+    }
+
+    public function isOutbound(): bool
+    {
+        return match ($this) {
+            self::Ship, self::TransferOut, self::TransitOut, self::Loss => true,
+            default => false,
+        };
+    }
+
     public function getColor(): string|array|null
     {
         return match ($this) {

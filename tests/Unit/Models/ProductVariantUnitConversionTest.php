@@ -32,3 +32,27 @@ it('allows the same unit_name across different variants', function () {
 
     expect($second->exists)->toBeTrue();
 });
+
+it('casts is_default_purchase and is_default_transfer to boolean', function () {
+    $conversion = ProductVariantUnitConversion::factory()->create([
+        'is_default_purchase' => true,
+        'is_default_transfer' => false,
+    ]);
+
+    expect($conversion->fresh()->is_default_purchase)->toBeTrue()
+        ->and($conversion->fresh()->is_default_transfer)->toBeFalse();
+});
+
+it('defaults is_default_purchase and is_default_transfer to false', function () {
+    $conversion = ProductVariantUnitConversion::factory()->create();
+
+    expect($conversion->is_default_purchase)->toBeFalse()
+        ->and($conversion->is_default_transfer)->toBeFalse();
+});
+
+it('belongs to a variant', function () {
+    $variant = ProductVariant::factory()->create();
+    $conversion = ProductVariantUnitConversion::factory()->for($variant, 'variant')->create();
+
+    expect($conversion->variant->is($variant))->toBeTrue();
+});

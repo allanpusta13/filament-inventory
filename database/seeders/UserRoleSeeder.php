@@ -7,7 +7,6 @@ namespace Database\Seeders;
 use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 final class UserRoleSeeder extends Seeder
@@ -40,25 +39,7 @@ final class UserRoleSeeder extends Seeder
             ['name' => 'Inventory Auditor', 'role' => UserRole::AUDITOR->value, 'password' => Hash::make('password')]
         );
 
-        // Attach warehouses to users (we assume warehouse IDs from WarehouseAndCatalogSeeder)
-        // We'll get the warehouse IDs by code
-        // $warehouseMnl = DB::table('warehouses')->where('code', 'WH-MNL')->first()->id;
-        // $warehouseCeb = DB::table('warehouses')->where('code', 'WH-CEB')->first()->id;
-        // $warehouseDvo = DB::table('warehouses')->where('code', 'WH-DVO')->first()->id;
-
-        // Admin: all warehouses (sync to avoid duplicates)
-        // $admin->warehouses()->sync([$warehouseMnl, $warehouseCeb, $warehouseDvo]);
-
-        // Manila Manager: only WH-MNL
-        // $managerMnl->warehouses()->sync([$warehouseMnl]);
-
-        // // Cebu Manager: only WH-CEB
-        // $managerCeb->warehouses()->sync([$warehouseCeb]);
-
-        // // Davao Staff: only WH-DVO
-        // $staffDvo->warehouses()->sync([$warehouseDvo]);
-
-        // // Auditor: all warehouses (read-only)
-        // $auditor->warehouses()->sync([$warehouseMnl, $warehouseCeb, $warehouseDvo]);
+        // Warehouse attachment is handled by DemoWorkflowSeeder (runs after this seeder)
+        // because warehouses don't exist yet at this point.
     }
 }

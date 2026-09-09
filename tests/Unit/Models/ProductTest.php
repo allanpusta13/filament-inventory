@@ -29,3 +29,13 @@ it('is excluded from default queries once soft deleted', function () {
 
     expect(Product::find($product->id))->toBeNull();
 });
+
+it('has name and category fillable via mass assignment', function () {
+    $product = Product::create([
+        'name' => 'Test Coffee',
+        'category' => 'Beverages',
+    ]);
+
+    expect($product->name)->toBe('Test Coffee')
+        ->and($product->category)->toBe('Beverages');
+});

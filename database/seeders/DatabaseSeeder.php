@@ -11,8 +11,8 @@ final class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            // WarehouseAndCatalogSeeder::class,
-            UserRoleSeeder::class,
+            UserRoleSeeder::class,      // creates users (admin, managers, staff)
+            DemoWorkflowSeeder::class,  // creates warehouses, products, variants, stock movements, transfers
         ]);
     }
 }

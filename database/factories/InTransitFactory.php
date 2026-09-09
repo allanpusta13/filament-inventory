@@ -32,4 +32,24 @@ class InTransitFactory extends Factory
             'status' => InTransitStatus::InTransit,
         ];
     }
+
+    public function inTransit(): static
+    {
+        return $this->state(fn () => ['status' => InTransitStatus::InTransit]);
+    }
+
+    public function received(): static
+    {
+        return $this->state(fn () => ['status' => InTransitStatus::Received]);
+    }
+
+    public function partiallyReceived(): static
+    {
+        return $this->state(fn () => ['status' => InTransitStatus::PartiallyReceived]);
+    }
+
+    public function cleared(): static
+    {
+        return $this->state(fn () => ['status' => InTransitStatus::Cleared]);
+    }
 }

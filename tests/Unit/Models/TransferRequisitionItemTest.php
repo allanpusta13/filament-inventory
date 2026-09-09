@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\ProductVariant;
 use App\Models\TransferRequisitionItem;
 use App\Models\TransferRequisitionItemRevision;
 
@@ -76,4 +77,25 @@ it('filters to only pending revisions', function () {
 
     expect($item->pendingRevisions()->pluck('id')->toArray())->toBe([$pending->id])
         ->and($item->pendingRevisions()->pluck('id')->toArray())->not->toContain($resolved->id);
+});
+
+it('belongs to a product variant', function () {
+    $variant = ProductVariant::factory()->create();
+    $item = TransferRequisitionItem::factory()->create(['product_variant_id' => $variant->id]);
+
+    expect($item->variant->is($variant))->toBeTrue();
+});
+
+it('belongs to a substitute variant when set', function () {
+    $substitute = ProductVariant::factory()->create();
+    $item = TransferRequisitionItem::factory()->create(['substitute_product_variant_id' => $substitute->id]);
+
+    expect($item->substituteVariant->is($substitute))->toBeTrue();
+});
+
+it('has many revisions', function () {
+    $item = TransferRequisitionItem::factory()->create();
+    TransferRequisitionItemRevision::factory()->count(3)->for($item, 'item')->create();
+
+    expect($item->revisions)->toHaveCount(3);
 });

@@ -17,6 +17,7 @@ return new class() extends Migration
             $table->integer('base_unit_ratio');     // e.g. 1 Box = 24 Pcs -> 24
             $table->boolean('is_default_purchase')->default(false);
             $table->boolean('is_default_transfer')->default(false);
+            $table->unique(['product_variant_id', 'unit_name'], 'uconv_variant_unit_unique');
             $table->timestamps();
         });
     }

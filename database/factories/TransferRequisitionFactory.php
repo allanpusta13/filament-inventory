@@ -6,6 +6,7 @@ namespace Database\Factories;
 
 use App\Enums\TransferRequisitionStatus;
 use App\Models\TransferRequisition;
+use App\Models\TransferRequisitionItem;
 use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -23,11 +24,41 @@ class TransferRequisitionFactory extends Factory
     public function definition(): array
     {
         return [
-              'reference_code' => 'DTR-'.now()->format('Ymd').'-'.strtoupper(fake()->unique()->bothify('????')),
+            'reference_code' => 'DTR-'.now()->format('Ymd').'-'.mb_strtoupper(fake()->unique()->bothify('????')),
             'from_warehouse_id' => Warehouse::factory(),
             'to_warehouse_id' => Warehouse::factory(),
             'status' => TransferRequisitionStatus::Draft,
             'requested_by' => User::factory(),
         ];
+    }
+
+    public function pending(): static
+    {
+        return $this->state(fn () => ['status' => TransferRequisitionStatus::Requested]);
+    }
+
+    public function approved(): static
+    {
+        return $this->state(fn () => ['status' => TransferRequisitionStatus::Approved]);
+    }
+
+    public function dispatched(): static
+    {
+        return $this->state(fn () => ['status' => TransferRequisitionStatus::Dispatched]);
+    }
+
+    public function received(): static
+    {
+        return $this->state(fn () => ['status' => TransferRequisitionStatus::Completed]);
+    }
+
+    public function withItems(): static
+    {
+        return $this->afterCreating(function (TransferRequisition $requisition) {
+            TransferRequisitionItem::factory()
+                ->count(fake()->numberBetween(1, 3))
+                ->for($requisition)
+                ->create();
+        });
     }
 }

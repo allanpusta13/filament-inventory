@@ -36,4 +36,37 @@ class TransferRequisitionItemFactory extends Factory
             'received_damaged_base_qty' => 0,
         ];
     }
+
+    public function approved(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'approved_unit_name' => $attributes['requested_unit_name'],
+            'approved_unit_ratio' => $attributes['requested_unit_ratio'],
+            'approved_qty' => $attributes['requested_qty'],
+            'approved_base_qty' => $attributes['requested_base_qty'],
+        ]);
+    }
+
+    public function dispatched(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'approved_unit_name' => $attributes['requested_unit_name'],
+            'approved_unit_ratio' => $attributes['requested_unit_ratio'],
+            'approved_qty' => $attributes['requested_qty'],
+            'approved_base_qty' => $attributes['requested_base_qty'],
+            'shipped_base_qty' => $attributes['requested_base_qty'],
+        ]);
+    }
+
+    public function received(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'approved_unit_name' => $attributes['requested_unit_name'],
+            'approved_unit_ratio' => $attributes['requested_unit_ratio'],
+            'approved_qty' => $attributes['requested_qty'],
+            'approved_base_qty' => $attributes['requested_base_qty'],
+            'shipped_base_qty' => $attributes['requested_base_qty'],
+            'received_good_base_qty' => $attributes['requested_base_qty'],
+        ]);
+    }
 }

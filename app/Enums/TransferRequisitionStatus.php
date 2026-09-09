@@ -21,6 +21,19 @@ enum TransferRequisitionStatus: string implements HasColor, HasIcon, HasLabel
     case Completed = 'completed';
     case ClosedWithLoss = 'closed_with_loss';
 
+    public function label(): string
+    {
+        return $this->getLabel();
+    }
+
+    public function isTerminal(): bool
+    {
+        return match ($this) {
+            self::Completed, self::ClosedWithLoss => true,
+            default => false,
+        };
+    }
+
     public function getColor(): string|array|null
     {
         return match ($this) {

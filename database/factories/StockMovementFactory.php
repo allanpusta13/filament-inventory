@@ -23,13 +23,43 @@ class StockMovementFactory extends Factory
     public function definition(): array
     {
         return [
-              'product_variant_id' => ProductVariant::factory(),
+            'product_variant_id' => ProductVariant::factory(),
             'warehouse_id' => Warehouse::factory(),
             'type' => MovementType::Receive,
             'quantity' => fake()->numberBetween(1, 500),
             'unit_name_used' => 'piece',
             'unit_ratio_used' => 1,
-            'reference_code' => 'DTR-'.now()->format('Ymd').'-'.strtoupper(fake()->bothify('????')),
+            'reference_code' => 'DTR-'.now()->format('Ymd').'-'.mb_strtoupper(fake()->bothify('????')),
         ];
+    }
+
+    public function receive(): static
+    {
+        return $this->state(fn () => ['type' => MovementType::Receive]);
+    }
+
+    public function ship(): static
+    {
+        return $this->state(fn () => ['type' => MovementType::Ship]);
+    }
+
+    public function transferIn(): static
+    {
+        return $this->state(fn () => ['type' => MovementType::TransferIn]);
+    }
+
+    public function transferOut(): static
+    {
+        return $this->state(fn () => ['type' => MovementType::TransferOut]);
+    }
+
+    public function adjustment(): static
+    {
+        return $this->state(fn () => ['type' => MovementType::Adjustment]);
+    }
+
+    public function loss(): static
+    {
+        return $this->state(fn () => ['type' => MovementType::Loss]);
     }
 }
