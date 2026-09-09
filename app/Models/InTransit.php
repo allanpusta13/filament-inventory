@@ -9,51 +9,41 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-final class InTransit extends Model
+class InTransit extends Model
 {
+    /** @use HasFactory<\Database\Factories\InTransitFactory> */
     use HasFactory;
 
-    protected $table = 'in_transit';
-
     protected $fillable = [
-        'requisition_id',
-        'requisition_item_id',
-        'variant_id',
+        'transfer_requisition_id',
+        'transfer_requisition_item_id',
+        'product_variant_id',
         'dispatched_base_qty',
         'dispatched_at',
         'status',
     ];
 
-    /**
-     * @return array<string, string>
-     */
-    protected $casts = [
-        'dispatched_base_qty' => 'integer',
-        'dispatched_at' => 'datetime',
-        'status' => InTransitStatus::class,
-    ];
-
-    /**
-     * @return BelongsTo<TransferRequisition, $this>
-     */
-    public function requisition(): BelongsTo
+    public function transferRequisition(): BelongsTo
     {
-        return $this->belongsTo(TransferRequisition::class, 'requisition_id');
+        return $this->belongsTo(TransferRequisition::class);
     }
 
-    /**
-     * @return BelongsTo<TransferRequisitionItem, $this>
-     */
-    public function requisitionItem(): BelongsTo
+    public function item(): BelongsTo
     {
-        return $this->belongsTo(TransferRequisitionItem::class, 'requisition_item_id');
+        return $this->belongsTo(TransferRequisitionItem::class, 'transfer_requisition_item_id');
     }
 
-    /**
-     * @return BelongsTo<ProductVariant, $this>
-     */
     public function variant(): BelongsTo
     {
-        return $this->belongsTo(ProductVariant::class);
+        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'status' => InTransitStatus::class,
+            'dispatched_base_qty' => 'integer',
+            'dispatched_at' => 'datetime',
+        ];
     }
 }

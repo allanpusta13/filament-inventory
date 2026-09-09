@@ -7,36 +7,34 @@ namespace Database\Factories;
 use App\Models\LossLedger;
 use App\Models\ProductVariant;
 use App\Models\TransferRequisition;
-use App\Models\TransferRequisitionItem;
-use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-final class LossLedgerFactory extends Factory
+/**
+ * @extends Factory<LossLedger>
+ */
+class LossLedgerFactory extends Factory
 {
-    protected $model = LossLedger::class;
-
+    /**
+     * Define the model's default state.
+     *
+     * @return array<string, mixed>
+     */
     public function definition(): array
     {
-        $variant = ProductVariant::factory()->create();
-        $requisition = TransferRequisition::factory()->create();
-        $requisitionItem = TransferRequisitionItem::factory()->create([
-            'requisition_id' => $requisition->id,
-            'variant_id' => $variant->id,
-        ]);
+        $lost = fake()->numberBetween(1, 20);
+        $unitCost = fake()->randomFloat(4, 10, 200);
 
         return [
-            'requisition_id' => $requisition->id,
-            'requisition_item_id' => $requisitionItem->id,
-            'variant_id' => $variant->id,
+            'transfer_requisition_id' => TransferRequisition::factory(),
+            'product_variant_id' => ProductVariant::factory(),
             'warehouse_id' => Warehouse::factory(),
-            'lost_base_qty' => fake()->numberBetween(0, 100),
-            'damaged_base_qty' => fake()->numberBetween(0, 100),
-            'unit_cost_price' => fake()->randomFloat(4, 1, 100),
-            'total_financial_loss' => fake()->randomFloat(4, 1, 1000),
-            'loss_category' => fake()->randomElement(['Transit Variance', 'Damage', 'Theft', 'Other']),
-            'recorded_by' => User::factory(),
-            'recorded_at' => fake()->dateTime(),
+            'lost_base_qty' => $lost,
+            'damaged_base_qty' => 0,
+            'unit_cost_price' => $unitCost,
+            'total_financial_loss' => round($lost * $unitCost, 4),
+            'loss_category' => 'shortfall',
+            'recorded_at' => now(),
         ];
     }
 }

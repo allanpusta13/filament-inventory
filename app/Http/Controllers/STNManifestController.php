@@ -4,78 +4,60 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Models\DirectTransfer;
+use App\Models\StockMovement;
 use App\Models\TransferRequisition;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\URL;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 final class STNManifestController extends Controller
 {
-    public function print(Request $request, TransferRequisition $transferRequisition)
+    /**
+     * Prints the multi-stage Stock Transfer Note (STN) Manifest.
+     */
+    public function print(Request $request, TransferRequisition $requisition)
     {
-        $user = $request->user();
+        $user = Auth::user();
 
-        if (
-            ! $user->hasAccessToWarehouse($transferRequisition->to_warehouse_id) &&
-            ! $user->hasAccessToWarehouse($transferRequisition->from_warehouse_id)
-        ) {
-            abort(403, 'You are not assigned to the origin or destination warehouse.');
+        // Enforce RBAC site scope
+        if (! $user->canAccessWarehouse($requisition->toWarehouse) && ! $user->canAccessWarehouse($requisition->fromWarehouse)) {
+            abort(403, 'Unauthorized access to this location manifest.');
         }
 
+        // Generate 30-day secure temporary signed scan URL
         $signedUrl = URL::temporarySignedRoute(
             'stn.scan',
             now()->addDays(30),
-            ['transferRequisition' => $transferRequisition->id]
+            ['transferRequisition' => $requisition->id]
         );
 
-        $qrCode = QrCode::size(120)->generate($signedUrl);
-
-        $requisition = $transferRequisition->load([
-            'items.variant',
-            'items.substituteVariant',
-            'fromWarehouse',
-            'toWarehouse',
-            'requestedBy',
-            'dispatchedBy',
-            'receivedBy',
-        ]);
+        $qrCodeSvg = QrCode::size(120)->generate($signedUrl);
 
         return view('pdf.stn-manifest', [
-            'requisition' => $requisition,
-            'qrCode' => $qrCode,
+            'requisition' => $requisition->load('items.variant', 'fromWarehouse', 'toWarehouse', 'requestedBy'),
+            'qrCode' => $qrCodeSvg,
         ]);
     }
 
-    public function printDirectTransfer(Request $request, DirectTransfer $directTransfer)
+    /**
+     * Prints the Instant Direct Transfer Manifest.
+     */
+    public function printDirectTransfer(Request $request, StockMovement $movement)
     {
-        $user = $request->user();
+        abort_unless($movement->type === 'transfer_out', 404);
 
-        if (
-            ! $user->hasAccessToWarehouse($directTransfer->to_warehouse_id) &&
-            ! $user->hasAccessToWarehouse($directTransfer->from_warehouse_id)
-        ) {
-            abort(403, 'You are not assigned to the origin or destination warehouse.');
+        $user = Auth::user();
+        $inLeg = StockMovement::where('related_movement_id', $movement->id)->firstOrFail();
+
+        // Enforce RBAC physical scope
+        if (! $user->canAccessWarehouse($movement->warehouse) && ! $user->canAccessWarehouse($inLeg->warehouse)) {
+            abort(403);
         }
 
-        $signedUrl = URL::temporarySignedRoute(
-            'stn.direct-scan',
-            now()->addDays(30),
-            ['directTransfer' => $directTransfer->id]
-        );
-
-        $qrCode = QrCode::size(120)->generate($signedUrl);
-
-        $transfer = $directTransfer->load([
-            'items.variant',
-            'fromWarehouse',
-            'toWarehouse',
-            'executedByUser',
-        ]);
-
         return view('pdf.direct-transfer-manifest', [
-            'transfer' => $transfer,
-            'qrCode' => $qrCode,
+            'outLeg' => $movement->load('variant', 'warehouse', 'creator'),
+            'inLeg' => $inLeg->load('warehouse'),
         ]);
     }
 }

@@ -6,9 +6,6 @@ namespace App\Filament\Pages;
 
 use App\Enums\UserRole;
 use App\Filament\Widgets\BentoStatsWidget;
-use App\Filament\Widgets\LowStockAlertsWidget;
-use App\Filament\Widgets\PendingRequisitionsWidget;
-use App\Filament\Widgets\RecentMovementsChartWidget;
 use Filament\Pages\Dashboard as BaseDashboard;
 
 final class Dashboard extends BaseDashboard
@@ -22,10 +19,10 @@ final class Dashboard extends BaseDashboard
         }
 
         return in_array($user->role, [
-            UserRole::Admin,
-            UserRole::BranchManager,
-            UserRole::WarehouseStaff,
-            UserRole::Auditor,
+            UserRole::ADMIN,
+            UserRole::BRANCH_MANAGER,
+            UserRole::WAREHOUSE_STAFF,
+            UserRole::AUDITOR,
         ], true);
     }
 
@@ -43,18 +40,14 @@ final class Dashboard extends BaseDashboard
     public function getHeaderWidgets(): array
     {
         return [
-            // We are removing the WarehouseFilterWidget for now to simplify the header
-            // If needed, we can add it back later, but the spec doesn't mention it.
+            // BentoStatsWidget::class,
         ];
     }
 
     public function getWidgets(): array
     {
         return [
-            BentoStatsWidget::class,
-            RecentMovementsChartWidget::class,
-            LowStockAlertsWidget::class,
-            PendingRequisitionsWidget::class,
+            // BentoStatsWidget::class,
         ];
     }
 }

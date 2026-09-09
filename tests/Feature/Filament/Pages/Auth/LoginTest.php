@@ -35,7 +35,7 @@ test('an unauthenticated user can login', function () {
 
 test('an authenticated admin user can access the admin panel', function () {
     $this->actingAs(
-        App\Models\User::factory()->create(['role' => App\Enums\UserRole::Admin->value])
+        App\Models\User::factory()->create(['role' => App\Enums\UserRole::ADMIN->value])
     );
 
     $this->get('admin')
@@ -44,7 +44,7 @@ test('an authenticated admin user can access the admin panel', function () {
 
 test('an authenticated non-admin user can access the admin dashboard', function () {
     $this->actingAs(
-        App\Models\User::factory()->create(['role' => App\Enums\UserRole::WarehouseStaff->value])
+        App\Models\User::factory()->create(['role' => App\Enums\UserRole::WAREHOUSE_STAFF->value])
     );
 
     $this->get('admin')

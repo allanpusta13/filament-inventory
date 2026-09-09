@@ -1,378 +1,530 @@
-# Multi-Warehouse Inventory System — Blueprint v3
-**Stack:** Laravel 13 + FilamentPHP v5
+# Multi-Warehouse Inventory System — Complete System Blueprint (v3.0)
 
-> **Lineage:** v1 = basic flat-product system (superseded). v2 = adopted
-> `docs/00-project/master-sidebar-resource-map-v5.md` with gaps closed (variants, requisitions,
-> loss ledger, 4-role RBAC — see `docs/00-project/map-gap-closure.md`). **v3 (this doc)** adds
-> Review & Verify wizard steps and the printable/scannable Stock Transfer Note
-> (STN) manifest system from `docs/00-project/transfer-enhancements-guide.md`, with council-
-> mandated fixes applied. This is the current, largest scope. If this is more
-> than intended, v1 is the fallback for a genuinely basic build.
+**Stack:** Laravel 13 + FilamentPHP v5 | **Database:** PostgreSQL / MySQL | **Architecture:** Pure Derived Stock of Truth Ledger
 
 ---
 
-## 1. Data Model
+## 🧭 Executive Architecture & System Principles
 
-Unchanged from v2 — see below for the full reference. No new tables were needed for the v3 enhancements; STN manifests and scan-to-receive are computed/rendered from existing data (`transfer_requisitions`, `requisition_items`, `stock_movements`).
-
-### `products`
-| column | type | notes |
-|---|---|---|
-| id | bigint PK | |
-| sku | string, unique | family/base SKU |
-| name | string | product family name |
-| category | string, nullable | |
-| reorder_point | integer, default 0 | default safety threshold, base units |
-| timestamps | | |
-
-### `product_variants`
-| column | type | notes |
-|---|---|---|
-| id | bigint PK | |
-| product_id | FK → products | |
-| sku | string, unique | |
-| barcode | string, nullable, unique | GTIN |
-| name | string | e.g. "500g Pack" |
-| base_unit_name | string | e.g. gram, piece, ml |
-| cost_price | decimal(12,4) | per base unit |
-| sale_price | decimal(12,4) | per base unit |
-| attributes | json, nullable | |
-| images | json, nullable | |
-| timestamps | | |
-
-### `product_unit_conversions`
-| column | type | notes |
-|---|---|---|
-| id | bigint PK | |
-| product_variant_id | FK → product_variants | |
-| unit_name | string | e.g. Box, Bag, Pallet |
-| base_unit_ratio | integer, min 1 | |
-| is_default_purchase | boolean, default false | |
-| is_default_transfer | boolean, default false | |
-| timestamps | | |
-
-### `warehouses`
-| column | type | notes |
-|---|---|---|
-| id | bigint PK | |
-| code | string, unique | e.g. WH-MNL |
-| name | string | |
-| location | string, nullable | |
-| is_active | boolean, default true | |
-| timestamps | | |
-
-### `stock_movements` (source of truth — no stored balance table)
-| column | type | notes |
-|---|---|---|
-| id | bigint PK | |
-| variant_id | FK → product_variants | |
-| warehouse_id | FK → warehouses | |
-| type | enum: receive, ship, transfer_in, transfer_out, adjustment, loss | |
-| quantity | integer, **signed**, base units | + in, − out |
-| related_movement_id | FK → stock_movements, nullable | links transfer pairs — this is the join used to render the Direct Transfer manifest |
-| reference_type | string, nullable | polymorphic source model |
-| reference_id | bigint, nullable | polymorphic source id |
-| reference_code | string, nullable | e.g. DTR-20260904-XXXX |
-| created_by | FK → users, nullable | |
-| timestamps | | |
-
-**Index:** `(variant_id, warehouse_id)`.
-
-> Stock is always `SUM(quantity)` grouped by variant + warehouse. Reserved = sum of `approved_base_qty` on requisition items in `confirmed`/`dispatched` status at that warehouse. Available = on-hand − reserved. Nothing stored.
-
-### `transfer_requisitions`
-| column | type | notes |
-|---|---|---|
-| id | bigint PK | |
-| reference_code | string, unique | e.g. TRQ-20260904-XXXX |
-| from_warehouse_id | FK → warehouses | |
-| to_warehouse_id | FK → warehouses | |
-| status | enum: draft, requested, under_review_fulfiller, under_review_requestor, confirmed, dispatched, completed, closed_with_loss, cancelled | |
-| requested_by | FK → users | |
-| approved_by | FK → users, nullable | |
-| dispatched_by | FK → users, nullable | |
-| received_by | FK → users, nullable | **new in v3** — who confirmed receipt (scan or manual) |
-| requested_at | timestamp | |
-| dispatched_at | timestamp, nullable | |
-| completed_at | timestamp, nullable | |
-| timestamps | | |
-
-### `requisition_items`
-| column | type | notes |
-|---|---|---|
-| id | bigint PK | |
-| requisition_id | FK → transfer_requisitions | |
-| variant_id | FK → product_variants | |
-| substitute_variant_id | FK → product_variants, nullable | |
-| requested_unit_name | string | |
-| requested_unit_ratio | integer | |
-| requested_qty | integer | |
-| requested_base_qty | integer | |
-| approved_unit_name | string, nullable | |
-| approved_qty | integer, nullable | |
-| approved_base_qty | integer, nullable | |
-| received_qty | integer, nullable | **new in v3** — actual quantity confirmed at receipt |
-| timestamps | | |
-
-### `requisition_item_revisions`
-| column | type | notes |
-|---|---|---|
-| id | bigint PK | |
-| requisition_item_id | FK → requisition_items | |
-| user_id | FK → users | |
-| variant_id | FK → product_variants | |
-| substitute_variant_id | FK → product_variants, nullable | |
-| proposed_unit_name | string | |
-| proposed_qty | integer | |
-| proposed_base_qty | integer | |
-| negotiation_reason | text, nullable | |
-| timestamps | | |
-
-### `loss_ledgers`
-| column | type | notes |
-|---|---|---|
-| id | bigint PK | |
-| requisition_id | FK → transfer_requisitions | |
-| variant_id | FK → product_variants | |
-| warehouse_id | FK → warehouses | |
-| lost_base_qty | integer | |
-| damaged_base_qty | integer, default 0 | |
-| unit_cost_price | decimal(12,4) | |
-| total_financial_loss | decimal(14,4) | |
-| loss_category | string, default 'shortfall' | |
-| timestamps | | |
-
-### `users` (extended)
-| column | type | notes |
-|---|---|---|
-| role | string, default 'warehouse_staff' | admin / auditor / branch_manager / warehouse_staff |
-
-### `user_warehouse` (pivot)
-| column | type |
-|---|---|
-| user_id | FK → users |
-| warehouse_id | FK → warehouses |
+1. **Pure Derived Stock of Truth**: Physical stock levels, active transit reservations, and available balances are **never** stored in a physical database table (e.g. no `warehouse_stock` table exists). Physical on-hand stock is calculated dynamically at query-time as the sum of all signed records in `stock_movements`. Active reservations sum pending quantities from unreceived requisitions (`confirmed` or `dispatched`), and available stock is derived as `on_hand - reserved`.
+2. **Variant-Level Stock & Pricing**:
+   - **`sku`** lives **exclusively** on `product_variants`. Parent `products` act purely as family grouping containers (`name`, `category`).
+   - **`reorder_point`** lives **exclusively** on `product_variants` (default `0`).
+   - **`cost_price`** and **`sale_price`** live **exclusively** on `product_variants` as high-precision decimals (`decimal(15,4)`, default `0.0000`). Standalone price history tables are omitted in favor of variant-level pricing defaults.
+3. **Pessimistic Locking & Transaction Isolation**: All stock deductions, dispatches, and intake receipts execute inside atomic database transactions (`DB::transaction()`) using pessimistic row-level locking (`lockForUpdate()`) on `product_variants` and `transfer_requisitions` to guarantee zero concurrency race conditions.
+4. **Canonical Foreign Key & Plural Naming**: All database tables use explicit plural `snake_case` names (`transfer_requisitions`, `transfer_requisition_items`, `transfer_requisition_item_revisions`, `in_transits`, `loss_ledgers`), and foreign keys strictly follow table-bound names (`product_variant_id`, `transfer_requisition_id`, `transfer_requisition_item_id`).
+5. **Physical-to-Digital State Lifecycle**: Requisitions follow an explicit, physical state machine:
+   $$\text{draft} \rightarrow \text{requested} \rightarrow \text{under\_review\_fulfiller} \rightarrow \text{under\_review\_requestor} \rightarrow \text{confirmed} \rightarrow \text{dispatched} \rightarrow \text{partially\_received} \rightarrow \text{completed / closed\_with\_loss / cancelled}$$
+6. **Negotiated Substitute Variant Swapping**: Dispatch and receipt pipelines dynamically resolve `$actualVariantId = $item->substitute_product_variant_id ?? $item->product_variant_id` at loop start. Inventory deductions, credit additions, and transit rows apply strictly to the substituted variant SKU.
+7. **Scanned Receipt Loss Integrity & Omitted Cargo**: Dispatched items missing from a physical scan payload are not skipped. They are recorded as `0` received, triggering a 100% variance write-off to the `loss_ledgers` table at the variant's cost price, clearing virtual transit rows cleanly.
+8. **Signed Web QR Routing**: STN QR codes embed secure 30-day temporary signed URLs (`APP_URL/transfers/scan/{id}?signature=...`). Scanning redirects authenticated staff into Filament's `ViewTransferRequisition` page and auto-triggers the Scan-to-Receive Reconciliation Modal.
+9. **Modal-First UI (< 8 Inputs Rule)**: Any setup or adjustment form containing fewer than 8 fields operates inside inline slide-over Drawers or Dialog Modals (`closeModalByClickingAway(false)`) directly from listing views.
+10. **Strongly-Typed Icons & Multi-Language i18n**: Raw string icons are strictly prohibited, using `Filament\Support\Icons\Heroicon` enum properties instead. All UI strings are loaded dynamically from locale catalogs (`lang/{locale}/`).
 
 ---
 
-## 2. RBAC — 4 Canonical Roles
+## 🗄️ Section 1: Complete Database Schema (12 Migrations)
+
+```
+products ──< product_variants ──< product_unit_conversions
+                    │        └──< stock_movements >── warehouses
+                    │
+                    └──< transfer_requisition_items >── transfer_requisitions >── warehouses (from/to)
+                                │        │                        │
+                                │        └──< in_transits          ├──< in_transits
+                                │        └──< loss_ledgers          └──< loss_ledgers
+                                │
+                                └──< transfer_requisition_item_revisions (self-referencing thread)
+
+users ──< user_warehouse >── warehouses
+```
+
+### 1. `products`
+| Column | Type | Modifiers / Notes |
+| :--- | :--- | :--- |
+| `id` | bigint | PK |
+| `name` | string | Product family name (e.g. "Arabica Specialty Coffee") |
+| `category` | string | Nullable |
+| `deleted_at` | timestamp | Soft deletes support |
+| `timestamps` | timestamp | Created / Updated |
+
+### 2. `product_variants`
+| Column | Type | Modifiers / Notes |
+| :--- | :--- | :--- |
+| `id` | bigint | PK |
+| `product_id` | foreignId | FK → `products.id` (cascadeOnDelete) |
+| `sku` | string | Unique SKU (e.g. 'PROD-COF-500G') |
+| `barcode` | string | Nullable GTIN scanner barcode |
+| `name` | string | Variant identifier (e.g. "500g Whole Bean") |
+| `base_unit_name` | string | Lowest non-divisible unit (e.g. 'gram', 'piece') |
+| `cost_price` | decimal(15,4) | High-precision unit cost price (default `0.0000`) |
+| `sale_price` | decimal(15,4) | High-precision unit selling price (default `0.0000`) |
+| `reorder_point` | integer | Default safety threshold in Base Units (default `0`) |
+| `attributes` | json | Custom key-value tags (e.g. `{"roast": "Medium"}`) |
+| `images` | json | Nullable, array of image file paths |
+| `is_active` | boolean | Default `true` |
+| `deleted_at` | timestamp | Soft deletes support |
+| `timestamps` | timestamp | Created / Updated |
+
+### 3. `product_unit_conversions`
+| Column | Type | Modifiers / Notes |
+| :--- | :--- | :--- |
+| `id` | bigint | PK |
+| `product_variant_id` | foreignId | FK → `product_variants.id` (cascadeOnDelete) |
+| `unit_name` | string | Packaging name (e.g. 'Box', 'Pallet') |
+| `base_unit_ratio` | integer | Multiplier relative to base unit (1 Box = 24 Pcs → 24) |
+| `is_default_purchase`| boolean | Default for receiving POs (default `false`) |
+| `is_default_transfer`| boolean | Default for transfer requisitions (default `false`) |
+| `timestamps` | timestamp | Created / Updated |
+
+### 4. `warehouses`
+| Column | Type | Modifiers / Notes |
+| :--- | :--- | :--- |
+| `id` | bigint | PK |
+| `code` | string | Short branch code, unique (e.g. 'WH-MNL') |
+| `name` | string | Warehouse or branch display name |
+| `location` | string | Nullable location/address details |
+| `is_active` | boolean | Default `true` |
+| `timestamps` | timestamp | Created / Updated |
+
+### 5. `stock_movements` (The Pure Ledger Source of Truth)
+| Column | Type | Modifiers / Notes |
+| :--- | :--- | :--- |
+| `id` | bigint | PK |
+| `product_variant_id` | foreignId | FK → `product_variants.id` (cascadeOnDelete) |
+| `warehouse_id` | foreignId | FK → `warehouses.id` (cascadeOnDelete) |
+| `type` | string | Enum: `receive`, `ship`, `transfer_out`, `transfer_in`, `transit_out`, `transit_in`, `adjustment`, `loss` |
+| `quantity` | integer | **Signed integer strictly in Base Units** (+ for credit, - for debit) |
+| `unit_name_used` | string | Packaging format label used during transaction |
+| `unit_ratio_used` | integer | Conversion ratio active at time of movement (default `1`) |
+| `related_movement_id`| foreignId | Nullable, FK → `stock_movements.id` (nullOnDelete, links transfer legs) |
+| `reference_type` | string | Nullable polymorphic class (e.g. `App\Models\TransferRequisition`) |
+| `reference_id` | unsignedBigInteger | Nullable polymorphic ID |
+| `reference_code` | string | Nullable business code (e.g. 'DTR-20260908-XXXX') |
+| `created_by` | foreignId | Nullable, FK → `users.id` (nullOnDelete) |
+| `created_at / updated_at` | timestamp | Indexed |
+
+### 6. `transfer_requisitions`
+| Column | Type | Modifiers / Notes |
+| :--- | :--- | :--- |
+| `id` | bigint | PK |
+| `reference_code` | string | Unique index (e.g. 'TRQ-20260908-0001') |
+| `from_warehouse_id`| foreignId | FK → `warehouses.id` (Fulfilling origin) |
+| `to_warehouse_id` | foreignId | FK → `warehouses.id` (Requesting destination) |
+| `status` | string | Enum: `draft`, `requested`, `under_review_fulfiller`, `under_review_requestor`, `confirmed`, `dispatched`, `partially_received`, `completed`, `closed_with_loss`, `cancelled` |
+| `requested_by` | foreignId | FK → `users.id` |
+| `approved_by` | foreignId | Nullable, FK → `users.id` |
+| `dispatched_by` | foreignId | Nullable, FK → `users.id` |
+| `received_by` | foreignId | Nullable, FK → `users.id` |
+| `requested_at` | timestamp | Nullable |
+| `approved_at` | timestamp | Nullable |
+| `dispatched_at` | timestamp | Nullable |
+| `completed_at` | timestamp | Nullable |
+| `notes` | text | Nullable |
+| `deleted_at` | timestamp | Soft deletes support |
+| `timestamps` | timestamp | Created / Updated |
+
+### 7. `transfer_requisition_items`
+| Column | Type | Modifiers / Notes |
+| :--- | :--- | :--- |
+| `id` | bigint | PK |
+| `transfer_requisition_id` | foreignId | FK → `transfer_requisitions.id` (cascadeOnDelete) |
+| `product_variant_id` | foreignId | FK → `product_variants.id` |
+| `substitute_product_variant_id` | foreignId | Nullable, FK → `product_variants.id` (Negotiated swap SKU) |
+| `requested_unit_name` | string | Packaging unit label requested |
+| `requested_unit_ratio` | integer | Ratio at time of request |
+| `requested_qty` | integer | Quantity in requested packaging unit |
+| `requested_base_qty` | integer | Computed Base Unit quantity |
+| `approved_unit_name` | string | Nullable, negotiated packaging unit |
+| `approved_unit_ratio` | integer | Nullable, negotiated ratio |
+| `approved_qty` | integer | Nullable, negotiated quantity |
+| `approved_base_qty` | integer | Nullable, approved Base Unit quantity |
+| `shipped_base_qty` | integer | Actual base units dispatched (default `0`) |
+| `received_good_base_qty` | integer | Good base units received (default `0`) |
+| `received_damaged_base_qty` | integer | Damaged base units received (default `0`) |
+| `received_qty` | integer | Nullable, confirmed count at intake |
+| `notes` | text | Nullable |
+| `timestamps` | timestamp | Created / Updated |
+
+### 8. `transfer_requisition_item_revisions`
+| Column | Type | Modifiers / Notes |
+| :--- | :--- | :--- |
+| `id` | bigint | PK |
+| `transfer_requisition_item_id` | foreignId | FK → `transfer_requisition_items.id` (cascadeOnDelete) |
+| `user_id` | foreignId | FK → `users.id` (Proposing user) |
+| `product_variant_id` | foreignId | FK → `product_variants.id` |
+| `substitute_product_variant_id` | foreignId | Nullable, FK → `product_variants.id` |
+| `proposed_unit_name` | string | Packaging label proposed |
+| `proposed_qty` | integer | Packaging quantity proposed |
+| `proposed_base_qty` | integer | Computed base quantity proposed |
+| `negotiation_reason` | text | Nullable compliance reason |
+| `side` | string | Enum: `fulfiller`, `requestor` |
+| `status` | string | Enum: `pending`, `accepted`, `rejected`, `superseded` |
+| `responds_to_revision_id` | foreignId | Nullable, self-referencing FK (nullOnDelete) |
+| `responded_at` | timestamp | Nullable |
+| `timestamps` | timestamp | Created / Updated |
+
+### 9. `in_transits`
+| Column | Type | Modifiers / Notes |
+| :--- | :--- | :--- |
+| `id` | bigint | PK |
+| `transfer_requisition_id` | foreignId | FK → `transfer_requisitions.id` (cascadeOnDelete) |
+| `transfer_requisition_item_id` | foreignId | FK → `transfer_requisition_items.id` (cascadeOnDelete) |
+| `product_variant_id` | foreignId | FK → `product_variants.id` |
+| `dispatched_base_qty` | integer | Base Unit quantity traveling |
+| `dispatched_at` | timestamp | Dispatch timestamp |
+| `status` | string | Enum: `in_transit`, `partially_received`, `cleared` |
+| `timestamps` | timestamp | Created / Updated |
+
+### 10. `loss_ledgers`
+| Column | Type | Modifiers / Notes |
+| :--- | :--- | :--- |
+| `id` | bigint | PK |
+| `transfer_requisition_id` | foreignId | FK → `transfer_requisitions.id` |
+| `transfer_requisition_item_id` | foreignId | Nullable, FK → `transfer_requisition_items.id` |
+| `product_variant_id` | foreignId | FK → `product_variants.id` |
+| `warehouse_id` | foreignId | FK → `warehouses.id` (Destination site bearing loss) |
+| `lost_base_qty` | integer | Missing/unaccounted units (default `0`) |
+| `damaged_base_qty` | integer | Physically damaged units (default `0`) |
+| `unit_cost_price` | decimal(15,4) | Cost price snapshot at incident time |
+| `total_financial_loss` | decimal(15,4) | Total financial write-off value |
+| `loss_category` | string | Default 'shortfall' (e.g. 'Damaged in Transit', 'Omitted') |
+| `recorded_by` | foreignId | Nullable, FK → `users.id` |
+| `recorded_at` | timestamp | Default current timestamp |
+| `timestamps` | timestamp | Created / Updated |
+
+### 11. `users` (Altered) & 12. `user_warehouse` (Pivot)
+```php
+// Schema::table('users')
+$table->string('role')->default('warehouse_staff')->after('password');
+
+// Schema::create('user_warehouse')
+$table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+$table->foreignId('warehouse_id')->constrained('warehouses')->cascadeOnDelete();
+$table->primary(['user_id', 'warehouse_id']);
+```
+
+---
+
+## 🛠️ Section 2: Model-Level Derived Stock Engine
+
+On-hand physical stock, active requisition allocations, and physical stock availability are calculated dynamically at query-time on the `ProductVariant` model:
 
 ```php
-enum UserRole: string
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class ProductVariant extends Model
 {
-    case Admin = 'admin';
-    case Auditor = 'auditor';
-    case BranchManager = 'branch_manager';
-    case WarehouseStaff = 'warehouse_staff';
-}
-```
+    protected $fillable = [
+        'product_id', 'sku', 'barcode', 'name', 'base_unit_name',
+        'cost_price', 'sale_price', 'reorder_point', 'attributes', 'images', 'is_active',
+    ];
 
-| Role | Visibility |
-|---|---|
-| **admin** | Everything. |
-| **auditor** | Read-only, all warehouses, Audit Ledgers group. |
-| **branch_manager** | Scoped to assigned warehouse(s); can approve/confirm requisitions and **scan-to-receive** for their warehouse. |
-| **warehouse_staff** | Scoped to assigned warehouse(s); can view and dispatch, but scan-to-receive confirmation is a branch_manager action (see Section 6). |
+    protected $casts = [
+        'cost_price' => 'decimal:4',
+        'sale_price' => 'decimal:4',
+        'reorder_point' => 'integer',
+        'attributes' => 'array',
+        'images' => 'array',
+        'is_active' => 'boolean',
+    ];
 
----
-
-## 3. Sidebar Navigation
-
-| Group | Resource | Visibility |
-|---|---|---|
-| Home | Dashboard | All |
-| **CATALOG** | ProductResource | All |
-| **OPERATIONS** | TransferRequisitionResource | All (scoped) |
-| | DirectTransferResource | All (scoped) |
-| **AUDIT LEDGERS** | InTransitResource | Admin, Auditor, Branch Manager |
-| | StockMovementResource | Admin, Auditor, Branch Manager |
-| | LossLedgerResource | Admin, Auditor |
-| **SYSTEM ADMIN** | WarehouseResource | Admin only |
-| | UserResource | Admin only |
-
----
-
-## 4. Core Services
-
-### `InventoryService`
-- `recordMovement()` — the one primitive every mutation goes through
-- `currentQuantity()` — SUM lookup
-- `executeDirectTransfer()` — instant two-leg transfer
-- `dispatchRequisition()` — moves stock out of origin, marks `dispatched`
-- `receiveRequisition(TransferRequisition $requisition, array $receivedQuantities, ?int $receivedBy = null)` — moves stock into destination, detects shortfall, triggers loss recording, marks `completed`/`closed_with_loss`. **This is the single method called by both the manual "Confirm Receipt" table action AND the scan-to-receive flow — no duplicate logic path.**
-- `ship()` — guarded single-warehouse deduction
-
-### `LossLedgerService`
-- `record()` — creates a `LossLedger` row from a requisition item shortfall
-
-Full bodies in `docs/00-project/map-gap-closure.md`.
-
----
-
-## 5. Transfer Requisition State Machine
-
-```
-draft → requested → under_review_fulfiller ⇄ under_review_requestor → confirmed → dispatched → completed
-                                                                                              ↘ closed_with_loss
-requested/under_review_* → cancelled (either party)
-```
-
-Dispatch and receive both go through `InventoryService`. Receipt can be triggered two ways (Section 6): manual table action, or QR scan — both funnel into the same `receiveRequisition()` call.
-
----
-
-## 6. v3 Additions: Review & Verify + STN Manifest + Scan-to-Receive
-
-### 6.1 Review & Verify Wizard Step
-
-Both `TransferRequisitionForm` and `DirectTransferForm` gain a final wizard step rendering a live summary (via reactive `$get()` Placeholders) before submission — item lines, computed base quantities, origin/destination, and (for Direct Transfer) the audit compliance note. Purely a UX safeguard; no new data captured.
-
-**Council-mandated fix applied:** `DirectTransferForm.php` must import `Filament\Schemas\Schema` (not `Filament\Forms\Form`) to match the rest of the v5 codebase — the original enhancement doc had this wrong in one file.
-
-### 6.2 Printable STN Manifest
-
-**For Transfer Requisitions:** `STNManifestController::print()` renders `pdf.stn-manifest` from the real `TransferRequisition` record — metadata, item table (with substitution badges), and a QR code linking to a 30-day signed scan-to-receive URL.
-
-**For Direct Transfers (new in v3):** since `DirectTransferResource` has no persisted "document" model — only the linked pair of `StockMovement` rows (`transfer_out` + `transfer_in` via `related_movement_id`) — the manifest needs its **own controller method and its own Blade template** (`pdf.direct-transfer-manifest`), sourcing warehouse/variant/quantity/operator directly from the movement pair rather than reusing the requisition template:
-
-```php
-public function printDirectTransfer(Request $request, StockMovement $movement)
-{
-    abort_unless($movement->type === 'transfer_out', 404);
-
-    $user = auth()->user();
-    $inLeg = StockMovement::where('related_movement_id', $movement->id)->first();
-
-    if (!$user->canAccessWarehouse($movement->warehouse) && !$user->canAccessWarehouse($inLeg->warehouse)) {
-        abort(403);
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
     }
 
-    return view('pdf.direct-transfer-manifest', [
-        'outLeg' => $movement->load('variant', 'warehouse', 'creator'),
-        'inLeg' => $inLeg->load('warehouse'),
-    ]);
+    public function unitConversions(): HasMany
+    {
+        return $this->hasMany(ProductUnitConversion::class);
+    }
+
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(StockMovement::class);
+    }
+
+    public function requisitionItems(): HasMany
+    {
+        return $this->hasMany(TransferRequisitionItem::class);
+    }
+
+    /**
+     * Physical on-hand stock: Raw SUM of signed stock movements.
+     */
+    public function onHandQuantity(int $warehouseId): int
+    {
+        return StockMovement::where('product_variant_id', $this->id)
+            ->where('warehouse_id', $warehouseId)
+            ->sum('quantity');
+    }
+
+    /**
+     * Active Requisition Reservations: SUM of approved_base_qty locked in confirmed/dispatched requisitions.
+     */
+    public function reservedQuantity(int $warehouseId): int
+    {
+        return TransferRequisitionItem::where('product_variant_id', $this->id)
+            ->whereHas('transferRequisition', function ($q) use ($warehouseId) {
+                $q->where('from_warehouse_id', $warehouseId)
+                  ->whereIn('status', ['confirmed', 'dispatched']);
+            })
+            ->sum('approved_base_qty');
+    }
+
+    /**
+     * Available physical stock: On-Hand minus active Reservations.
+     */
+    public function availableQuantity(int $warehouseId): int
+    {
+        return $this->onHandQuantity($warehouseId) - $this->reservedQuantity($warehouseId);
+    }
 }
 ```
 
-No QR/scan-to-receive on Direct Transfers — they're instant and atomic already, there's nothing pending to "receive."
+---
 
-**Signature blocks are physical-paper backup only** (council condition #4) — the printed sign-off lines are not the system of record; the scan (or manual confirm action) is. The manifest should say so explicitly in a footer note.
+## ⚙️ Section 3: Core Transactional Service Layer
 
-### 6.3 Scan-to-Receive (built in full, per your decision)
-
-**Route:**
 ```php
-Route::get('/stn/{transferRequisition}/scan', [ScanReceiptController::class, 'show'])
-    ->name('stn.scan')
-    ->middleware(['signed', 'auth']);
-```
+namespace App\Services;
 
-**Controller — lands on a confirm page, does not auto-execute (council condition #2):**
-```php
-class ScanReceiptController extends Controller
+use App\Models\InTransit;
+use App\Models\LossLedger;
+use App\Models\ProductVariant;
+use App\Models\StockMovement;
+use App\Models\TransferRequisition;
+use App\Models\TransferRequisitionItem;
+use Illuminate\Support\Facades\DB;
+use Exception;
+
+class InventoryService
 {
-    public function show(Request $request, TransferRequisition $requisition)
-    {
-        abort_unless($request->hasValidSignature(), 403, 'Invalid or expired scan link.');
-
-        $user = auth()->user();
-        if (!$user->canAccessWarehouse($requisition->toWarehouse)) {
-            abort(403, 'You are not authorized to receive at this warehouse.');
+    /**
+     * Record an atomic stock movement in the immutable ledger.
+     */
+    public function recordMovement(
+        int $productVariantId,
+        int $warehouseId,
+        string $type,
+        int $baseQuantity,
+        ?string $unitName = null,
+        int $unitRatio = 1,
+        ?string $referenceType = null,
+        ?int $referenceId = null,
+        ?string $referenceCode = null,
+        ?int $relatedMovementId = null
+    ): StockMovement {
+        if (in_array($type, ['receive', 'transfer_in', 'transit_in', 'adjustment']) && $baseQuantity < 0) {
+            throw new Exception("Intake movement quantity must be positive. Provided: {$baseQuantity}");
         }
 
-        abort_unless($requisition->status === 'dispatched', 409, 'This requisition is not awaiting receipt.');
+        return DB::transaction(function () use (
+            $productVariantId, $warehouseId, $type, $baseQuantity,
+            $unitName, $unitRatio, $referenceType, $referenceId,
+            $referenceCode, $relatedMovementId
+        ) {
+            $variant = ProductVariant::lockForUpdate()->findOrFail($productVariantId);
+            $currentStock = $variant->onHandQuantity($warehouseId);
 
-        return view('scan.confirm-receipt', [
-            'requisition' => $requisition->load('items.variant', 'fromWarehouse', 'toWarehouse'),
-        ]);
+            if ($baseQuantity < 0 && ($currentStock + $baseQuantity) < 0) {
+                throw new Exception("Insufficient stock for SKU {$variant->sku} at Warehouse ID {$warehouseId}. Available: {$currentStock}, Requested deduction: " . abs($baseQuantity));
+            }
+
+            return StockMovement::create([
+                'product_variant_id' => $productVariantId,
+                'warehouse_id' => $warehouseId,
+                'type' => $type,
+                'quantity' => $baseQuantity,
+                'unit_name_used' => $unitName ?? $variant->base_unit_name,
+                'unit_ratio_used' => $unitRatio,
+                'related_movement_id' => $relatedMovementId,
+                'reference_type' => $referenceType,
+                'reference_id' => $referenceId,
+                'reference_code' => $referenceCode,
+                'created_by' => auth()->id(),
+            ]);
+        });
     }
 
-    public function confirm(Request $request, TransferRequisition $requisition, InventoryService $service)
+    /**
+     * Dispatch Requisition: Deduct stock from origin, write transit_out, register Virtual In-Transit.
+     */
+    public function dispatchTransfer(int $requisitionId): void
     {
-        abort_unless($request->hasValidSignature(), 403);
-        $user = auth()->user();
-        abort_unless($user->canAccessWarehouse($requisition->toWarehouse), 403);
+        DB::transaction(function () use ($requisitionId) {
+            $requisition = TransferRequisition::with('items.productVariant')->lockForUpdate()->findOrFail($requisitionId);
 
-        $validated = $request->validate([
-            'items' => 'required|array',
-            'items.*.item_id' => 'required|exists:requisition_items,id',
-            'items.*.received_qty' => 'required|integer|min:0',
-        ]);
+            if ($requisition->status !== 'confirmed') {
+                throw new Exception("Requisition must be confirmed before dispatch. Current: {$requisition->status}");
+            }
 
-        $receivedQuantities = collect($validated['items'])
-            ->mapWithKeys(fn ($row) => [$row['item_id'] => (int) $row['received_qty']])
-            ->toArray();
+            foreach ($requisition->items as $item) {
+                $actualVariantId = $item->substitute_product_variant_id ?? $item->product_variant_id;
+                $dispatchQty = $item->approved_base_qty ?? $item->requested_base_qty;
 
-        $service->receiveRequisition($requisition, $receivedQuantities, receivedBy: $user->id);
+                if ($dispatchQty <= 0) {
+                    throw new Exception("Invalid dispatch quantity ({$dispatchQty}) on line item {$item->id}.");
+                }
 
-        return redirect()->route('stn.scan', $requisition)->with('status', 'Receipt confirmed.');
+                $variant = ProductVariant::lockForUpdate()->findOrFail($actualVariantId);
+                if ($variant->onHandQuantity($requisition->from_warehouse_id) < $dispatchQty) {
+                    throw new Exception("Insufficient unreserved stock for SKU {$variant->sku} at origin warehouse.");
+                }
+
+                // Record origin debit movement
+                StockMovement::create([
+                    'product_variant_id' => $actualVariantId,
+                    'warehouse_id' => $requisition->from_warehouse_id,
+                    'type' => 'transit_out',
+                    'quantity' => -$dispatchQty,
+                    'unit_name_used' => $item->approved_unit_name ?? $item->requested_unit_name,
+                    'unit_ratio_used' => $item->approved_unit_ratio ?? $item->requested_unit_ratio,
+                    'reference_type' => TransferRequisition::class,
+                    'reference_id' => $requisition->id,
+                    'reference_code' => $requisition->reference_code,
+                    'created_by' => auth()->id(),
+                ]);
+
+                // Register Virtual In-Transit row
+                InTransit::create([
+                    'transfer_requisition_id' => $requisition->id,
+                    'transfer_requisition_item_id' => $item->id,
+                    'product_variant_id' => $actualVariantId,
+                    'dispatched_base_qty' => $dispatchQty,
+                    'dispatched_at' => now(),
+                    'status' => 'in_transit',
+                ]);
+
+                $item->update(['shipped_base_qty' => $dispatchQty]);
+            }
+
+            $requisition->update([
+                'status' => 'dispatched',
+                'dispatched_by' => auth()->id(),
+                'dispatched_at' => now(),
+            ]);
+        });
+    }
+
+    /**
+     * Scan-to-Receive pipeline: Credit destination stock, write loss logs for variances or omitted items.
+     */
+    public function scanToReceive(int $requisitionId, array $receivedItemsData): void
+    {
+        DB::transaction(function () use ($requisitionId, $receivedItemsData) {
+            $requisition = TransferRequisition::with('items.productVariant')->lockForUpdate()->findOrFail($requisitionId);
+
+            if ($requisition->status !== 'dispatched') {
+                throw new Exception("Requisition must be in dispatched state. Current: {$requisition->status}");
+            }
+
+            $hasLossOrDamage = false;
+
+            foreach ($requisition->items as $item) {
+                $actualVariantId = $item->substitute_product_variant_id ?? $item->product_variant_id;
+                $expectedBase = $item->shipped_base_qty;
+
+                // Handle omitted items (Guardrail 6)
+                if (!isset($receivedItemsData[$item->id])) {
+                    $goodBase = 0;
+                    $damagedBase = 0;
+                    $lostBase = $expectedBase;
+                    $lossCategory = 'Omitted From Intake / Transit Loss';
+                } else {
+                    $entry = $receivedItemsData[$item->id];
+                    $ratio = $item->approved_unit_ratio ?? $item->requested_unit_ratio;
+                    $goodBase = ($entry['good_qty'] ?? 0) * $ratio;
+                    $damagedBase = ($entry['damaged_qty'] ?? 0) * $ratio;
+                    $lostBase = max(0, $expectedBase - ($goodBase + $damagedBase));
+                    $lossCategory = $entry['loss_category'] ?? 'Transit Variance';
+                }
+
+                if ($goodBase > 0) {
+                    $this->recordMovement(
+                        productVariantId: $actualVariantId,
+                        warehouseId: $requisition->to_warehouse_id,
+                        type: 'transit_in',
+                        baseQuantity: $goodBase,
+                        unitName: $item->approved_unit_name ?? $item->requested_unit_name,
+                        unitRatio: $item->approved_unit_ratio ?? $item->requested_unit_ratio,
+                        referenceType: TransferRequisition::class,
+                        referenceId: $requisition->id,
+                        referenceCode: $requisition->reference_code
+                    );
+                }
+
+                if ($damagedBase > 0 || $lostBase > 0) {
+                    $hasLossOrDamage = true;
+                    $variant = ProductVariant::findOrFail($actualVariantId);
+
+                    LossLedger::create([
+                        'transfer_requisition_id' => $requisition->id,
+                        'transfer_requisition_item_id' => $item->id,
+                        'product_variant_id' => $actualVariantId,
+                        'warehouse_id' => $requisition->to_warehouse_id,
+                        'lost_base_qty' => $lostBase,
+                        'damaged_base_qty' => $damagedBase,
+                        'unit_cost_price' => $variant->cost_price,
+                        'total_financial_loss' => ($lostBase + $damagedBase) * $variant->cost_price,
+                        'loss_category' => $lossCategory,
+                        'recorded_by' => auth()->id(),
+                        'recorded_at' => now(),
+                    ]);
+                }
+
+                $item->update([
+                    'received_good_base_qty' => $goodBase,
+                    'received_damaged_base_qty' => $damagedBase,
+                    'received_qty' => ($goodBase + $damagedBase),
+                ]);
+
+                InTransit::where('transfer_requisition_item_id', $item->id)->update([
+                    'status' => 'cleared',
+                ]);
+            }
+
+            $requisition->update([
+                'status' => $hasLossOrDamage ? 'closed_with_loss' : 'completed',
+                'received_by' => auth()->id(),
+                'completed_at' => now(),
+            ]);
+        });
     }
 }
 ```
 
-The confirm page (`scan.confirm-receipt`) shows a form pre-filled with expected quantities per item (same UI pattern as the manual "Confirm Receipt" Filament action from the gap closure) and posts to a `confirm` route using the same signed URL. Requires the scanning device to have an authenticated session with `branch_manager` (or `admin`) role — a plain warehouse_staff scan is rejected by `canAccessWarehouse()` unless staff are also granted this action explicitly (your call if that's needed later).
+---
 
-**QR generation** (`simplesoftwareio/simple-qrcode`, approved):
-```bash
-composer require simplesoftwareio/simple-qrcode
-```
-```php
-$signedUrl = URL::temporarySignedRoute('stn.scan', now()->addDays(30), ['transferRequisition' => $requisition->id]);
-$qrCodeSvg = QrCode::size(120)->generate($signedUrl);
-```
+## 🎨 Section 4: Clinical "Operations Deck" Design System & Bento Grid
+
+- **Operational Blue Authority (`#3b82f6`)**: Primary brand accent restricted strictly to **$\le$10% of any single view**, reserved for primary action execution triggers (*Receive*, *Dispatch*, *Confirm*, *Execute Now*).
+- **Flat Surface Rest States**: Card wrappers, borders, and table headers remain flat (`1px solid zinc-200`). Elevation shadows trigger only during active modal focus.
+- **Zero-Zebra Density**: Alternating background row striping is removed from all tables, relying on thin bottom dividers (`border-b border-zinc-200`) and instantaneous hover highlights (`hover:bg-zinc-50`).
+- **Glassmorphic Bento Grid**: The primary landing dashboard organizes widgets into responsive 4-column asymmetrical bento grids using specular glass styling (`backdrop-filter: blur(24px)`).
+- **Widgets Caching (300s TTL)**: Heavy widget sums are wrapped in `Cache::remember('stats_overview_...', 300)` to eliminate memory bottlenecks on massive movement tables.
 
 ---
 
-## 7. Filament v5 File Structure
+## 📋 Section 5: Master 16-Stage Execution Sequence
 
-```
-app/Filament/Resources/{Name}/
-├── {Name}Resource.php
-├── Pages/
-├── Schemas/           ← Filament\Schemas\Schema everywhere, including DirectTransferForm
-├── Tables/
-├── Infolists/          (TransferRequisitions only)
-└── RelationManagers/
-```
-
-Plus, outside Filament:
-```
-app/Http/Controllers/
-├── STNManifestController.php       (print requisition + print direct transfer)
-└── ScanReceiptController.php       (show confirm page + process confirm)
-
-resources/views/
-├── pdf/stn-manifest.blade.php
-├── pdf/direct-transfer-manifest.blade.php
-└── scan/confirm-receipt.blade.php
-```
-
----
-
-## 8. Build Order (17 stages)
-
-1. Laravel 13 + Filament v5 install, admin panel, first admin user
-2. Migrations: products, product_variants, product_unit_conversions, warehouses, stock_movements, user role column, user_warehouse
-3. Models + relationships, `ProductVariant::onHandQuantity()/reservedQuantity()/availableQuantity()`
-4. `UserRole` enum + helper methods on `User`
-5. `InventoryService` v1 (recordMovement, currentQuantity, executeDirectTransfer, ship)
-6. `ProductResource` + Variants/Conversions relation managers
-7. `WarehouseResource` + WarehouseStocks (computed) + Users relation managers
-8. `UserResource` + Warehouses relation manager
-9. `DirectTransferResource` — wizard with Routing → Allocation → **Review & Verify** steps (Schema import fixed)
-10. Migrations: transfer_requisitions (+ `received_by`), requisition_items (+ `received_qty`), requisition_item_revisions + models
-11. `TransferRequisitionResource` — wizard with Routing → Manifest → **Review & Verify** steps, Infolist, Revisions relation manager
-12. Extend `InventoryService`: `dispatchRequisition()`, `receiveRequisition()` (now accepting `receivedBy`); migration + model + `LossLedgerService`
-13. `InTransitResource` with manual "Confirm Receipt" action; `StockMovementResource`; `LossLedgerResource`
-14. RBAC scoping pass across all resources
-15. `STNManifestController::print()` for requisitions + `pdf.stn-manifest.blade.php`, wired to `ViewTransferRequisition` header action
-16. `STNManifestController::printDirectTransfer()` + `pdf.direct-transfer-manifest.blade.php`, wired to `DirectTransferResource` table row action; install `simplesoftwareio/simple-qrcode`
-17. `ScanReceiptController` (show + confirm), `stn.scan` signed route, `scan/confirm-receipt.blade.php`, QR embedded in the requisition manifest
-
----
-
-## 9. Notes
-
-- Prompts in `prompts/` cover v1 only. A v3-matching prompt set (17 stages) would need to be written separately — say the word and I'll generate it.
-- `docs/00-project/map-gap-closure.md` still holds the full reasoning/code for the v2 fixes (Schema API, derived stock, canonical service, loss ledger, RBAC, in-transit closure) — nothing there is superseded by v3, only extended.
-- Four council conditions from the v3 review are folded directly into this doc: Schema import fix (6.1), scan lands on confirm page not auto-execute (6.3), Direct Transfer manifest uses its own template sourced from the StockMovement pair (6.2), signatures documented as backup not source of truth (6.2).
+1. **Phase 00: Environment & Core Guardrails Setup**: Bootstrap Laravel 13, FilamentPHP v5, and register composer dependencies.
+2. **Phase 01: Relational Schema Migrations**: Execute the 12 explicit migrations in strict dependency order.
+3. **Phase 02: Base Seeders & Opening Ledger**: Populate warehouses, products, variants, conversions, and seed initial stocks as `receive` entries in `stock_movements`.
+4. **Phase 03: Eloquent Model Projections**: Implement derived stock methods (`onHandQuantity`, `reservedQuantity`, `availableQuantity`) on `ProductVariant`.
+5. **Phase 04: Transactional Inventory Engine**: Implement `InventoryService` with pessimistic locking, substitute variant matching, and omitted receipt write-offs.
+6. **Phase 05: Product Catalog Resources**: Build `ProductResource` (family name/category) and `VariantsRelationManager` (SKU, GTIN, sub-cent pricing, reorder points).
+7. **Phase 06: Packaging Conversions**: Build `ConversionsRelationManager` mapping packaging multipliers.
+8. **Phase 07: Warehouses & Manual Adjustments**: Build `WarehouseResource` and slide-over stock adjuster drawer with 15-character note validation.
+9. **Phase 08: Inter-Warehouse Requisition Wizard**: Implement 3-step creation wizard dialog modals (`3xl` width, `closeModalByClickingAway(false)`).
+10. **Phase 09: Negotiation Loop UI**: Build review actions and revisions form for counter-offers and substitute variant swapping.
+11. **Phase 10: Dispatch & In-Transit Monitor**: Connect confirmation and dispatch actions to `InventoryService` and construct `InTransitResource`.
+12. **Phase 11: Printable STN & Signed QR Route**: Build PDF manifests rendering 30-day signed scan URLs.
+13. **Phase 12: Scan-to-Receive Modal**: Implement QR scan landing controller and auto-triggering intake reconciliation modal.
+14. **Phase 13: Read-Only Audit Ledgers**: Build `StockMovementResource` and `LossLedgerResource` with decimal:4 sum footers.
+15. **Phase 14: Glassmorphic Bento Dashboard**: Construct responsive bento dashboard with 300-second cached widgets.
+16. **Phase 15: CI/CD Testing & E2E Validation**: Execute Pest unit suites (SQLite `:memory:`) and Playwright E2E browser suites (PostgreSQL container).

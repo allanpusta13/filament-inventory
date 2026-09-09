@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Enums;
 
 use Filament\Support\Contracts\HasColor;
-use Filament\Support\Contracts\HasLabel;
 use Filament\Support\Contracts\HasIcon;
+use Filament\Support\Contracts\HasLabel;
 
-enum MovementType: string implements HasColor, HasLabel, HasIcon
+enum MovementType: string implements HasColor, HasIcon, HasLabel
 {
     case Receive = 'receive';
     case Ship = 'ship';
@@ -23,8 +23,8 @@ enum MovementType: string implements HasColor, HasLabel, HasIcon
     {
         return match ($this) {
             self::Receive, self::TransferIn, self::TransitIn => 'success',
-            self::Ship, self::TransferOut, self::TransitOut => 'danger',
-            self::Adjustment => 'warning',
+            self::Ship, self::TransferOut, self::TransitOut => 'orange',
+            self::Adjustment => 'blue',
             self::Loss => 'danger',
         };
     }

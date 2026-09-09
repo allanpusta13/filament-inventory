@@ -6,12 +6,11 @@ namespace Database\Factories;
 
 use App\Models\Warehouse;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
 
 /**
  * @extends Factory<Warehouse>
  */
-final class WarehouseFactory extends Factory
+class WarehouseFactory extends Factory
 {
     /**
      * Define the model's default state.
@@ -20,16 +19,10 @@ final class WarehouseFactory extends Factory
      */
     public function definition(): array
     {
-        $code = Str::upper(Str::random(3));
-        // Avoid reserving codes used by WarehouseAndCatalogSeeder
-        while (in_array($code, ['WH-MNL', 'WH-CEB', 'WH-DVO'])) {
-            $code = Str::upper(Str::random(3));
-        }
-
         return [
-            'code' => $code,
-            'name' => fake()->unique()->word(),
-            'location' => fake()->city(),
+            'code' => mb_strtoupper('WH-'.fake()->unique()->lexify('???')),
+            'name' => fake()->city().' Warehouse',
+            'location' => fake()->address(),
             'is_active' => true,
         ];
     }

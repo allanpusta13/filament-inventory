@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Enums\UserRole;
 use App\Models\Warehouse;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -32,7 +33,7 @@ final class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => self::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
-            'role' => \App\Enums\UserRole::WarehouseStaff->value,
+            'role' => UserRole::WAREHOUSE_STAFF->value,
         ];
     }
 
@@ -46,17 +47,17 @@ final class UserFactory extends Factory
         ]);
     }
 
-    /**
-     * Indicate that the model is a warehouse staff.
-     */
-    public function warehouseStaff(): static
-    {
-        return $this->state(fn (array $attributes): array => [
-            'role' => \App\Enums\UserRole::WarehouseStaff->value,
-        ])->afterCreating(function (\App\Models\User $user) {
-            $user->warehouses()->attach(Warehouse::factory()->create());
-        });
-    }
+    // /**
+    //  * Indicate that the model is a warehouse staff.
+    //  */
+    // public function warehouseStaff(): static
+    // {
+    //     return $this->state(fn (array $attributes): array => [
+    //         'role' => UserRole::WAREHOUSE_STAFF->value,
+    //     ])->afterCreating(function (\App\Models\User $user) {
+    //         $user->warehouses()->attach(Warehouse::factory()->create());
+    //     });
+    // }
 
     /**
      * Indicate that the model is an admin.
@@ -64,7 +65,7 @@ final class UserFactory extends Factory
     public function admin(): static
     {
         return $this->state(fn (array $attributes): array => [
-            'role' => \App\Enums\UserRole::Admin->value,
+            'role' => UserRole::ADMIN->value,
         ]);
     }
 }

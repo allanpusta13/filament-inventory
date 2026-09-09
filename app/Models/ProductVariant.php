@@ -5,56 +5,69 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-final class ProductVariant extends Model
+class ProductVariant extends Pivot
 {
+    /** @use HasFactory<\Database\Factories\ProductVariantFactory> */
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['product_id', 'sku', 'barcode', 'name', 'attributes', 'base_unit_name', 'images', 'cost_price', 'sale_price'];
-
-    protected $casts = [
-        'attributes' => 'json',
-        'images' => 'json',
-        'cost_price' => 'decimal:4',
-        'sale_price' => 'decimal:4',
+    protected $fillable = [
+        'product_id',
+        'sku',
+        'barcode',
+        'name',
+        'base_unit_name',
+        'reorder_point',
+        'attributes',
+        'images',
     ];
 
-    public function product()
+    public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
-    public function unitConversions()
+    public function unitConversions(): HasMany
     {
-        return $this->hasMany(ProductUnitConversion::class);
+        return $this->hasMany(ProductVariantUnitConversion::class);
     }
 
-    public function prices()
+    public function prices(): HasMany
     {
-        return $this->hasMany(ProductPrice::class);
+        return $this->hasMany(ProductVariantPrice::class);
     }
 
-    public function warehouseStocks()
+    public function stockMovements(): HasMany
     {
-        return $this->hasMany(WarehouseStock::class, 'variant_id');
+        return $this->hasMany(StockMovement::class);
     }
 
-    public function movements()
+    /**
+     * The single active price row for this variant.
+     * App logic is responsible for keeping exactly one is_current=true row per variant;
+     * the DB enforces this with a partial/generated unique index (see migration).
+     */
+    public function currentPrice(): HasOne
     {
-        return $this->hasMany(StockMovement::class, 'variant_id');
+        return $this->hasOne(ProductVariantPrice::class)->where('is_current', true);
     }
 
-    public function stockMovements()
+    public function isBelowReorderPoint(int $currentBaseQty): bool
     {
-        return $this->movements();
+        return $currentBaseQty <= $this->reorder_point;
     }
 
-    public function getAvailableQuantityForWarehouse(int $warehouseId): int
+    protected function casts(): array
     {
-        $stock = $this->warehouseStocks()->where('warehouse_id', $warehouseId)->first();
-
-        return $stock ? $stock->available_quantity : 0;
+        return [
+            'attributes' => 'array',
+            'images' => 'array',
+            'reorder_point' => 'integer',
+        ];
     }
 }

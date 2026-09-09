@@ -11,7 +11,6 @@ use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -22,7 +21,6 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
-    #[Fillable(['role'])]
     protected $fillable = [
         'name',
         'email',
@@ -50,25 +48,25 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
 
     public function isAdmin(): bool
     {
-        return ($this->attributes['role'] ?? null) === UserRole::Admin->value;
+        return ($this->attributes['role'] ?? null) === UserRole::ADMIN->value;
     }
 
-    public function canAccessWarehouse(Warehouse $warehouse): bool
-    {
-        if ($this->isAdmin()) {
-            return true;
-        }
+    // public function canAccessWarehouse(Warehouse $warehouse): bool
+    // {
+    //     if ($this->isAdmin()) {
+    //         return true;
+    //     }
 
-        return $this->warehouses->contains($warehouse);
-    }
+    //     return $this->warehouses->contains($warehouse);
+    // }
 
-    /**
-     * @return BelongsToMany<Warehouse, $this>
-     */
-    public function warehouses(): BelongsToMany
-    {
-        return $this->belongsToMany(Warehouse::class, 'user_warehouse');
-    }
+    // /**
+    //  * @return BelongsToMany<Warehouse, $this>
+    //  */
+    // public function warehouses(): BelongsToMany
+    // {
+    //     return $this->belongsToMany(Warehouse::class, 'user_warehouse');
+    // }
 
     public function getAppAuthenticationSecret(): ?string
     {
@@ -102,7 +100,7 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
 
     public function isAuditor(): bool
     {
-        return ($this->attributes['role'] ?? null) === UserRole::Auditor->value;
+        return ($this->attributes['role'] ?? null) === UserRole::AUDITOR->value;
     }
 
     public function hasAccessToWarehouse(int $warehouseId): bool
@@ -115,7 +113,7 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
      */
     public function isBranchManager(): bool
     {
-        return ($this->attributes['role'] ?? null) === UserRole::BranchManager->value;
+        return ($this->attributes['role'] ?? null) === UserRole::BRANCH_MANAGER->value;
     }
 
     /**
@@ -123,7 +121,7 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
      */
     public function isWarehouseStaff(): bool
     {
-        return ($this->attributes['role'] ?? null) === UserRole::WarehouseStaff->value;
+        return ($this->attributes['role'] ?? null) === UserRole::WAREHOUSE_STAFF->value;
     }
 
     /**

@@ -104,6 +104,13 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 - Laravel can be deployed using [Laravel Cloud](https://cloud.laravel.com/), which is the fastest way to deploy and scale production Laravel applications.
 
+=== herd rules ===
+
+# Laravel Herd
+
+- The application is served by Laravel Herd at `https?://[kebab-case-project-dir].test`. Use the `get-absolute-url` tool to generate valid URLs. Never run commands to serve the site. It is always available.
+- Use the `herd` CLI to manage services, PHP versions, and sites (e.g. `herd sites`, `herd services:start <service>`, `herd php:list`). Run `herd list` to discover all available commands.
+
 === tests rules ===
 
 # Test Enforcement
@@ -440,7 +447,6 @@ shell commands: if the edit tool would deny a file, do not modify that file any 
 - Prefer popular, well-supported libraries over custom code.
 - **Shipnames title format**: When invoking `task`, set `description` to the work-only title. Do not manually prefix `<Ship>` or `[role]`; the shipnames plugin auto-prefixes them.
 - **Evidence-based receipts**: Subagent tasks require pasted evidence in the receipt `Evidence` block. No claim of done is accepted without evidence.
-
 
 ## Adaptive delivery
 

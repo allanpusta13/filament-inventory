@@ -7,9 +7,6 @@ namespace App\Filament\Resources\Users;
 use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
-use App\Filament\Resources\Users\RelationManagers\WarehousesRelationManager;
-use App\Filament\Resources\Users\Schemas\UserForm;
-use App\Filament\Resources\Users\Tables\UsersTable;
 use App\Models\User;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -17,43 +14,23 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use UnitEnum;
-use Illuminate\Database\Eloquent\Builder;
 
 final class UserResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserGroup;
+    protected static string|UnitEnum|null $navigationGroup = 'System Admin';
 
-    protected static UnitEnum|string|null $navigationGroup = 'Admin';
-
-    protected static ?int $navigationSort = 31;
-
-    protected static ?string $recordTitleAttribute = 'name';
-
-    public static function getGloballySearchableAttributes(): array
-    {
-        return [
-            'name',
-            'email',
-        ];
-    }
+    protected static BackedEnum|string|null $navigationIcon = Heroicon::OutlinedUsers;
 
     public static function form(Schema $schema): Schema
     {
-        return UserForm::configure($schema);
+        return Schemas\UserForm::configure($schema);
     }
 
     public static function table(Table $table): Table
     {
-        return UsersTable::configure($table);
-    }
-
-    public static function getRelations(): array
-    {
-        return [
-            WarehousesRelationManager::class,
-        ];
+        return Tables\UsersTable::configure($table);
     }
 
     public static function getPages(): array
@@ -64,4 +41,17 @@ final class UserResource extends Resource
             'edit' => EditUser::route('/{record}/edit'),
         ];
     }
+
+    public static function getRelations(): array
+    {
+        return [
+            // RelationManagers\WarehousesRelationManager::class,
+        ];
+    }
+
+    // public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    // {
+    //     return parent::getEloquentQuery()
+    //         ->with(['warehouses']);
+    // }
 }

@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Enums;
 
 use Filament\Support\Contracts\HasColor;
-use Filament\Support\Contracts\HasLabel;
 use Filament\Support\Contracts\HasIcon;
+use Filament\Support\Contracts\HasLabel;
 
-enum InTransitStatus: string implements HasColor, HasLabel, HasIcon
+enum InTransitStatus: string implements HasColor, HasIcon, HasLabel
 {
     case InTransit = 'in_transit';
     case PartiallyReceived = 'partially_received';

@@ -9,13 +9,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-final class Warehouse extends Model
+class Warehouse extends Model
 {
+    /** @use HasFactory<\Database\Factories\WarehouseFactory> */
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     */
     protected $fillable = [
         'code',
         'name',
@@ -23,36 +21,30 @@ final class Warehouse extends Model
         'is_active',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
-    protected $casts = [
-        'is_active' => 'boolean',
-    ];
-
-    /**
-     * @return HasMany<WarehouseStock, >
-     */
-    public function warehouseStocks(): HasMany
-    {
-        return $this->hasMany(WarehouseStock::class);
-    }
-
-    /**
-     * @return HasMany<StockMovement, >
-     */
     public function stockMovements(): HasMany
     {
         return $this->hasMany(StockMovement::class);
     }
 
-    /**
-     * @return BelongsToMany<User, >
-     */
+    public function outgoingTransfers(): HasMany
+    {
+        return $this->hasMany(TransferRequisition::class, 'from_warehouse_id');
+    }
+
+    public function incomingTransfers(): HasMany
+    {
+        return $this->hasMany(TransferRequisition::class, 'to_warehouse_id');
+    }
+
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'user_warehouse');
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'is_active' => 'boolean',
+        ];
     }
 }

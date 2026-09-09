@@ -432,9 +432,9 @@ protected $casts = ['role' => UserRole::class];
 
 public function warehouses() { return $this->belongsToMany(Warehouse::class, 'user_warehouse'); }
 
-public function isAdmin(): bool { return $this->role === UserRole::Admin; }
-public function isAuditor(): bool { return $this->role === UserRole::Auditor; }
-public function isBranchManager(): bool { return $this->role === UserRole::BranchManager; }
+public function isAdmin(): bool { return $this->role === UserRole::ADMIN; }
+public function isAuditor(): bool { return $this->role === UserRole::AUDITOR; }
+public function isBranchManager(): bool { return $this->role === UserRole::BRANCH_MANAGER; }
 
 public function canAccessWarehouse(Warehouse $warehouse): bool
 {

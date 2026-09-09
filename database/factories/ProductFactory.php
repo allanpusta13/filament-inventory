@@ -10,19 +10,18 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 /**
  * @extends Factory<Product>
  */
-final class ProductFactory extends Factory
+class ProductFactory extends Factory
 {
     /**
+     * Define the model's default state.
+     *
      * @return array<string, mixed>
      */
     public function definition(): array
     {
         return [
-            'sku' => fake()->unique()->uuid(),
-            'name' => fake()->words(3, true),
-            'category' => fake()->optional()->word(),
-            'unit' => fake()->randomElement(['each', 'box', 'palette']),
-            'reorder_point' => 0,
+             'name' => fake()->words(3, true),
+            'category' => fake()->randomElement(['Beverages', 'Snacks', 'Office Supplies']),
         ];
     }
 }

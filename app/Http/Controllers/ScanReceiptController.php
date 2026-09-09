@@ -4,17 +4,18 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Enums\TransferRequisitionStatus;
 use App\Models\TransferRequisition;
+use App\Services\InventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\URL;
 
 final class ScanReceiptController extends Controller
 {
     /**
      * Display the scan-to-receive landing page with read-only dispatched items.
      */
-    public function show(TransferRequisition $transferRequisition, Request $request): \Illuminate\View\View
+    public function show(TransferRequisition $transferRequisition, Request $request)
     {
         // Validate signed URL (30-day expiry)
         if (! $request->hasValidSignature()) {
@@ -24,7 +25,7 @@ final class ScanReceiptController extends Controller
                 'type' => 'danger',
             ]);
 
-            return redirect()->route('filment.admin.pages.dashboard');
+            return redirect()->route('filament.admin.pages.dashboard');
         }
 
         // Restrict access: only users authorized at destination warehouse can access
@@ -41,8 +42,8 @@ final class ScanReceiptController extends Controller
 
         // Only allow scanning for requisitions that are dispatched or partially received
         if (! in_array($transferRequisition->status, [
-            TransferRequisitionStatus::Dispatched,
-            TransferRequisitionStatus::PartiallyReceived,
+            'dispatched',
+            'partially_received',
         ])) {
             session()->flash('notification', [
                 'title' => 'Invalid Status',
@@ -62,7 +63,7 @@ final class ScanReceiptController extends Controller
     /**
      * Process the scan-to-receive reconciliation form submission.
      */
-    public function receive(TransferRequisition $transferRequisition, Request $request): \Illuminate\Http\RedirectResponse
+    public function receive(TransferRequisition $transferRequisition, Request $request)
     {
         // Validate signed URL
         if (! $request->hasValidSignature()) {
@@ -90,7 +91,7 @@ final class ScanReceiptController extends Controller
         // Validate the request
         $validated = $request->validate([
             'received_items' => 'required|array',
-            'received_items.*.item_id' => 'required|exists:transfer_requisition_items,id',
+            'received_items.*.item_id' => 'required|exists:requisition_items,id',
             'received_items.*.good_qty' => 'required|integer|min:0',
             'received_items.*.damaged_qty' => 'required|integer|min:0',
             'received_items.*.loss_category' => 'sometimes|string',
@@ -110,8 +111,8 @@ final class ScanReceiptController extends Controller
         app(InventoryService::class)->scanToReceive(
             $transferRequisition->id,
             $receivedData,
-            $user->id,
-            $user
+            auth()->id(),
+            auth()->user()
         );
 
         session()->flash('notification', [

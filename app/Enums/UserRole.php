@@ -4,44 +4,47 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
+use BackedEnum;
 use Filament\Support\Contracts\HasColor;
-use Filament\Support\Contracts\HasLabel;
 use Filament\Support\Contracts\HasIcon;
+use Filament\Support\Contracts\HasLabel;
+use Filament\Support\Icons\Heroicon;
+use Illuminate\Contracts\Support\Htmlable;
 
-enum UserRole: string implements HasColor, HasLabel, HasIcon
+enum UserRole: string implements HasColor, HasIcon, HasLabel
 {
-    case Admin = 'admin';
-    case BranchManager = 'branch_manager';
-    case WarehouseStaff = 'warehouse_staff';
-    case Auditor = 'auditor';
-
-    public function getColor(): string|array|null
-    {
-        return match ($this) {
-            self::Admin => 'danger',
-            self::BranchManager => 'warning',
-            self::WarehouseStaff => 'success',
-            self::Auditor => 'gray',
-        };
-    }
+    case ADMIN = 'admin';
+    case AUDITOR = 'auditor';
+    case BRANCH_MANAGER = 'branch_manager';
+    case WAREHOUSE_STAFF = 'warehouse_staff';
 
     public function getLabel(): string
     {
         return match ($this) {
-            self::Admin => 'Admin',
-            self::BranchManager => 'Branch Manager',
-            self::WarehouseStaff => 'Warehouse Staff',
-            self::Auditor => 'Auditor',
+            self::ADMIN => 'Administrator',
+            self::AUDITOR => 'Logistics Auditor',
+            self::BRANCH_MANAGER => 'Branch Manager',
+            self::WAREHOUSE_STAFF => 'Warehouse Staff',
         };
     }
 
-    public function getIcon(): ?string
+    public function getIcon(): string|BackedEnum|Htmlable|null
     {
         return match ($this) {
-            self::Admin => 'heroicon-o-user',
-            self::BranchManager => 'heroicon-o-briefcase',
-            self::WarehouseStaff => 'heroicon-o-user-group',
-            self::Auditor => 'heroicon-o-clipboard-list',
+            self::ADMIN => Heroicon::OutlinedUserCircle,
+            self::AUDITOR => Heroicon::OutlinedEye,
+            self::BRANCH_MANAGER => Heroicon::OutlinedBuildingOffice2,
+            self::WAREHOUSE_STAFF => Heroicon::OutlinedTruck,
+        };
+    }
+
+    public function getColor(): string|array|null
+    {
+        return match ($this) {
+            self::ADMIN => 'danger',
+            self::AUDITOR => 'info',
+            self::BRANCH_MANAGER => 'warning',
+            self::WAREHOUSE_STAFF => 'gray',
         };
     }
 }

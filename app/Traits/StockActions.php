@@ -140,7 +140,7 @@ trait StockActions
                     ->maxLength(255),
             ])
             ->action(function (array $data): void {
-                app(InventoryService::class)->transfer(
+                app(InventoryService::class)->executeDirectTransfer(
                     productId: (int) $data['product_id'],
                     fromWarehouseId: (int) $data['from_warehouse_id'],
                     toWarehouseId: (int) $data['to_warehouse_id'],

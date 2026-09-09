@@ -8,17 +8,15 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-final class LossLedger extends Model
+class LossLedger extends Model
 {
+    /** @use HasFactory<\Database\Factories\LossLedgerFactory> */
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     */
     protected $fillable = [
-        'requisition_id',
-        'requisition_item_id',
-        'variant_id',
+        'transfer_requisition_id',
+        'transfer_requisition_item_id',
+        'product_variant_id',
         'warehouse_id',
         'lost_base_qty',
         'damaged_base_qty',
@@ -30,53 +28,48 @@ final class LossLedger extends Model
     ];
 
     /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
+     * unit_cost_price is a snapshot taken at incident time — pull it from the
+     * variant's ProductPrice::currentPrice() when creating this record, since
+     * ProductVariant no longer carries cost_price directly.
      */
-    protected $casts = [
-        'unit_cost_price' => 'decimal:4',
-        'total_financial_loss' => 'decimal:4',
-        'recorded_at' => 'datetime',
-    ];
+    public static function snapshotUnitCostFrom(ProductVariant $variant): ?string
+    {
+        return $variant->currentPrice?->cost_price;
+    }
 
-    /**
-     * Get the requisition associated with the loss ledger.
-     */
-    public function requisition(): BelongsTo
+    public function transferRequisition(): BelongsTo
     {
         return $this->belongsTo(TransferRequisition::class);
     }
 
-    /**
-     * Get the requisition item associated with the loss ledger.
-     */
-    public function requisitionItem(): BelongsTo
+    public function item(): BelongsTo
     {
-        return $this->belongsTo(TransferRequisitionItem::class);
+        return $this->belongsTo(TransferRequisitionItem::class, 'transfer_requisition_item_id');
     }
 
-    /**
-     * Get the variant associated with the loss ledger.
-     */
     public function variant(): BelongsTo
     {
-        return $this->belongsTo(ProductVariant::class);
+        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
     }
 
-    /**
-     * Get the warehouse associated with the loss ledger.
-     */
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
     }
 
-    /**
-     * Get the user who recorded the loss.
-     */
-    public function recorder(): BelongsTo
+    public function recordedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'recorded_by');
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'lost_base_qty' => 'integer',
+            'damaged_base_qty' => 'integer',
+            'unit_cost_price' => 'decimal:4',
+            'total_financial_loss' => 'decimal:4',
+            'recorded_at' => 'datetime',
+        ];
     }
 }

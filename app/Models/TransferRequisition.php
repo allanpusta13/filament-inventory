@@ -5,15 +5,15 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\TransferRequisitionStatus;
-use Exception;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-final class TransferRequisition extends Model
+class TransferRequisition extends Model
 {
+    /** @use HasFactory<\Database\Factories\TransferRequisitionFactory> */
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
@@ -32,107 +32,64 @@ final class TransferRequisition extends Model
         'notes',
     ];
 
-    protected $casts = [
-        'status' => TransferRequisitionStatus::class,
-        'requested_at' => 'datetime',
-        'approved_at' => 'datetime',
-        'dispatched_at' => 'datetime',
-        'completed_at' => 'datetime',
-    ];
-
-    /**
-     * @return BelongsTo<Warehouse, $this>
-     */
     public function fromWarehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class, 'from_warehouse_id');
     }
 
-    /**
-     * @return BelongsTo<Warehouse, $this>
-     */
     public function toWarehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class, 'to_warehouse_id');
     }
 
-    /**
-     * @return BelongsTo<User, $this>
-     */
     public function requestedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requested_by');
     }
 
-    /**
-     * @return BelongsTo<User, $this>
-     */
     public function approvedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
     }
 
-    /**
-     * @return BelongsTo<User, $this>
-     */
     public function dispatchedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'dispatched_by');
     }
 
-    /**
-     * @return BelongsTo<User, $this>
-     */
     public function receivedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'received_by');
     }
 
-    /**
-     * @return HasMany<TransferRequisitionItem, $this>
-     */
     public function items(): HasMany
     {
-        return $this->hasMany(TransferRequisitionItem::class, 'requisition_id');
+        return $this->hasMany(TransferRequisitionItem::class);
     }
 
-    protected static function booted(): void
+    public function inTransits(): HasMany
     {
-        self::creating(function (TransferRequisition $requisition): void {
-            if (empty($requisition->reference_code)) {
-                $year = date('Y');
-                $last = static::whereYear('created_at', $year)->count() + 1;
-                $requisition->reference_code = 'TRQ-'.$year.'-'.mb_str_pad((string) $last, 4, '0', STR_PAD_LEFT);
-            }
-            if (is_null($requisition->requested_by)) {
-                $requisition->requested_by = auth()->id();
-            }
-            if (is_null($requisition->requested_at)) {
-                $requisition->requested_at = now();
-            }
-        });
+        return $this->hasMany(InTransit::class);
+    }
 
-        self::deleting(function (TransferRequisition $requisition) {
-            if ($requisition->status === 'dispatched') {
-                throw new Exception('Cannot delete a requisition that is currently in transit (Dispatched status).');
-            }
+    public function lossLedgers(): HasMany
+    {
+        return $this->hasMany(LossLedger::class);
+    }
 
-            if ($requisition->status === 'confirmed') {
-                \Illuminate\Support\Facades\DB::transaction(function () use ($requisition) {
-                    foreach ($requisition->items as $item) {
-                        $stock = WarehouseStock::where('variant_id', $item->variant_id)
-                            ->where('warehouse_id', $requisition->from_warehouse_id)
-                            ->lockForUpdate()
-                            ->first();
+    public function isTerminal(): bool
+    {
+        return $this->status->isTerminal();
+    }
 
-                        if ($stock) {
-                            $releaseQty = $item->approved_base_qty ?? $item->requested_base_qty;
-                            $stock->reserved_quantity = max(0, $stock->reserved_quantity - $releaseQty);
-                            $stock->save();
-                        }
-                    }
-                });
-            }
-        });
+    protected function casts(): array
+    {
+        return [
+            'status' => TransferRequisitionStatus::class,
+            'requested_at' => 'datetime',
+            'approved_at' => 'datetime',
+            'dispatched_at' => 'datetime',
+            'completed_at' => 'datetime',
+        ];
     }
 }

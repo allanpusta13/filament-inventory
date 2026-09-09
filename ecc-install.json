@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "target": "claude",
+  "profile": "developer",
+  "include": [
+    "framework:laravel",
+    "capability:security"
+  ],
+  "options": {
+    "test": "pest",
+    "lint": "pint",
+    "static-analysis": "phpstan",
+    "format": "pint"
+  }
+}

@@ -5,43 +5,44 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Users\Schemas;
 
 use App\Enums\UserRole;
-use App\Filament\Resources\Users\Pages\CreateUser;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules\Password;
 
 final class UserForm
 {
     public static function configure(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                TextInput::make('name')
-                    ->maxLength(255)
-                    ->required(),
-                TextInput::make('email')
-                    ->maxLength(255)
-                    ->unique()
-                    ->email()
-                    ->required(),
-                TextInput::make('password')
-                    ->password()
-                    ->required(fn ($livewire): bool => $livewire instanceof CreateUser)
-                    ->revealable(filament()->arePasswordsRevealable())
-                    ->rule(Password::default())
-                    ->autocomplete('new-password')
-                    ->dehydrated(fn ($state): bool => filled($state))
-                    ->dehydrateStateUsing(fn ($state): string => Hash::make($state)),
-                Select::make('role')
-                    ->options(UserRole::class)
-                    ->required(),
-                Select::make('warehouses')
-                    ->multiple()
-                    ->relationship('warehouses', 'name')
-                    ->searchable()
-                    ->preload(),
-            ]);
+        return $schema->components([
+            Section::make()
+                ->schema([
+                    TextInput::make('name')
+                        ->label('FULL NAME')
+                        ->required()
+                        ->maxLength(255)
+                        ->placeholder('John Doe'),
+
+                    TextInput::make('email')
+                        ->label('EMAIL ADDRESS')
+                        ->required()
+                        ->email()
+                        ->maxLength(255)
+                        ->unique(ignoreRecord: true)
+                        ->placeholder('john@example.com'),
+
+                    TextInput::make('password')
+                        ->label('PASSWORD')
+                        ->required(fn (string $operation): bool => $operation === 'create')
+                        ->dehydrated(fn ($state): bool => filled($state))
+                        ->password()
+                        ->placeholder('********'),
+
+                    Select::make('role')
+                        ->label('ROLE')
+                        ->required()
+                        ->options(collect(UserRole::cases())->mapWithKeys(fn (UserRole $role) => [$role->value => $role->getLabel()])),
+                ]),
+        ]);
     }
 }
