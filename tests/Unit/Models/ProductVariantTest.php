@@ -1,8 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Models\Product;
-use App\Models\ProductVariantPrice;
 use App\Models\ProductVariant;
+use App\Models\ProductVariantPrice;
 
 it('belongs to a product', function () {
     $product = Product::factory()->create();
@@ -34,8 +36,8 @@ it('reports below reorder point correctly', function () {
 it('resolves currentPrice to only the is_current row', function () {
     $variant = ProductVariant::factory()->create();
 
-    ProductVariantPrice::factory()->notCurrent()->for($variant, 'variant')->create(['sale_price' => 100]);
-    $current = ProductVariantPrice::factory()->for($variant, 'variant')->create(['sale_price' => 150]);
+    ProductVariantPrice::factory()->notCurrent()->forVariant($variant)->create(['sale_price' => 100]);
+    $current = ProductVariantPrice::factory()->forVariant($variant)->create(['sale_price' => 150]);
 
     expect($variant->currentPrice()->first()->id)->toBe($current->id);
 });
@@ -44,5 +46,5 @@ it('enforces unique sku', function () {
     $variant = ProductVariant::factory()->create(['sku' => 'DUPE-SKU']);
 
     expect(fn () => ProductVariant::factory()->create(['sku' => 'DUPE-SKU']))
-        ->toThrow(\Illuminate\Database\QueryException::class);
+        ->toThrow(Illuminate\Database\QueryException::class);
 });

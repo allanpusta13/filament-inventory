@@ -1,6 +1,8 @@
-# Multi-Warehouse Inventory System — Complete System Blueprint (v7.0)
+# Multi-Warehouse Inventory System — Complete System Blueprint (v8.0)
 
 **Stack:** Laravel 13 + FilamentPHP v5 + Livewire v4 | **Database:** PostgreSQL / MySQL | **Architecture:** Pure Derived Stock of Truth Ledger
+
+> **v8.0 changelog (vs v7.0):** Section 5 now includes the complete, audited `NegotiationService` alongside a corrected `InventoryService` (added `directTransfer()`, fixed `productVariant()` relationship naming, replaced raw status strings with backed enums, fixed the `reference_id` type to support UUID/ULID). Section 4's `ProductVariant` model corrected to match (`ProductVariantUnitConversion`, enum-based status checks, `SoftDeletes`). Section 2's `transfer_requisition_item_revisions` table gained `proposed_unit_ratio`. Phase 01 and Phase 09 of Section 7 updated to match. One open gap flagged at the end of Section 5B: no service-level guard yet prevents accepting/rejecting/countering a revision once its parent requisition has left a negotiable status.
 
 ---
 
@@ -185,6 +187,7 @@ users ──< user_warehouse >── warehouses
 | `product_variant_id` | foreignId | FK → `product_variants.id` |
 | `substitute_product_variant_id` | foreignId | Nullable, FK → `product_variants.id` |
 | `proposed_unit_name` | string | Packaging label proposed |
+| `proposed_unit_ratio` | integer | Packaging multiplier proposed (lets `NegotiationService::accept()` populate the item's `approved_unit_ratio` directly, with no division/rounding) |
 | `proposed_qty` | integer | Packaging quantity proposed |
 | `proposed_base_qty` | integer | Computed base quantity proposed |
 | `negotiation_reason` | text | Nullable compliance reason |
@@ -263,33 +266,46 @@ Configured as a 3-step **3xl Dialog Modal** wizard:
 
 ## 🛠️ Section 4: Model-Level Pure Derived Stock Engine
 
-On-hand physical stock, active requisition allocations, and physical stock availability are calculated dynamically at query-time on the `ProductVariant` model:
+On-hand physical stock, active requisition allocations, and physical stock availability are calculated dynamically at query-time on the `ProductVariant` model. Status comparisons use the `TransferRequisitionStatus` backed enum, never raw strings, per Principle #10 (Strongly-Typed values throughout).
 
 ```php
 namespace App\Models;
 
+use App\Enums\TransferRequisitionStatus;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ProductVariant extends Model
 {
+    use HasFactory, SoftDeletes;
+
     protected $fillable = [
         'product_id', 'sku', 'barcode', 'name', 'base_unit_name',
         'reorder_point', 'attributes', 'images', 'is_active',
     ];
 
-    protected $casts = [
-        'reorder_point' => 'integer',
-        'attributes' => 'array',
-        'images' => 'array',
-        'is_active' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'attributes' => 'array',
+            'images' => 'array',
+            'reorder_point' => 'integer',
+            'is_active' => 'boolean',
+        ];
+    }
 
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function unitConversions(): HasMany
+    {
+        return $this->hasMany(ProductVariantUnitConversion::class);
     }
 
     public function prices(): HasMany
@@ -297,14 +313,15 @@ class ProductVariant extends Model
         return $this->hasMany(ProductVariantPrice::class);
     }
 
+    /**
+     * The single active price row for this variant. App logic is responsible
+     * for keeping exactly one is_current=true row per variant; the DB
+     * enforces this with a partial/generated unique index (see Section 2,
+     * table 3).
+     */
     public function currentPrice(): HasOne
     {
         return $this->hasOne(ProductVariantPrice::class)->where('is_current', true);
-    }
-
-    public function unitConversions(): HasMany
-    {
-        return $this->hasMany(ProductUnitConversion::class);
     }
 
     public function stockMovements(): HasMany
@@ -317,31 +334,46 @@ class ProductVariant extends Model
         return $this->hasMany(TransferRequisitionItem::class);
     }
 
+    public function isBelowReorderPoint(int $currentBaseQty): bool
+    {
+        return $currentBaseQty <= $this->reorder_point;
+    }
+
     /**
-     * Physical on-hand stock: Raw SUM of signed stock movements.
+     * Physical on-hand stock: raw SUM of signed stock movements. This is the
+     * single source of truth for physical quantity — no stock is ever stored
+     * directly on this model or in any dedicated stock table.
      */
     public function onHandQuantity(int $warehouseId): int
     {
-        return StockMovement::where('product_variant_id', $this->id)
+        return (int) StockMovement::where('product_variant_id', $this->id)
             ->where('warehouse_id', $warehouseId)
             ->sum('quantity');
     }
 
     /**
-     * Active Requisition Reservations: SUM of approved_base_qty locked in confirmed/dispatched requisitions.
+     * Active requisition reservations: SUM of approved_base_qty across items
+     * belonging to requisitions in 'confirmed' or 'dispatched' status,
+     * fulfilled from the given warehouse. Deliberately does NOT reserve
+     * during earlier negotiation stages (draft/requested/under_review_*) —
+     * approved_base_qty is null until a NegotiationService::accept() call
+     * resolves it, so those rows contribute 0 to the sum.
      */
     public function reservedQuantity(int $warehouseId): int
     {
-        return TransferRequisitionItem::where('product_variant_id', $this->id)
-            ->whereHas('transferRequisition', function ($q) use ($warehouseId) {
-                $q->where('from_warehouse_id', $warehouseId)
-                  ->whereIn('status', ['confirmed', 'dispatched']);
+        return (int) TransferRequisitionItem::where('product_variant_id', $this->id)
+            ->whereHas('transferRequisition', function ($query) use ($warehouseId) {
+                $query->where('from_warehouse_id', $warehouseId)
+                    ->whereIn('status', [
+                        TransferRequisitionStatus::Confirmed,
+                        TransferRequisitionStatus::Dispatched,
+                    ]);
             })
             ->sum('approved_base_qty');
     }
 
     /**
-     * Available physical stock: On-Hand minus active Reservations.
+     * Available physical stock: on-hand minus active reservations.
      */
     public function availableQuantity(int $warehouseId): int
     {
@@ -354,42 +386,63 @@ class ProductVariant extends Model
 
 ## ⚙️ Section 5: Transactional Service Layer
 
+Two services own every write to the stock ledger and the negotiation state machine, respectively. `InventoryService` never reads or writes `approved_*` fields except by consuming them — those fields are populated exclusively by `NegotiationService` (via an accepted revision), never inferred or derived on the fly during dispatch.
+
+### A. `InventoryService`
+
 ```php
 namespace App\Services;
 
+use App\Enums\InTransitStatus;
+use App\Enums\StockMovementType;
+use App\Enums\TransferRequisitionStatus;
 use App\Models\InTransit;
 use App\Models\LossLedger;
 use App\Models\ProductVariant;
 use App\Models\StockMovement;
 use App\Models\TransferRequisition;
-use App\Models\TransferRequisitionItem;
-use Illuminate\Support\Facades\DB;
+use App\Models\Warehouse;
 use Exception;
+use Illuminate\Support\Facades\DB;
 
+/**
+ * Transactional stock engine. Physical stock is never stored directly — it is
+ * always the signed SUM of stock_movements rows (see ProductVariant::onHandQuantity()).
+ * Every write path here runs inside DB::transaction() with lockForUpdate() on
+ * the ProductVariant and/or TransferRequisition/Warehouse rows involved, per
+ * Principle #3 (Pessimistic Locking & Transaction Isolation).
+ */
 class InventoryService
 {
+    /**
+     * Record a single signed stock movement for a variant at a warehouse,
+     * after verifying it won't drive on-hand stock negative.
+     */
     public function recordMovement(
         int $productVariantId,
         int $warehouseId,
-        string $type,
+        StockMovementType $type,
         int $baseQuantity,
         ?string $unitName = null,
         int $unitRatio = 1,
         ?string $referenceType = null,
-        ?int $referenceId = null,
+        ?string $referenceId = null,
         ?string $referenceCode = null,
-        ?int $relatedMovementId = null
+        ?int $relatedMovementId = null,
     ): StockMovement {
         return DB::transaction(function () use (
             $productVariantId, $warehouseId, $type, $baseQuantity,
             $unitName, $unitRatio, $referenceType, $referenceId,
-            $referenceCode, $relatedMovementId
+            $referenceCode, $relatedMovementId,
         ) {
             $variant = ProductVariant::lockForUpdate()->findOrFail($productVariantId);
             $currentStock = $variant->onHandQuantity($warehouseId);
 
             if ($baseQuantity < 0 && ($currentStock + $baseQuantity) < 0) {
-                throw new Exception("Insufficient stock for SKU {$variant->sku} at Warehouse ID {$warehouseId}. Available: {$currentStock}, Requested deduction: " . abs($baseQuantity));
+                throw new Exception(
+                    "Insufficient stock for SKU {$variant->sku} at warehouse ID {$warehouseId}. ".
+                    "Available: {$currentStock}, requested deduction: ".abs($baseQuantity).'.'
+                );
             }
 
             return StockMovement::create([
@@ -408,13 +461,104 @@ class InventoryService
         });
     }
 
+    /**
+     * Instant two-leg transfer between warehouses, bypassing the requisition
+     * workflow entirely (backs DirectTransferResource). Creates a
+     * transfer_out at the origin and a transfer_in at the destination,
+     * linked via related_movement_id in both directions, inside one
+     * transaction — unlike dispatchTransfer(), there is no in-transit
+     * period: stock leaves one warehouse and lands in the other atomically,
+     * in the same commit.
+     */
+    public function directTransfer(
+        int $productVariantId,
+        int $fromWarehouseId,
+        int $toWarehouseId,
+        int $baseQuantity,
+        ?string $unitName = null,
+        int $unitRatio = 1,
+        ?string $referenceCode = null,
+    ): array {
+        if ($fromWarehouseId === $toWarehouseId) {
+            throw new Exception('Direct transfer origin and destination warehouses must differ.');
+        }
+
+        if ($baseQuantity <= 0) {
+            throw new Exception('Direct transfer quantity must be a positive number of base units.');
+        }
+
+        return DB::transaction(function () use (
+            $productVariantId, $fromWarehouseId, $toWarehouseId,
+            $baseQuantity, $unitName, $unitRatio, $referenceCode,
+        ) {
+            // Lock both warehouse rows in a deterministic order (by ID) to avoid
+            // deadlocking against a concurrent reverse-direction direct transfer
+            // between the same two warehouses.
+            $warehouseIds = collect([$fromWarehouseId, $toWarehouseId])->sort()->values();
+            Warehouse::whereIn('id', $warehouseIds)->lockForUpdate()->get();
+
+            $variant = ProductVariant::lockForUpdate()->findOrFail($productVariantId);
+            $currentStock = $variant->onHandQuantity($fromWarehouseId);
+
+            if ($currentStock < $baseQuantity) {
+                throw new Exception(
+                    "Insufficient stock for SKU {$variant->sku} at origin warehouse ID {$fromWarehouseId}. ".
+                    "Available: {$currentStock}, requested: {$baseQuantity}."
+                );
+            }
+
+            $resolvedUnitName = $unitName ?? $variant->base_unit_name;
+
+            $outMovement = StockMovement::create([
+                'product_variant_id' => $productVariantId,
+                'warehouse_id' => $fromWarehouseId,
+                'type' => StockMovementType::TransferOut,
+                'quantity' => -$baseQuantity,
+                'unit_name_used' => $resolvedUnitName,
+                'unit_ratio_used' => $unitRatio,
+                'reference_code' => $referenceCode,
+                'created_by' => auth()->id(),
+            ]);
+
+            $inMovement = StockMovement::create([
+                'product_variant_id' => $productVariantId,
+                'warehouse_id' => $toWarehouseId,
+                'type' => StockMovementType::TransferIn,
+                'quantity' => $baseQuantity,
+                'unit_name_used' => $resolvedUnitName,
+                'unit_ratio_used' => $unitRatio,
+                'related_movement_id' => $outMovement->id,
+                'reference_code' => $referenceCode,
+                'created_by' => auth()->id(),
+            ]);
+
+            $outMovement->update(['related_movement_id' => $inMovement->id]);
+
+            return [$outMovement->fresh(), $inMovement];
+        });
+    }
+
+    /**
+     * Dispatch a confirmed requisition: for each item, resolve the actual
+     * variant (substitute if negotiated), verify stock, debit the origin
+     * warehouse with a transit_out movement, and open an in_transits row.
+     *
+     * approved_base_qty is populated exclusively by an accepted negotiation
+     * revision (see NegotiationService::accept() below). If no negotiation
+     * ever occurred on an item, this falls back to requested_base_qty — an
+     * item that was never negotiated ships exactly what was requested.
+     */
     public function dispatchTransfer(int $requisitionId): void
     {
         DB::transaction(function () use ($requisitionId) {
-            $requisition = TransferRequisition::with('items.productVariant')->lockForUpdate()->findOrFail($requisitionId);
+            $requisition = TransferRequisition::with('items.productVariant')
+                ->lockForUpdate()
+                ->findOrFail($requisitionId);
 
-            if ($requisition->status !== 'confirmed') {
-                throw new Exception("Requisition must be confirmed before dispatch. Current: {$requisition->status}");
+            if ($requisition->status !== TransferRequisitionStatus::Confirmed) {
+                throw new Exception(
+                    "Requisition must be confirmed before dispatch. Current status: {$requisition->status->value}."
+                );
             }
 
             foreach ($requisition->items as $item) {
@@ -422,19 +566,23 @@ class InventoryService
                 $dispatchQty = $item->approved_base_qty ?? $item->requested_base_qty;
 
                 $variant = ProductVariant::lockForUpdate()->findOrFail($actualVariantId);
+
                 if ($variant->onHandQuantity($requisition->from_warehouse_id) < $dispatchQty) {
-                    throw new Exception("Insufficient stock for SKU {$variant->sku} at origin warehouse.");
+                    throw new Exception(
+                        "Insufficient stock for SKU {$variant->sku} at origin warehouse for ".
+                        "requisition {$requisition->reference_code}."
+                    );
                 }
 
                 StockMovement::create([
                     'product_variant_id' => $actualVariantId,
                     'warehouse_id' => $requisition->from_warehouse_id,
-                    'type' => 'transit_out',
+                    'type' => StockMovementType::TransitOut,
                     'quantity' => -$dispatchQty,
                     'unit_name_used' => $item->approved_unit_name ?? $item->requested_unit_name,
                     'unit_ratio_used' => $item->approved_unit_ratio ?? $item->requested_unit_ratio,
                     'reference_type' => TransferRequisition::class,
-                    'reference_id' => $requisition->id,
+                    'reference_id' => (string) $requisition->id,
                     'reference_code' => $requisition->reference_code,
                     'created_by' => auth()->id(),
                 ]);
@@ -445,27 +593,44 @@ class InventoryService
                     'product_variant_id' => $actualVariantId,
                     'dispatched_base_qty' => $dispatchQty,
                     'dispatched_at' => now(),
-                    'status' => 'in_transit',
+                    'status' => InTransitStatus::InTransit,
                 ]);
 
                 $item->update(['shipped_base_qty' => $dispatchQty]);
             }
 
             $requisition->update([
-                'status' => 'dispatched',
+                'status' => TransferRequisitionStatus::Dispatched,
                 'dispatched_by' => auth()->id(),
                 'dispatched_at' => now(),
             ]);
         });
     }
 
+    /**
+     * Reconcile a scan-to-receive intake against what was dispatched. Any
+     * dispatched item absent from $receivedItemsData is treated as a total
+     * loss (0 received) rather than silently skipped — this is Principle #7
+     * (Scanned Receipt Loss Integrity & Omitted Cargo): omitted cargo is not
+     * forgiven, it is written off at the variant's current cost price.
+     *
+     * $receivedItemsData is keyed by transfer_requisition_item_id, each value
+     * shaped as ['good_qty' => int, 'damaged_qty' => int, 'loss_category' => ?string]
+     * where good_qty/damaged_qty are in the item's approved (or requested)
+     * packaging unit — NOT base units; this method converts using the ratio
+     * that was actually shipped.
+     */
     public function scanToReceive(int $requisitionId, array $receivedItemsData): void
     {
         DB::transaction(function () use ($requisitionId, $receivedItemsData) {
-            $requisition = TransferRequisition::with(['items.productVariant.currentPrice'])->lockForUpdate()->findOrFail($requisitionId);
+            $requisition = TransferRequisition::with('items.productVariant')
+                ->lockForUpdate()
+                ->findOrFail($requisitionId);
 
-            if ($requisition->status !== 'dispatched') {
-                throw new Exception("Requisition must be in dispatched state. Current: {$requisition->status}");
+            if ($requisition->status !== TransferRequisitionStatus::Dispatched) {
+                throw new Exception(
+                    "Requisition must be in dispatched state to receive. Current status: {$requisition->status->value}."
+                );
             }
 
             $hasLossOrDamage = false;
@@ -473,39 +638,44 @@ class InventoryService
             foreach ($requisition->items as $item) {
                 $actualVariantId = $item->substitute_product_variant_id ?? $item->product_variant_id;
                 $expectedBase = $item->shipped_base_qty;
+                $ratio = $item->approved_unit_ratio ?? $item->requested_unit_ratio;
 
-                if (!isset($receivedItemsData[$item->id])) {
+                if (! isset($receivedItemsData[$item->id])) {
                     $goodBase = 0;
                     $damagedBase = 0;
                     $lostBase = $expectedBase;
-                    $lossCategory = 'Omitted From Intake / Transit Loss';
+                    $lossCategory = 'omitted_from_intake';
                 } else {
                     $entry = $receivedItemsData[$item->id];
-                    $ratio = $item->approved_unit_ratio ?? $item->requested_unit_ratio;
                     $goodBase = ($entry['good_qty'] ?? 0) * $ratio;
                     $damagedBase = ($entry['damaged_qty'] ?? 0) * $ratio;
                     $lostBase = max(0, $expectedBase - ($goodBase + $damagedBase));
-                    $lossCategory = $entry['loss_category'] ?? 'Transit Variance';
+                    $lossCategory = $entry['loss_category'] ?? 'shortfall';
                 }
 
                 if ($goodBase > 0) {
-                    $this->recordMovement(
-                        productVariantId: $actualVariantId,
-                        warehouseId: $requisition->to_warehouse_id,
-                        type: 'transit_in',
-                        baseQuantity: $goodBase,
-                        unitName: $item->approved_unit_name ?? $item->requested_unit_name,
-                        unitRatio: $item->approved_unit_ratio ?? $item->requested_unit_ratio,
-                        referenceType: TransferRequisition::class,
-                        referenceId: $requisition->id,
-                        referenceCode: $requisition->reference_code
-                    );
+                    StockMovement::create([
+                        'product_variant_id' => $actualVariantId,
+                        'warehouse_id' => $requisition->to_warehouse_id,
+                        'type' => StockMovementType::TransitIn,
+                        'quantity' => $goodBase,
+                        'unit_name_used' => $item->approved_unit_name ?? $item->requested_unit_name,
+                        'unit_ratio_used' => $ratio,
+                        'reference_type' => TransferRequisition::class,
+                        'reference_id' => (string) $requisition->id,
+                        'reference_code' => $requisition->reference_code,
+                        'created_by' => auth()->id(),
+                    ]);
                 }
 
                 if ($damagedBase > 0 || $lostBase > 0) {
                     $hasLossOrDamage = true;
+
+                    // Fetched by $actualVariantId (not eager-loaded above), since
+                    // a substitute variant's price is never preloaded off the
+                    // original item's relation.
                     $variant = ProductVariant::with('currentPrice')->findOrFail($actualVariantId);
-                    $unitCost = $variant->currentPrice?->cost_price ?? 0.0000;
+                    $unitCost = LossLedger::snapshotUnitCostFrom($variant) ?? '0.0000';
 
                     LossLedger::create([
                         'transfer_requisition_id' => $requisition->id,
@@ -515,7 +685,7 @@ class InventoryService
                         'lost_base_qty' => $lostBase,
                         'damaged_base_qty' => $damagedBase,
                         'unit_cost_price' => $unitCost,
-                        'total_financial_loss' => ($lostBase + $damagedBase) * $unitCost,
+                        'total_financial_loss' => ($lostBase + $damagedBase) * (float) $unitCost,
                         'loss_category' => $lossCategory,
                         'recorded_by' => auth()->id(),
                         'recorded_at' => now(),
@@ -525,16 +695,17 @@ class InventoryService
                 $item->update([
                     'received_good_base_qty' => $goodBase,
                     'received_damaged_base_qty' => $damagedBase,
-                    'received_qty' => ($goodBase + $damagedBase),
+                    'received_qty' => $goodBase + $damagedBase,
                 ]);
 
-                InTransit::where('transfer_requisition_item_id', $item->id)->update([
-                    'status' => 'cleared',
-                ]);
+                InTransit::where('transfer_requisition_item_id', $item->id)
+                    ->update(['status' => InTransitStatus::Cleared]);
             }
 
             $requisition->update([
-                'status' => $hasLossOrDamage ? 'closed_with_loss' : 'completed',
+                'status' => $hasLossOrDamage
+                    ? TransferRequisitionStatus::ClosedWithLoss
+                    : TransferRequisitionStatus::Completed,
                 'received_by' => auth()->id(),
                 'completed_at' => now(),
             ]);
@@ -542,6 +713,118 @@ class InventoryService
     }
 }
 ```
+
+### B. `NegotiationService`
+
+Owns the counter-offer lifecycle for `transfer_requisition_item_revisions`. This is the **only** path by which a `TransferRequisitionItem`'s `approved_unit_name` / `approved_unit_ratio` / `approved_qty` / `approved_base_qty` / `substitute_product_variant_id` fields get populated — `InventoryService::dispatchTransfer()` reads those fields on the assumption they reflect an accepted revision, never writes to them directly.
+
+```php
+namespace App\Services;
+
+use App\Enums\NegotiationSide;
+use App\Enums\RevisionStatus;
+use App\Models\TransferRequisitionItem;
+use App\Models\TransferRequisitionItemRevision;
+use App\Models\User;
+use Exception;
+use Illuminate\Support\Facades\DB;
+
+class NegotiationService
+{
+    /**
+     * Open a new negotiation thread on an item, or start a counter-thread if
+     * $respondsTo is given.
+     */
+    public function propose(
+        TransferRequisitionItem $item,
+        User $user,
+        NegotiationSide $side,
+        string $unitName,
+        int $unitRatio,
+        int $qty,
+        ?int $substituteProductVariantId = null,
+        ?string $reason = null,
+        ?TransferRequisitionItemRevision $respondsTo = null,
+    ): TransferRequisitionItemRevision {
+        $attributes = [
+            'user_id' => $user->id,
+            'product_variant_id' => $item->product_variant_id,
+            'substitute_product_variant_id' => $substituteProductVariantId,
+            'proposed_unit_name' => $unitName,
+            'proposed_unit_ratio' => $unitRatio,
+            'proposed_qty' => $qty,
+            'proposed_base_qty' => $qty * $unitRatio,
+            'negotiation_reason' => $reason,
+            'side' => $side,
+        ];
+
+        if ($respondsTo !== null) {
+            return $respondsTo->counterWith($attributes);
+        }
+
+        return DB::transaction(function () use ($item, $attributes) {
+            return TransferRequisitionItemRevision::create(array_merge($attributes, [
+                'transfer_requisition_item_id' => $item->id,
+                'status' => RevisionStatus::Pending,
+            ]));
+        });
+    }
+
+    /**
+     * Accept a revision, syncing its proposed values onto the parent item.
+     * Delegates to TransferRequisitionItemRevision::accept(), which wraps
+     * this in its own transaction with a row lock on the item.
+     */
+    public function accept(TransferRequisitionItemRevision $revision): void
+    {
+        if ($revision->status->isResolved()) {
+            throw new Exception("Revision {$revision->id} is already resolved ({$revision->status->value}) and cannot be accepted again.");
+        }
+
+        $revision->accept();
+    }
+
+    public function reject(TransferRequisitionItemRevision $revision): void
+    {
+        if ($revision->status->isResolved()) {
+            throw new Exception("Revision {$revision->id} is already resolved ({$revision->status->value}) and cannot be rejected.");
+        }
+
+        $revision->reject();
+    }
+
+    /**
+     * Counter a pending revision with a new proposal from the opposite side.
+     */
+    public function counter(
+        TransferRequisitionItemRevision $revision,
+        User $user,
+        string $unitName,
+        int $unitRatio,
+        int $qty,
+        ?int $substituteProductVariantId = null,
+        ?string $reason = null,
+    ): TransferRequisitionItemRevision {
+        if ($revision->status->isResolved()) {
+            throw new Exception("Revision {$revision->id} is already resolved ({$revision->status->value}) and cannot be countered.");
+        }
+
+        return $revision->counterWith([
+            'user_id' => $user->id,
+            'product_variant_id' => $revision->product_variant_id,
+            'substitute_product_variant_id' => $substituteProductVariantId,
+            'proposed_unit_name' => $unitName,
+            'proposed_unit_ratio' => $unitRatio,
+            'proposed_qty' => $qty,
+            'proposed_base_qty' => $qty * $unitRatio,
+            'negotiation_reason' => $reason,
+            'side' => $revision->side->opposite(),
+        ]);
+    }
+}
+```
+
+> **Known open gap (not yet resolved):** neither `accept()`, `reject()`, nor `counter()` currently checks whether the parent requisition itself is still in a negotiable status (e.g. `under_review_fulfiller` / `under_review_requestor`). A revision could theoretically be accepted after the requisition has already moved to `confirmed` or beyond. Guarding this — either here or via a DB constraint — is still undecided.
 
 ---
 
@@ -558,15 +841,15 @@ class InventoryService
 ## 📋 Section 7: Master 17-Stage Execution Sequence
 
 1. **Phase 00: Environment & Core Guardrails Setup**: Bootstrap Laravel 13, FilamentPHP v5, Livewire v4, and register composer dependencies (`simplesoftwareio/simple-qrcode`, `pestphp/pest`).
-2. **Phase 01: Relational Schema Migrations**: Execute the 13 clean migrations in strict dependency order (`products`, `product_variants`, `product_variant_prices`, `product_unit_conversions`, `warehouses`, `users` role update, `user_warehouse`, `stock_movements`, `transfer_requisitions`, `transfer_requisition_items`, `transfer_requisition_item_revisions`, `in_transits`, `loss_ledgers`).
+2. **Phase 01: Relational Schema Migrations**: Execute the 13 clean migrations in strict dependency order (`products`, `product_variants`, `product_variant_prices`, `product_variant_unit_conversions`, `warehouses`, `users` role update, `user_warehouse`, `stock_movements`, `transfer_requisitions`, `transfer_requisition_items`, `transfer_requisition_item_revisions`, `in_transits`, `loss_ledgers`).
 3. **Phase 02: Base Seeders & Opening Ledger**: Populate warehouses, products, variants, unit conversions, current prices, and seed opening stocks as `receive` entries in `stock_movements`.
 4. **Phase 03: Eloquent Model Projections & UserRole Enum**: Implement derived stock methods (`onHandQuantity`, `reservedQuantity`, `availableQuantity`) on `ProductVariant` and create `UserRole` enum.
 5. **Phase 04: Transactional Inventory Engine**: Implement `InventoryService` with pessimistic locking, substitute variant matching, and omitted receipt write-offs.
 6. **Phase 05: Product Catalog Resources**: Build `ProductResource` (family name/category) and `VariantsRelationManager` (SKU, GTIN, sub-cent pricing, reorder points).
 7. **Phase 06: Price History & Packaging Conversions**: Build `PricesRelationManager` (location-scoped price overrides) and `ConversionsRelationManager` mapping packaging multipliers.
 8. **Phase 07: Warehouses & Manual Adjustments**: Build `WarehouseResource` and slide-over stock adjuster drawer with 15-character note validation.
-9. **Phase 08: Inter-Warehouse Requisition Wizard**: Implement 3-step creation wizard dialog modals (`closeModalByClickingAway(false)`).
-10. **Phase 09: Negotiation Loop UI**: Build review actions and revisions form for counter-offers and substitute variant swapping.
+9. **Phase 08: Inter-Warehouse Requisition Wizard**: Implement 3-step creation wizard dialog modals (3xl width, `closeModalByClickingAway(false)`).
+10. **Phase 09: Negotiation Loop UI**: Build review actions and revisions form for counter-offers and substitute variant swapping, wired to `NegotiationService::propose()` / `accept()` / `reject()` / `counter()`.
 11. **Phase 10: Dispatch & In-Transit Monitor**: Connect confirmation and dispatch actions to `InventoryService` and construct `InTransitResource`.
 12. **Phase 11: Printable STN & Signed QR Route**: Build PDF manifests rendering 30-day signed scan URLs.
 13. **Phase 12: Scan-to-Receive Modal**: Implement QR scan landing controller (`ScanReceiptController`) and auto-triggering intake reconciliation modal.

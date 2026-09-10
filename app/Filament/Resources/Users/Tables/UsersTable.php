@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Users\Tables;
 
 use App\Enums\UserRole;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Support\Enums\FontWeight;
@@ -62,6 +65,16 @@ final class UsersTable
                     ->slideOver()
                     ->icon(Heroicon::PencilSquare)
                     ->closeModalByClickingAway(false),
+
+                DeleteAction::make()
+                    ->slideOver()
+                    ->icon(Heroicon::Trash)
+                    ->closeModalByClickingAway(false),
+            ])
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                ]),
             ]);
     }
 }

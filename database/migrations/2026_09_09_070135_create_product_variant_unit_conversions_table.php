@@ -11,7 +11,7 @@ return new class() extends Migration
     public function up(): void
     {
         Schema::create('product_variant_unit_conversions', function (Blueprint $table) {
-           $table->id();
+            $table->id();
             $table->foreignId('product_variant_id')->constrained('product_variants')->cascadeOnDelete();
             $table->string('unit_name');            // Packaging name (e.g. 'Box', 'Pallet')
             $table->integer('base_unit_ratio');     // e.g. 1 Box = 24 Pcs -> 24
@@ -19,7 +19,7 @@ return new class() extends Migration
             $table->boolean('is_default_transfer')->default(false);
             $table->timestamps();
 
-            $table->unique(['product_variant_id', 'unit_name']);
+            $table->unique(['product_variant_id', 'unit_name'], 'pvuc_variant_unit_unique');
         });
     }
 

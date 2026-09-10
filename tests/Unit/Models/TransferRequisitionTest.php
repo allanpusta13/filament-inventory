@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Enums\TransferRequisitionStatus;
 use App\Models\TransferRequisition;
 
@@ -19,7 +21,7 @@ it('enforces unique reference_code', function () {
     TransferRequisition::factory()->create(['reference_code' => 'DTR-DUPE']);
 
     expect(fn () => TransferRequisition::factory()->create(['reference_code' => 'DTR-DUPE']))
-        ->toThrow(\Illuminate\Database\QueryException::class);
+        ->toThrow(Illuminate\Database\QueryException::class);
 });
 
 it('soft deletes without removing the row', function () {
@@ -40,7 +42,7 @@ describe('TransferRequisitionStatus enum', function () {
 
     it('provides a human-readable label for every case', function () {
         foreach (TransferRequisitionStatus::cases() as $case) {
-            expect($case->label())->toBeString()->not->toBeEmpty();
+            expect($case->getLabel())->toBeString()->not->toBeEmpty();
         }
     });
 });

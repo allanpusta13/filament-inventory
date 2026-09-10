@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Enums\InTransitStatus;
 use App\Models\InTransit;
 
@@ -26,6 +28,6 @@ it('cascades deletion when the parent requisition is force-deleted', function ()
 
 it('provides a human-readable label for every status', function () {
     foreach (InTransitStatus::cases() as $case) {
-        expect($case->label())->toBeString()->not->toBeEmpty();
+        expect($case->getLabel())->toBeString()->not->toBeEmpty();
     }
 });

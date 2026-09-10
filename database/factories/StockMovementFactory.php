@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Enums\MovementType;
+use App\Enums\StockMovementType;
 use App\Models\ProductVariant;
 use App\Models\StockMovement;
 use App\Models\Warehouse;
@@ -25,7 +25,7 @@ class StockMovementFactory extends Factory
         return [
             'product_variant_id' => ProductVariant::factory(),
             'warehouse_id' => Warehouse::factory(),
-            'type' => MovementType::Receive,
+            'type' => StockMovementType::Receive,
             'quantity' => fake()->numberBetween(1, 500),
             'unit_name_used' => 'piece',
             'unit_ratio_used' => 1,
@@ -35,31 +35,31 @@ class StockMovementFactory extends Factory
 
     public function receive(): static
     {
-        return $this->state(fn () => ['type' => MovementType::Receive]);
+        return $this->state(fn () => ['type' => StockMovementType::Receive]);
     }
 
     public function ship(): static
     {
-        return $this->state(fn () => ['type' => MovementType::Ship]);
+        return $this->state(fn () => ['type' => StockMovementType::Ship]);
     }
 
     public function transferIn(): static
     {
-        return $this->state(fn () => ['type' => MovementType::TransferIn]);
+        return $this->state(fn () => ['type' => StockMovementType::TransferIn]);
     }
 
     public function transferOut(): static
     {
-        return $this->state(fn () => ['type' => MovementType::TransferOut]);
+        return $this->state(fn () => ['type' => StockMovementType::TransferOut]);
     }
 
     public function adjustment(): static
     {
-        return $this->state(fn () => ['type' => MovementType::Adjustment]);
+        return $this->state(fn () => ['type' => StockMovementType::Adjustment]);
     }
 
     public function loss(): static
     {
-        return $this->state(fn () => ['type' => MovementType::Loss]);
+        return $this->state(fn () => ['type' => StockMovementType::Loss]);
     }
 }

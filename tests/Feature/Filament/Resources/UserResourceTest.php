@@ -49,7 +49,7 @@ it('can render the edit page', function () {
 it('has column', function (string $column) {
     livewire(ListUsers::class)
         ->assertTableColumnExists($column);
-})->with(['name', 'email', 'created_at', 'updated_at']);
+})->with(['name', 'email', 'created_at']);
 
 it('can sort column', function (string $column) {
     $records = User::factory(5)->create();

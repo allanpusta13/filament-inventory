@@ -56,6 +56,7 @@ A specific sellable SKU under a product.
 | `reorder_point` | integer | No | `0` | safety threshold, in base units |
 | `attributes` | json | Yes | — | e.g. `{"roast": "Medium"}` |
 | `images` | json | Yes | — | |
+| `is_active` | boolean | No | `true` | |
 | `deleted_at` | timestamp | Yes | — | soft deletes |
 | `created_at` / `updated_at` | timestamp | Yes | — | |
 
@@ -394,3 +395,64 @@ users ──< (user_id) transfer_requisition_item_revisions
 | `RevisionStatus` | `transfer_requisition_item_revisions.status` | `pending`, `accepted`, `rejected`, `superseded` |
 
 All five are string columns backed by PHP enums (Laravel 13 native enum casting) rather than DB-level `enum()` columns, so adding a new case never requires a schema migration.
+
+### Filament 5 integration
+
+All five enums implement Filament's `HasLabel`, `HasColor`, and `HasIcon` contracts (`Filament\Support\Contracts\*`), so passing the enum class straight to a Filament `Select`, `Radio`, or table `TextColumn::badge()` automatically renders the correct label, color, and icon with no manual mapping in the Resource:
+
+```php
+use App\Enums\TransferRequisitionStatus;
+
+Forms\Components\Select::make('status')
+    ->options(TransferRequisitionStatus::class); // labels resolve automatically
+
+Tables\Columns\TextColumn::make('status')
+    ->badge(); // color + icon resolve automatically from the enum
+```
+
+Each case implements:
+- `getLabel(): string` — human-readable name
+- `getColor(): string | array | null` — one of Filament's 6 default semantic colors (`gray`, `info`, `warning`, `primary`, `success`, `danger`)
+- `getIcon(): string | BackedEnum | null` — a `Filament\Support\Icons\Heroicon` case
+
+| Enum | Color mapping |
+|---|---|
+| `TransferRequisitionStatus` | `draft`/`cancelled`→gray, `requested`/`dispatched`→info, `under_review_*`/`partially_received`→warning, `confirmed`→primary, `completed`→success, `closed_with_loss`→danger |
+| `InTransitStatus` | `in_transit`→info, `partially_received`→warning, `cleared`→success |
+| `StockMovementType` | inbound types→success, outbound types→info, `adjustment`→warning, `loss`→danger |
+| `NegotiationSide` | `fulfiller`→primary, `requestor`→info |
+| `RevisionStatus` | `pending`→warning, `accepted`→success, `rejected`→danger, `superseded`→gray |
+
+Reference: [Filament 5 — Advanced: Enums](https://filamentphp.com/docs/5.x/advanced/enums)
+
+---
+
+## Service layer
+
+Physical stock is never stored as a standalone number — it is always the signed SUM of `stock_movements` rows for a given variant + warehouse. Two services own all writes to this ledger.
+
+### `App\Services\InventoryService`
+
+| Method | Purpose |
+|---|---|
+| `recordMovement()` | Single signed stock movement; blocks any deduction that would drive on-hand stock negative |
+| `directTransfer()` | Instant two-leg transfer between warehouses (no in-transit period), backing `DirectTransferResource`; writes paired `transfer_out`/`transfer_in` movements linked via `related_movement_id` in both directions |
+| `dispatchTransfer()` | Dispatches a `confirmed` requisition: resolves the substitute variant if one was negotiated, debits the origin warehouse with a `transit_out` movement, opens an `in_transits` row per item |
+| `scanToReceive()` | Reconciles a scan-to-receive intake against what was dispatched; any dispatched item **absent from the payload is treated as a 100% write-off**, not silently skipped; writes `loss_ledgers` rows for any shortfall/damage and closes the requisition `completed` or `closed_with_loss` accordingly |
+
+All four methods run inside `DB::transaction()` with `lockForUpdate()` on the `ProductVariant`/`TransferRequisition`/`Warehouse` rows involved. `directTransfer()` locks both warehouse rows in ID order to avoid deadlocking against a concurrent reverse-direction transfer between the same pair.
+
+`dispatchTransfer()` and `scanToReceive()` read `approved_base_qty`/`approved_unit_name`/`approved_unit_ratio`/`substitute_product_variant_id` off the item, falling back to the `requested_*` fields when an item was never negotiated. These `approved_*` fields are populated **exclusively** by an accepted negotiation revision — see below.
+
+### `App\Services\NegotiationService`
+
+Thin orchestration layer over `TransferRequisitionItemRevision`'s own model methods (`accept()`, `reject()`, `counterWith()`).
+
+| Method | Purpose |
+|---|---|
+| `propose()` | Opens a new negotiation thread on an item, or starts a counter-thread if `$respondsTo` is given |
+| `accept()` | Accepts a revision; guards against accepting an already-resolved one, then delegates to `TransferRequisitionItemRevision::accept()`, which syncs the revision's proposed values onto the parent item's `approved_*` fields (and `substitute_product_variant_id`) inside its own locked transaction |
+| `reject()` | Rejects a pending revision; guards against rejecting an already-resolved one |
+| `counter()` | Counters a pending revision from the opposite `NegotiationSide` automatically |
+
+`transfer_requisition_item_revisions.proposed_unit_ratio` (added alongside `proposed_unit_name`/`proposed_qty`/`proposed_base_qty`) is what lets `accept()` populate `approved_unit_ratio` on the item without dividing `proposed_base_qty` by `proposed_qty` and risking a rounding/zero-division edge case.

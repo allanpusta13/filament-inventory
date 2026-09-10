@@ -1,14 +1,16 @@
 <?php
 
-use App\Models\ProductVariantPrice;
+declare(strict_types=1);
+
 use App\Models\ProductVariant;
+use App\Models\ProductVariantPrice;
 
 it('defaults cost_price and sale_price to 0.0000 at the DB level', function () {
     $variant = ProductVariant::factory()->create();
 
     // Bypass the model's fillable/casts by inserting directly, to prove the
     // default lives on the column itself, not just in application code.
-    $id = \Illuminate\Support\Facades\DB::table('product_variant_prices')->insertGetId([
+    $id = Illuminate\Support\Facades\DB::table('product_variant_prices')->insertGetId([
         'product_variant_id' => $variant->id,
         'effective_from' => now(),
         'is_current' => true,
@@ -16,7 +18,7 @@ it('defaults cost_price and sale_price to 0.0000 at the DB level', function () {
         'updated_at' => now(),
     ]);
 
-    $row = \Illuminate\Support\Facades\DB::table('product_variant_prices')->find($id);
+    $row = Illuminate\Support\Facades\DB::table('product_variant_prices')->find($id);
 
     expect((float) $row->cost_price)->toBe(0.0)
         ->and((float) $row->sale_price)->toBe(0.0);
@@ -31,18 +33,18 @@ it('casts cost_price and sale_price as decimal strings', function () {
 
 it('rejects a second is_current row for the same variant at the DB level', function () {
     $variant = ProductVariant::factory()->create();
-    ProductVariantPrice::factory()->for($variant, 'variant')->create(['is_current' => true]);
+    ProductVariantPrice::factory()->forVariant($variant)->create(['is_current' => true]);
 
-    expect(fn () => ProductVariantPrice::factory()->for($variant, 'variant')->create(['is_current' => true]))
-        ->toThrow(\Illuminate\Database\QueryException::class);
+    expect(fn () => ProductVariantPrice::factory()->forVariant($variant)->create(['is_current' => true]))
+        ->toThrow(Illuminate\Database\QueryException::class);
 });
 
 it('allows multiple non-current rows for the same variant', function () {
     $variant = ProductVariant::factory()->create();
 
-    ProductVariantPrice::factory()->notCurrent()->for($variant, 'variant')->create();
-    ProductVariantPrice::factory()->notCurrent()->for($variant, 'variant')->create();
-    $current = ProductVariantPrice::factory()->for($variant, 'variant')->create();
+    ProductVariantPrice::factory()->notCurrent()->forVariant($variant)->create();
+    ProductVariantPrice::factory()->notCurrent()->forVariant($variant)->create();
+    $current = ProductVariantPrice::factory()->forVariant($variant)->create();
 
     expect($variant->prices()->count())->toBe(3)
         ->and($variant->prices()->where('is_current', true)->count())->toBe(1)
@@ -51,7 +53,7 @@ it('allows multiple non-current rows for the same variant', function () {
 
 it('flips the previous current row to false when recording a new price', function () {
     $variant = ProductVariant::factory()->create();
-    $old = ProductVariantPrice::factory()->for($variant, 'variant')->create(['sale_price' => 100]);
+    $old = ProductVariantPrice::factory()->forVariant($variant)->create(['sale_price' => 100]);
 
     $new = ProductVariantPrice::recordNewPrice($variant, costPrice: 50, salePrice: 120);
 

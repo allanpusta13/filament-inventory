@@ -60,4 +60,11 @@ class ProductVariantUnitConversionFactory extends Factory
             'base_unit_ratio' => 48,
         ]);
     }
+
+    public function forVariant(ProductVariant $variant): static
+    {
+        return $this->state(fn () => [
+            'product_variant_id' => $variant->id,
+        ]);
+    }
 }

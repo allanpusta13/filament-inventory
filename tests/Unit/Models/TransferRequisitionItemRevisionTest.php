@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Enums\NegotiationSide;
 use App\Enums\RevisionStatus;
 use App\Models\TransferRequisitionItem;
@@ -10,7 +12,7 @@ it('belongs to the item, the user, and the proposed variant', function () {
 
     expect($revision->item)->not->toBeNull()
         ->and($revision->user)->not->toBeNull()
-        ->and($revision->variant)->not->toBeNull();
+        ->and($revision->productVariant)->not->toBeNull();
 });
 
 it('cascades deletion when the parent item is deleted', function () {
