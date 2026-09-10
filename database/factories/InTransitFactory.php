@@ -40,7 +40,7 @@ class InTransitFactory extends Factory
 
     public function received(): static
     {
-        return $this->state(fn () => ['status' => InTransitStatus::Received]);
+        return $this->state(fn () => ['status' => InTransitStatus::Cleared]);
     }
 
     public function partiallyReceived(): static

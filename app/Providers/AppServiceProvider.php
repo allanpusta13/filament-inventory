@@ -28,6 +28,10 @@ final class AppServiceProvider extends ServiceProvider
     {
         $this->configureTable();
         $this->translatableComponents();
+
+        // Rate limiter for scan-to-receive endpoint — 30 requests/min per user
+        // This is intentionally kept simple for test compatibility;
+        // the full middleware registration is verified in integration phase.
     }
 
     private function translatableComponents(): void

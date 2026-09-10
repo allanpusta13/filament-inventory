@@ -22,6 +22,7 @@ class TransferRequisitionItemRevision extends Model
         'product_variant_id',
         'substitute_product_variant_id',
         'proposed_unit_name',
+        'proposed_unit_ratio',
         'proposed_qty',
         'proposed_base_qty',
         'negotiation_reason',
@@ -30,17 +31,6 @@ class TransferRequisitionItemRevision extends Model
         'responds_to_revision_id',
         'responded_at',
     ];
-
-    protected function casts(): array
-    {
-        return [
-            'proposed_qty' => 'integer',
-            'proposed_base_qty' => 'integer',
-            'side' => NegotiationSide::class,
-            'status' => RevisionStatus::class,
-            'responded_at' => 'datetime',
-        ];
-    }
 
     public function item(): BelongsTo
     {
@@ -115,5 +105,17 @@ class TransferRequisitionItemRevision extends Model
         }
 
         return $node;
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'proposed_unit_ratio' => 'integer',
+            'proposed_qty' => 'integer',
+            'proposed_base_qty' => 'integer',
+            'side' => NegotiationSide::class,
+            'status' => RevisionStatus::class,
+            'responded_at' => 'datetime',
+        ];
     }
 }

@@ -4,20 +4,46 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-enum RevisionStatus: string
+use BackedEnum;
+use Filament\Support\Contracts\HasColor;
+use Filament\Support\Contracts\HasIcon;
+use Filament\Support\Contracts\HasLabel;
+use Filament\Support\Icons\Heroicon;
+
+enum RevisionStatus: string implements HasColor, HasIcon, HasLabel
 {
     case Pending = 'pending';
     case Accepted = 'accepted';
     case Rejected = 'rejected';
     case Superseded = 'superseded'; // Countered by a later revision before a decision was made
 
-    public function label(): string
+    public function getLabel(): string
     {
         return match ($this) {
             self::Pending => 'Pending',
             self::Accepted => 'Accepted',
             self::Rejected => 'Rejected',
             self::Superseded => 'Superseded',
+        };
+    }
+
+    public function getColor(): string|array|null
+    {
+        return match ($this) {
+            self::Pending => 'warning',
+            self::Accepted => 'success',
+            self::Rejected => 'danger',
+            self::Superseded => 'gray',
+        };
+    }
+
+    public function getIcon(): string|BackedEnum|null
+    {
+        return match ($this) {
+            self::Pending => Heroicon::Clock,
+            self::Accepted => Heroicon::CheckCircle,
+            self::Rejected => Heroicon::XCircle,
+            self::Superseded => Heroicon::ArrowPath,
         };
     }
 

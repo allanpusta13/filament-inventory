@@ -12,12 +12,17 @@ return new class() extends Migration
     {
         Schema::create('transfer_requisition_item_revisions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('transfer_requisition_item_id')->constrained('transfer_requisition_items')->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained('users');
-            $table->foreignId('product_variant_id')->constrained('product_variants');
-            $table->foreignId('substitute_product_variant_id')->nullable()->constrained('product_variants');
+            $table->foreignId('transfer_requisition_item_id');
+            $table->foreign('transfer_requisition_item_id', 'tri_rev_item_fk')->references('id')->on('transfer_requisition_items')->onDelete('cascade');
+            $table->foreignId('user_id');
+            $table->foreign('user_id', 'tri_rev_user_fk')->references('id')->on('users')->onDelete('cascade');
+            $table->foreignId('product_variant_id');
+            $table->foreign('product_variant_id', 'tri_rev_variant_fk')->references('id')->on('product_variants')->onDelete('cascade');
+            $table->foreignId('substitute_product_variant_id')->nullable();
+            $table->foreign('substitute_product_variant_id', 'tri_rev_sub_variant_fk')->references('id')->on('product_variants')->onDelete('set null');
 
             $table->string('proposed_unit_name');
+            $table->integer('proposed_unit_ratio')->default(1);
             $table->integer('proposed_qty');
             $table->integer('proposed_base_qty');
             $table->text('negotiation_reason')->nullable();
@@ -31,15 +36,15 @@ return new class() extends Migration
 
             // Self-reference: the revision this one is countering/responding to, if any.
             // Null means this is the opening proposal in the thread for this item.
-            $table->foreignId('responds_to_revision_id')->nullable()
-                ->constrained('transfer_requisition_item_revisions')->nullOnDelete();
+            $table->foreignId('responds_to_revision_id')->nullable();
+            $table->foreign('responds_to_revision_id', 'tri_rev_parent_fk')->references('id')->on('transfer_requisition_item_revisions')->onDelete('set null');
 
             $table->timestamp('responded_at')->nullable(); // When status moved out of pending
 
             $table->timestamps();
 
-            $table->index('transfer_requisition_item_id');
-            $table->index(['transfer_requisition_item_id', 'status']);
+            $table->index('transfer_requisition_item_id', 'tri_rev_item_idx');
+            $table->index(['transfer_requisition_item_id', 'status'], 'tri_rev_item_status_idx');
         });
     }
 

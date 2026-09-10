@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
+use BackedEnum;
 use Filament\Support\Contracts\HasColor;
 use Filament\Support\Contracts\HasIcon;
 use Filament\Support\Contracts\HasLabel;
+use Filament\Support\Icons\Heroicon;
 
 enum TransferRequisitionStatus: string implements HasColor, HasIcon, HasLabel
 {
@@ -19,17 +21,21 @@ enum TransferRequisitionStatus: string implements HasColor, HasIcon, HasLabel
     case PartiallyReceived = 'partially_received';
     case Completed = 'completed';
     case ClosedWithLoss = 'closed_with_loss';
+    case Cancelled = 'cancelled';
 
-    public function label(): string
-    {
-        return $this->getLabel();
-    }
-
-    public function isTerminal(): bool
+    public function getLabel(): string
     {
         return match ($this) {
-            self::Completed, self::ClosedWithLoss => true,
-            default => false,
+            self::Draft => 'Draft',
+            self::Requested => 'Requested',
+            self::UnderReviewFulfiller => 'Under review (fulfiller)',
+            self::UnderReviewRequestor => 'Under review (requestor)',
+            self::Confirmed => 'Confirmed',
+            self::Dispatched => 'Dispatched',
+            self::PartiallyReceived => 'Partially received',
+            self::Completed => 'Completed',
+            self::ClosedWithLoss => 'Closed with loss',
+            self::Cancelled => 'Cancelled',
         };
     }
 
@@ -39,40 +45,32 @@ enum TransferRequisitionStatus: string implements HasColor, HasIcon, HasLabel
             self::Draft => 'gray',
             self::Requested => 'info',
             self::UnderReviewFulfiller, self::UnderReviewRequestor => 'warning',
-            self::Confirmed => 'success',
-            self::Dispatched => 'primary',
+            self::Confirmed => 'primary',
+            self::Dispatched => 'info',
             self::PartiallyReceived => 'warning',
             self::Completed => 'success',
             self::ClosedWithLoss => 'danger',
+            self::Cancelled => 'gray',
         };
     }
 
-    public function getLabel(): string
+    public function getIcon(): string|BackedEnum|null
     {
         return match ($this) {
-            self::Draft => 'Draft',
-            self::Requested => 'Requested',
-            self::UnderReviewFulfiller => 'Under Review (Fulfiller)',
-            self::UnderReviewRequestor => 'Under Review (Requestor)',
-            self::Confirmed => 'Confirmed',
-            self::Dispatched => 'Dispatched',
-            self::PartiallyReceived => 'Partially Received',
-            self::Completed => 'Completed',
-            self::ClosedWithLoss => 'Closed with Loss',
+            self::Draft => Heroicon::Pencil,
+            self::Requested => Heroicon::PaperAirplane,
+            self::UnderReviewFulfiller, self::UnderReviewRequestor => Heroicon::ChatBubbleLeftRight,
+            self::Confirmed => Heroicon::CheckCircle,
+            self::Dispatched => Heroicon::Truck,
+            self::PartiallyReceived => Heroicon::ArchiveBoxArrowDown,
+            self::Completed => Heroicon::CheckBadge,
+            self::ClosedWithLoss => Heroicon::ExclamationTriangle,
+            self::Cancelled => Heroicon::XCircle,
         };
     }
 
-    public function getIcon(): ?string
+    public function isTerminal(): bool
     {
-        return match ($this) {
-            self::Draft => 'heroicon-o-document',
-            self::Requested => 'heroicon-o-arrow-right',
-            self::UnderReviewFulfiller, self::UnderReviewRequestor => 'heroicon-o-chart-pie',
-            self::Confirmed => 'heroicon-o-check-circle',
-            self::Dispatched => 'heroicon-o-truck',
-            self::PartiallyReceived => 'heroicon-o-chart-bar',
-            self::Completed => 'heroicon-o-check-circle',
-            self::ClosedWithLoss => 'heroicon-o-x-circle',
-        };
+        return in_array($this, [self::Completed, self::ClosedWithLoss, self::Cancelled], true);
     }
 }

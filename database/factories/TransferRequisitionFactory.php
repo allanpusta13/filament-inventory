@@ -39,7 +39,7 @@ class TransferRequisitionFactory extends Factory
 
     public function approved(): static
     {
-        return $this->state(fn () => ['status' => TransferRequisitionStatus::Approved]);
+        return $this->state(fn () => ['status' => TransferRequisitionStatus::Confirmed]);
     }
 
     public function dispatched(): static
