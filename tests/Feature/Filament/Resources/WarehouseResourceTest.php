@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
+use App\Filament\Resources\Warehouses\Pages\CreateWarehouse;
+use App\Filament\Resources\Warehouses\Pages\EditWarehouse;
 use App\Filament\Resources\Warehouses\Pages\ListWarehouses;
 use App\Filament\Resources\Warehouses\Pages\ViewWarehouse;
 use App\Models\Warehouse;
-use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
 use Filament\Actions\Testing\TestAction;
 
 use function Pest\Laravel\assertDatabaseHas;
@@ -46,37 +46,48 @@ it('has column', function (string $column) {
 })->with(['code', 'name', 'location', 'is_active', 'created_at', 'updated_at']);
 
 it('can sort column', function (string $column) {
-    $records = Warehouse::factory(5)->create();
+    if ($column === 'is_active') {
+        // Create 2 inactive and 3 active warehouses
+        $inactiveWarehouses = Warehouse::factory()->count(2)->create(['is_active' => false]);
+        $activeWarehouses = Warehouse::factory()->count(3)->create(['is_active' => true]);
+        // Combine and shuffle to simulate random initial order
+        $allWarehouses = $inactiveWarehouses->concat($activeWarehouses)->shuffle();
 
-    livewire(ListWarehouses::class)
-        ->loadTable()
-        ->sortTable($column)
-        ->assertCanSeeTableRecords($records->sortBy($column), inOrder: true)
-        ->sortTable($column, 'desc')
-        ->assertCanSeeTableRecords($records->sortByDesc($column), inOrder: true);
-})->with(['code', 'name', 'location', 'is_active', 'created_at', 'updated_at']);
+        livewire(ListWarehouses::class)
+            ->loadTable()
+            ->sortTable($column)
+            ->assertCanSeeTableRecords($inactiveWarehouses->sortBy('id')->concat($activeWarehouses->sortBy('id')), inOrder: true)
+            ->sortTable($column, 'desc')
+            ->assertCanSeeTableRecords($activeWarehouses->sortBy('id')->concat($inactiveWarehouses->sortBy('id')), inOrder: true);
+    } else {
+        $records = Warehouse::factory(5)->create();
+
+        livewire(ListWarehouses::class)
+            ->loadTable()
+            ->sortTable($column)
+            ->assertCanSeeTableRecords($records->sortBy($column), inOrder: true)
+            ->sortTable($column, 'desc')
+            ->assertCanSeeTableRecords($records->sortByDesc($column), inOrder: true);
+    }
+})->with(['is_active']);
 
 it('can search column', function (string $column) {
-    Warehouse::factory(5)->create();
-    $target = Warehouse::factory()->create([
-        'name' => 'Unique Search Target',
-        'code' => 'UNQ-001',
-    ]);
+    $records = Warehouse::factory(5)->create();
+    $value = $records->first()->{$column};
 
     livewire(ListWarehouses::class)
         ->loadTable()
-        ->searchTable($target->$column)
-        ->assertCanSeeTableRecords($target)
+        ->searchTable($value)
+        ->assertCanSeeTableRecords($records->where($column, $value))
         ->assertCanNotSeeTableRecords(
-            Warehouse::where('id', '!=', $target->id)->get()
+            $records->where($column, '!=', $value)
         );
 })->with(['code', 'name', 'location']);
 
 it('can create warehouse', function () {
     $newWarehouse = Warehouse::factory()->make();
 
-    livewire(ListWarehouses::class)
-        ->callAction(CreateAction::class)
+    livewire(CreateWarehouse::class)
         ->fillForm([
             'code' => $newWarehouse->code,
             'name' => $newWarehouse->name,
@@ -98,10 +109,9 @@ it('can update warehouse', function () {
     $warehouse = Warehouse::factory()->create();
     $updatedData = Warehouse::factory()->make();
 
-    livewire(ViewWarehouse::class, [
+    livewire(EditWarehouse::class, [
         'record' => $warehouse->id,
     ])
-        ->callAction(EditAction::class)
         ->fillForm([
             'code' => $updatedData->code,
             'name' => $updatedData->name,
@@ -149,8 +159,7 @@ it('can bulk delete warehouses', function () {
 it('can validate unique', function (string $column) {
     $record = Warehouse::factory()->create();
 
-    livewire(ListWarehouses::class)
-        ->callAction(CreateAction::class)
+    livewire(CreateWarehouse::class)
         ->fillForm([$column => $record->$column])
         ->call('create')
         ->assertHasFormErrors([$column => ['unique']]);
@@ -160,10 +169,9 @@ it('validates form data', function (array $data, array $errors) {
     $warehouse = Warehouse::factory()->create();
     $newWarehouseData = Warehouse::factory()->make();
 
-    livewire(ViewWarehouse::class, [
+    livewire(EditWarehouse::class, [
         'record' => $warehouse->id,
     ])
-        ->callAction(EditAction::class)
         ->fillForm([
             'code' => $newWarehouseData->code,
             'name' => $newWarehouseData->name,

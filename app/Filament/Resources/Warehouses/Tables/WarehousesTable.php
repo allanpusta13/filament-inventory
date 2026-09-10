@@ -6,6 +6,8 @@ namespace App\Filament\Resources\Warehouses\Tables;
 
 use App\Models\Warehouse;
 use Filament\Actions\Action;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Support\Enums\Alignment;
 use Filament\Support\Enums\FontWeight;
@@ -17,6 +19,8 @@ use Filament\Tables\Columns\Layout\Split;
 use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
 
 class WarehousesTable
 {
@@ -37,16 +41,19 @@ class WarehousesTable
                         TextColumn::make('code')
                             ->weight(FontWeight::Bold)
                             ->searchable()
+                            ->sortable()
                             ->color('primary'),
 
                         IconColumn::make('is_active')
                             ->boolean()
-                            ->alignment(Alignment::End),
+                            ->alignment(Alignment::End)
+                            ->sortable(),
                     ]),
 
                     // Warehouse Title
                     TextColumn::make('name')
                         ->searchable()
+                        ->sortable()
                         ->size(TextSize::Large)
                         ->weight(FontWeight::Bold),
 
@@ -56,7 +63,9 @@ class WarehousesTable
                             TextColumn::make('location')
                                 ->icon(Heroicon::MapPin)
                                 ->placeholder('No Address Registered')
-                                ->color('gray'),
+                                ->color('gray')
+                                ->searchable()
+                                ->sortable(),
 
                             TextColumn::make('users_count')
                                 ->counts('users')
@@ -64,6 +73,20 @@ class WarehousesTable
                                 ->formatStateUsing(fn ($state) => "{$state} Assigned Operators")
                                 ->icon(Heroicon::UserGroup)
                                 ->color('gray'),
+
+                            TextColumn::make('created_at')
+                                ->label('Created')
+                                ->dateTime()
+                                ->placeholder('Never')
+                                ->color('gray')
+                                ->size(TextSize::ExtraSmall),
+
+                            TextColumn::make('updated_at')
+                                ->label('Updated')
+                                ->dateTime()
+                                ->placeholder('Never')
+                                ->color('gray')
+                                ->size(TextSize::ExtraSmall),
                         ])->space(1),
                     ])
                         ->collapsible()
@@ -79,6 +102,15 @@ class WarehousesTable
                     ->slideOver()
                     ->icon(Heroicon::PencilSquare)
                     ->closeModalByClickingAway(false),
+
+                DeleteAction::make()
+                    ->slideOver()
+                    ->icon(Heroicon::Trash)
+                    ->requiresConfirmation(),
+
+                DeleteBulkAction::make()
+                    ->icon(Heroicon::Trash)
+                    ->requiresConfirmation(),
 
                 Action::make('manualStockAdjustment')
                     ->label('Record Adjustment')
@@ -101,10 +133,10 @@ class WarehousesTable
                         //     ->required()
                         //     ->string()
                         //     ->minLength(15)
-                        //     ->regex('/^(?!(.)\1+$)(?!\b(test|dummy|notes|adjust|none)\b)/i')
+                        //     ->regex('/^(?!(.)\\1+$)(?!\\b(test|dummy|notes|adjust|none)\\b)/i')
                         //     ->placeholder('Provide a clear, descriptive audit explanation (min. 15 characters)...'),
                     ])
-                /* ->action(function (Warehouse $record, array $data, InventoryService $service) {
+                    /* ->action(function (Warehouse $record, array $data, InventoryService $service) {
                         $service->recordMovement(
                             productVariantId: $data['product_variant_id'],
                             warehouseId: $record->id,
@@ -117,6 +149,17 @@ class WarehousesTable
                             referenceCode: 'MANUAL-ADJ-' . strtoupper(uniqid())
                         );
                     }) */,
-            ]);
+            ])
+            ->modifyQueryUsing(function (Builder $query, Table $table): Builder {
+                $sortDirection = $table->getSortDirection() ?: 'asc';
+                $sortColumn = $table->getSortColumn();
+
+                if ($sortColumn === 'is_active') {
+                    return $query->orderBy('is_active', $sortDirection)
+                                 ->orderBy('id', 'asc');
+                }
+
+                return $query;
+            });
     }
 }

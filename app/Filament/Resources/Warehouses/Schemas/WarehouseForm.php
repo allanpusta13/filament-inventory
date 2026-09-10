@@ -22,7 +22,8 @@ class WarehouseForm
                     ->icon(Heroicon::MapPin)
                     ->schema([
                         TextInput::make('code')
-                            ->required(),
+                            ->required()
+                            ->unique(),
                         TextInput::make('name')
                             ->required(),
                         TextInput::make('location'),
@@ -30,7 +31,6 @@ class WarehouseForm
                             ->inline(false)
                             ->required(),
                     ]),
-
             ]);
     }
 }
