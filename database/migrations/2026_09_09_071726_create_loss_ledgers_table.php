@@ -14,7 +14,7 @@ return new class() extends Migration
             $table->id();
             $table->foreignId('transfer_requisition_id')->constrained()->cascadeOnDelete();
             $table->foreignId('transfer_requisition_item_id')->nullable()->constrained()->cascadeOnDelete();
-            $table->foreignId('product_variant_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('product_variant_id')->constrained()->restrictOnDelete();
             $table->foreignId('warehouse_id')->constrained()->cascadeOnDelete();
 
             $table->integer('lost_base_qty')->default(0);

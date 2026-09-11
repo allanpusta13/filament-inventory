@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Models\Product;
+use App\Observers\ProductObserver;
 use Filament\Forms\Components\Field;
 use Filament\Infolists\Components\Entry;
 use Filament\Support\Components\Component;
@@ -26,6 +28,8 @@ final class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Product::observe(ProductObserver::class);
+
         $this->configureTable();
         $this->translatableComponents();
 

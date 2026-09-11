@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Enums\StockMovementType;
+use App\Enums\TransferRequisitionStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -26,6 +26,7 @@ class ProductVariant extends Model
         'reorder_point',
         'attributes',
         'images',
+        'is_active',
     ];
 
     public function product(): BelongsTo
@@ -43,24 +44,19 @@ class ProductVariant extends Model
         return $this->hasMany(ProductVariantPrice::class);
     }
 
+    public function currentPrice(): HasOne
+    {
+        return $this->hasOne(ProductVariantPrice::class)->where('is_current', true);
+    }
+
     public function stockMovements(): HasMany
     {
         return $this->hasMany(StockMovement::class);
     }
 
-    public function transferRequisitionItems(): HasMany
+    public function requisitionItems(): HasMany
     {
         return $this->hasMany(TransferRequisitionItem::class);
-    }
-
-    /**
-     * The single active price row for this variant.
-     * App logic is responsible for keeping exactly one is_current=true row per variant;
-     * the DB enforces this with a partial/generated unique index (see migration).
-     */
-    public function currentPrice(): HasOne
-    {
-        return $this->hasOne(ProductVariantPrice::class)->where('is_current', true);
     }
 
     public function isBelowReorderPoint(int $currentBaseQty): bool
@@ -68,127 +64,50 @@ class ProductVariant extends Model
         return $currentBaseQty <= $this->reorder_point;
     }
 
-    /**-------------------------------------------------------
-     * Derived Stock of Truth — calculated dynamically from
-     * stock_movements and transfer_requisition_items.
-     * Never store physical stock in a denormalized column.
-     *-------------------------------------------------------*/
-
-    public function onHandQuantity(?int $warehouseId = null): int
+    public function onHandQuantity(int $warehouseId): int
     {
-        $query = $this->stockMovements()
-            ->whereNotNull('quantity');
-
-        if ($warehouseId !== null) {
-            $query->where('warehouse_id', $warehouseId);
-        }
-
-        return $query->sum('quantity');
+        return (int) StockMovement::where('product_variant_id', $this->id)
+            ->where('warehouse_id', $warehouseId)
+            ->sum('quantity');
     }
 
-    public function reservedQuantity(): int
+    /**
+     * [FIX v10] Reservation scope is intentionally and permanently bounded
+     * to Confirmed status only. Once TransferRequisition transitions to
+     * Dispatched, the reserved quantity is superseded by the TransitOut
+     * stock_movement (already reflected in onHandQuantity()). In-transit
+     * and partially-received cargo is NOT considered "reserved" against
+     * the origin warehouse — it has already left on_hand accounting
+     * entirely at the moment of dispatch.
+     *
+     * Do NOT extend this query to include Dispatched or PartiallyReceived
+     * statuses. Doing so would double-count stock that onHandQuantity()
+     * has already deducted via the TransitOut movement, producing a
+     * negative or understated availableQuantity() for any variant with
+     * cargo currently in transit.
+     */
+    public function reservedQuantity(int $warehouseId): int
     {
-        $items = $this->transferRequisitionItems()
-            ->whereStatus('pending')
-            ->get();
-
-        $total = 0;
-        foreach ($items as $item) {
-            $total += max(0, $item->approved_base_qty - $item->received_good_base_qty);
-        }
-
-        return $total;
+        return (int) TransferRequisitionItem::where('product_variant_id', $this->id)
+            ->whereHas('transferRequisition', function ($query) use ($warehouseId) {
+                $query->where('from_warehouse_id', $warehouseId)
+                    ->where('status', TransferRequisitionStatus::Confirmed);
+            })
+            ->sum('approved_base_qty');
     }
 
-    public function availableQuantity(): int
+    public function availableQuantity(int $warehouseId): int
     {
-        return $this->onHandQuantity() - $this->reservedQuantity();
-    }
-
-    public function incomingStock(): int
-    {
-        $movements = $this->stockMovements()
-            ->where('type', StockMovementType::TransferIn)
-            ->get();
-
-        $total = 0;
-        foreach ($movements as $q) {
-            $total += $q->quantity;
-        }
-
-        return $total;
-    }
-
-    public function outgoingStock(): int
-    {
-        $movements = $this->stockMovements()
-            ->where('type', StockMovementType::TransferOut)
-            ->get();
-
-        $total = 0;
-        foreach ($movements as $q) {
-            $total += $q->quantity;
-        }
-
-        return $total;
-    }
-
-    public function lossStock(): int
-    {
-        $movements = $this->stockMovements()
-            ->where('type', StockMovementType::Loss)
-            ->get();
-
-        $total = 0;
-        foreach ($movements as $q) {
-            $total += $q->quantity;
-        }
-
-        return $total;
-    }
-
-    public function stockLevel(): string
-    {
-        $onHand = $this->onHandQuantity();
-        $reserved = $this->reservedQuantity();
-
-        if ($onHand <= 0) {
-            return 'critical';
-        }
-        if ($onHand <= $reserved) {
-            return 'low';
-        }
-        if ($onHand <= $this->reorder_point + $reserved) {
-            return 'medium';
-        }
-
-        return 'full';
-    }
-
-    public function urgencyLevel(): string
-    {
-        $onHand = $this->onHandQuantity();
-        $reserved = $this->reservedQuantity();
-
-        if ($onHand <= 0) {
-            return 'critical';
-        }
-        if ($onHand <= $reserved) {
-            return 'high';
-        }
-        if ($onHand <= $this->reorder_point + $reserved) {
-            return 'medium';
-        }
-
-        return 'none';
+        return $this->onHandQuantity($warehouseId) - $this->reservedQuantity($warehouseId);
     }
 
     protected function casts(): array
     {
         return [
-            'attributes' => 'array',
-            'images' => 'array',
+            'attributes'    => 'array',
+            'images'        => 'array',
             'reorder_point' => 'integer',
+            'is_active'     => 'boolean',
         ];
     }
 }

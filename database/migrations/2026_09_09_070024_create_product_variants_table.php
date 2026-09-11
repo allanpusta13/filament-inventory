@@ -22,6 +22,7 @@ return new class() extends Migration
             $table->integer('reorder_point')->default(0);    // Safety threshold in base units
             $table->json('attributes')->nullable();          // e.g. {"roast": "Medium"}
             $table->json('images')->nullable();
+            $table->boolean('is_active')->default(true);
             $table->softDeletes();
             $table->timestamps();
 

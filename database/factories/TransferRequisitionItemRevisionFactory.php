@@ -24,13 +24,18 @@ class TransferRequisitionItemRevisionFactory extends Factory
      */
     public function definition(): array
     {
+        $unitRatio = fake()->numberBetween(1, 12);
+        $qty = fake()->numberBetween(1, 10);
+
         return [
             'transfer_requisition_item_id' => TransferRequisitionItem::factory(),
             'user_id' => User::factory(),
             'product_variant_id' => ProductVariant::factory(),
+            'substitute_product_variant_id' => null,
             'proposed_unit_name' => 'Box',
-            'proposed_qty' => fake()->numberBetween(1, 10),
-            'proposed_base_qty' => fake()->numberBetween(24, 240),
+            'proposed_unit_ratio' => $unitRatio,
+            'proposed_qty' => $qty,
+            'proposed_base_qty' => $qty * $unitRatio,
             'negotiation_reason' => fake()->sentence(),
             'side' => fake()->randomElement(NegotiationSide::cases()),
             'status' => RevisionStatus::Pending,

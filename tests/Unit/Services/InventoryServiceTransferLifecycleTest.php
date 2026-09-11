@@ -14,6 +14,7 @@ use App\Models\TransferRequisitionItem;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\InventoryService;
+use Exception;
 
 beforeEach(function () {
     $this->service = new InventoryService();
@@ -88,7 +89,7 @@ describe('dispatchTransfer', function () {
         expect($requisition->items->first()->fresh()->shipped_base_qty)->toBe(96);
     });
 
-    it('falls back to requested_base_qty when the item was never negotiated', function () {
+    it('throws when approved_base_qty is null (ConfirmAction must materialize)', function () {
         $requisition = TransferRequisition::factory()->create([
             'from_warehouse_id' => $this->origin->id,
             'to_warehouse_id' => $this->destination->id,
@@ -103,9 +104,10 @@ describe('dispatchTransfer', function () {
             'approved_unit_ratio' => null,
         ]);
 
-        $this->service->dispatchTransfer($requisition->fresh('items')->id);
+        expect(fn () => $this->service->dispatchTransfer($requisition->fresh('items')->id))
+            ->toThrow(Exception::class, 'has no approved_base_qty');
 
-        expect($this->variant->onHandQuantity($this->origin->id))->toBe(880); // 1000 - 120
+        expect($this->variant->onHandQuantity($this->origin->id))->toBe(1000);
     });
 
     it('dispatches against the substitute variant when one was negotiated, not the original', function () {
@@ -226,7 +228,7 @@ describe('scanToReceive', function () {
             ->toBe(InTransitStatus::Cleared);
     });
 
-    it('writes a loss ledger for partial damage and closes with loss', function () {
+    it('writes a loss ledger for partial damage but remains partially received until fully received', function () {
         $requisition = makeConfirmedRequisition($this->service, $this->origin, $this->destination, $this->variant);
         $this->service->dispatchTransfer($requisition->id);
         $item = $requisition->fresh('items')->items->first();
@@ -234,6 +236,7 @@ describe('scanToReceive', function () {
         ProductVariantPrice::recordNewPrice($this->variant, costPrice: 5.00, salePrice: 10.00);
 
         // Approved 240 base units (10 boxes of 24); receive 8 good, 1 damaged, 1 short.
+        // Total received = 9 boxes = 216 < 240 shipped → PartiallyReceived
         $this->service->scanToReceive($requisition->id, [
             $item->id => ['good_qty' => 8, 'damaged_qty' => 1, 'loss_category' => 'damaged_in_transit'],
         ]);
@@ -244,9 +247,9 @@ describe('scanToReceive', function () {
             ->and($ledger)->not->toBeNull()
             ->and($ledger->damaged_base_qty)->toBe(24) // 1 box * 24
             ->and($ledger->lost_base_qty)->toBe(24) // 1 box short * 24
-            ->and((float) $ledger->unit_cost_price)->toBe(5.0)
-            ->and((float) $ledger->total_financial_loss)->toBe((24 + 24) * 5.0)
-            ->and($requisition->fresh()->status)->toBe(TransferRequisitionStatus::ClosedWithLoss);
+            ->and((string) $ledger->unit_cost_price)->toBe('5.0000')
+            ->and($ledger->total_financial_loss)->toBe(bcmul('48', '5.0000', 4))
+            ->and($requisition->fresh()->status)->toBe(TransferRequisitionStatus::PartiallyReceived);
     });
 
     it('treats an item entirely absent from the scan payload as a 100% write-off', function () {
@@ -262,12 +265,13 @@ describe('scanToReceive', function () {
         $ledger = LossLedger::where('transfer_requisition_id', $requisition->id)->first();
 
         expect($this->variant->onHandQuantity($this->destination->id))->toBe(0)
+            ->and($ledger)->not->toBeNull()
             ->and($ledger->lost_base_qty)->toBe(240)
             ->and($ledger->damaged_base_qty)->toBe(0)
             ->and($ledger->loss_category)->toBe('omitted_from_intake')
-            ->and((float) $ledger->total_financial_loss)->toBe(240 * 2.5)
+            ->and($ledger->total_financial_loss)->toBe(bcmul('240', '2.5000', 4))
             ->and($item->fresh()->received_good_base_qty)->toBe(0)
-            ->and($requisition->fresh()->status)->toBe(TransferRequisitionStatus::ClosedWithLoss);
+            ->and($requisition->fresh()->status)->toBe(TransferRequisitionStatus::PartiallyReceived);
     });
 
     it('falls back to a zero cost snapshot when the variant has no current price', function () {
@@ -279,8 +283,8 @@ describe('scanToReceive', function () {
 
         $ledger = LossLedger::where('transfer_requisition_id', $requisition->id)->first();
 
-        expect((float) $ledger->unit_cost_price)->toBe(0.0)
-            ->and((float) $ledger->total_financial_loss)->toBe(0.0);
+        expect((string) $ledger->unit_cost_price)->toBe('0.0000')
+            ->and($ledger->total_financial_loss)->toBe('0.0000');
     });
 
     it('receives against the substitute variant when one was dispatched', function () {
@@ -386,7 +390,8 @@ describe('scanToReceive', function () {
         ProductVariantPrice::recordNewPrice($this->variant, costPrice: 3.00, salePrice: 6.00);
         ProductVariantPrice::recordNewPrice($variant2, costPrice: 2.00, salePrice: 4.00);
 
-        // Item 1: all good, Item 2: partial damage
+        // Item 1: all good, Item 2: partial damage (10 short = 20 received)
+        // Total received = 120 + 20 = 140 < 150 shipped → PartiallyReceived
         $this->service->scanToReceive($requisition->id, [
             $item1->id => ['good_qty' => 5, 'damaged_qty' => 0],
             $item2->id => ['good_qty' => 40, 'damaged_qty' => 5, 'loss_category' => 'damaged_in_transit'],
@@ -394,7 +399,7 @@ describe('scanToReceive', function () {
 
         expect($this->variant->onHandQuantity($this->destination->id))->toBe(120) // 5 boxes * 24 units
             ->and($variant2->onHandQuantity($this->destination->id))->toBe(40)
-            ->and($requisition->fresh()->status)->toBe(TransferRequisitionStatus::ClosedWithLoss)
+            ->and($requisition->fresh()->status)->toBe(TransferRequisitionStatus::PartiallyReceived)
             ->and(LossLedger::where('transfer_requisition_id', $requisition->id)->count())->toBe(1);
     });
 });

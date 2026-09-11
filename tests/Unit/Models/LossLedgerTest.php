@@ -23,10 +23,10 @@ it('snapshots unit cost from the variant current price', function () {
     expect(LossLedger::snapshotUnitCostFrom($variant->fresh()))->toBe('45.5000');
 });
 
-it('returns null when snapshotting a variant with no current price', function () {
+it('returns 0.0000 when snapshotting a variant with no current price', function () {
     $variant = ProductVariant::factory()->create();
 
-    expect(LossLedger::snapshotUnitCostFrom($variant))->toBeNull();
+    expect(LossLedger::snapshotUnitCostFrom($variant))->toBe('0.0000');
 });
 
 it('belongs to a warehouse that bears the loss', function () {

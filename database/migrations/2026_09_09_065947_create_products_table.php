@@ -14,6 +14,7 @@ return new class() extends Migration
             $table->id();
             $table->string('name');            // Product family name (e.g. "Arabica Specialty Coffee")
             $table->string('category')->nullable();
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
             $table->softDeletes();
         });

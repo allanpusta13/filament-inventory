@@ -17,9 +17,9 @@ return new class() extends Migration
             $table->foreignId('user_id');
             $table->foreign('user_id', 'tri_rev_user_fk')->references('id')->on('users')->onDelete('cascade');
             $table->foreignId('product_variant_id');
-            $table->foreign('product_variant_id', 'tri_rev_variant_fk')->references('id')->on('product_variants')->onDelete('cascade');
+            $table->foreign('product_variant_id', 'tri_rev_variant_fk')->references('id')->on('product_variants')->onDelete('restrict');
             $table->foreignId('substitute_product_variant_id')->nullable();
-            $table->foreign('substitute_product_variant_id', 'tri_rev_sub_variant_fk')->references('id')->on('product_variants')->onDelete('set null');
+            $table->foreign('substitute_product_variant_id', 'tri_rev_sub_variant_fk')->references('id')->on('product_variants')->onDelete('restrict');
 
             $table->string('proposed_unit_name');
             $table->integer('proposed_unit_ratio')->default(1);

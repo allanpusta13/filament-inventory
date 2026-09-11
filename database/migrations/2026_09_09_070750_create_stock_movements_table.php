@@ -12,8 +12,8 @@ return new class() extends Migration
     {
         Schema::create('stock_movements', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('product_variant_id')->constrained('product_variants')->cascadeOnDelete();
-            $table->foreignId('warehouse_id')->constrained('warehouses')->cascadeOnDelete();
+            $table->foreignId('product_variant_id')->constrained('product_variants')->restrictOnDelete();
+            $table->foreignId('warehouse_id')->constrained('warehouses')->restrictOnDelete();
 
             // String + PHP backed enum (App\Enums\StockMovementType) instead of DB enum()
             // for easier future additions without a schema alteration.
@@ -28,6 +28,8 @@ return new class() extends Migration
             $table->string('reference_type')->nullable();
             $table->string('reference_id')->nullable();
             $table->string('reference_code')->nullable(); // e.g. 'DTR-20260908-XXXX'
+
+            $table->text('notes')->nullable();
 
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();

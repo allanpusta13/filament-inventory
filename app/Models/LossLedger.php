@@ -13,7 +13,7 @@ class LossLedger extends Model
     /** @use HasFactory<\Database\Factories\LossLedgerFactory> */
     use HasFactory;
 
-     protected $fillable = [
+    protected $fillable = [
         'transfer_requisition_id',
         'transfer_requisition_item_id',
         'product_variant_id',
@@ -30,11 +30,11 @@ class LossLedger extends Model
     protected function casts(): array
     {
         return [
-            'lost_base_qty' => 'integer',
-            'damaged_base_qty' => 'integer',
-            'unit_cost_price' => 'decimal:4',
+            'lost_base_qty'        => 'integer',
+            'damaged_base_qty'     => 'integer',
+            'unit_cost_price'      => 'decimal:4',
             'total_financial_loss' => 'decimal:4',
-            'recorded_at' => 'datetime',
+            'recorded_at'          => 'datetime',
         ];
     }
 
@@ -64,12 +64,23 @@ class LossLedger extends Model
     }
 
     /**
-     * unit_cost_price is a snapshot taken at incident time — pull it from the
-     * variant's ProductVariantPrice::currentPrice() when creating this record, since
-     * ProductVariant no longer carries cost_price directly.
+     * [FIX v10] Snapshots variant's CURRENT cost price at the moment
+     * loss/intake is actually processed — not the price at time of
+     * original dispatch. This is a deliberate design choice: if cost_price
+     * changes mid-transit, loss/damage valuation reflects present-day
+     * replacement cost, not historical acquisition cost.
+     *
+     * Uses null-safe operator (?->) on the bare property chain, because
+     * `currentPrice` itself can be null (no is_current=true row exists
+     * for the variant) — a plain `??` on the property access would still
+     * throw, since PHP evaluates the property access before the null-coalesce
+     * is reached.
+     *
+     * Callers should eager-load `currentPrice` relation on $variant
+     * before calling this method to avoid an N+1 query per loss row.
      */
-    public static function snapshotUnitCostFrom(ProductVariant $variant): ?string
+    public static function snapshotUnitCostFrom(ProductVariant $variant): string
     {
-        return $variant->currentPrice?->cost_price;
+        return (string) ($variant->currentPrice?->cost_price ?? '0.0000');
     }
 }

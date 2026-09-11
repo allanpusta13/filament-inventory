@@ -38,8 +38,19 @@ class ProductVariantPriceFactory extends Factory
 
     public function forVariant(ProductVariant $variant): static
     {
+        // [FIX v10] Ensure at-most-one is_current=true per variant by
+        // demoting any existing current price for this variant before
+        // creating the new one. This satisfies the DB constraint from
+        // the migration (partial unique index / generated column).
         return $this->state(fn () => [
             'product_variant_id' => $variant->id,
-        ]);
+        ])->afterCreating(function (ProductVariantPrice $price) use ($variant) {
+            if ($price->is_current) {
+                ProductVariantPrice::where('product_variant_id', $variant->id)
+                    ->where('id', '!=', $price->id)
+                    ->where('is_current', true)
+                    ->update(['is_current' => false]);
+            }
+        });
     }
 }

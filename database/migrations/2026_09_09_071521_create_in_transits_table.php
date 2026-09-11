@@ -16,7 +16,7 @@ return new class() extends Migration
             $table->id();
             $table->foreignIdFor(TransferRequisition::class)->constrained()->cascadeOnDelete();
             $table->foreignIdFor(TransferRequisitionItem::class)->constrained()->cascadeOnDelete();
-            $table->foreignId('product_variant_id')->constrained('product_variants');
+            $table->foreignId('product_variant_id')->constrained('product_variants')->restrictOnDelete();
 
             $table->integer('dispatched_base_qty');
             $table->timestamp('dispatched_at');
