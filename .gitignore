@@ -46,3 +46,85 @@ node_modules/
 /.laraskills
 .laraskills*
 .tests
+.graphify/
+graphify*/
+/graphify*
+
+.agents/
+agents/
+.claude/
+.codex/
+.cursor/
+.ecc/
+.ecc-upstream/
+.impeccable/
+.mcp.json
+.playwright-cli/
+.playwright-mcp/
+.qodo/
+
+# Cleanup patterns for removed scratch files
+*.log
+!.gitignore
+!.github/
+!README.md
+!composer.json
+!package.json
+# Remove build artifacts
+public/build/
+public/hot
+# Remove test artifacts
+**/test_*.php
+**/test_*.txt
+**/test_*.json
+**/test-*.php
+**/test-*.txt
+**/test-*.json
+**/Test.php
+**/Tests.php
+# Remove debug artifacts
+debug*.php
+debug-*.png
+debug-*.html
+debug-*.txt
+debug-widget*
+debug-after-login.png
+debug-dashboard.*
+# Remove dashboard artifacts
+dashboard.png
+dashboard_output.txt
+dashboard_raw.html
+dashboard_response.html
+dashboard_test_output.txt
+dashboard-content.html
+dashboard-content.png
+# Remove check artifacts
+check_dashboard.php
+check_dashboard_correct_url.php
+check_dashboard_raw.php
+check_encoding.php
+check-data.php
+check-data2.php
+# Remove misc temporary
+cookies.txt
+hello.php
+login.html
+nul
+output.txt
+server.error
+trace-output.txt
+trace-run.log
+skills-lock.json
+# Remove backups
+*.backup-*
+*.bak
+# Remove extraction artifacts
+extract_failures.php
+extract_summary.php
+# Remove test widget artifacts
+test-widget.php
+test-widget2.php
+test-widget3.php
+# Remove run_tests
+run_tests.php
+

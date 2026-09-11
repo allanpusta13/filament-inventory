@@ -65,6 +65,11 @@
                         <p class="mt-3 text-base font-medium text-gray-950 dark:text-white">No warehouses found</p>
                         <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Get started by creating a warehouse.</p>
                     </div>
+                    <div class="col-span-full py-4 border-t border-gray-200 dark:border-white/10">
+                        <a href="/admin/warehouses" class="text-primary-600 dark:text-primary-400 font-medium hover:underline">
+                            View all warehouses →
+                        </a>
+                    </div>
                 @endforelse
             </div>
         </div>
