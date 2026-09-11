@@ -12,6 +12,11 @@ final class EditUser extends EditRecord
 {
     protected static string $resource = UserResource::class;
 
+    public function getModalWidth(): string
+    {
+        return 'large';
+    }
+
     protected function getHeaderActions(): array
     {
         return [

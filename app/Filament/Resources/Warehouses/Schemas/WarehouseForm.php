@@ -29,7 +29,8 @@ class WarehouseForm
                         TextInput::make('location'),
                         Toggle::make('is_active')
                             ->inline(false)
-                            ->required(),
+                            ->required()
+                            ->default(true),
                     ]),
             ]);
     }

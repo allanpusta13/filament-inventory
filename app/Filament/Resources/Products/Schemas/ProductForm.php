@@ -4,38 +4,32 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Products\Schemas;
 
+use Filament\Forms\Components\KeyValue;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
 
 class ProductForm
 {
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('PRODUCT FAMILY PROFILE')
-                ->icon(Heroicon::ClipboardDocumentList)
-                ->columns(2)
-                ->columnSpanFull()
-                ->schema(self::getComponents()),
-        ]);
-    }
-
-    /**
-     * Reusable array of form field components
-     */
-    public static function getComponents(): array
-    {
-        return [
-            TextInput::make('name')
-                ->label('PRODUCT FAMILY NAME')
+            Select::make('product_id')
+                ->relationship('product', 'name')
                 ->required()
-                ->placeholder('Specialty Coffee Family'),
-
-            TextInput::make('category')
-                ->label('CATEGORY')
-                ->placeholder('Beverage Ingredients'),
-        ];
+                ->createOptionForm(fn (Schema $schema) => $schema->components([
+                    TextInput::make('name')->required()->maxLength(255),
+                    TextInput::make('category')->nullable(),
+                ])),
+            TextInput::make('sku')->required()->unique(ignoreRecord: true)->maxLength(255),
+            TextInput::make('barcode')->nullable()->unique(ignoreRecord: true)->maxLength(255),
+            TextInput::make('name')->required(),
+            TextInput::make('base_unit_name')->required(),
+            TextInput::make('reorder_point')->numeric()->default(0)->required(),
+            KeyValue::make('attributes'),
+            KeyValue::make('images'),
+            Toggle::make('is_active')->default(true),
+        ]);
     }
 }

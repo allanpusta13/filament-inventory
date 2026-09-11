@@ -10,4 +10,14 @@ use Filament\Resources\Pages\CreateRecord;
 final class CreateWarehouse extends CreateRecord
 {
     protected static string $resource = WarehouseResource::class;
+
+    public function getDrawerWidth(): string
+    {
+        return 'large';
+    }
+
+    public function getModalWidth(): string
+    {
+        return 'large';
+    }
 }

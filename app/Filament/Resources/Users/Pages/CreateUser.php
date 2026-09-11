@@ -10,4 +10,9 @@ use Filament\Resources\Pages\CreateRecord;
 final class CreateUser extends CreateRecord
 {
     protected static string $resource = UserResource::class;
+
+    public function getModalWidth(): string
+    {
+        return 'large';
+    }
 }

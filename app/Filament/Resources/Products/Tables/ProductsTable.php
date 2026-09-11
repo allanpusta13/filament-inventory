@@ -5,14 +5,15 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Products\Tables;
 
 use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
-use Filament\Actions\ViewAction;
-use Filament\Support\Enums\FontWeight;
-use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
@@ -22,45 +23,56 @@ class ProductsTable
     {
         return $table
             ->columns([
-                TextColumn::make('name')
-                    ->label('PRODUCT FAMILY NAME')
-                    ->weight(FontWeight::Bold)
+                TextColumn::make('product.name')->searchable()->sortable(),
+                TextColumn::make('sku')
+                    ->fontFamily('mono')
+                    ->copyable()
                     ->searchable()
                     ->sortable(),
-
-                TextColumn::make('category')
-                    ->label('CATEGORY')
+                TextColumn::make('barcode')
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('name')
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('base_unit_name')
                     ->badge()
-                    ->color('gray')
-                    ->placeholder('Uncategorized')
-                    ->icon(Heroicon::Tag)
-                    ->searchable(),
-
-                TextColumn::make('variants_count')
-                    ->counts('variants')
-                    ->label('REGISTERED VARIANTS')
-                    ->badge()
-                    ->color('info')
-                    ->alignRight(),
-
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('currentPrice.sale_price')
+                    ->money(config('app.currency')),
+                TextColumn::make('reorder_point')
+                    ->numeric()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                IconColumn::make('is_active')
+                    ->boolean()
+                    ->sortable(),
                 TextColumn::make('created_at')
                     ->label('CREATED ON')
                     ->dateTime('M d, Y')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('updated_at')
+                    ->label('LAST MODIFIED')
+                    ->dateTime('M d, Y')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                TernaryFilter::make('is_active'),
+                SelectFilter::make('product_id')->relationship('product', 'name'),
                 TrashedFilter::make(),
             ])
             ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
+                EditAction::make()->modalWidth(\Filament\Support\Enums\Width::Large),
+                DeleteAction::make()->authorize('delete'),
+                RestoreAction::make()->authorize('restore'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                    ForceDeleteBulkAction::make(),
-                    RestoreBulkAction::make(),
+                    DeleteBulkAction::make()->authorize('deleteAny'),
+                    RestoreBulkAction::make()->authorize('restoreAny'),
                 ]),
             ]);
     }
