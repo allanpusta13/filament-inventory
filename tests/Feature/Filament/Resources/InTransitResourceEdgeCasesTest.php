@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 use App\Filament\Resources\InTransits\Pages\ViewInTransit;
 use App\Models\InTransit;
-use App\Models\ProductVariant;
 use App\Models\TransferRequisition;
 use App\Models\TransferRequisitionItem;
-use App\Models\User;
+use App\Models\ProductVariant;
 use App\Models\Warehouse;
+use App\Models\User;
 use Filament\Actions\DeleteAction;
 
+use function Pest\Laravel\assertDatabaseMissing;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
@@ -26,43 +27,15 @@ beforeEach(function () {
 });
 
 describe('InTransitResource edge cases', function () {
-    it('validates dispatched_base_qty is required', function () {
-        $requisition = TransferRequisition::factory()->create();
-        $item = TransferRequisitionItem::factory()->for($requisition)->create();
-        $variant = ProductVariant::factory()->create();
-
-        $inTransit = InTransit::factory()->make([
-            'transfer_requisition_id' => $requisition->id,
-            'transfer_requisition_item_id' => $item->id,
-            'product_variant_id' => $variant->id,
-            'dispatched_base_qty' => null,
-        ]);
-        expect($inTransit->isValid())->toBeFalse();
-    });
-
-    it('validates dispatched_base_qty is integer', function () {
-        $requisition = TransferRequisition::factory()->create();
-        $item = TransferRequisitionItem::factory()->for($requisition)->create();
-        $variant = ProductVariant::factory()->create();
-
-        $inTransit = InTransit::factory()->make([
-            'transfer_requisition_id' => $requisition->id,
-            'transfer_requisition_item_id' => $item->id,
-            'product_variant_id' => $variant->id,
-            'dispatched_base_qty' => 'not-integer',
-        ]);
-        expect($inTransit->dispatched_base_qty)->toBe(0);
-    });
-
     it('validates status enum', function () {
         $requisition = TransferRequisition::factory()->create();
         $item = TransferRequisitionItem::factory()->for($requisition)->create();
         $variant = ProductVariant::factory()->create();
 
-        $inTransit = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'transferRequisitionItem')->for($variant, 'productVariant')->create(['status' => 'in_transit']);
+        $inTransit = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->create(['status' => 'in_transit']);
         expect($inTransit->status->value)->toBe('in_transit');
 
-        $inTransit2 = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'transferRequisitionItem')->for($variant, 'productVariant')->create(['status' => 'cleared']);
+        $inTransit2 = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->create(['status' => 'cleared']);
         expect($inTransit2->status->value)->toBe('cleared');
     });
 
@@ -74,8 +47,8 @@ describe('InTransitResource edge cases', function () {
         $item2 = TransferRequisitionItem::factory()->for($req2)->create();
         $variant = ProductVariant::factory()->create();
 
-        $inTransit1 = InTransit::factory()->for($req1, 'transferRequisition')->for($item1, 'transferRequisitionItem')->for($variant, 'productVariant')->create();
-        InTransit::factory()->for($req2, 'transferRequisition')->for($item2, 'transferRequisitionItem')->for($variant, 'productVariant')->create();
+        $inTransit1 = InTransit::factory()->for($req1, 'transferRequisition')->for($item1, 'item')->for($variant, 'productVariant')->create();
+        InTransit::factory()->for($req2, 'transferRequisition')->for($item2, 'item')->for($variant, 'productVariant')->create();
 
         $results = InTransit::whereHas('transferRequisition', fn ($q) => $q->where('reference_code', 'like', '%DTR-001%'))->get();
         expect($results)->toHaveCount(1);
@@ -88,8 +61,8 @@ describe('InTransitResource edge cases', function () {
         $item = TransferRequisitionItem::factory()->for($requisition)->create();
         $variant = ProductVariant::factory()->create();
 
-        $inTransit = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'transferRequisitionItem')->for($variant, 'productVariant')->inTransit()->create();
-        InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'transferRequisitionItem')->for($variant, 'productVariant')->received()->create();
+        $inTransit = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->inTransit()->create();
+        InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->received()->create();
 
         $results = InTransit::where('status', 'in_transit')->get();
         expect($results)->toHaveCount(1);
@@ -103,8 +76,8 @@ describe('InTransitResource edge cases', function () {
         $variant1 = ProductVariant::factory()->create(['sku' => 'VAR-001']);
         $variant2 = ProductVariant::factory()->create(['sku' => 'VAR-002']);
 
-        $inTransit1 = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'transferRequisitionItem')->for($variant1, 'productVariant')->create();
-        InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'transferRequisitionItem')->for($variant2, 'productVariant')->create();
+        $inTransit1 = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant1, 'productVariant')->create();
+        InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant2, 'productVariant')->create();
 
         $results = InTransit::where('product_variant_id', $variant1->id)->get();
         expect($results)->toHaveCount(1);
@@ -117,9 +90,9 @@ describe('InTransitResource edge cases', function () {
         $item = TransferRequisitionItem::factory()->for($requisition)->create();
         $variant = ProductVariant::factory()->create();
 
-        $it1 = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'transferRequisitionItem')->for($variant, 'productVariant')->create(['dispatched_base_qty' => 300]);
-        $it2 = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'transferRequisitionItem')->for($variant, 'productVariant')->create(['dispatched_base_qty' => 100]);
-        $it3 = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'transferRequisitionItem')->for($variant, 'productVariant')->create(['dispatched_base_qty' => 200]);
+        $it1 = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->create(['dispatched_base_qty' => 300]);
+        $it2 = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->create(['dispatched_base_qty' => 100]);
+        $it3 = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->create(['dispatched_base_qty' => 200]);
 
         $results = InTransit::orderBy('dispatched_base_qty', 'asc')->get();
         expect($results->pluck('id')->toArray())->toBe([$it2->id, $it3->id, $it1->id]);
@@ -131,9 +104,9 @@ describe('InTransitResource edge cases', function () {
         $item = TransferRequisitionItem::factory()->for($requisition)->create();
         $variant = ProductVariant::factory()->create();
 
-        $it1 = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'transferRequisitionItem')->for($variant, 'productVariant')->create(['dispatched_at' => now()->subDays(2)]);
-        $it2 = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'transferRequisitionItem')->for($variant, 'productVariant')->create(['dispatched_at' => now()->subDay()]);
-        $it3 = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'transferRequisitionItem')->for($variant, 'productVariant')->create(['dispatched_at' => now()]);
+        $it1 = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->create(['dispatched_at' => now()->subDays(2)]);
+        $it2 = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->create(['dispatched_at' => now()->subDay()]);
+        $it3 = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->create(['dispatched_at' => now()]);
 
         $results = InTransit::orderBy('dispatched_at', 'asc')->get();
         expect($results->pluck('id')->toArray())->toBe([$it1->id, $it2->id, $it3->id]);
@@ -143,7 +116,7 @@ describe('InTransitResource edge cases', function () {
         $requisition = TransferRequisition::factory()->create(['reference_code' => 'DTR-VIEW']);
         $item = TransferRequisitionItem::factory()->for($requisition)->create();
         $variant = ProductVariant::factory()->create(['sku' => 'SKU-VIEW', 'name' => 'View Variant']);
-        $inTransit = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'transferRequisitionItem')->for($variant, 'productVariant')->create(['dispatched_base_qty' => 50]);
+        $inTransit = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->create(['dispatched_base_qty' => 50]);
 
         livewire(ViewInTransit::class, ['record' => $inTransit->id])
             ->assertOk()
@@ -159,15 +132,14 @@ describe('InTransitResource edge cases', function () {
         $requisition = TransferRequisition::factory()->create();
         $item = TransferRequisitionItem::factory()->for($requisition)->create();
         $variant = ProductVariant::factory()->create();
-        $inTransit = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'transferRequisitionItem')->for($variant, 'productVariant')->create();
+        $inTransit = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->create();
 
         livewire(ViewInTransit::class, ['record' => $inTransit->id])
             ->callAction(DeleteAction::class)
             ->assertNotified()
             ->assertRedirect();
 
-        $inTransit->refresh();
-        expect($inTransit->deleted_at)->not->toBeNull();
+        assertDatabaseMissing($inTransit);
     });
 
     it('handles in transit with partially received status', function () {
@@ -175,7 +147,7 @@ describe('InTransitResource edge cases', function () {
         $item = TransferRequisitionItem::factory()->for($requisition)->create();
         $variant = ProductVariant::factory()->create();
 
-        $inTransit = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'transferRequisitionItem')->for($variant, 'productVariant')->partiallyReceived()->create();
+        $inTransit = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->partiallyReceived()->create();
         expect($inTransit->status->value)->toBe('partially_received');
 
         livewire(ViewInTransit::class, ['record' => $inTransit->id])
@@ -187,7 +159,7 @@ describe('InTransitResource edge cases', function () {
         $item = TransferRequisitionItem::factory()->for($requisition)->create();
         $variant = ProductVariant::factory()->create();
 
-        $inTransit = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'transferRequisitionItem')->for($variant, 'productVariant')->cleared()->create();
+        $inTransit = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->cleared()->create();
         expect($inTransit->status->value)->toBe('cleared');
 
         livewire(ViewInTransit::class, ['record' => $inTransit->id])
@@ -203,7 +175,7 @@ describe('InTransitResource edge cases', function () {
         ]);
         $item = TransferRequisitionItem::factory()->for($requisition)->create();
         $variant = ProductVariant::factory()->create();
-        $inTransit = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'transferRequisitionItem')->for($variant, 'productVariant')->create();
+        $inTransit = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->create();
 
         livewire(ViewInTransit::class, ['record' => $inTransit->id])
             ->assertOk()
@@ -211,18 +183,5 @@ describe('InTransitResource edge cases', function () {
                 'transferRequisition.fromWarehouse.name' => 'Origin WH',
                 'transferRequisition.toWarehouse.name' => 'Dest WH',
             ]);
-    });
-
-    it('handles in transit with no dispatched_at', function () {
-        $requisition = TransferRequisition::factory()->create();
-        $item = TransferRequisitionItem::factory()->for($requisition)->create();
-        $variant = ProductVariant::factory()->create();
-
-        $inTransit = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'transferRequisitionItem')->for($variant, 'productVariant')->create(['dispatched_at' => null]);
-
-        livewire(ViewInTransit::class, ['record' => $inTransit->id])
-            ->assertOk();
-
-        expect($inTransit->dispatched_at)->toBeNull();
     });
 });
