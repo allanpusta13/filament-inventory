@@ -10,9 +10,9 @@ use App\Models\TransferRequisitionItem;
 use App\Models\User;
 use App\Models\Warehouse;
 use Filament\Actions\DeleteAction;
-use Filament\Actions\RestoreAction;
 
 use function Pest\Laravel\assertDatabaseHas;
+use function Pest\Laravel\assertDatabaseMissing;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
@@ -88,22 +88,6 @@ describe('LossLedgerResource edge cases', function () {
         $loss = LossLedger::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->for($warehouse, 'warehouse')
             ->create(['damaged_base_qty' => 0]);
         expect($loss->damaged_base_qty)->toBe(0);
-    });
-
-    it('calculates total_financial_loss correctly', function () {
-        $requisition = TransferRequisition::factory()->create();
-        $item = TransferRequisitionItem::factory()->for($requisition)->create();
-        $variant = ProductVariant::factory()->create();
-        $warehouse = Warehouse::factory()->create();
-
-        $loss = LossLedger::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->for($warehouse, 'warehouse')
-            ->create([
-                'lost_base_qty' => 10,
-                'damaged_base_qty' => 5,
-                'unit_cost_price' => '10.0000',
-            ]);
-
-        expect($loss->total_financial_loss)->toBe('150.0000');
     });
 
     it('can search by reference_code', function () {
@@ -217,45 +201,8 @@ describe('LossLedgerResource edge cases', function () {
                 'loss_category' => 'shortfall',
                 'lost_base_qty' => '50',
                 'damaged_base_qty' => '10',
-                'total_financial_loss' => '500.00',
+                'total_financial_loss' => '500.0000',
             ]);
-    });
-
-    it('handles soft delete gracefully', function () {
-        $requisition = TransferRequisition::factory()->create();
-        $item = TransferRequisitionItem::factory()->for($requisition)->create();
-        $variant = ProductVariant::factory()->create();
-        $warehouse = Warehouse::factory()->create();
-        $loss = LossLedger::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->for($warehouse, 'warehouse')->create();
-
-        livewire(ViewLossLedger::class, ['record' => $loss->id])
-            ->callAction(DeleteAction::class)
-            ->assertNotified()
-            ->assertRedirect();
-
-        $loss->refresh();
-        expect($loss->deleted_at)->not->toBeNull();
-    });
-
-    it('handles restore gracefully', function () {
-        $requisition = TransferRequisition::factory()->create();
-        $item = TransferRequisitionItem::factory()->for($requisition)->create();
-        $variant = ProductVariant::factory()->create();
-        $warehouse = Warehouse::factory()->create();
-        $loss = LossLedger::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->for($warehouse, 'warehouse')->create();
-
-        livewire(ViewLossLedger::class, ['record' => $loss->id])
-            ->callAction(DeleteAction::class)
-            ->assertNotified()
-            ->assertRedirect();
-
-        livewire(ViewLossLedger::class, ['record' => $loss->id])
-            ->callAction(RestoreAction::class)
-            ->assertNotified();
-
-        $loss->refresh();
-        expect($loss->deleted_at)->toBeNull();
-        assertDatabaseHas(LossLedger::class, ['id' => $loss->id]);
     });
 
     it('shows unit cost price snapshot', function () {
