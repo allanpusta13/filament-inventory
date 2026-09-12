@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Enums\StockMovementType;
 use App\Models\StockMovement;
 

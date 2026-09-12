@@ -23,15 +23,6 @@ class InTransit extends Model
         'status',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'status' => InTransitStatus::class,
-            'dispatched_base_qty' => 'integer',
-            'dispatched_at' => 'datetime',
-        ];
-    }
-
     public function transferRequisition(): BelongsTo
     {
         return $this->belongsTo(TransferRequisition::class);
@@ -42,8 +33,22 @@ class InTransit extends Model
         return $this->belongsTo(TransferRequisitionItem::class, 'transfer_requisition_item_id');
     }
 
+    public function transferRequisitionItem(): BelongsTo
+    {
+        return $this->belongsTo(TransferRequisitionItem::class, 'transfer_requisition_item_id');
+    }
+
     public function productVariant(): BelongsTo
     {
         return $this->belongsTo(ProductVariant::class, 'product_variant_id');
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'status' => InTransitStatus::class,
+            'dispatched_base_qty' => 'integer',
+            'dispatched_at' => 'datetime',
+        ];
     }
 }

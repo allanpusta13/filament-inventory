@@ -6,7 +6,6 @@ namespace App\Filament\Resources\TransferRequisitions;
 
 use App\Filament\Resources\TransferRequisitions\Pages\ListTransferRequisitions;
 use App\Filament\Resources\TransferRequisitions\Pages\ViewTransferRequisition;
-use App\Filament\Resources\TransferRequisitions\Schemas\TransferRequisitionForm;
 use App\Filament\Resources\TransferRequisitions\Schemas\TransferRequisitionInfolist;
 use App\Filament\Resources\TransferRequisitions\Tables\TransferRequisitionsTable;
 use App\Models\TransferRequisition;
@@ -33,7 +32,7 @@ class TransferRequisitionResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return TransferRequisitionForm::configure($schema);
+        return $schema;
     }
 
     public static function infolist(Schema $schema): Schema

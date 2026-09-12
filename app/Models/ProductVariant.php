@@ -104,10 +104,10 @@ class ProductVariant extends Model
     protected function casts(): array
     {
         return [
-            'attributes'    => 'array',
-            'images'        => 'array',
+            'attributes' => 'array',
+            'images' => 'array',
             'reorder_point' => 'integer',
-            'is_active'     => 'boolean',
+            'is_active' => 'boolean',
         ];
     }
 }

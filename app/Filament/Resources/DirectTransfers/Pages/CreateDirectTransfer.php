@@ -7,16 +7,11 @@ namespace App\Filament\Resources\DirectTransfers\Pages;
 use App\Filament\Resources\DirectTransfers\DirectTransferResource;
 use App\Filament\Resources\DirectTransfers\Schemas\DirectTransferForm;
 use App\Models\ProductVariant;
-use App\Models\Warehouse;
 use App\Services\InventoryService;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
-use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Components\Wizard\Step;
-use Filament\Schemas\Components\Utilities\Get;
-use Filament\Support\Enums\Width;
-use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\DB;
 
 class CreateDirectTransfer extends CreateRecord
@@ -58,7 +53,7 @@ class CreateDirectTransfer extends CreateRecord
         return 'max-content';
     }
 
-    protected function getFormSubmitAction(): \Filament\Actions\Action
+    protected function getFormSubmitAction(): Action
     {
         return Action::make('create')
             ->label('EXECUTE TRANSFER')
@@ -71,7 +66,7 @@ class CreateDirectTransfer extends CreateRecord
                     $qty = $data['quantity'];
                     $notes = $data['notes'];
 
-                    $referenceCode = 'DTR-' . date('Ymd') . '-' . mb_strtoupper(uniqid());
+                    $referenceCode = 'DTR-'.date('Ymd').'-'.mb_strtoupper(uniqid());
                     $variant = ProductVariant::findOrFail($variantId);
 
                     app(InventoryService::class)->directTransfer(
@@ -101,18 +96,17 @@ class CreateDirectTransfer extends CreateRecord
     protected function getWizardSteps(): array
     {
         return [
-            \Filament\Schemas\Components\Wizard\Step::make('Location Mapping')
+            Step::make('Location Mapping')
                 ->description('Map origin and destination warehouses')
-                ->schema(\App\Filament\Resources\DirectTransfers\Schemas\DirectTransferForm::getLocationSchema()),
+                ->schema(DirectTransferForm::getLocationSchema()),
 
-            \Filament\Schemas\Components\Wizard\Step::make('Stock Allocation')
+            Step::make('Stock Allocation')
                 ->description('Select variant, quantity, and add notes')
-                ->schema(\App\Filament\Resources\DirectTransfers\Schemas\DirectTransferForm::getAllocationSchema()),
+                ->schema(DirectTransferForm::getAllocationSchema()),
 
-            \Filament\Schemas\Components\Wizard\Step::make('Review & Verify')
+            Step::make('Review & Verify')
                 ->description('Confirm all details before executing')
-                ->schema(\App\Filament\Resources\DirectTransfers\Schemas\DirectTransferForm::getReviewSchema()),
+                ->schema(DirectTransferForm::getReviewSchema()),
         ];
     }
-
-    }
+}

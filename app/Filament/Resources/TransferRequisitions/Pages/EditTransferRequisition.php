@@ -11,15 +11,15 @@ class EditTransferRequisition extends EditRecord
 {
     protected static string $resource = TransferRequisitionResource::class;
 
+    public function getModalWidth(): string
+    {
+        return 'large';
+    }
+
     protected function getHeaderActions(): array
     {
         return [
             \Filament\Actions\DeleteAction::make(),
         ];
-    }
-
-    public function getModalWidth(): string
-    {
-        return 'large';
     }
 }

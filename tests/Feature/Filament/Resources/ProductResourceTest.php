@@ -9,14 +9,10 @@ use App\Filament\Resources\Products\Pages\ViewProduct;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\RestoreAction;
-use Filament\Actions\RestoreBulkAction;
-use Filament\Actions\Testing\TestAction;
 use Illuminate\Support\Str;
 
 use function Pest\Laravel\assertDatabaseHas;
-use function Pest\Laravel\assertDatabaseMissing;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {

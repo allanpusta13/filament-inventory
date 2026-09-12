@@ -21,7 +21,6 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 
 class TransferRequisitionsTable
 {
@@ -82,18 +81,18 @@ class TransferRequisitionsTable
                     ->searchable()
                     ->preload(),
 
-                \Filament\Tables\Filters\TrashedFilter::make(),
+                TrashedFilter::make(),
             ])
             ->recordActions([
-                \Filament\Actions\ViewAction::make(),
+                ViewAction::make(),
 
-                \Filament\Actions\EditAction::make()
+                EditAction::make()
                     ->visible(fn ($record) => $record->status === 'draft')
                     ->modalWidth(\Filament\Support\Enums\Width::Large),
 
-                \Filament\Actions\Action::make('submitRequest')
+                Action::make('submitRequest')
                     ->label('SUBMIT REQUEST')
-                    ->icon(\Filament\Support\Icons\Heroicon::PaperAirplane)
+                    ->icon(Heroicon::PaperAirplane)
                     ->color('primary')
                     ->visible(fn ($record) => $record->status === 'draft')
                     ->action(function ($record) {
@@ -105,51 +104,51 @@ class TransferRequisitionsTable
                     })
                     ->requiresConfirmation(),
 
-                \Filament\Actions\Action::make('reviewNegotiate')
+                Action::make('reviewNegotiate')
                     ->label('REVIEW / NEGOTIATE')
-                    ->icon(\Filament\Support\Icons\Heroicon::ChatBubbleLeftRight)
+                    ->icon(Heroicon::ChatBubbleLeftRight)
                     ->color('warning')
                     ->visible(fn ($record) => in_array($record->status, ['requested', 'under_review_fulfiller', 'under_review_requestor']))
                     ->url(fn ($record) => $record->getUrl('edit')),
 
-                \Filament\Actions\Action::make('acceptRevision')
+                Action::make('acceptRevision')
                     ->label('ACCEPT REVISION')
-                    ->icon(\Filament\Support\Icons\Heroicon::CheckCircle)
+                    ->icon(Heroicon::CheckCircle)
                     ->color('success')
                     ->visible(fn ($record) => in_array($record->status, ['under_review_fulfiller', 'under_review_requestor'])),
 
-                \Filament\Actions\Action::make('rejectRevision')
+                Action::make('rejectRevision')
                     ->label('REJECT REVISION')
-                    ->icon(\Filament\Support\Icons\Heroicon::XCircle)
+                    ->icon(Heroicon::XCircle)
                     ->color('danger')
                     ->visible(fn ($record) => in_array($record->status, ['under_review_fulfiller', 'under_review_requestor'])),
 
-                \Filament\Actions\Action::make('confirm')
+                Action::make('confirm')
                     ->label('CONFIRM')
-                    ->icon(\Filament\Support\Icons\Heroicon::CheckBadge)
+                    ->icon(Heroicon::CheckBadge)
                     ->color('primary')
                     ->authorize('confirm')
                     ->visible(fn ($record) => in_array($record->status, ['requested', 'under_review_fulfiller', 'under_review_requestor'])),
 
-                \Filament\Actions\Action::make('dispatch')
+                Action::make('dispatch')
                     ->label('DISPATCH')
-                    ->icon(\Filament\Support\Icons\Heroicon::Truck)
+                    ->icon(Heroicon::Truck)
                     ->color('primary')
                     ->authorize('dispatch')
                     ->visible(fn ($record) => $record->status === 'confirmed'),
 
-                \Filament\Actions\Action::make('scanToReceive')
+                Action::make('scanToReceive')
                     ->label('SCAN TO RECEIVE')
                     ->name('scanToReceive')
-                    ->icon(\Filament\Support\Icons\Heroicon::QrCode)
+                    ->icon(Heroicon::QrCode)
                     ->color('success')
                     ->authorize('receive')
                     ->visible(fn ($record) => in_array($record->status, ['dispatched', 'partially_received'])),
 
                 // Cancellation only pre-dispatch
-                \Filament\Actions\Action::make('cancel')
+                Action::make('cancel')
                     ->label('CANCEL')
-                    ->icon(\Filament\Support\Icons\Heroicon::XMark)
+                    ->icon(Heroicon::XMark)
                     ->color('danger')
                     ->authorize('cancel')
                     ->visible(fn ($record) => in_array($record->status, [
@@ -160,29 +159,29 @@ class TransferRequisitionsTable
                         'confirmed',
                     ])),
 
-                \Filament\Actions\DeleteAction::make()
+                DeleteAction::make()
                     ->authorize('delete')
                     ->visible(fn ($record) => in_array($record->status, [
                         'draft',
                         'cancelled',
                     ])),
 
-                \Filament\Actions\RestoreAction::make()
+                RestoreAction::make()
                     ->authorize('restore'),
 
-                \Filament\Actions\ForceDeleteAction::make()
+                ForceDeleteAction::make()
                     ->authorize('forceDelete')
                     ->visible(fn () => auth()->user()->isAdmin()),
             ])
             ->toolbarActions([
-                \Filament\Actions\BulkActionGroup::make([
-                    \Filament\Actions\DeleteBulkAction::make()
+                BulkActionGroup::make([
+                    DeleteBulkAction::make()
                         ->authorize('deleteAny'),
 
-                    \Filament\Actions\RestoreBulkAction::make()
+                    RestoreBulkAction::make()
                         ->authorize('restoreAny'),
 
-                    \Filament\Actions\ForceDeleteBulkAction::make()
+                    ForceDeleteBulkAction::make()
                         ->authorize('forceDeleteAny'),
                 ]),
             ]);

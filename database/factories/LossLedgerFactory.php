@@ -6,7 +6,6 @@ namespace Database\Factories;
 
 use App\Models\LossLedger;
 use App\Models\ProductVariant;
-use App\Models\ProductVariantPrice;
 use App\Models\TransferRequisition;
 use App\Models\User;
 use App\Models\Warehouse;

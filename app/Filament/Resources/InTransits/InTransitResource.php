@@ -12,36 +12,38 @@ use App\Models\InTransit;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use UnitEnum;
 
 class InTransitResource extends Resource
 {
     protected static ?string $model = InTransit::class;
 
-    protected static string | \UnitEnum | null $navigationGroup = 'OPERATIONS';
+    protected static string|UnitEnum|null $navigationGroup = 'OPERATIONS';
 
     protected static ?int $navigationSort = 3;
 
-    protected static ?string $recordTitleAttribute = 'transfer_requisition_id';
+    protected static ?string $recordTitleAttribute = 'id';
 
-    public static function form(\Filament\Schemas\Schema $schema): \Filament\Schemas\Schema
+    public static function form(Schema $schema): Schema
     {
         return $schema;
     }
 
-    public static function table(\Filament\Tables\Table $table): \Filament\Tables\Table
+    public static function table(Table $table): Table
     {
         return InTransitsTable::configure($table);
     }
 
-    public static function infolist(\Filament\Schemas\Schema $schema): \Filament\Schemas\Schema
+    public static function infolist(Schema $schema): Schema
     {
         return InTransitInfolist::configure($schema);
     }
 
-    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->with(['transferRequisition', 'transferRequisitionItem', 'productVariant']);
+            ->with(['transferRequisition', 'item', 'productVariant']);
     }
 
     public static function getPages(): array

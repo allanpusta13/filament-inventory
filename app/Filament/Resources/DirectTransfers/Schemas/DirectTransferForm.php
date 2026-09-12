@@ -13,6 +13,8 @@ use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 
+use function view;
+
 class DirectTransferForm
 {
     /**
@@ -23,7 +25,7 @@ class DirectTransferForm
         return [
             Select::make('from_warehouse_id')
                 ->label('ORIGIN WAREHOUSE')
-                ->options(fn () => \App\Models\Warehouse::query()->where('is_active', true)->pluck('name', 'id'))
+                ->options(fn () => Warehouse::query()->where('is_active', true)->pluck('name', 'id'))
                 ->required()
                 ->searchable()
                 ->preload()
@@ -34,7 +36,7 @@ class DirectTransferForm
 
             Select::make('to_warehouse_id')
                 ->label('DESTINATION WAREHOUSE')
-                ->options(fn () => \App\Models\Warehouse::query()->where('is_active', true)->pluck('name', 'id'))
+                ->options(fn () => Warehouse::query()->where('is_active', true)->pluck('name', 'id'))
                 ->required()
                 ->searchable()
                 ->preload()
@@ -58,7 +60,7 @@ class DirectTransferForm
                 ->required()
                 ->searchable()
                 ->preload()
-                ->getOptionLabelFromRecordUsing(fn (\App\Models\ProductVariant $v) => "{$v->sku} - {$v->name}"),
+                ->getOptionLabelFromRecordUsing(fn (ProductVariant $v) => "{$v->sku} - {$v->name}"),
 
             TextInput::make('quantity')
                 ->label('BASE UNITS TO TRANSFER')
@@ -67,7 +69,7 @@ class DirectTransferForm
                 ->required()
                 ->helperText('Quantity in base units (e.g., pieces, grams).'),
 
-            \Filament\Forms\Components\Textarea::make('notes')
+            Textarea::make('notes')
                 ->label('AUDIT NOTES')
                 ->required()
                 ->minLength(15)
@@ -81,13 +83,13 @@ class DirectTransferForm
     public static function getReviewSchema(): array
     {
         return [
-            \Filament\Forms\Components\Placeholder::make('review_summary')
+            Placeholder::make('review_summary')
                 ->label('REVIEW & VERIFY')
-                ->content(fn (Get $get) => \view('filament.wizards.direct-transfer-review', ['state' => $get()])),
+                ->content(fn (Get $get) => view('filament.wizards.direct-transfer-review', ['state' => $get()])),
         ];
     }
 
-    public static function configure(\Filament\Schemas\Schema $schema): \Filament\Schemas\Schema
+    public static function configure(Schema $schema): Schema
     {
         return $schema->components([
             \Filament\Schemas\Components\Wizard::make([

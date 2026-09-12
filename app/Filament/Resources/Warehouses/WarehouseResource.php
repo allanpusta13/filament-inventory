@@ -6,8 +6,6 @@ namespace App\Filament\Resources\Warehouses;
 
 use App\Filament\Resources\Warehouses\Pages\ListWarehouses;
 use App\Filament\Resources\Warehouses\Pages\ViewWarehouse;
-use App\Filament\Resources\Warehouses\Pages\CreateWarehouse;
-use App\Filament\Resources\Warehouses\Pages\EditWarehouse;
 use App\Filament\Resources\Warehouses\Schemas\WarehouseForm;
 use App\Filament\Resources\Warehouses\Schemas\WarehouseInfolist;
 use App\Filament\Resources\Warehouses\Tables\WarehousesTable;

@@ -20,7 +20,6 @@ use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Http\Request;
 
 class WarehousesTable
 {
@@ -136,7 +135,7 @@ class WarehousesTable
                         //     ->regex('/^(?!(.)\\1+$)(?!\\b(test|dummy|notes|adjust|none)\\b)/i')
                         //     ->placeholder('Provide a clear, descriptive audit explanation (min. 15 characters)...'),
                     ])
-                    /* ->action(function (Warehouse $record, array $data, InventoryService $service) {
+                /* ->action(function (Warehouse $record, array $data, InventoryService $service) {
                         $service->recordMovement(
                             productVariantId: $data['product_variant_id'],
                             warehouseId: $record->id,
@@ -156,7 +155,7 @@ class WarehousesTable
 
                 if ($sortColumn === 'is_active') {
                     return $query->orderBy('is_active', $sortDirection)
-                                 ->orderBy('id', 'asc');
+                        ->orderBy('id', 'asc');
                 }
 
                 return $query;

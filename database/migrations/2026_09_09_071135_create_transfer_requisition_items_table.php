@@ -11,7 +11,7 @@ return new class() extends Migration
     public function up(): void
     {
         Schema::create('transfer_requisition_items', function (Blueprint $table) {
-             $table->id();
+            $table->id();
             $table->foreignId('transfer_requisition_id')->constrained('transfer_requisitions')->cascadeOnDelete();
             $table->foreignId('product_variant_id')->constrained('product_variants')->restrictOnDelete();
             $table->foreignId('substitute_product_variant_id')->nullable()->constrained('product_variants')->restrictOnDelete(); // Negotiated swap SKU

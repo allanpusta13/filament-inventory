@@ -18,11 +18,11 @@ use Filament\Tables\Table;
 
 class DirectTransfersTable
 {
-    public static function configure(\Filament\Tables\Table $table): \Filament\Tables\Table
+    public static function configure(Table $table): Table
     {
         return $table
             ->columns([
-                \Filament\Tables\Columns\TextColumn::make('reference_code')
+                TextColumn::make('reference_code')
                     ->label('REFERENCE CODE')
                     ->weight(\Filament\Support\Enums\FontWeight::Bold)
                     ->searchable()
@@ -30,21 +30,21 @@ class DirectTransfersTable
                     ->copyable()
                     ->color('primary'),
 
-                \Filament\Tables\Columns\TextColumn::make('productVariant.sku')
+                TextColumn::make('productVariant.sku')
                     ->label('SKU')
                     ->searchable()
                     ->sortable(),
 
-                \Filament\Tables\Columns\TextColumn::make('productVariant.name')
+                TextColumn::make('productVariant.name')
                     ->label('VARIANT NAME')
                     ->searchable()
                     ->sortable(),
 
-                \Filament\Tables\Columns\TextColumn::make('warehouse.name')
+                TextColumn::make('warehouse.name')
                     ->label('ORIGIN WAREHOUSE')
                     ->sortable(),
 
-                \Filament\Tables\Columns\TextColumn::make('type')
+                TextColumn::make('type')
                     ->label('MOVEMENT TYPE')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
@@ -53,44 +53,44 @@ class DirectTransfersTable
                         default => 'gray',
                     }),
 
-                \Filament\Tables\Columns\TextColumn::make('quantity')
+                TextColumn::make('quantity')
                     ->label('BASE UNITS')
                     ->numeric()
                     ->sortable()
                     ->color(fn (int $state): string => $state < 0 ? 'danger' : 'success'),
 
-                \Filament\Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->label('EXECUTED AT')
                     ->dateTime('M d, Y H:i')
                     ->sortable(),
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
-                \Filament\Tables\Filters\SelectFilter::make('type')
+                SelectFilter::make('type')
                     ->options([
                         'transfer_out' => 'Transfer Out (Origin)',
                         'transfer_in' => 'Transfer In (Destination)',
                     ])
                     ->label('MOVEMENT TYPE'),
 
-                \Filament\Tables\Filters\SelectFilter::make('warehouse_id')
+                SelectFilter::make('warehouse_id')
                     ->label('WAREHOUSE')
                     ->relationship('warehouse', 'name')
                     ->searchable()
                     ->preload(),
 
-                \Filament\Tables\Filters\TrashedFilter::make(),
+                TrashedFilter::make(),
             ])
             ->recordActions([
-                \Filament\Actions\ViewAction::make(),
-                \Filament\Actions\EditAction::make(),
-                \Filament\Actions\DeleteAction::make(),
-                \Filament\Actions\RestoreAction::make(),
+                ViewAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
+                RestoreAction::make(),
             ])
             ->toolbarActions([
-                \Filament\Actions\BulkActionGroup::make([
-                    \Filament\Actions\DeleteBulkAction::make(),
-                    \Filament\Actions\RestoreBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                    RestoreBulkAction::make(),
                 ]),
             ]);
     }

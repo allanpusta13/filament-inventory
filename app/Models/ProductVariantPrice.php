@@ -23,26 +23,6 @@ class ProductVariantPrice extends Model
         'notes',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'cost_price' => 'decimal:4',
-            'sale_price' => 'decimal:4',
-            'effective_from' => 'datetime',
-            'is_current' => 'boolean',
-        ];
-    }
-
-    public function productVariant(): BelongsTo
-    {
-        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
-    }
-
-    public function setBy(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'set_by');
-    }
-
     /**
      * Record a new price as current, unsetting whatever was current before it.
      * Wrap in a transaction at the call site if combined with other writes.
@@ -62,5 +42,25 @@ class ProductVariantPrice extends Model
             'set_by' => $setBy,
             'notes' => $notes,
         ]);
+    }
+
+    public function productVariant(): BelongsTo
+    {
+        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
+    }
+
+    public function setBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'set_by');
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'cost_price' => 'decimal:4',
+            'sale_price' => 'decimal:4',
+            'effective_from' => 'datetime',
+            'is_current' => 'boolean',
+        ];
     }
 }

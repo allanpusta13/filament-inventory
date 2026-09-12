@@ -20,7 +20,7 @@ class ProductObserver
         if ($activeVariants > 0) {
             throw new Exception(
                 "Cannot soft-delete Product #{$product->id}: {$activeVariants} ".
-                "active variant(s) must be trashed or reassigned first."
+                'active variant(s) must be trashed or reassigned first.'
             );
         }
     }

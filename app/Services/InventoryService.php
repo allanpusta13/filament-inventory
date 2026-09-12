@@ -12,7 +12,6 @@ use App\Models\LossLedger;
 use App\Models\ProductVariant;
 use App\Models\StockMovement;
 use App\Models\TransferRequisition;
-use App\Models\TransferRequisitionItem;
 use App\Models\Warehouse;
 use Exception;
 use Illuminate\Support\Facades\DB;
@@ -70,18 +69,18 @@ class InventoryService
             }
 
             return StockMovement::create([
-                'product_variant_id'  => $productVariantId,
-                'warehouse_id'        => $warehouseId,
-                'type'                => $type,
-                'quantity'            => $baseQuantity,
-                'unit_name_used'      => $unitName ?? $variant->base_unit_name,
-                'unit_ratio_used'     => $unitRatio,
+                'product_variant_id' => $productVariantId,
+                'warehouse_id' => $warehouseId,
+                'type' => $type,
+                'quantity' => $baseQuantity,
+                'unit_name_used' => $unitName ?? $variant->base_unit_name,
+                'unit_ratio_used' => $unitRatio,
                 'related_movement_id' => $relatedMovementId,
-                'reference_type'      => $referenceType,
-                'reference_id'        => $referenceId,
-                'reference_code'      => $referenceCode,
-                'notes'               => $notes,
-                'created_by'          => auth()->id(),
+                'reference_type' => $referenceType,
+                'reference_id' => $referenceId,
+                'reference_code' => $referenceCode,
+                'notes' => $notes,
+                'created_by' => auth()->id(),
             ]);
         });
     }
@@ -156,27 +155,27 @@ class InventoryService
 
             $outMovement = StockMovement::create([
                 'product_variant_id' => $productVariantId,
-                'warehouse_id'       => $fromWarehouseId,
-                'type'               => StockMovementType::TransferOut,
-                'quantity'           => -$baseQuantity,
-                'unit_name_used'     => $resolvedUnitName,
-                'unit_ratio_used'    => $unitRatio,
-                'reference_code'     => $referenceCode,
-                'notes'              => $notes,
-                'created_by'         => auth()->id(),
+                'warehouse_id' => $fromWarehouseId,
+                'type' => StockMovementType::TransferOut,
+                'quantity' => -$baseQuantity,
+                'unit_name_used' => $resolvedUnitName,
+                'unit_ratio_used' => $unitRatio,
+                'reference_code' => $referenceCode,
+                'notes' => $notes,
+                'created_by' => auth()->id(),
             ]);
 
             $inMovement = StockMovement::create([
-                'product_variant_id'  => $productVariantId,
-                'warehouse_id'        => $toWarehouseId,
-                'type'                => StockMovementType::TransferIn,
-                'quantity'            => $baseQuantity,
-                'unit_name_used'      => $resolvedUnitName,
-                'unit_ratio_used'     => $unitRatio,
+                'product_variant_id' => $productVariantId,
+                'warehouse_id' => $toWarehouseId,
+                'type' => StockMovementType::TransferIn,
+                'quantity' => $baseQuantity,
+                'unit_name_used' => $resolvedUnitName,
+                'unit_ratio_used' => $unitRatio,
                 'related_movement_id' => $outMovement->id,
-                'reference_code'      => $referenceCode,
-                'notes'               => $notes,
-                'created_by'          => auth()->id(),
+                'reference_code' => $referenceCode,
+                'notes' => $notes,
+                'created_by' => auth()->id(),
             ]);
 
             $outMovement->update(['related_movement_id' => $inMovement->id]);
@@ -217,12 +216,12 @@ class InventoryService
                 if ($item->approved_base_qty === null) {
                     throw new Exception(
                         "Item #{$item->id} has no approved_base_qty; ConfirmAction must ".
-                        "materialize approved_* before dispatch."
+                        'materialize approved_* before dispatch.'
                     );
                 }
 
                 $actualVariantId = $item->substitute_product_variant_id ?? $item->product_variant_id;
-                $dispatchQty     = $item->approved_base_qty;
+                $dispatchQty = $item->approved_base_qty;
 
                 $variant = ProductVariant::lockForUpdate()->findOrFail($actualVariantId);
 
@@ -235,31 +234,31 @@ class InventoryService
 
                 StockMovement::create([
                     'product_variant_id' => $actualVariantId,
-                    'warehouse_id'       => $requisition->from_warehouse_id,
-                    'type'               => StockMovementType::TransitOut,
-                    'quantity'           => -$dispatchQty,
-                    'unit_name_used'     => $item->approved_unit_name,
-                    'unit_ratio_used'    => $item->approved_unit_ratio,
-                    'reference_type'     => TransferRequisition::class,
-                    'reference_id'       => (string) $requisition->id,
-                    'reference_code'     => $requisition->reference_code,
-                    'created_by'         => auth()->id(),
+                    'warehouse_id' => $requisition->from_warehouse_id,
+                    'type' => StockMovementType::TransitOut,
+                    'quantity' => -$dispatchQty,
+                    'unit_name_used' => $item->approved_unit_name,
+                    'unit_ratio_used' => $item->approved_unit_ratio,
+                    'reference_type' => TransferRequisition::class,
+                    'reference_id' => (string) $requisition->id,
+                    'reference_code' => $requisition->reference_code,
+                    'created_by' => auth()->id(),
                 ]);
 
                 InTransit::create([
-                    'transfer_requisition_id'      => $requisition->id,
+                    'transfer_requisition_id' => $requisition->id,
                     'transfer_requisition_item_id' => $item->id,
-                    'product_variant_id'           => $actualVariantId,
-                    'dispatched_base_qty'          => $dispatchQty,
-                    'dispatched_at'                => now(),
-                    'status'                       => InTransitStatus::InTransit,
+                    'product_variant_id' => $actualVariantId,
+                    'dispatched_base_qty' => $dispatchQty,
+                    'dispatched_at' => now(),
+                    'status' => InTransitStatus::InTransit,
                 ]);
 
                 $item->update(['shipped_base_qty' => $dispatchQty]);
             }
 
             $requisition->update([
-                'status'        => TransferRequisitionStatus::Dispatched,
+                'status' => TransferRequisitionStatus::Dispatched,
                 'dispatched_by' => auth()->id(),
                 'dispatched_at' => now(),
             ]);
@@ -323,7 +322,7 @@ class InventoryService
 
             foreach ($requisition->items as $item) {
                 $alreadyReceived = $item->received_good_base_qty + $item->received_damaged_base_qty;
-                $expectedBase    = $item->shipped_base_qty;
+                $expectedBase = $item->shipped_base_qty;
 
                 if ($alreadyReceived >= $expectedBase) {
                     continue;
@@ -336,21 +335,21 @@ class InventoryService
                         continue;
                     }
                     // Omitted item on first scan: 0 received, 100% loss
-                    $goodBase     = 0;
-                    $damagedBase  = 0;
-                    $lostBase     = $expectedBase - $alreadyReceived;
+                    $goodBase = 0;
+                    $damagedBase = 0;
+                    $lostBase = $expectedBase - $alreadyReceived;
                     $lossCategory = 'omitted_from_intake';
 
                     // Omitted items on first scan MUST be processed - skip idempotency check entirely
                     $isOmittedOnFirstScan = true;
                 } else {
-                    $entry        = $receivedItemsData[$item->id];
-                    $incomingGood = ($entry['good_qty']    ?? 0) * $ratio;
-                    $incomingDmg  = ($entry['damaged_qty'] ?? 0) * $ratio;
+                    $entry = $receivedItemsData[$item->id];
+                    $incomingGood = ($entry['good_qty'] ?? 0) * $ratio;
+                    $incomingDmg = ($entry['damaged_qty'] ?? 0) * $ratio;
 
-                    $goodBase     = $item->received_good_base_qty    + $incomingGood;
-                    $damagedBase  = $item->received_damaged_base_qty + $incomingDmg;
-                    $lostBase     = max(0, $expectedBase - ($goodBase + $damagedBase));
+                    $goodBase = $item->received_good_base_qty + $incomingGood;
+                    $damagedBase = $item->received_damaged_base_qty + $incomingDmg;
+                    $lostBase = max(0, $expectedBase - ($goodBase + $damagedBase));
                     $lossCategory = $entry['loss_category'] ?? 'shortfall';
                 }
 
@@ -367,7 +366,7 @@ class InventoryService
                 // 100% loss ledger (per "scanned receipt loss integrity" rule).
                 // The idempotency check only applies when the item IS present
                 // in the payload but would produce no state change.
-                $wouldChangeGood    = $goodBase    !== $item->received_good_base_qty;
+                $wouldChangeGood = $goodBase !== $item->received_good_base_qty;
                 $wouldChangeDamaged = $damagedBase !== $item->received_damaged_base_qty;
 
                 $isOmittedOnFirstScan = $isFirstScan && ! isset($receivedItemsData[$item->id]);
@@ -376,28 +375,28 @@ class InventoryService
                     continue;
                 }
 
-                $newlyReceivedGood    = $goodBase    - $item->received_good_base_qty;
+                $newlyReceivedGood = $goodBase - $item->received_good_base_qty;
                 $newlyReceivedDamaged = $damagedBase - $item->received_damaged_base_qty;
 
                 if ($newlyReceivedGood > 0) {
                     StockMovement::create([
                         'product_variant_id' => $item->substitute_product_variant_id ?? $item->product_variant_id,
-                        'warehouse_id'       => $requisition->to_warehouse_id,
-                        'type'               => StockMovementType::TransitIn,
-                        'quantity'           => $newlyReceivedGood,
-                        'unit_name_used'     => $item->approved_unit_name,
-                        'unit_ratio_used'    => $ratio,
-                        'reference_type'     => TransferRequisition::class,
-                        'reference_id'       => (string) $requisition->id,
-                        'reference_code'     => $requisition->reference_code,
-                        'created_by'         => auth()->id(),
+                        'warehouse_id' => $requisition->to_warehouse_id,
+                        'type' => StockMovementType::TransitIn,
+                        'quantity' => $newlyReceivedGood,
+                        'unit_name_used' => $item->approved_unit_name,
+                        'unit_ratio_used' => $ratio,
+                        'reference_type' => TransferRequisition::class,
+                        'reference_id' => (string) $requisition->id,
+                        'reference_code' => $requisition->reference_code,
+                        'created_by' => auth()->id(),
                     ]);
                 }
 
                 if ($newlyReceivedDamaged > 0 || $lostBase > 0) {
                     $actualVariantId = $item->substitute_product_variant_id ?? $item->product_variant_id;
-                    $variant         = ProductVariant::with('currentPrice')->findOrFail($actualVariantId);
-                    $unitCost        = LossLedger::snapshotUnitCostFrom($variant);
+                    $variant = ProductVariant::with('currentPrice')->findOrFail($actualVariantId);
+                    $unitCost = LossLedger::snapshotUnitCostFrom($variant);
 
                     // [FIX v10] bcmul() replaces the previous
                     // (float) $unitCost * $qty calculation. Casting a
@@ -413,24 +412,24 @@ class InventoryService
                     );
 
                     LossLedger::create([
-                        'transfer_requisition_id'      => $requisition->id,
+                        'transfer_requisition_id' => $requisition->id,
                         'transfer_requisition_item_id' => $item->id,
-                        'product_variant_id'           => $actualVariantId,
-                        'warehouse_id'                 => $requisition->to_warehouse_id,
-                        'lost_base_qty'                => $lostBase,
-                        'damaged_base_qty'             => $newlyReceivedDamaged,
-                        'unit_cost_price'              => $unitCost,
-                        'total_financial_loss'         => $totalLoss,
-                        'loss_category'                => $lossCategory,
-                        'recorded_by'                  => auth()->id(),
-                        'recorded_at'                  => now(),
+                        'product_variant_id' => $actualVariantId,
+                        'warehouse_id' => $requisition->to_warehouse_id,
+                        'lost_base_qty' => $lostBase,
+                        'damaged_base_qty' => $newlyReceivedDamaged,
+                        'unit_cost_price' => $unitCost,
+                        'total_financial_loss' => $totalLoss,
+                        'loss_category' => $lossCategory,
+                        'recorded_by' => auth()->id(),
+                        'recorded_at' => now(),
                     ]);
                 }
 
                 $item->update([
-                    'received_good_base_qty'    => $goodBase,
+                    'received_good_base_qty' => $goodBase,
                     'received_damaged_base_qty' => $damagedBase,
-                    'received_qty'              => $goodBase + $damagedBase,
+                    'received_qty' => $goodBase + $damagedBase,
                 ]);
 
                 InTransit::where('transfer_requisition_item_id', $item->id)
@@ -448,11 +447,11 @@ class InventoryService
             try {
                 DB::table('stock_movement_idempotency_keys')->insert([
                     'transfer_requisition_id' => $requisition->id,
-                    'payload_checksum'        => $payloadChecksum,
-                    'resulting_item_states'   => json_encode(
+                    'payload_checksum' => $payloadChecksum,
+                    'resulting_item_states' => json_encode(
                         $requisition->items->pluck('received_qty', 'id')
                     ),
-                    'created_at'              => now(),
+                    'created_at' => now(),
                 ]);
             } catch (\Illuminate\Database\QueryException $e) {
                 report($e); // duplicate payload — already logged, non-fatal
@@ -470,7 +469,7 @@ class InventoryService
                     : ($hasAnyLoss
                         ? TransferRequisitionStatus::ClosedWithLoss
                         : TransferRequisitionStatus::Completed),
-                'received_by'  => auth()->id(),
+                'received_by' => auth()->id(),
                 'completed_at' => $allClosed ? now() : null,
             ]);
         });

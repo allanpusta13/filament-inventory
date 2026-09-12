@@ -15,12 +15,13 @@ use App\Models\ProductVariant;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
+use UnitEnum;
 
 class ProductResource extends Resource
 {
     protected static ?string $model = ProductVariant::class;
 
-    protected static string | \UnitEnum | null $navigationGroup = 'CATALOG';
+    protected static string|UnitEnum|null $navigationGroup = 'CATALOG';
 
     protected static ?int $navigationSort = 1;
 
@@ -56,10 +57,10 @@ class ProductResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => ListProducts::route('/'),
+            'index' => ListProducts::route('/'),
             'create' => CreateProduct::route('/create'),
-            'view'   => ViewProduct::route('/{record}'),
-            'edit'   => EditProduct::route('/{record}/edit'),
+            'view' => ViewProduct::route('/{record}'),
+            'edit' => EditProduct::route('/{record}/edit'),
         ];
     }
 }

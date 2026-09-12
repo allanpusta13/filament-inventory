@@ -328,7 +328,6 @@ describe('UserResource edge cases', function () {
             ->toBe([$warehouse->id]);
     });
 
-    
     // Search/filter/sort tests - using direct database assertions with isolated data
     it('can search users by name', function () {
         User::truncate();

@@ -6,12 +6,9 @@ namespace App\Filament\Resources\TransferRequisitions\Pages;
 
 use App\Filament\Resources\TransferRequisitions\TransferRequisitionResource;
 use Filament\Actions\Action;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Schemas\Components\Wizard\Step;
-use Filament\Schemas\Components\Wizard;
-use Filament\Support\Enums\Width;
-use Filament\Support\Icons\Heroicon;
-use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\DB;
 
 class CreateTransferRequisition extends CreateRecord
@@ -60,7 +57,7 @@ class CreateTransferRequisition extends CreateRecord
             ->color('primary')
             ->action(function (array $data) {
                 DB::transaction(function () use ($data) {
-                    $referenceCode = 'TRQ-' . date('Ymd') . '-' . mb_strtoupper(uniqid());
+                    $referenceCode = 'TRQ-'.date('Ymd').'-'.mb_strtoupper(uniqid());
                     $requisition = \App\Models\TransferRequisition::create([
                         'reference_code' => $referenceCode,
                         'from_warehouse_id' => $data['from_warehouse_id'],
@@ -70,7 +67,7 @@ class CreateTransferRequisition extends CreateRecord
                         'requested_at' => now(),
                     ]);
 
-                    if (!empty($data['items'])) {
+                    if (! empty($data['items'])) {
                         foreach ($data['items'] as $item) {
                             $variant = \App\Models\ProductVariant::find($item['product_variant_id']);
                             $ratio = $item['requested_unit_ratio'] ?? 1;
@@ -91,7 +88,7 @@ class CreateTransferRequisition extends CreateRecord
 
                 Notification::make()
                     ->title('Requisition created')
-                    ->body('Transfer requisition #' . $this->record->reference_code . ' submitted for review.')
+                    ->body('Transfer requisition #'.$this->record->reference_code.' submitted for review.')
                     ->success()
                     ->send();
             });
@@ -100,15 +97,15 @@ class CreateTransferRequisition extends CreateRecord
     protected function getWizardSteps(): array
     {
         return [
-            \Filament\Schemas\Components\Wizard\Step::make('Routing Pathways')
+            Step::make('Routing Pathways')
                 ->description('Identify dispatching & receiving locations')
                 ->schema(\App\Filament\Resources\TransferRequisitions\Schemas\TransferRequisitionForm::getRoutingSchema()),
 
-            \Filament\Schemas\Components\Wizard\Step::make('Material Manifest')
+            Step::make('Material Manifest')
                 ->description('Declare variant items, order volumes')
                 ->schema(\App\Filament\Resources\TransferRequisitions\Schemas\TransferRequisitionForm::getItemsSchema()),
 
-            \Filament\Schemas\Components\Wizard\Step::make('Review & Verify')
+            Step::make('Review & Verify')
                 ->description('Confirm accuracy before sending request')
                 ->schema(\App\Filament\Resources\TransferRequisitions\Schemas\TransferRequisitionForm::getReviewSchema()),
         ];

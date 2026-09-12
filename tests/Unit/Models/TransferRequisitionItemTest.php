@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Models\TransferRequisitionItem;
 use App\Models\TransferRequisitionItemRevision;
 
@@ -58,7 +60,7 @@ it('returns the full negotiation history in chronological order', function () {
         'proposed_unit_name' => 'Box',
         'proposed_qty' => 5,
         'proposed_base_qty' => 120,
-        'side' => \App\Enums\NegotiationSide::Fulfiller,
+        'side' => App\Enums\NegotiationSide::Fulfiller,
     ]);
 
     $history = $item->negotiationHistory()->pluck('id');

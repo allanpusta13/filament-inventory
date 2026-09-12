@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Enums\MovementType;
 use App\Enums\StockMovementType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -29,15 +28,6 @@ class StockMovement extends Model
         'reference_code',
         'created_by',
     ];
-
-    protected function casts(): array
-    {
-        return [
-            'type' => StockMovementType::class,
-            'quantity' => 'integer',
-            'unit_ratio_used' => 'integer',
-        ];
-    }
 
     public function productVariant(): BelongsTo
     {
@@ -67,5 +57,14 @@ class StockMovement extends Model
     public function reference(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'type' => StockMovementType::class,
+            'quantity' => 'integer',
+            'unit_ratio_used' => 'integer',
+        ];
     }
 }

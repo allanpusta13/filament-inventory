@@ -27,15 +27,25 @@ class LossLedger extends Model
         'recorded_at',
     ];
 
-    protected function casts(): array
+    /**
+     * [FIX v10] Snapshots variant's CURRENT cost price at the moment
+     * loss/intake is actually processed — not the price at time of
+     * original dispatch. This is a deliberate design choice: if cost_price
+     * changes mid-transit, loss/damage valuation reflects present-day
+     * replacement cost, not historical acquisition cost.
+     *
+     * Uses null-safe operator (?->) on the bare property chain, because
+     * `currentPrice` itself can be null (no is_current=true row exists
+     * for the variant) — a plain `??` on the property access would still
+     * throw, since PHP evaluates the property access before the null-coalesce
+     * is reached.
+     *
+     * Callers should eager-load `currentPrice` relation on $variant
+     * before calling this method to avoid an N+1 query per loss row.
+     */
+    public static function snapshotUnitCostFrom(ProductVariant $variant): string
     {
-        return [
-            'lost_base_qty'        => 'integer',
-            'damaged_base_qty'     => 'integer',
-            'unit_cost_price'      => 'decimal:4',
-            'total_financial_loss' => 'decimal:4',
-            'recorded_at'          => 'datetime',
-        ];
+        return (string) ($variant->currentPrice?->cost_price ?? '0.0000');
     }
 
     public function transferRequisition(): BelongsTo
@@ -63,24 +73,14 @@ class LossLedger extends Model
         return $this->belongsTo(User::class, 'recorded_by');
     }
 
-    /**
-     * [FIX v10] Snapshots variant's CURRENT cost price at the moment
-     * loss/intake is actually processed — not the price at time of
-     * original dispatch. This is a deliberate design choice: if cost_price
-     * changes mid-transit, loss/damage valuation reflects present-day
-     * replacement cost, not historical acquisition cost.
-     *
-     * Uses null-safe operator (?->) on the bare property chain, because
-     * `currentPrice` itself can be null (no is_current=true row exists
-     * for the variant) — a plain `??` on the property access would still
-     * throw, since PHP evaluates the property access before the null-coalesce
-     * is reached.
-     *
-     * Callers should eager-load `currentPrice` relation on $variant
-     * before calling this method to avoid an N+1 query per loss row.
-     */
-    public static function snapshotUnitCostFrom(ProductVariant $variant): string
+    protected function casts(): array
     {
-        return (string) ($variant->currentPrice?->cost_price ?? '0.0000');
+        return [
+            'lost_base_qty' => 'integer',
+            'damaged_base_qty' => 'integer',
+            'unit_cost_price' => 'decimal:4',
+            'total_financial_loss' => 'decimal:4',
+            'recorded_at' => 'datetime',
+        ];
     }
 }
