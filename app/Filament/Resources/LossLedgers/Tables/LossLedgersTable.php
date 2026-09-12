@@ -7,12 +7,9 @@ namespace App\Filament\Resources\LossLedgers\Tables;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\RestoreAction;
-use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
 class LossLedgersTable
@@ -99,18 +96,14 @@ class LossLedgersTable
                 SelectFilter::make('warehouse_id')
                     ->label('WAREHOUSE')
                     ->relationship('warehouse', 'name'),
-
-                TrashedFilter::make(),
             ])
             ->actions([
                 ViewAction::make(),
                 DeleteAction::make(),
-                RestoreAction::make(),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
-                    RestoreBulkAction::make(),
                 ]),
             ]);
     }

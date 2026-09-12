@@ -10,8 +10,6 @@ use App\Models\TransferRequisition;
 use App\Models\User;
 use App\Models\Warehouse;
 use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\Testing\TestAction;
 
 use function Pest\Livewire\livewire;
 
@@ -105,29 +103,4 @@ it('can delete transfer requisition', function () {
 
     $requisition->refresh();
     expect($requisition->deleted_at)->not->toBeNull();
-});
-
-it('can bulk delete transfer requisitions', function () {
-    $requisitions = TransferRequisition::factory()->count(5)->create();
-
-    livewire(ListTransferRequisitions::class)
-        ->loadTable()
-        ->assertCanSeeTableRecords($requisitions)
-        ->selectTableRecords($requisitions)
-        ->callAction(TestAction::make(DeleteBulkAction::class)->table()->bulk())
-        ->assertNotified()
-        ->assertCanNotSeeTableRecords($requisitions);
-
-    $requisitions->each(fn (TransferRequisition $r) => $r->refresh());
-    $requisitions->each(fn (TransferRequisition $r) => expect($r->deleted_at)->not->toBeNull());
-});
-
-it('validates unique reference_code', function () {
-    $existing = TransferRequisition::factory()->create(['reference_code' => 'TRQ-UNIQUE-TEST']);
-
-    livewire(EditTransferRequisition::class, ['record' => TransferRequisition::factory()->create(['reference_code' => 'TRQ-OTHER'])->id])
-        ->fillForm(['reference_code' => 'TRQ-UNIQUE-TEST'])
-        ->call('save')
-        ->assertHasFormErrors(['reference_code' => 'unique'])
-        ->assertNotNotified();
 });

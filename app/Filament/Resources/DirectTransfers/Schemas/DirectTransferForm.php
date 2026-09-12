@@ -12,8 +12,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
-
-use function view;
+use Filament\Support\Enums\Width;
 
 class DirectTransferForm
 {
@@ -67,46 +66,53 @@ class DirectTransferForm
                 ->numeric()
                 ->minValue(1)
                 ->required()
-                ->helperText('Quantity in base units (e.g., pieces, grams).'),
+                ->placeholder('e.g., 100'),
 
             Textarea::make('notes')
                 ->label('AUDIT NOTES')
-                ->required()
+                ->placeholder('Reason for transfer, approval ref, etc.')
+                ->columnSpanFull()
                 ->minLength(15)
-                ->placeholder('Provide a clear, descriptive audit explanation (min. 15 characters)...'),
+                ->maxLength(500),
         ];
     }
 
     /**
-     * Step 3: Review & Verify
+     * Step 3: Review & Confirm
      */
     public static function getReviewSchema(): array
     {
         return [
             Placeholder::make('review_summary')
                 ->label('REVIEW & VERIFY')
-                ->content(fn (Get $get) => view('filament.wizards.direct-transfer-review', ['state' => $get()])),
+                ->content(fn (Get $get) => view('filament.wizards.direct-transfer-review', [
+                    'fromWarehouse' => Warehouse::find($get('from_warehouse_id')),
+                    'toWarehouse' => Warehouse::find($get('to_warehouse_id')),
+                    'productVariant' => ProductVariant::find($get('product_variant_id')),
+                    'quantity' => $get('quantity'),
+                    'notes' => $get('notes'),
+                ])->render()),
         ];
     }
 
     public static function configure(Schema $schema): Schema
     {
-        return $schema->components([
-            \Filament\Schemas\Components\Wizard::make([
-                \Filament\Schemas\Components\Wizard\Step::make('Location Mapping')
-                    ->description('Map origin and destination warehouses')
-                    ->schema(self::getLocationSchema()),
+        return $schema
+            ->components([
+                \Filament\Schemas\Components\Wizard::make([
+                    \Filament\Schemas\Components\Wizard\Step::make('Location Mapping')
+                        ->description('Select origin and destination warehouses')
+                        ->schema(self::getLocationSchema()),
 
-                \Filament\Schemas\Components\Wizard\Step::make('Stock Allocation')
-                    ->description('Select variant, quantity, and add notes')
-                    ->schema(self::getAllocationSchema()),
+                    \Filament\Schemas\Components\Wizard\Step::make('Stock Allocation')
+                        ->description('Select variant and quantity to transfer')
+                        ->schema(self::getAllocationSchema()),
 
-                \Filament\Schemas\Components\Wizard\Step::make('Review & Verify')
-                    ->description('Confirm all details before executing')
-                    ->schema(self::getReviewSchema()),
-            ])
-                ->modalWidth(\Filament\Support\Enums\Width::MaxContent)
-                ->closeModalByClickingAway(false),
-        ]);
+                    \Filament\Schemas\Components\Wizard\Step::make('Review & Confirm')
+                        ->description('Verify all details before executing transfer')
+                        ->schema(self::getReviewSchema()),
+                ])
+                    ->columnSpanFull(),
+            ]);
     }
 }
