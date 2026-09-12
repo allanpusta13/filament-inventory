@@ -37,6 +37,11 @@ class TransferRequisitionItemRevision extends Model
         return $this->belongsTo(TransferRequisitionItem::class, 'transfer_requisition_item_id');
     }
 
+    public function transferRequisitionItem(): BelongsTo
+    {
+        return $this->belongsTo(TransferRequisitionItem::class, 'transfer_requisition_item_id');
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -53,8 +58,8 @@ class TransferRequisitionItemRevision extends Model
     }
 
     /**
-     * The revision this one is countering, if any. Null means this is the
-     * opening proposal in the negotiation thread for its item.
+     * Revision one is countering, if any. Null means
+     * opening proposal in negotiation thread item.
      */
     public function respondsTo(): BelongsTo
     {
@@ -62,52 +67,53 @@ class TransferRequisitionItemRevision extends Model
     }
 
     /**
-     * Revisions that countered this one.
+     * Revisions countered by this one.
      */
     public function counters(): HasMany
     {
         return $this->hasMany(self::class, 'responds_to_revision_id');
     }
 
+    public function isResolved(): bool
+    {
+        return in_array($this->status, [
+            RevisionStatus::Accepted,
+            RevisionStatus::Rejected,
+        ], true);
+    }
+
+    /**
+     * Create a counter-proposal revision.
+     */
+    public function counterWith(array $attributes): self
+    {
+        return self::create(array_merge($attributes, [
+            'transfer_requisition_item_id' => $this->transfer_requisition_item_id,
+            'responds_to_revision_id' => $this->id,
+            'side' => $this->side->opposite(),
+            'status' => RevisionStatus::Pending,
+        ]));
+    }
+
     public function accept(): void
     {
+        if ($this->isResolved()) {
+            throw new \Exception("Revision {$this->id} is already resolved ({$this->status->value}).");
+        }
+
         $this->update(['status' => RevisionStatus::Accepted, 'responded_at' => now()]);
     }
 
     public function reject(): void
     {
+        if ($this->isResolved()) {
+            throw new \Exception("Revision {$this->id} is already resolved ({$this->status->value}).");
+        }
+
         $this->update(['status' => RevisionStatus::Rejected, 'responded_at' => now()]);
     }
 
-    /**
-     * Record a counter-proposal against this revision. Marks this one as
-     * superseded and returns the new revision, threaded via responds_to_revision_id.
-     */
-    public function counterWith(array $attributes): self
-    {
-        $this->update(['status' => RevisionStatus::Superseded, 'responded_at' => now()]);
-
-        return self::create(array_merge($attributes, [
-            'transfer_requisition_item_id' => $this->transfer_requisition_item_id,
-            'responds_to_revision_id' => $this->id,
-            'status' => RevisionStatus::Pending,
-        ]));
-    }
-
-    /**
-     * Walk the thread back to its opening proposal (responds_to_revision_id is null).
-     */
-    public function threadRoot(): self
-    {
-        $node = $this;
-        while ($node->responds_to_revision_id !== null) {
-            $node = $node->respondsTo()->firstOrFail();
-        }
-
-        return $node;
-    }
-
-    protected function casts(): array
+    public function casts(): array
     {
         return [
             'proposed_unit_ratio' => 'integer',

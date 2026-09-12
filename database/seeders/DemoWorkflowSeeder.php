@@ -342,6 +342,12 @@ final class DemoWorkflowSeeder extends Seeder
         if ($transfer2) {
             $this->seedTransferRequisitionItems($transfer2);
         }
+
+        // Create revisions for both transfers
+        $this->seedRevisions($transfer1);
+        if ($transfer2) {
+            $this->seedRevisions($transfer2);
+        }
     }
 
     private function seedTransferRequisitionItems(TransferRequisition $transfer): void
@@ -377,6 +383,37 @@ final class DemoWorkflowSeeder extends Seeder
         }
     }
 
+    private function seedRevisions(TransferRequisition $transfer): void
+    {
+        $admin = User::where('email', 'admin@example.com')->first();
+
+        if (! $admin) {
+            return;
+        }
+
+        foreach ($transfer->items as $item) {
+            $variant = $item->productVariant;
+
+            // Create an accepted revision proposal
+            TransferRequisitionItemRevision::updateOrCreate(
+                [
+                    'transfer_requisition_item_id' => $item->id,
+                    'product_variant_id' => $variant->id,
+                    'side' => 'fulfiller',
+                ],
+                [
+                    'user_id' => $admin->id,
+                    'proposed_unit_name' => $item->approved_unit_name,
+                    'proposed_qty' => $item->approved_qty,
+                    'proposed_base_qty' => $item->approved_base_qty,
+                    'negotiation_reason' => 'Initial fulfiller proposal',
+                    'status' => RevisionStatus::Accepted->value,
+                    'responded_at' => now(),
+                ],
+            );
+        }
+    }
+
     private function seedRevision(TransferRequisitionItem $item, ProductVariant $variant): void
     {
         $admin = User::where('email', 'admin@example.com')->first();
@@ -406,32 +443,31 @@ final class DemoWorkflowSeeder extends Seeder
 
     private function seedInTransits(): void
     {
-        // Find a dispatched transfer (TR-2026-002)
-        $transfer = TransferRequisition::where('reference_code', 'TR-2026-002')->first();
+        $transfers = TransferRequisition::whereIn('reference_code', ['TR-2026-001', 'TR-2026-002'])->get();
 
-        if (! $transfer) {
-            return;
+        foreach ($transfers as $transfer) {
+            $variant = ProductVariant::first();
+            $item = $transfer->items()->first();
+
+            if (! $variant || ! $item) {
+                continue;
+            }
+
+            $status = $transfer->status === 'completed' ? 'cleared' : 'in_transit';
+
+            InTransit::updateOrCreate(
+                [
+                    'transfer_requisition_id' => $transfer->id,
+                    'transfer_requisition_item_id' => $item->id,
+                    'product_variant_id' => $variant->id,
+                ],
+                [
+                    'dispatched_base_qty' => $item->approved_base_qty,
+                    'dispatched_at' => $transfer->dispatched_at ?? now()->subDays(2),
+                    'status' => $status,
+                ],
+            );
         }
-
-        $variant = ProductVariant::first();
-        $item = $transfer->items()->first();
-
-        if (! $variant || ! $item) {
-            return;
-        }
-
-        InTransit::updateOrCreate(
-            [
-                'transfer_requisition_id' => $transfer->id,
-                'transfer_requisition_item_id' => $item->id,
-                'product_variant_id' => $variant->id,
-            ],
-            [
-                'dispatched_base_qty' => $item->approved_base_qty,
-                'dispatched_at' => $transfer->dispatched_at ?? now()->subDays(2),
-                'status' => 'in_transit',
-            ],
-        );
     }
 
     private function seedLossLedgers(): void
@@ -444,25 +480,28 @@ final class DemoWorkflowSeeder extends Seeder
             return;
         }
 
-        $transfer = TransferRequisition::where('reference_code', 'TR-2026-001')->first();
-        $item = $transfer?->items()->first();
+        $transfers = TransferRequisition::whereIn('reference_code', ['TR-2026-001', 'TR-2026-002'])->get();
 
-        // Loss ledger for a completed transfer (shortfall of 200 grams)
-        LossLedger::updateOrCreate(
-            [
-                'transfer_requisition_id' => $transfer?->id,
-                'product_variant_id' => $variant->id,
-                'warehouse_id' => $warehouse->id,
-            ],
-            [
-                'transfer_requisition_item_id' => $item?->id,
-                'lost_base_qty' => 200,
-                'damaged_base_qty' => 0,
-                'unit_cost_price' => 0.15,
-                'total_financial_loss' => 30.00,
-                'loss_category' => 'shortfall',
-                'recorded_by' => $admin->id,
-            ],
-        );
+        foreach ($transfers as $transfer) {
+            $item = $transfer->items()->first();
+
+            // Loss ledger for each transfer (shortfall of 200 grams)
+            LossLedger::updateOrCreate(
+                [
+                    'transfer_requisition_id' => $transfer->id,
+                    'product_variant_id' => $variant->id,
+                    'warehouse_id' => $warehouse->id,
+                ],
+                [
+                    'transfer_requisition_item_id' => $item?->id,
+                    'lost_base_qty' => 200,
+                    'damaged_base_qty' => 0,
+                    'unit_cost_price' => 0.15,
+                    'total_financial_loss' => 30.00,
+                    'loss_category' => 'shortfall',
+                    'recorded_by' => $admin->id,
+                ],
+            );
+        }
     }
 }

@@ -19,7 +19,8 @@ return new class() extends Migration
             $table->json('resulting_item_states');
             $table->timestamp('created_at')->useCurrent();
 
-            $table->unique(['transfer_requisition_id', 'payload_checksum']);
+            // Custom short name to avoid MySQL 64-char identifier limit
+            $table->unique(['transfer_requisition_id', 'payload_checksum'], 'skmik_uniq_req_payload');
         });
     }
 

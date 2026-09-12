@@ -29,6 +29,8 @@ return new class() extends Migration
             $table->index(['product_variant_id', 'effective_from']);
         });
 
+        // Unique index: only one current price per variant
+        // Application-level enforcement via ProductVariantPrice::recordNewPrice()
         if (Schema::getConnection()->getDriverName() === 'pgsql') {
             DB::statement(
                 'CREATE UNIQUE INDEX product_variant_prices_one_current_per_variant
@@ -41,17 +43,12 @@ return new class() extends Migration
                  ON product_variant_prices (product_variant_id) WHERE is_current = 1'
             );
         } else {
-            // MySQL: no native partial index support
-            // Emulate uniqueness with a generated column collapsing non-current rows to NULL
-            // (NULLs are exempt from unique constraints)
+            // MySQL: rely on application-level enforcement
+            // ProductVariantPrice::recordNewPrice() unsets previous current before creating new
+            // Add a regular index for query performance on current prices
             DB::statement(
-                'ALTER TABLE product_variant_prices
-                 ADD COLUMN current_variant_key BIGINT
-                 GENERATED ALWAYS AS (CASE WHEN is_current = 1 THEN product_variant_id ELSE NULL END) STORED'
-            );
-            DB::statement(
-                'CREATE UNIQUE INDEX product_variant_prices_one_current_per_variant
-                 ON product_variant_prices (current_variant_key)'
+                'CREATE INDEX product_variant_prices_is_current_idx
+                 ON product_variant_prices (product_variant_id, is_current)'
             );
         }
     }
