@@ -6,10 +6,12 @@ use App\Filament\Resources\Warehouses\Pages\CreateWarehouse;
 use App\Filament\Resources\Warehouses\Pages\EditWarehouse;
 use App\Filament\Resources\Warehouses\Pages\ListWarehouses;
 use App\Filament\Resources\Warehouses\Pages\ViewWarehouse;
+use App\Models\User;
 use App\Models\Warehouse;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\Testing\TestAction;
+use Illuminate\Support\Str;
 
 use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Laravel\assertDatabaseMissing;
@@ -18,7 +20,7 @@ use function Pest\Livewire\livewire;
 beforeEach(function () {
     Warehouse::truncate();
 
-    $this->admin = App\Models\User::factory()->admin()->create();
+    $this->admin = User::factory()->admin()->create();
     $this->actingAs($this->admin);
 });
 
@@ -35,73 +37,124 @@ it('can render view page', function () {
     ])
         ->assertOk()
         ->assertSchemaStateSet([
-            'name' => $warehouse->name,
             'code' => $warehouse->code,
+            'name' => $warehouse->name,
+            'location' => $warehouse->location,
         ]);
 });
 
 it('has column', function (string $column) {
     livewire(ListWarehouses::class)
         ->assertTableColumnExists($column);
-})->with(['code', 'name', 'location', 'is_active', 'created_at', 'updated_at']);
+})->with(['code', 'name', 'location', 'is_active', 'users_count', 'created_at', 'updated_at']);
 
 it('can sort column', function (string $column) {
-    if ($column === 'is_active') {
-        // Create 2 inactive and 3 active warehouses
-        $inactiveWarehouses = Warehouse::factory()->count(2)->create(['is_active' => false]);
-        $activeWarehouses = Warehouse::factory()->count(3)->create(['is_active' => true]);
-        // Combine and shuffle to simulate random initial order
-        $allWarehouses = $inactiveWarehouses->concat($activeWarehouses)->shuffle();
-
-        livewire(ListWarehouses::class)
-            ->loadTable()
-            ->sortTable($column)
-            ->assertCanSeeTableRecords($inactiveWarehouses->sortBy('id')->concat($activeWarehouses->sortBy('id')), inOrder: true)
-            ->sortTable($column, 'desc')
-            ->assertCanSeeTableRecords($activeWarehouses->sortBy('id')->concat($inactiveWarehouses->sortBy('id')), inOrder: true);
-    } else {
-        $records = Warehouse::factory(5)->create();
-
-        livewire(ListWarehouses::class)
-            ->loadTable()
-            ->sortTable($column)
-            ->assertCanSeeTableRecords($records->sortBy($column), inOrder: true)
-            ->sortTable($column, 'desc')
-            ->assertCanSeeTableRecords($records->sortByDesc($column), inOrder: true);
-    }
-})->with(['is_active']);
-
-it('can search column', function (string $column) {
     $records = Warehouse::factory(5)->create();
-    $value = $records->first()->{$column};
 
     livewire(ListWarehouses::class)
         ->loadTable()
-        ->searchTable($value)
-        ->assertCanSeeTableRecords($records->where($column, $value))
-        ->assertCanNotSeeTableRecords(
-            $records->where($column, '!=', $value)
-        );
-})->with(['code', 'name', 'location']);
+        ->sortTable($column)
+        ->assertCanSeeTableRecords($records->sortBy($column), inOrder: true)
+        ->sortTable($column, 'desc')
+        ->assertCanSeeTableRecords($records->sortByDesc($column), inOrder: true);
+})->with(['code', 'name', 'location', 'is_active']);
+
+it('can search table', function () {
+    $warehouse1 = Warehouse::factory()->create(['code' => 'WH-MNL', 'name' => 'Manila Warehouse']);
+    $warehouse2 = Warehouse::factory()->create(['code' => 'WH-CEB', 'name' => 'Cebu Warehouse']);
+    Warehouse::factory()->create(['code' => 'WH-DVO', 'name' => 'Davao Warehouse']);
+
+    livewire(ListWarehouses::class)
+        ->loadTable()
+        ->searchTable('WH-MNL')
+        ->assertCanSeeTableRecords([$warehouse1])
+        ->assertCanNotSeeTableRecords([$warehouse2]);
+});
+
+it('can search table by column', function () {
+    $warehouse1 = Warehouse::factory()->create(['code' => 'WH-MNL', 'name' => 'Manila Warehouse']);
+    $warehouse2 = Warehouse::factory()->create(['code' => 'WH-CEB', 'name' => 'Cebu Warehouse']);
+
+    livewire(ListWarehouses::class)
+        ->loadTable()
+        ->searchTable('Manila')
+        ->assertCanSeeTableRecords([$warehouse1])
+        ->assertCanNotSeeTableRecords([$warehouse2]);
+});
+
+
+it('can render table column state', function () {
+    $warehouse = Warehouse::factory()->create(['code' => 'WH-TEST', 'name' => 'Test Warehouse']);
+
+    livewire(ListWarehouses::class)
+        ->loadTable()
+        ->assertTableColumnStateSet('code', 'WH-TEST', record: $warehouse)
+        ->assertTableColumnStateSet('name', 'Test Warehouse', record: $warehouse);
+});
+
+
+it('can assert table column visibility', function () {
+    livewire(ListWarehouses::class)
+        ->loadTable()
+        ->assertTableColumnVisible('code')
+        ->assertTableColumnVisible('name')
+        ->assertTableColumnVisible('location')
+        ->assertTableColumnVisible('is_active');
+});
+
+it('can assert table column exists', function (string $column) {
+    livewire(ListWarehouses::class)
+        ->loadTable()
+        ->assertTableColumnExists($column);
+})->with(['code', 'name', 'location', 'is_active', 'users_count', 'created_at', 'updated_at']);
+
+it('renders empty state correctly', function () {
+    Warehouse::truncate();
+
+    livewire(ListWarehouses::class)
+        ->loadTable()
+        ->assertCountTableRecords(0);
+});
+
+it('has edit action on table row', function () {
+    $warehouse = Warehouse::factory()->create();
+
+    livewire(ListWarehouses::class)
+        ->loadTable()
+        ->callAction(TestAction::make('edit')->table($warehouse))
+        ->assertHasNoFormErrors();
+});
+
+it('has delete action on table row', function () {
+    $warehouse = Warehouse::factory()->create();
+
+    livewire(ListWarehouses::class)
+        ->loadTable()
+        ->callAction(TestAction::make('delete')->table($warehouse))
+        ->assertNotified();
+
+    assertDatabaseMissing($warehouse);
+});
 
 it('can create warehouse', function () {
-    $newWarehouse = Warehouse::factory()->make();
+    $newWarehouseData = Warehouse::factory()->make();
 
     livewire(CreateWarehouse::class)
         ->fillForm([
-            'code' => $newWarehouse->code,
-            'name' => $newWarehouse->name,
-            'location' => $newWarehouse->location,
-            'is_active' => $newWarehouse->is_active,
+            'code' => $newWarehouseData->code,
+            'name' => $newWarehouseData->name,
+            'location' => $newWarehouseData->location,
+            'is_active' => $newWarehouseData->is_active,
         ])
         ->call('create')
-        ->assertNotified()
         ->assertHasNoFormErrors()
+        ->assertNotified()
         ->assertRedirect();
 
     assertDatabaseHas(Warehouse::class, [
-        'code' => $newWarehouse->code,
-        'name' => $newWarehouse->name,
+        'code' => $newWarehouseData->code,
+        'name' => $newWarehouseData->name,
+        'location' => $newWarehouseData->location,
     ]);
 });
 
@@ -126,6 +179,7 @@ it('can update warehouse', function () {
         'id' => $warehouse->id,
         'code' => $updatedData->code,
         'name' => $updatedData->name,
+        'location' => $updatedData->location,
     ]);
 });
 
@@ -156,7 +210,7 @@ it('can bulk delete warehouses', function () {
     $warehouses->each(fn (Warehouse $warehouse) => assertDatabaseMissing($warehouse));
 });
 
-it('can validate unique', function (string $column) {
+it('can validate unique code', function (string $column) {
     $record = Warehouse::factory()->create();
 
     livewire(CreateWarehouse::class)
@@ -165,7 +219,27 @@ it('can validate unique', function (string $column) {
         ->assertHasFormErrors([$column => ['unique']]);
 })->with(['code']);
 
-it('validates form data', function (array $data, array $errors) {
+it('validates form data on create', function (array $data, array $errors) {
+    $newWarehouseData = Warehouse::factory()->make();
+
+    livewire(CreateWarehouse::class)
+        ->fillForm([
+            'code' => $newWarehouseData->code,
+            'name' => $newWarehouseData->name,
+            'location' => $newWarehouseData->location,
+            'is_active' => $newWarehouseData->is_active,
+            ...$data,
+        ])
+        ->call('create')
+        ->assertHasFormErrors($errors)
+        ->assertNotNotified();
+})->with([
+    '`code` required' => [['code' => null], ['code' => 'required']],
+    '`name` required' => [['name' => null], ['name' => 'required']],
+    '`is_active` required' => [['is_active' => null], ['is_active' => 'required']],
+]);
+
+it('validates form data on update', function (array $data, array $errors) {
     $warehouse = Warehouse::factory()->create();
     $newWarehouseData = Warehouse::factory()->make();
 
@@ -187,3 +261,25 @@ it('validates form data', function (array $data, array $errors) {
     '`name` required' => [['name' => null], ['name' => 'required']],
     '`is_active` required' => [['is_active' => null], ['is_active' => 'required']],
 ]);
+
+it('renders infolist entries on view page', function () {
+    $warehouse = Warehouse::factory()->create();
+
+    livewire(ViewWarehouse::class, ['record' => $warehouse->id])
+        ->assertSchemaComponentExists('code')
+        ->assertSchemaComponentExists('name')
+        ->assertSchemaComponentExists('location')
+        ->assertSchemaComponentExists('is_active')
+        ->assertSchemaComponentExists('users_count')
+        ->assertSchemaComponentExists('users');
+});
+
+it('denies access to non-admin users', function () {
+    Warehouse::truncate();
+    User::truncate();
+    $staff = User::factory()->create(['role' => 'warehouse_staff']);
+    $this->actingAs($staff);
+
+    livewire(ListWarehouses::class)
+        ->assertForbidden();
+});

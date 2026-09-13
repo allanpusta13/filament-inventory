@@ -58,7 +58,7 @@ class TransferRequisitionItemRevision extends Model
     }
 
     /**
-     * Revision one is countering, if any. Null means
+     * Revision one countering, if any. Null means
      * opening proposal in negotiation thread item.
      */
     public function respondsTo(): BelongsTo
@@ -87,12 +87,26 @@ class TransferRequisitionItemRevision extends Model
      */
     public function counterWith(array $attributes): self
     {
+        $this->update(['status' => RevisionStatus::Superseded, 'responded_at' => now()]);
+
         return self::create(array_merge($attributes, [
             'transfer_requisition_item_id' => $this->transfer_requisition_item_id,
             'responds_to_revision_id' => $this->id,
             'side' => $this->side->opposite(),
             'status' => RevisionStatus::Pending,
         ]));
+    }
+
+    /**
+     * Get the root revision of the negotiation thread.
+     */
+    public function threadRoot(): self
+    {
+        $revision = $this;
+        while ($revision->respondsTo) {
+            $revision = $revision->respondsTo;
+        }
+        return $revision;
     }
 
     public function accept(): void
@@ -107,7 +121,7 @@ class TransferRequisitionItemRevision extends Model
     public function reject(): void
     {
         if ($this->isResolved()) {
-            throw new \Exception("Revision {$this->id} is already resolved ({$this->status->value}).");
+            throw new \Exception("Revision {$this->id} is already resolved ({$this->status->value})..");
         }
 
         $this->update(['status' => RevisionStatus::Rejected, 'responded_at' => now()]);

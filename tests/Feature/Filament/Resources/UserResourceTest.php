@@ -2,13 +2,16 @@
 
 declare(strict_types=1);
 
+use App\Enums\UserRole;
 use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Models\User;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Actions\Testing\TestAction;
+use Filament\Actions\ViewAction;
 use Illuminate\Support\Str;
 
 use function Pest\Laravel\assertDatabaseHas;
@@ -16,24 +19,23 @@ use function Pest\Laravel\assertDatabaseMissing;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
-    /* The TestCase setup generates a user before each test, so we need to clear the table to make sure we have a clean slate. */
     User::truncate();
 
     $this->admin = User::factory()->admin()->create();
     $this->actingAs($this->admin);
 });
 
-it('can render the index page', function () {
+it('can render index page', function () {
     livewire(ListUsers::class)
         ->assertOk();
 });
 
-it('can render the create page', function () {
+it('can render create page', function () {
     livewire(CreateUser::class)
         ->assertOk();
 });
 
-it('can render the edit page', function () {
+it('can render edit page', function () {
     $user = User::factory()->create();
 
     livewire(EditUser::class, [
@@ -49,7 +51,7 @@ it('can render the edit page', function () {
 it('has column', function (string $column) {
     livewire(ListUsers::class)
         ->assertTableColumnExists($column);
-})->with(['name', 'email', 'created_at']);
+})->with(['name', 'email', 'role', 'warehouses.name', 'created_at']);
 
 it('can sort column', function (string $column) {
     $records = User::factory(5)->create();
@@ -62,69 +64,103 @@ it('can sort column', function (string $column) {
         ->assertCanSeeTableRecords($records->sortByDesc($column), inOrder: true);
 })->with(['name']);
 
-it('can search column', function (string $column) {
-    $records = User::factory(5)->create();
-
-    $value = $records->first()->{$column};
+it('can search table', function () {
+    $john = User::factory()->create(['name' => 'John Doe', 'email' => 'john@example.com']);
+    $jane = User::factory()->create(['name' => 'Jane Smith', 'email' => 'jane@example.com']);
+    $bob = User::factory()->create(['name' => 'Bob Wilson', 'email' => 'bob@example.com']);
 
     livewire(ListUsers::class)
         ->loadTable()
-        ->searchTable($value)
-        ->assertCanSeeTableRecords($records->where($column, $value))
-        ->assertCanNotSeeTableRecords($records->where($column, '!=', $value));
-})->with(['name']);
-
-it('can create a user', function () {
-    $user = User::factory()->make();
-
-    livewire(CreateUser::class)
-        ->fillForm([
-            'name' => $user->name,
-            'email' => $user->email,
-            'password' => $user->password,
-            'role' => 'warehouse_staff',
-        ])
-        ->call('create')
-        ->assertNotified();
-
-    assertDatabaseHas(User::class, [
-        'name' => $user->name,
-        'email' => $user->email,
-    ]);
+        ->searchTable('John')
+        ->assertCanSeeTableRecords([$john])
+        ->assertCanNotSeeTableRecords([$jane, $bob]);
 });
 
-it('can update a user', function () {
-    $user = User::factory()->create();
-    $newUserData = User::factory()->make();
+it('can filter table by role', function () {
+    $admin = User::factory()->create(['role' => UserRole::ADMIN->value]);
+    $manager = User::factory()->create(['role' => UserRole::BRANCH_MANAGER->value]);
+    $staff = User::factory()->create(['role' => UserRole::WAREHOUSE_STAFF->value]);
 
-    livewire(EditUser::class, [
-        'record' => $user->id,
-    ])
-        ->fillForm([
-            'name' => $newUserData->name,
-            'email' => $newUserData->email,
-        ])
-        ->call('save')
-        ->assertNotified();
-
-    assertDatabaseHas(User::class, [
-        'id' => $user->id,
-        'name' => $newUserData->name,
-        'email' => $newUserData->email,
-    ]);
+    livewire(ListUsers::class)
+        ->loadTable()
+        ->filterTable('role', UserRole::ADMIN->value)
+        ->assertCanSeeTableRecords([$admin])
+        ->assertCanNotSeeTableRecords([$manager, $staff]);
 });
 
-it('can delete a user', function () {
+it('can render table column state', function () {
+    $user = User::factory()->create(['name' => 'Test User', 'email' => 'test@example.com']);
+
+    livewire(ListUsers::class)
+        ->loadTable()
+        ->assertTableColumnStateSet('name', 'Test User', record: $user)
+        ->assertTableColumnStateSet('email', 'test@example.com', record: $user);
+});
+
+it('can render table column formatted state', function () {
+    $user = User::factory()->create(['created_at' => now()->subDays(5)]);
+
+    livewire(ListUsers::class)
+        ->loadTable()
+        ->assertTableColumnFormattedStateSet('created_at', $user->created_at->format('M d, Y'), record: $user);
+});
+
+it('can assert table column visibility', function () {
+    livewire(ListUsers::class)
+        ->loadTable()
+        ->assertTableColumnVisible('name')
+        ->assertTableColumnVisible('email')
+        ->assertTableColumnVisible('role')
+        ->assertTableColumnVisible('warehouses.name');
+});
+
+it('can assert table column exists', function (string $column) {
+    livewire(ListUsers::class)
+        ->loadTable()
+        ->assertTableColumnExists($column);
+})->with(['name', 'email', 'role', 'warehouses.name', 'created_at']);
+
+it('renders empty state correctly', function () {
+    User::truncate();
+
+    livewire(ListUsers::class)
+        ->loadTable()
+        ->assertCountTableRecords(0);
+});
+
+it('has view action on table row', function () {
     $user = User::factory()->create();
 
-    livewire(EditUser::class, [
-        'record' => $user->id,
-    ])
-        ->callAction(DeleteAction::class)
-        ->assertNotified()
-        ->assertRedirect();
+    livewire(ListUsers::class)
+        ->loadTable()
+        ->callAction(TestAction::make('view')->table($user))
+        ->assertHasNoFormErrors();
+});
+
+it('has edit action on table row', function () {
+    $user = User::factory()->create();
+
+    livewire(ListUsers::class)
+        ->loadTable()
+        ->callAction(TestAction::make('edit')->table($user))
+        ->assertHasNoFormErrors();
+});
+
+it('has delete action on table row', function () {
+    $user = User::factory()->create();
+
+    livewire(ListUsers::class)
+        ->loadTable()
+        ->callAction(TestAction::make('delete')->table($user))
+        ->assertNotified();
 
     assertDatabaseMissing($user);
+});
+
+it('has header actions', function () {
+    livewire(ListUsers::class)
+        ->loadTable()
+        ->assertCanRenderTableColumn('name');
 });
 
 it('can bulk delete users', function () {
@@ -141,7 +177,62 @@ it('can bulk delete users', function () {
     $users->each(fn (User $user) => assertDatabaseMissing($user));
 });
 
-it('can validate unique', function (string $column) {
+it('can create user', function () {
+    $newUserData = User::factory()->make();
+
+    livewire(CreateUser::class)
+        ->fillForm([
+            'name' => $newUserData->name,
+            'email' => $newUserData->email,
+            'role' => UserRole::WAREHOUSE_STAFF->value,
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors()
+        ->assertNotified()
+        ->assertRedirect();
+
+    assertDatabaseHas(User::class, [
+        'name' => $newUserData->name,
+        'email' => $newUserData->email,
+        'role' => UserRole::WAREHOUSE_STAFF->value,
+    ]);
+});
+
+it('can update user', function () {
+    $user = User::factory()->create();
+    $newUserData = User::factory()->make();
+
+    livewire(EditUser::class, [
+        'record' => $user->id,
+    ])
+        ->fillForm([
+            'name' => $newUserData->name,
+            'email' => $newUserData->email,
+        ])
+        ->call('save')
+        ->assertHasNoFormErrors()
+        ->assertNotified();
+
+    expect($user->refresh()->name)->toBe($newUserData->name)
+        ->and($user->refresh()->email)->toBe($newUserData->email);
+});
+
+it('can delete user', function () {
+    $user = User::factory()->create();
+
+    livewire(EditUser::class, [
+        'record' => $user->id,
+    ])
+        ->callAction(DeleteAction::class)
+        ->assertNotified()
+        ->assertRedirect();
+
+    assertDatabaseMissing($user);
+});
+
+it('can validate unique email', function (string $column) {
     $record = User::factory()->create();
 
     livewire(CreateUser::class)
@@ -150,7 +241,7 @@ it('can validate unique', function (string $column) {
         ->assertHasFormErrors([$column => ['unique']]);
 })->with(['email']);
 
-it('validates the form data', function (array $data, array $errors) {
+it('validates form data', function (array $data, array $errors) {
     $user = User::factory()->create();
     $newUserData = User::factory()->make();
 
@@ -166,9 +257,18 @@ it('validates the form data', function (array $data, array $errors) {
         ->assertHasFormErrors($errors)
         ->assertNotNotified();
 })->with([
-    '`name` is required' => [['name' => null], ['name' => 'required']],
-    '`name` is max 255 characters' => [['name' => Str::random(256)], ['name' => 'max']],
-    '`email` is a valid email address' => [['email' => Str::random()], ['email' => 'email']],
-    '`email` is required' => [['email' => null], ['email' => 'required']],
-    '`email` is max 255 characters' => [['email' => Str::random(256)], ['email' => 'max']],
+    '`name` required' => [['name' => null], ['name' => 'required']],
+    '`name` max 255 characters' => [['name' => Str::random(256)], ['name' => 'max']],
+    '`email` valid email address' => [['email' => Str::random()], ['email' => 'email']],
+    '`email` required' => [['email' => null], ['email' => 'required']],
+    '`email` max 255 characters' => [['email' => Str::random(256)], ['email' => 'max']],
 ]);
+
+it('allows access to all authenticated users via canAccessPanel', function () {
+    User::truncate();
+    $staff = User::factory()->create(['role' => UserRole::WAREHOUSE_STAFF->value]);
+    $this->actingAs($staff);
+
+    livewire(ListUsers::class)
+        ->assertOk();
+});

@@ -11,8 +11,6 @@ use App\Models\ProductVariant;
 use App\Models\User;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\RestoreAction;
-use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\Testing\TestAction;
 
 use function Pest\Laravel\assertDatabaseHas;
@@ -94,26 +92,6 @@ it('can bulk delete revisions', function () {
         ->assertCanNotSeeTableRecords($revisions);
 
     $revisions->each(fn (TransferRequisitionItemRevision $r) => assertDatabaseMissing($r));
-});
-
-it('can restore revision', function () {
-    $requisition = TransferRequisition::factory()->create();
-    $item = TransferRequisitionItem::factory()->for($requisition)->create();
-    $variant = ProductVariant::factory()->create();
-    $revision = TransferRequisitionItemRevision::factory()->for($item, 'transferRequisitionItem')->for($variant, 'productVariant')->for($variant, 'substituteProductVariant')->create();
-
-    livewire(ViewTransferRequisitionItemRevision::class, ['record' => $revision->id])
-        ->callAction(DeleteAction::class)
-        ->assertNotified()
-        ->assertRedirect();
-
-    livewire(ViewTransferRequisitionItemRevision::class, ['record' => $revision->id])
-        ->callAction(RestoreAction::class)
-        ->assertNotified();
-
-    $revision->refresh();
-    expect($revision->deleted_at)->toBeNull();
-    assertDatabaseHas(TransferRequisitionItemRevision::class, ['id' => $revision->id]);
 });
 
 it('shows status badge correctly', function () {

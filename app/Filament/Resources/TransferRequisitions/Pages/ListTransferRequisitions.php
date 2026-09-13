@@ -42,19 +42,23 @@ class ListTransferRequisitions extends ListRecords
                         ->schema(TransferRequisitionForm::getReviewSchema()),
                 ])
                 ->action(function (array $data) {
-                    DB::transaction(function () use ($data) {
+                    // Handle wizard data structure - data may be under 'wizardData' key
+                    $formData = $data['wizardData'] ?? $data;
+
+                    DB::transaction(function () use ($formData) {
                         $referenceCode = 'TRQ-'.date('Ymd').'-'.mb_strtoupper(uniqid());
 
                         $requisition = TransferRequisition::create([
                             'reference_code' => $referenceCode,
-                            'from_warehouse_id' => $data['from_warehouse_id'],
-                            'to_warehouse_id' => $data['to_warehouse_id'],
+                            'from_warehouse_id' => $formData['from_warehouse_id'],
+                            'to_warehouse_id' => $formData['to_warehouse_id'],
                             'status' => 'requested',
                             'requested_by' => auth()->id(),
                             'requested_at' => now(),
                         ]);
 
-                        foreach ($data['items'] as $item) {
+                        $items = $formData['items'] ?? [];
+                        foreach ($items as $item) {
                             $ratio = (int) ($item['requested_unit_ratio'] ?? 1);
                             $qty = (int) ($item['requested_qty'] ?? 1);
 

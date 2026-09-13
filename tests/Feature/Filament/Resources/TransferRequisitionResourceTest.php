@@ -2,15 +2,24 @@
 
 declare(strict_types=1);
 
+use App\Enums\TransferRequisitionStatus;
 use App\Filament\Resources\TransferRequisitions\Pages\CreateTransferRequisition;
 use App\Filament\Resources\TransferRequisitions\Pages\EditTransferRequisition;
 use App\Filament\Resources\TransferRequisitions\Pages\ListTransferRequisitions;
 use App\Filament\Resources\TransferRequisitions\Pages\ViewTransferRequisition;
+use App\Models\ProductVariant;
 use App\Models\TransferRequisition;
+use App\Models\TransferRequisitionItem;
 use App\Models\User;
 use App\Models\Warehouse;
 use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\Testing\TestAction;
+use Illuminate\Support\Str;
+use Livewire\Features\SupportTesting\Testable;
 
+use function Pest\Laravel\assertDatabaseHas;
+use function Pest\Laravel\assertDatabaseMissing;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
@@ -61,9 +70,9 @@ it('can render view page', function () {
 it('has column', function (string $column) {
     livewire(ListTransferRequisitions::class)
         ->assertTableColumnExists($column);
-})->with(['reference_code', 'fromWarehouse.name', 'toWarehouse.name', 'status', 'requested_at']);
+})->with(['reference_code', 'fromWarehouse.name', 'toWarehouse.name', 'status', 'requested_at', 'completed_at']);
 
-it('can sort by reference_code', function () {
+it('can sort column', function (string $column) {
     TransferRequisition::truncate();
     $req1 = TransferRequisition::factory()->create(['reference_code' => 'TRQ-C', 'requested_at' => now()->subDays(2)]);
     $req2 = TransferRequisition::factory()->create(['reference_code' => 'TRQ-A', 'requested_at' => now()->subDay()]);
@@ -71,28 +80,117 @@ it('can sort by reference_code', function () {
 
     livewire(ListTransferRequisitions::class)
         ->loadTable()
-        ->sortTable('reference_code')
-        ->assertCanSeeTableRecords([$req2, $req3, $req1], inOrder: true)
-        ->sortTable('reference_code', 'desc')
-        ->assertCanSeeTableRecords([$req1, $req3, $req2], inOrder: true);
-});
+        ->sortTable($column)
+        ->assertCanSeeTableRecords($column === 'reference_code' ? [$req2, $req3, $req1] : [$req1, $req2, $req3], inOrder: true)
+        ->sortTable($column, 'desc')
+        ->assertCanSeeTableRecords($column === 'reference_code' ? [$req1, $req3, $req2] : [$req3, $req2, $req1], inOrder: true);
+})->with(['reference_code', 'requested_at']);
 
-it('can sort by requested_at', function () {
-    TransferRequisition::truncate();
-    $req1 = TransferRequisition::factory()->create(['reference_code' => 'TRQ-C', 'requested_at' => now()->subDays(2)]);
-    $req2 = TransferRequisition::factory()->create(['reference_code' => 'TRQ-A', 'requested_at' => now()->subDay()]);
-    $req3 = TransferRequisition::factory()->create(['reference_code' => 'TRQ-B', 'requested_at' => now()]);
+it('can search table', function () {
+    $req1 = TransferRequisition::factory()->create(['reference_code' => 'TRQ-ABC-001']);
+    $req2 = TransferRequisition::factory()->create(['reference_code' => 'TRQ-ABC-002']);
+    $req3 = TransferRequisition::factory()->create(['reference_code' => 'TRQ-XYZ-003']);
 
     livewire(ListTransferRequisitions::class)
         ->loadTable()
-        ->sortTable('requested_at')
-        ->assertCanSeeTableRecords([$req1, $req2, $req3], inOrder: true)
-        ->sortTable('requested_at', 'desc')
-        ->assertCanSeeTableRecords([$req3, $req2, $req1], inOrder: true);
+        ->searchTable('TRQ-ABC')
+        ->assertCanSeeTableRecords([$req1, $req2])
+        ->assertCanNotSeeTableRecords([$req3]);
 });
+
+it('can filter table by status', function () {
+    $draft = TransferRequisition::factory()->create(['status' => TransferRequisitionStatus::Draft]);
+    $requested = TransferRequisition::factory()->create(['status' => TransferRequisitionStatus::Requested]);
+    $confirmed = TransferRequisition::factory()->create(['status' => TransferRequisitionStatus::Confirmed]);
+
+    livewire(ListTransferRequisitions::class)
+        ->loadTable()
+        ->filterTable('status', 'requested')
+        ->assertCanSeeTableRecords([$requested])
+        ->assertCanNotSeeTableRecords([$draft, $confirmed]);
+});
+
+it('can filter table by origin warehouse', function () {
+    $from1 = Warehouse::factory()->create(['name' => 'Origin A']);
+    $from2 = Warehouse::factory()->create(['name' => 'Origin B']);
+    $req1 = TransferRequisition::factory()->create(['from_warehouse_id' => $from1->id]);
+    $req2 = TransferRequisition::factory()->create(['from_warehouse_id' => $from2->id]);
+
+    livewire(ListTransferRequisitions::class)
+        ->loadTable()
+        ->filterTable('from_warehouse_id', $from1->id)
+        ->assertCanSeeTableRecords([$req1])
+        ->assertCanNotSeeTableRecords([$req2]);
+});
+
+it('can filter table by receiving warehouse', function () {
+    $to1 = Warehouse::factory()->create(['name' => 'Destination A']);
+    $to2 = Warehouse::factory()->create(['name' => 'Destination B']);
+    $req1 = TransferRequisition::factory()->create(['to_warehouse_id' => $to1->id]);
+    $req2 = TransferRequisition::factory()->create(['to_warehouse_id' => $to2->id]);
+
+    livewire(ListTransferRequisitions::class)
+        ->loadTable()
+        ->filterTable('to_warehouse_id', $to1->id)
+        ->assertCanSeeTableRecords([$req1])
+        ->assertCanNotSeeTableRecords([$req2]);
+});
+
+it('can render table column state', function () {
+    $requisition = TransferRequisition::factory()->create(['reference_code' => 'TRQ-TEST-001']);
+
+    livewire(ListTransferRequisitions::class)
+        ->loadTable()
+        ->assertTableColumnStateSet('reference_code', 'TRQ-TEST-001', record: $requisition);
+});
+
+it('can render table column formatted state', function () {
+    $requisition = TransferRequisition::factory()->create(['requested_at' => now()->subDays(5)]);
+
+    livewire(ListTransferRequisitions::class)
+        ->loadTable()
+        ->assertTableColumnFormattedStateSet('requested_at', $requisition->requested_at->format('M d, Y H:i'), record: $requisition);
+});
+
+it('can assert table column visibility', function () {
+    livewire(ListTransferRequisitions::class)
+        ->loadTable()
+        ->assertTableColumnVisible('reference_code')
+        ->assertTableColumnVisible('fromWarehouse.name')
+        ->assertTableColumnVisible('toWarehouse.name')
+        ->assertTableColumnVisible('status')
+        ->assertTableColumnVisible('requested_at')
+        ->assertTableColumnVisible('completed_at');
+});
+
+it('can assert table column exists', function (string $column) {
+    livewire(ListTransferRequisitions::class)
+        ->loadTable()
+        ->assertTableColumnExists($column);
+})->with(['reference_code', 'fromWarehouse.name', 'toWarehouse.name', 'status', 'requested_at', 'completed_at']);
+
+it('renders empty state correctly', function () {
+    TransferRequisition::truncate();
+    Warehouse::truncate();
+    User::truncate();
+
+    livewire(ListTransferRequisitions::class)
+        ->loadTable()
+        ->assertCountTableRecords(0);
+});
+
+it('has view action on table row', function () {
+    $requisition = TransferRequisition::factory()->create(['status' => TransferRequisitionStatus::Draft]);
+
+    livewire(ListTransferRequisitions::class)
+        ->loadTable()
+        ->callAction(TestAction::make('view')->table($requisition))
+        ->assertHasNoFormErrors();
+});
+
 
 it('can delete transfer requisition', function () {
-    $requisition = TransferRequisition::factory()->create();
+    $requisition = TransferRequisition::factory()->create(['status' => TransferRequisitionStatus::Draft]);
 
     livewire(ViewTransferRequisition::class, [
         'record' => $requisition->id,
@@ -104,3 +202,17 @@ it('can delete transfer requisition', function () {
     $requisition->refresh();
     expect($requisition->deleted_at)->not->toBeNull();
 });
+
+
+it('renders infolist entries on view page', function () {
+    $requisition = TransferRequisition::factory()->create();
+
+    livewire(ViewTransferRequisition::class, ['record' => $requisition->id])
+        ->assertSchemaComponentExists('reference_code')
+        ->assertSchemaComponentExists('status')
+        ->assertSchemaComponentExists('fromWarehouse.name')
+        ->assertSchemaComponentExists('toWarehouse.name')
+        ->assertSchemaComponentExists('requestedBy.name')
+        ->assertSchemaComponentExists('items');
+});
+
