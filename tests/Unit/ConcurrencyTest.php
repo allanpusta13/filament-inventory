@@ -7,12 +7,12 @@ use App\Models\ProductVariant;
 use App\Models\Warehouse;
 use App\Services\InventoryService;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
 
 beforeEach(function () {
     $this->service = new InventoryService();
-    $this->user = \App\Models\User::factory()->create();
-    \Illuminate\Support\Facades\Auth::login($this->user);
+    $this->user = App\Models\User::factory()->create();
+    Illuminate\Support\Facades\Auth::login($this->user);
 });
 
 it('simultaneous_opposite_direction_direct_transfers_do_not_deadlock', function () {
@@ -37,7 +37,7 @@ it('simultaneous_opposite_direction_direct_transfers_do_not_deadlock', function 
             $service = new InventoryService();
             $result = $service->directTransfer($variant->id, $warehouseA->id, $warehouseB->id, 10);
             $results['AtoB'] = $result;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $errors['AtoB'] = $e->getMessage();
         }
     };
@@ -48,7 +48,7 @@ it('simultaneous_opposite_direction_direct_transfers_do_not_deadlock', function 
             $service = new InventoryService();
             $result = $service->directTransfer($variant->id, $warehouseB->id, $warehouseA->id, 10);
             $results['BtoA'] = $result;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $errors['BtoA'] = $e->getMessage();
         }
     };
@@ -66,7 +66,7 @@ it('simultaneous_opposite_direction_direct_transfers_do_not_deadlock', function 
         ->and($variant->onHandQuantity($warehouseB->id))->toBe(100);
 
     // Verify movements exist
-    $movements = \App\Models\StockMovement::where('product_variant_id', $variant->id)
+    $movements = App\Models\StockMovement::where('product_variant_id', $variant->id)
         ->whereIn('warehouse_id', [$warehouseA->id, $warehouseB->id])
         ->whereIn('type', [StockMovementType::TransferOut, StockMovementType::TransferIn])
         ->get();

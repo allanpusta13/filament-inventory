@@ -9,8 +9,6 @@ use App\Filament\Resources\TransferRequisitions\Pages\ViewTransferRequisition;
 use App\Filament\Resources\TransferRequisitions\Schemas\TransferRequisitionInfolist;
 use App\Filament\Resources\TransferRequisitions\Tables\TransferRequisitionsTable;
 use App\Models\TransferRequisition;
-use App\Models\User;
-use App\Models\Warehouse;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;

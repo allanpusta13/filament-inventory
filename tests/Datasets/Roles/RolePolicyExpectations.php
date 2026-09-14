@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Datasets\Roles;
 
-use App\Enums\UserRole;
-
 class RolePolicyExpectations
 {
     /** @return array<string, array<string, bool>> */

@@ -68,4 +68,24 @@ final class UserFactory extends Factory
             'role' => UserRole::ADMIN->value,
         ]);
     }
+
+    /**
+     * Indicate that the model is an auditor.
+     */
+    public function auditor(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'role' => UserRole::AUDITOR->value,
+        ]);
+    }
+
+    /**
+     * Indicate that the model is a branch manager.
+     */
+    public function branchManager(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'role' => UserRole::BRANCH_MANAGER->value,
+        ]);
+    }
 }

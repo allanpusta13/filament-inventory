@@ -21,7 +21,7 @@ class StockMovementPolicy
 
     public function create(User $user): bool
     {
-        return false;
+        return $user->isAdmin();
     }
 
     public function update(User $user, StockMovement $movement): bool

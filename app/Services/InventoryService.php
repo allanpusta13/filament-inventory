@@ -15,6 +15,7 @@ use App\Models\TransferRequisition;
 use App\Models\Warehouse;
 use Exception;
 use Illuminate\Support\Facades\DB;
+use Throwable;
 
 /**
  * Transactional stock engine. Physical stock is never stored directly — it is
@@ -53,36 +54,44 @@ class InventoryService
             );
         }
 
-        return DB::transaction(function () use (
-            $productVariantId, $warehouseId, $type, $baseQuantity,
-            $unitName, $unitRatio, $referenceType, $referenceId,
-            $referenceCode, $relatedMovementId, $notes,
-        ) {
-            $variant = ProductVariant::lockForUpdate()->findOrFail($productVariantId);
-            $currentStock = $variant->onHandQuantity($warehouseId);
+        try {
+            return DB::transaction(function () use (
+                $productVariantId, $warehouseId, $type, $baseQuantity,
+                $unitName, $unitRatio, $referenceType, $referenceId,
+                $referenceCode, $relatedMovementId, $notes,
+            ) {
+                $variant = ProductVariant::lockForUpdate()->findOrFail($productVariantId);
+                $currentStock = $variant->onHandQuantity($warehouseId);
 
-            if ($baseQuantity < 0 && ($currentStock + $baseQuantity) < 0) {
-                throw new Exception(
-                    "Insufficient stock for SKU {$variant->sku} at warehouse ID {$warehouseId}. ".
-                    "Available: {$currentStock}, requested deduction: ".abs($baseQuantity).'.'
-                );
-            }
+                if ($baseQuantity < 0 && ($currentStock + $baseQuantity) < 0) {
+                    throw new Exception(
+                        "Insufficient stock for SKU {$variant->sku} at warehouse ID {$warehouseId}. ".
+                        "Available: {$currentStock}, requested deduction: ".abs($baseQuantity).'.'
+                    );
+                }
 
-            return StockMovement::create([
-                'product_variant_id' => $productVariantId,
-                'warehouse_id' => $warehouseId,
-                'type' => $type,
-                'quantity' => $baseQuantity,
-                'unit_name_used' => $unitName ?? $variant->base_unit_name,
-                'unit_ratio_used' => $unitRatio,
-                'related_movement_id' => $relatedMovementId,
-                'reference_type' => $referenceType,
-                'reference_id' => $referenceId,
-                'reference_code' => $referenceCode,
-                'notes' => $notes,
-                'created_by' => auth()->id(),
-            ]);
-        });
+                return StockMovement::create([
+                    'product_variant_id' => $productVariantId,
+                    'warehouse_id' => $warehouseId,
+                    'type' => $type,
+                    'quantity' => $baseQuantity,
+                    'unit_name_used' => $unitName ?? $variant->base_unit_name,
+                    'unit_ratio_used' => $unitRatio,
+                    'related_movement_id' => $relatedMovementId,
+                    'reference_type' => $referenceType,
+                    'reference_id' => $referenceId,
+                    'reference_code' => $referenceCode,
+                    'notes' => $notes,
+                    'created_by' => auth()->id(),
+                ]);
+            });
+        } catch (Throwable $e) {
+            // Rollback already happened inside DB::transaction().
+            // Do whatever you need here: log, wrap, rethrow, translate...
+            report($e);
+
+            throw $e;
+        }
     }
 
     /**

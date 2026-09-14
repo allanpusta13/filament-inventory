@@ -140,10 +140,10 @@ class NegotiationService
                 ->whereNull('approved_base_qty')
                 ->each(function (TransferRequisitionItem $item) {
                     $item->update([
-                        'approved_unit_name'  => $item->requested_unit_name,
+                        'approved_unit_name' => $item->requested_unit_name,
                         'approved_unit_ratio' => $item->requested_unit_ratio,
-                        'approved_qty'        => $item->requested_qty,
-                        'approved_base_qty'   => $item->requested_base_qty,
+                        'approved_qty' => $item->requested_qty,
+                        'approved_base_qty' => $item->requested_base_qty,
                     ]);
                 });
         });
