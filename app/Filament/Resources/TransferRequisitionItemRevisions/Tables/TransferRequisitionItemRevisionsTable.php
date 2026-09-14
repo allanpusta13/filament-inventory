@@ -14,11 +14,11 @@ use Filament\Tables\Table;
 
 class TransferRequisitionItemRevisionsTable
 {
-    public static function configure(\Filament\Tables\Table $table): \Filament\Tables\Table
+    public static function configure(Table $table): Table
     {
         return $table
             ->columns([
-                \Filament\Tables\Columns\TextColumn::make('transferRequisitionItem.transferRequisition.reference_code')
+                TextColumn::make('transferRequisitionItem.transferRequisition.reference_code')
                     ->label('REQUISITION REF')
                     ->weight(\Filament\Support\Enums\FontWeight::Bold)
                     ->searchable()
@@ -26,19 +26,19 @@ class TransferRequisitionItemRevisionsTable
                     ->copyable()
                     ->color('primary'),
 
-                \Filament\Tables\Columns\TextColumn::make('productVariant.sku')
+                TextColumn::make('productVariant.sku')
                     ->label('VARIANT SKU')
                     ->fontFamily('mono')
                     ->copyable()
                     ->searchable()
                     ->sortable(),
 
-                \Filament\Tables\Columns\TextColumn::make('productVariant.name')
+                TextColumn::make('productVariant.name')
                     ->label('VARIANT NAME')
                     ->searchable()
                     ->sortable(),
 
-                \Filament\Tables\Columns\TextColumn::make('side')
+                TextColumn::make('side')
                     ->label('NEGOTIATION SIDE')
                     ->badge()
                     ->color(fn ($state): string => match ($state) {
@@ -47,7 +47,7 @@ class TransferRequisitionItemRevisionsTable
                         default => 'gray',
                     }),
 
-                \Filament\Tables\Columns\TextColumn::make('status')
+                TextColumn::make('status')
                     ->label('REVISION STATUS')
                     ->badge()
                     ->color(fn ($state): string => match ($state) {
@@ -58,23 +58,23 @@ class TransferRequisitionItemRevisionsTable
                         default => 'gray',
                     }),
 
-                \Filament\Tables\Columns\TextColumn::make('proposed_unit_name')
+                TextColumn::make('proposed_unit_name')
                     ->label('UNIT NAME')
                     ->placeholder('—'),
 
-                \Filament\Tables\Columns\TextColumn::make('proposed_qty')
+                TextColumn::make('proposed_qty')
                     ->label('QTY')
                     ->numeric()
                     ->sortable(),
 
-                \Filament\Tables\Columns\TextColumn::make('proposed_base_qty')
+                TextColumn::make('proposed_base_qty')
                     ->label('BASE QTY')
                     ->weight(\Filament\Support\Enums\FontWeight::Bold)
                     ->numeric()
                     ->sortable()
                     ->color('primary'),
 
-                \Filament\Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->label('CREATED')
                     ->dateTime()
                     ->sortable()
@@ -82,7 +82,7 @@ class TransferRequisitionItemRevisionsTable
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
-                \Filament\Tables\Filters\SelectFilter::make('status')
+                SelectFilter::make('status')
                     ->options([
                         'pending' => 'Pending',
                         'accepted' => 'Accepted',
@@ -91,7 +91,7 @@ class TransferRequisitionItemRevisionsTable
                     ])
                     ->label('REVISION STATUS'),
 
-                \Filament\Tables\Filters\SelectFilter::make('side')
+                SelectFilter::make('side')
                     ->options([
                         'fulfiller' => 'Fulfiller',
                         'requestor' => 'Requestor',
@@ -99,12 +99,12 @@ class TransferRequisitionItemRevisionsTable
                     ->label('NEGOTIATION SIDE'),
             ])
             ->actions([
-                \Filament\Actions\ViewAction::make(),
-                \Filament\Actions\DeleteAction::make(),
+                ViewAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                \Filament\Actions\BulkActionGroup::make([
-                    \Filament\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }

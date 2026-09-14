@@ -9,9 +9,7 @@ use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Models\User;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
 use Filament\Actions\Testing\TestAction;
-use Filament\Actions\ViewAction;
 use Illuminate\Support\Str;
 
 use function Pest\Laravel\assertDatabaseHas;

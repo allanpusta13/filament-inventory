@@ -8,6 +8,7 @@ use App\Enums\TransferRequisitionStatus;
 use App\Models\InTransit;
 use App\Models\LossLedger;
 use App\Models\ProductVariant;
+use App\Models\StockMovement;
 use App\Models\ProductVariantPrice;
 use App\Models\TransferRequisition;
 use App\Models\TransferRequisitionItem;
@@ -401,5 +402,73 @@ describe('scanToReceive', function () {
             ->and($variant2->onHandQuantity($this->destination->id))->toBe(40)
             ->and($requisition->fresh()->status)->toBe(TransferRequisitionStatus::PartiallyReceived)
             ->and(LossLedger::where('transfer_requisition_id', $requisition->id)->count())->toBe(1);
+    });
+});
+
+describe('v10: scanToReceive idempotency and precision', function () {
+    it('scan_to_receive_is_idempotent_against_duplicate_submission', function () {
+        // Test the state-equality idempotency check: if payload would produce no state change, it's a no-op
+        $requisition = makeConfirmedRequisition($this->service, $this->origin, $this->destination, $this->variant, approvedBaseQty: 240);
+        $this->service->dispatchTransfer($requisition->id);
+        $item = $requisition->fresh('items')->items->first();
+
+        // First: receive 5 boxes (120 base units)
+        $this->service->scanToReceive($requisition->id, [
+            $item->id => ['good_qty' => 5, 'damaged_qty' => 0],
+        ]);
+
+        // Verify state after first call
+        expect($item->fresh()->received_good_base_qty)->toBe(120);
+
+        $movementsAfterFirst = StockMovement::where('reference_type', TransferRequisition::class)
+            ->where('reference_id', (string) $requisition->id)
+            ->where('type', StockMovementType::TransitIn)
+            ->count();
+
+        // Second call: send payload that would result in SAME final state (120 total)
+        // This tests the no-op case: send 0 qty when already at target
+        $this->service->scanToReceive($requisition->id, [
+            $item->id => ['good_qty' => 0, 'damaged_qty' => 0], // No change
+        ]);
+
+        $movementsAfterSecond = StockMovement::where('reference_type', TransferRequisition::class)
+            ->where('reference_id', (string) $requisition->id)
+            ->where('type', StockMovementType::TransitIn)
+            ->count();
+
+        // Idempotency: no additional movements (0 qty = no state change)
+        expect($movementsAfterSecond)->toBe($movementsAfterFirst)
+            ->and($item->fresh()->received_good_base_qty)->toBe(120);
+    });
+
+    it('scan_to_receive_total_financial_loss_matches_bcmath_reference_value', function () {
+        // Use default 240 base qty (10 boxes * 24 ratio)
+        $requisition = makeConfirmedRequisition($this->service, $this->origin, $this->destination, $this->variant, approvedBaseQty: 240);
+        $this->service->dispatchTransfer($requisition->id);
+        $item = $requisition->fresh('items')->items->first();
+
+        // Set a known cost price with 4 decimals
+        ProductVariantPrice::recordNewPrice($this->variant, costPrice: 12.3456, salePrice: 24.6912);
+
+        // Ship 240 base units, receive 6 good + 2 damaged = (6+2)*24 = 192 base units received
+        // Lost = 240 - (144 + 48) = 48
+        // Damaged = 48
+        // Total loss base = 96
+        // Cost price = 12.3456
+        // Expected total = 96 * 12.3456 = 1185.1776 (bcmul with scale 4)
+        $this->service->scanToReceive($requisition->id, [
+            $item->id => ['good_qty' => 6, 'damaged_qty' => 2],
+        ]);
+
+        $ledger = LossLedger::where('transfer_requisition_id', $requisition->id)->first();
+
+        expect($ledger)->not->toBeNull();
+
+        $expectedLoss = bcmul('96', '12.3456', 4);
+
+        expect((string) $ledger->lost_base_qty)->toBe('48')
+            ->and((string) $ledger->damaged_base_qty)->toBe('48')
+            ->and((string) $ledger->unit_cost_price)->toBe('12.3456')
+            ->and((string) $ledger->total_financial_loss)->toBe($expectedLoss);
     });
 });

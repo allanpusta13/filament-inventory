@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 use App\Filament\Resources\InTransits\Pages\ViewInTransit;
 use App\Models\InTransit;
+use App\Models\ProductVariant;
 use App\Models\TransferRequisition;
 use App\Models\TransferRequisitionItem;
-use App\Models\ProductVariant;
-use App\Models\Warehouse;
 use App\Models\User;
+use App\Models\Warehouse;
 use Filament\Actions\DeleteAction;
 
 use function Pest\Laravel\assertDatabaseMissing;

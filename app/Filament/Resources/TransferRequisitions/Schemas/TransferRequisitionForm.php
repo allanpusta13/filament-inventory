@@ -12,11 +12,17 @@ use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 // use Filament\Schemas\Components\Placeholder;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\HtmlString;
 
 class TransferRequisitionForm
 {
+    public static function configure(Schema $schema): Schema
+    {
+        return $schema;
+    }
+
     /**
      * Step 1: Warehouse Location Routing
      */

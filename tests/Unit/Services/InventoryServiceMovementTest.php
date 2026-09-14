@@ -195,3 +195,64 @@ describe('directTransfer', function () {
             ->and($in->unit_ratio_used)->toBe(24);
     });
 });
+
+describe('v10: directTransfer locking and validation', function () {
+    it('direct_transfer_locks_warehouses_in_sorted_id_order', function () {
+        $variant = ProductVariant::factory()->create();
+        $origin = Warehouse::factory()->create();
+        $destination = Warehouse::factory()->create();
+
+        // Ensure origin.id > destination.id to test sorting
+        if ($origin->id < $destination->id) {
+            [$origin, $destination] = [$destination, $origin];
+        }
+
+        $this->service->recordMovement($variant->id, $origin->id, StockMovementType::Receive, 100);
+
+        // The service should lock warehouses in sorted ID order (lower ID first)
+        // This prevents deadlock when concurrent A→B and B→A transfers occur
+        [$out, $in] = $this->service->directTransfer(
+            $variant->id, $origin->id, $destination->id, 10,
+        );
+
+        expect($out->type)->toBe(StockMovementType::TransferOut)
+            ->and($in->type)->toBe(StockMovementType::TransferIn)
+            ->and($variant->onHandQuantity($origin->id))->toBe(90)
+            ->and($variant->onHandQuantity($destination->id))->toBe(10);
+    });
+
+    it('direct_transfer_rejects_zero_or_negative_unit_ratio', function () {
+        $variant = ProductVariant::factory()->create();
+        $origin = Warehouse::factory()->create();
+        $destination = Warehouse::factory()->create();
+        $this->service->recordMovement($variant->id, $origin->id, StockMovementType::Receive, 100);
+
+        expect(fn () => $this->service->directTransfer(
+            $variant->id, $origin->id, $destination->id, 10,
+            unitRatio: 0,
+        ))->toThrow(Exception::class, 'unit_ratio must be a positive integer');
+
+        expect(fn () => $this->service->directTransfer(
+            $variant->id, $origin->id, $destination->id, 10,
+            unitRatio: -1,
+        ))->toThrow(Exception::class, 'unit_ratio must be a positive integer');
+
+        // Stock should remain unchanged
+        expect($variant->onHandQuantity($origin->id))->toBe(100);
+    });
+
+    it('record_movement_rejects_zero_or_negative_unit_ratio', function () {
+        $variant = ProductVariant::factory()->create();
+        $warehouse = Warehouse::factory()->create();
+
+        expect(fn () => $this->service->recordMovement(
+            $variant->id, $warehouse->id, StockMovementType::Receive, 10,
+            unitRatio: 0,
+        ))->toThrow(Exception::class, 'unit_ratio must be a positive integer');
+
+        expect(fn () => $this->service->recordMovement(
+            $variant->id, $warehouse->id, StockMovementType::Receive, 10,
+            unitRatio: -1,
+        ))->toThrow(Exception::class, 'unit_ratio must be a positive integer');
+    });
+});

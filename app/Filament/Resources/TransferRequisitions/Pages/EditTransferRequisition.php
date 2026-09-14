@@ -5,12 +5,11 @@ declare(strict_types=1);
 namespace App\Filament\Resources\TransferRequisitions\Pages;
 
 use App\Filament\Resources\TransferRequisitions\TransferRequisitionResource;
-use App\Models\TransferRequisition;
+use Filament\Actions\DeleteAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Schemas\Schema;
-use Filament\Actions\DeleteAction;
 
 class EditTransferRequisition extends EditRecord
 {
@@ -31,22 +30,22 @@ class EditTransferRequisition extends EditRecord
                     ->maxLength(255)
                     ->disabled(),
 
-                \Filament\Forms\Components\Select::make('from_warehouse_id')
+                Select::make('from_warehouse_id')
                     ->label('ORIGIN WAREHOUSE')
                     ->relationship('fromWarehouse', 'name')
                     ->disabled(),
 
-                \Filament\Forms\Components\Select::make('to_warehouse_id')
+                Select::make('to_warehouse_id')
                     ->label('DESTINATION WAREHOUSE')
                     ->relationship('toWarehouse', 'name')
                     ->disabled(),
 
-                \Filament\Forms\Components\Select::make('status')
+                Select::make('status')
                     ->label('STATUS')
                     ->options(TransferRequisitionStatus::class)
                     ->required(),
 
-                \Filament\Forms\Components\Textarea::make('notes')
+                Textarea::make('notes')
                     ->label('NOTES')
                     ->columnSpanFull()
                     ->rows(3),

@@ -12,28 +12,29 @@ use App\Models\TransferRequisitionItemRevision;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
+use UnitEnum;
 
 class TransferRequisitionItemRevisionResource extends Resource
 {
     protected static ?string $model = TransferRequisitionItemRevision::class;
 
-    protected static string | \UnitEnum | null $navigationGroup = 'OPERATIONS';
+    protected static string|UnitEnum|null $navigationGroup = 'OPERATIONS';
 
     protected static ?int $navigationSort = 5;
 
     protected static ?string $recordTitleAttribute = 'id';
 
-    public static function form(\Filament\Schemas\Schema $schema): \Filament\Schemas\Schema
+    public static function form(Schema $schema): Schema
     {
         return $schema;
     }
 
-    public static function table(\Filament\Tables\Table $table): \Filament\Tables\Table
+    public static function table(Table $table): Table
     {
         return TransferRequisitionItemRevisionsTable::configure($table);
     }
 
-    public static function infolist(\Filament\Schemas\Schema $schema): \Filament\Schemas\Schema
+    public static function infolist(Schema $schema): Schema
     {
         return TransferRequisitionItemRevisionInfolist::configure($schema);
     }

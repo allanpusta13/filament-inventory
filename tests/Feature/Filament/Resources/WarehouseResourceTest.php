@@ -11,7 +11,6 @@ use App\Models\Warehouse;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\Testing\TestAction;
-use Illuminate\Support\Str;
 
 use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Laravel\assertDatabaseMissing;
@@ -82,7 +81,6 @@ it('can search table by column', function () {
         ->assertCanNotSeeTableRecords([$warehouse2]);
 });
 
-
 it('can render table column state', function () {
     $warehouse = Warehouse::factory()->create(['code' => 'WH-TEST', 'name' => 'Test Warehouse']);
 
@@ -91,7 +89,6 @@ it('can render table column state', function () {
         ->assertTableColumnStateSet('code', 'WH-TEST', record: $warehouse)
         ->assertTableColumnStateSet('name', 'Test Warehouse', record: $warehouse);
 });
-
 
 it('can assert table column visibility', function () {
     livewire(ListWarehouses::class)

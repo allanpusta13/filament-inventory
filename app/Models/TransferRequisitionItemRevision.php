@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Enums\NegotiationSide;
 use App\Enums\RevisionStatus;
+use Exception;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -106,13 +107,14 @@ class TransferRequisitionItemRevision extends Model
         while ($revision->respondsTo) {
             $revision = $revision->respondsTo;
         }
+
         return $revision;
     }
 
     public function accept(): void
     {
         if ($this->isResolved()) {
-            throw new \Exception("Revision {$this->id} is already resolved ({$this->status->value}).");
+            throw new Exception("Revision {$this->id} is already resolved ({$this->status->value}).");
         }
 
         $this->update(['status' => RevisionStatus::Accepted, 'responded_at' => now()]);
@@ -121,7 +123,7 @@ class TransferRequisitionItemRevision extends Model
     public function reject(): void
     {
         if ($this->isResolved()) {
-            throw new \Exception("Revision {$this->id} is already resolved ({$this->status->value})..");
+            throw new Exception("Revision {$this->id} is already resolved ({$this->status->value})..");
         }
 
         $this->update(['status' => RevisionStatus::Rejected, 'responded_at' => now()]);

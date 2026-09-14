@@ -7,19 +7,12 @@ use App\Filament\Resources\TransferRequisitions\Pages\CreateTransferRequisition;
 use App\Filament\Resources\TransferRequisitions\Pages\EditTransferRequisition;
 use App\Filament\Resources\TransferRequisitions\Pages\ListTransferRequisitions;
 use App\Filament\Resources\TransferRequisitions\Pages\ViewTransferRequisition;
-use App\Models\ProductVariant;
 use App\Models\TransferRequisition;
-use App\Models\TransferRequisitionItem;
 use App\Models\User;
 use App\Models\Warehouse;
 use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\Testing\TestAction;
-use Illuminate\Support\Str;
-use Livewire\Features\SupportTesting\Testable;
 
-use function Pest\Laravel\assertDatabaseHas;
-use function Pest\Laravel\assertDatabaseMissing;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
@@ -188,7 +181,6 @@ it('has view action on table row', function () {
         ->assertHasNoFormErrors();
 });
 
-
 it('can delete transfer requisition', function () {
     $requisition = TransferRequisition::factory()->create(['status' => TransferRequisitionStatus::Draft]);
 
@@ -203,7 +195,6 @@ it('can delete transfer requisition', function () {
     expect($requisition->deleted_at)->not->toBeNull();
 });
 
-
 it('renders infolist entries on view page', function () {
     $requisition = TransferRequisition::factory()->create();
 
@@ -215,4 +206,3 @@ it('renders infolist entries on view page', function () {
         ->assertSchemaComponentExists('requestedBy.name')
         ->assertSchemaComponentExists('items');
 });
-
