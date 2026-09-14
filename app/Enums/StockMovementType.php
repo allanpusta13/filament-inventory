@@ -24,14 +24,14 @@ enum StockMovementType: string implements HasColor, HasIcon, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Receive => 'Receive',
-            self::Ship => 'Ship',
-            self::TransferOut => 'Transfer out',
-            self::TransferIn => 'Transfer in',
-            self::TransitOut => 'Transit out',
-            self::TransitIn => 'Transit in',
-            self::Adjustment => 'Adjustment',
-            self::Loss => 'Loss',
+            self::Receive => __('Receive'),
+            self::Ship => __('Ship'),
+            self::TransferOut => __('Transfer out'),
+            self::TransferIn => __('Transfer in'),
+            self::TransitOut => __('Transit out'),
+            self::TransitIn => __('Transit in'),
+            self::Adjustment => __('Adjustment'),
+            self::Loss => __('Loss'),
         };
     }
 

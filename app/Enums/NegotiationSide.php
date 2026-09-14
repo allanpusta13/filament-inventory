@@ -18,8 +18,8 @@ enum NegotiationSide: string implements HasColor, HasIcon, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Fulfiller => 'Fulfiller',
-            self::Requestor => 'Requestor',
+            self::Fulfiller => __('Fulfiller'),
+            self::Requestor => __('Requestor'),
         };
     }
 

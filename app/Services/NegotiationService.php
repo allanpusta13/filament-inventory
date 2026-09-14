@@ -127,4 +127,25 @@ class NegotiationService
             'side' => $revision->side->opposite(),
         ]);
     }
+
+    /**
+     * Materialize requested quantities as approved for items that have not
+     * been negotiated (approved_base_qty is null). Called by ConfirmAction
+     * before transitioning to Confirmed status.
+     */
+    public function materializeRequestedAsApproved(TransferRequisition $requisition): void
+    {
+        DB::transaction(function () use ($requisition) {
+            $requisition->items()
+                ->whereNull('approved_base_qty')
+                ->each(function (TransferRequisitionItem $item) {
+                    $item->update([
+                        'approved_unit_name'  => $item->requested_unit_name,
+                        'approved_unit_ratio' => $item->requested_unit_ratio,
+                        'approved_qty'        => $item->requested_qty,
+                        'approved_base_qty'   => $item->requested_base_qty,
+                    ]);
+                });
+        });
+    }
 }

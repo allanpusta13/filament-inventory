@@ -26,16 +26,16 @@ enum TransferRequisitionStatus: string implements HasColor, HasIcon, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Draft => 'Draft',
-            self::Requested => 'Requested',
-            self::UnderReviewFulfiller => 'Under review (fulfiller)',
-            self::UnderReviewRequestor => 'Under review (requestor)',
-            self::Confirmed => 'Confirmed',
-            self::Dispatched => 'Dispatched',
-            self::PartiallyReceived => 'Partially received',
-            self::Completed => 'Completed',
-            self::ClosedWithLoss => 'Closed with loss',
-            self::Cancelled => 'Cancelled',
+            self::Draft => __('Draft'),
+            self::Requested => __('Requested'),
+            self::UnderReviewFulfiller => __('Under review (fulfiller)'),
+            self::UnderReviewRequestor => __('Under review (requestor)'),
+            self::Confirmed => __('Confirmed'),
+            self::Dispatched => __('Dispatched'),
+            self::PartiallyReceived => __('Partially received'),
+            self::Completed => __('Completed'),
+            self::ClosedWithLoss => __('Closed with loss'),
+            self::Cancelled => __('Cancelled'),
         };
     }
 

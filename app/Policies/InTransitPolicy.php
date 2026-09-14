@@ -36,17 +36,12 @@ class InTransitPolicy
 
     public function restore(User $user, InTransit $inTransit): bool
     {
-        return false;
+        return $user->isAdmin();
     }
 
     public function forceDelete(User $user, InTransit $inTransit): bool
     {
-        return false;
-    }
-
-    public function receive(User $user, InTransit $inTransit): bool
-    {
-        return true;
+        return $user->isAdmin();
     }
 
     public function deleteAny(User $user): bool
@@ -56,11 +51,16 @@ class InTransitPolicy
 
     public function restoreAny(User $user): bool
     {
-        return false;
+        return $user->isAdmin();
     }
 
     public function forceDeleteAny(User $user): bool
     {
-        return false;
+        return $user->isAdmin();
+    }
+
+    public function receive(User $user, InTransit $inTransit): bool
+    {
+        return true;
     }
 }

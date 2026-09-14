@@ -77,7 +77,7 @@ class LossLedgerInfolist
 
                             TextEntry::make('total_financial_loss')
                                 ->label('TOTAL FINANCIAL LOSS')
-                                ->money('PHP')
+                                ->money(config('app.currency'))
                                 ->weight(FontWeight::Bold)
                                 ->color('danger'),
                         ]),
@@ -91,7 +91,7 @@ class LossLedgerInfolist
                         Grid::make(2)->schema([
                             TextEntry::make('unit_cost_price')
                                 ->label('UNIT COST PRICE (SNAPSHOT)')
-                                ->money('PHP')
+                                ->money(config('app.currency'))
                                 ->weight(FontWeight::Bold)
                                 ->color('success'),
 

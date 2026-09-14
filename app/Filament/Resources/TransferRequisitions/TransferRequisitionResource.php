@@ -9,6 +9,8 @@ use App\Filament\Resources\TransferRequisitions\Pages\ViewTransferRequisition;
 use App\Filament\Resources\TransferRequisitions\Schemas\TransferRequisitionInfolist;
 use App\Filament\Resources\TransferRequisitions\Tables\TransferRequisitionsTable;
 use App\Models\TransferRequisition;
+use App\Models\User;
+use App\Models\Warehouse;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -58,6 +60,18 @@ class TransferRequisitionResource extends Resource
             'index' => ListTransferRequisitions::route('/'),
             'view' => ViewTransferRequisition::route('/{record}'),
         ];
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->when(auth()->user()?->isAdmin() === false, function (Builder $query) {
+                $warehouseIds = auth()->user()->warehouses()->pluck('warehouses.id');
+                $query->where(function ($q) use ($warehouseIds) {
+                    $q->whereIn('from_warehouse_id', $warehouseIds)
+                        ->orWhereIn('to_warehouse_id', $warehouseIds);
+                });
+            });
     }
 
     public static function getRecordRouteBindingEloquentQuery(): Builder

@@ -25,10 +25,10 @@ final class STNManifestController extends Controller
             abort(403, 'Unauthorized access to this location manifest.');
         }
 
-        // Generate 30-day secure temporary signed scan URL
+        // Generate 7-day secure temporary signed scan URL (Blueprint v10)
         $signedUrl = URL::temporarySignedRoute(
             'stn.scan',
-            now()->addDays(30),
+            now()->addDays(7),
             ['transferRequisition' => $requisition->id]
         );
 

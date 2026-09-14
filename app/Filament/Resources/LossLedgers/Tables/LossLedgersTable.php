@@ -68,7 +68,7 @@ class LossLedgersTable
 
                 TextColumn::make('total_financial_loss')
                     ->label('TOTAL FINANCIAL LOSS')
-                    ->money('PHP')
+                    ->money(config('app.currency'))
                     ->sortable()
                     ->weight(\Filament\Support\Enums\FontWeight::Bold)
                     ->color('danger'),

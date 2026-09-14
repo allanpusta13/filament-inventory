@@ -36,17 +36,12 @@ class LossLedgerPolicy
 
     public function restore(User $user, LossLedger $lossLedger): bool
     {
-        return false;
+        return $user->isAdmin();
     }
 
     public function forceDelete(User $user, LossLedger $lossLedger): bool
     {
-        return false;
-    }
-
-    public function recordLoss(User $user): bool
-    {
-        return true;
+        return $user->isAdmin();
     }
 
     public function deleteAny(User $user): bool
@@ -56,11 +51,16 @@ class LossLedgerPolicy
 
     public function restoreAny(User $user): bool
     {
-        return false;
+        return $user->isAdmin();
     }
 
     public function forceDeleteAny(User $user): bool
     {
-        return false;
+        return $user->isAdmin();
+    }
+
+    public function recordLoss(User $user): bool
+    {
+        return true;
     }
 }

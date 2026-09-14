@@ -44,16 +44,6 @@ class WarehousePolicy
         return $user->isAdmin();
     }
 
-    public function adjustStock(User $user): bool
-    {
-        return true;
-    }
-
-    public function recordLoss(User $user): bool
-    {
-        return $user->isAdmin();
-    }
-
     public function deleteAny(User $user): bool
     {
         return $user->isAdmin();
@@ -65,6 +55,16 @@ class WarehousePolicy
     }
 
     public function forceDeleteAny(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function adjustStock(User $user): bool
+    {
+        return true;
+    }
+
+    public function recordLoss(User $user): bool
     {
         return $user->isAdmin();
     }

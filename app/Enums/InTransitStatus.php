@@ -19,9 +19,9 @@ enum InTransitStatus: string implements HasColor, HasIcon, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::InTransit => 'In transit',
-            self::PartiallyReceived => 'Partially received',
-            self::Cleared => 'Cleared',
+            self::InTransit => __('In transit'),
+            self::PartiallyReceived => __('Partially received'),
+            self::Cleared => __('Cleared'),
         };
     }
 

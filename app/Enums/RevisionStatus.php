@@ -20,10 +20,10 @@ enum RevisionStatus: string implements HasColor, HasIcon, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Pending => 'Pending',
-            self::Accepted => 'Accepted',
-            self::Rejected => 'Rejected',
-            self::Superseded => 'Superseded',
+            self::Pending => __('Pending'),
+            self::Accepted => __('Accepted'),
+            self::Rejected => __('Rejected'),
+            self::Superseded => __('Superseded'),
         };
     }
 

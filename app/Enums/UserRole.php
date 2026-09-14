@@ -21,10 +21,10 @@ enum UserRole: string implements HasColor, HasIcon, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::ADMIN => 'Administrator',
-            self::AUDITOR => 'Logistics Auditor',
-            self::BRANCH_MANAGER => 'Branch Manager',
-            self::WAREHOUSE_STAFF => 'Warehouse Staff',
+            self::ADMIN => __('Administrator'),
+            self::AUDITOR => __('Logistics Auditor'),
+            self::BRANCH_MANAGER => __('Branch Manager'),
+            self::WAREHOUSE_STAFF => __('Warehouse Staff'),
         };
     }
 

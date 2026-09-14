@@ -128,7 +128,19 @@ class TransferRequisitionsTable
                     ->icon(Heroicon::CheckBadge)
                     ->color('primary')
                     ->authorize('confirm')
-                    ->visible(fn ($record) => in_array($record->status, ['requested', 'under_review_fulfiller', 'under_review_requestor'])),
+                    ->visible(fn ($record) => in_array($record->status, ['requested', 'under_review_fulfiller', 'under_review_requestor']))
+                    ->action(function ($record) {
+                        // Only materialize requested for items that were never negotiated
+                        // (items with negotiated revisions already have approved_* fields set)
+                        app(\App\Services\NegotiationService::class)
+                            ->materializeRequestedAsApproved($record);
+                        $record->update([
+                            'status' => 'confirmed',
+                            'approved_at' => now(),
+                            'approved_by' => auth()->id(),
+                        ]);
+                    })
+                    ->requiresConfirmation(),
 
                 Action::make('dispatch')
                     ->label('DISPATCH')
