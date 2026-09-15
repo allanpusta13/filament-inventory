@@ -6,10 +6,8 @@ namespace App\Filament\Resources\InTransits\Tables;
 
 use App\Enums\InTransitStatus;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -23,10 +21,11 @@ class InTransitsTable
                 TextColumn::make('transferRequisition.reference_code')
                     ->label('REQUISITION REF')
                     ->weight(\Filament\Support\Enums\FontWeight::Bold)
-                    ->searchable()
+                    ->searchable(query: fn ($query, $search) => $query->whereHas('transferRequisition', fn ($q) => $q->where('reference_code', 'like', "%{$search}%")))
                     ->sortable()
                     ->copyable()
-                    ->color('primary'),
+                    ->color('primary')
+                    ->getStateUsing(fn ($record) => $record->transferRequisition?->reference_code ?? '—'),
 
                 TextColumn::make('productVariant.sku')
                     ->label('SKU')
@@ -74,8 +73,6 @@ class InTransitsTable
             ])
             ->recordActions([
                 ViewAction::make(),
-                EditAction::make(),
-                DeleteAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

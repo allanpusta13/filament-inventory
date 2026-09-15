@@ -441,8 +441,10 @@ class InventoryService
                     'received_qty' => $goodBase + $damagedBase,
                 ]);
 
+                $isFullyReceived = ($goodBase + $damagedBase) >= $item->shipped_base_qty;
+
                 InTransit::where('transfer_requisition_item_id', $item->id)
-                    ->update(['status' => InTransitStatus::Cleared]);
+                    ->update(['status' => $isFullyReceived ? InTransitStatus::Cleared : InTransitStatus::PartiallyReceived]);
             }
 
             // [FIX v10] Record the idempotency audit row after successful

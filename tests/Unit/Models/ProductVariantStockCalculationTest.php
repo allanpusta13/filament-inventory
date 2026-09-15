@@ -236,8 +236,8 @@ it('classifies stockLevel using onHandQuantity', function () {
     expect($available)->toBe(100);
 });
 
-it('classifies urgency using onHandQuantity vs reorder_point', function () {
-    $variant = ProductVariant::factory()->create();
+it('classifies urgency onHandQuantity vs reorder_point', function () {
+    $variant = ProductVariant::factory()->create(['reorder_point' => 50]);
     $warehouse = Warehouse::factory()->create();
 
     StockMovement::factory()->create([

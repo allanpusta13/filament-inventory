@@ -26,7 +26,7 @@ class InTransitPolicy
 
     public function update(User $user, InTransit $inTransit): bool
     {
-        return $user->isAdmin();
+        return false;
     }
 
     public function delete(User $user, InTransit $inTransit): bool

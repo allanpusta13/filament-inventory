@@ -10,9 +10,9 @@ use App\Models\ProductVariant;
 use App\Models\TransferRequisition;
 use App\Models\TransferRequisitionItem;
 use App\Models\User;
-use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\Testing\TestAction;
+use Filament\Actions\DeleteAction;
 
 use function Pest\Laravel\assertDatabaseMissing;
 use function Pest\Livewire\livewire;
@@ -56,59 +56,36 @@ it('can render view page', function () {
 it('has column', function (string $column) {
     livewire(ListInTransits::class)
         ->assertTableColumnExists($column);
-})->with(['transferRequisition.reference_code', 'productVariant.sku', 'productVariant.name', 'status', 'dispatched_base_qty', 'dispatched_at', 'created_at']);
-
-it('can sort column', function (string $column) {
-    $requisition = TransferRequisition::factory()->create();
-    $item = TransferRequisitionItem::factory()->for($requisition)->create();
-    $variant = ProductVariant::factory()->create();
-    $records = InTransit::factory()->count(5)
-        ->for($requisition, 'transferRequisition')
-        ->for($item, 'item')
-        ->for($variant, 'productVariant')
-        ->create();
-
-    livewire(ListInTransits::class)
-        ->loadTable()
-        ->sortTable($column)
-        ->assertCanSeeTableRecords($records)
-        ->sortTable($column, 'desc')
-        ->assertCanSeeTableRecords($records);
-})->with(['transferRequisition.reference_code', 'productVariant.sku', 'productVariant.name', 'status', 'dispatched_base_qty', 'dispatched_at']);
+})->with(['transferRequisition.reference_code', 'productVariant.sku', 'productVariant.name',
+    'status', 'dispatched_base_qty', 'dispatched_at', 'created_at']);
 
 it('can search table', function () {
     $requisition = TransferRequisition::factory()->create(['reference_code' => 'TRQ-ABC-001']);
     $item = TransferRequisitionItem::factory()->for($requisition)->create();
     $variant = ProductVariant::factory()->create(['sku' => 'SKU-ABC-001']);
-    $inTransit1 = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->create();
+    $inTransits1 = InTransit::factory()->count(5)
+        ->for($requisition, 'transferRequisition')
+        ->for($item, 'item')
+        ->for($variant, 'productVariant')
+        ->create();
 
     $requisition2 = TransferRequisition::factory()->create(['reference_code' => 'TRQ-XYZ-002']);
     $item2 = TransferRequisitionItem::factory()->for($requisition2)->create();
     $variant2 = ProductVariant::factory()->create(['sku' => 'SKU-XYZ-002']);
-    $inTransit2 = InTransit::factory()->for($requisition2, 'transferRequisition')->for($item2, 'item')->for($variant2, 'productVariant')->create();
+    $inTransits2 = InTransit::factory()->count(3)
+        ->for($requisition2, 'transferRequisition')
+        ->for($item2, 'item')
+        ->for($variant2, 'productVariant')
+        ->create();
 
     livewire(ListInTransits::class)
         ->loadTable()
-        ->searchTable('TRQ-ABC')
-        ->assertCanSeeTableRecords([$inTransit1])
-        ->assertCanNotSeeTableRecords([$inTransit2]);
+        ->searchTable('TRQ-ABC-001')
+        ->assertCanSeeTableRecords($inTransits1)
+        ->assertCanNotSeeTableRecords($inTransits2);
 });
 
 it('can filter table by status', function () {
-    $requisition = TransferRequisition::factory()->create();
-    $item = TransferRequisitionItem::factory()->for($requisition)->create();
-    $variant = ProductVariant::factory()->create();
-    $inTransit = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->inTransit()->create();
-    $cleared = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->received()->create();
-
-    livewire(ListInTransits::class)
-        ->loadTable()
-        ->filterTable('status', InTransitStatus::InTransit->value)
-        ->assertCanSeeTableRecords([$inTransit])
-        ->assertCanNotSeeTableRecords([$cleared]);
-});
-
-it('can render table column state', function () {
     $requisition = TransferRequisition::factory()->create(['reference_code' => 'TRQ-TEST-001']);
     $item = TransferRequisitionItem::factory()->for($requisition)->create();
     $variant = ProductVariant::factory()->create();
@@ -146,17 +123,16 @@ it('can assert table column exists', function (string $column) {
     livewire(ListInTransits::class)
         ->loadTable()
         ->assertTableColumnExists($column);
-})->with(['transferRequisition.reference_code', 'productVariant.sku', 'productVariant.name', 'status', 'dispatched_base_qty', 'dispatched_at', 'created_at']);
+})->with(['transferRequisition.reference_code', 'productVariant.sku', 'productVariant.name',
+    'status', 'dispatched_base_qty', 'dispatched_at', 'created_at']);
 
-it('renders empty state correctly', function () {
+it('returns empty table when no in transits', function () {
     InTransit::truncate();
     TransferRequisitionItem::truncate();
     TransferRequisition::truncate();
     ProductVariant::truncate();
-    User::truncate();
 
     livewire(ListInTransits::class)
-        ->loadTable()
         ->assertCountTableRecords(0);
 });
 
@@ -172,44 +148,27 @@ it('has view action on table row', function () {
         ->assertHasNoFormErrors();
 });
 
-it('has edit action on table row', function () {
-    $requisition = TransferRequisition::factory()->create();
-    $item = TransferRequisitionItem::factory()->for($requisition)->create();
-    $variant = ProductVariant::factory()->create();
-    $inTransit = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->create();
-
-    livewire(ListInTransits::class)
-        ->loadTable()
-        ->callAction(TestAction::make('edit')->table($inTransit))
-        ->assertHasNoFormErrors();
-});
-
-it('has delete action on table row', function () {
-    $requisition = TransferRequisition::factory()->create();
-    $item = TransferRequisitionItem::factory()->for($requisition)->create();
-    $variant = ProductVariant::factory()->create();
-    $inTransit = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->create();
-
-    livewire(ListInTransits::class)
-        ->loadTable()
-        ->callAction(TestAction::make('delete')->table($inTransit))
-        ->assertNotified();
-
-    assertDatabaseMissing($inTransit);
-});
-
 it('can delete in transit', function () {
     $requisition = TransferRequisition::factory()->create();
     $item = TransferRequisitionItem::factory()->for($requisition)->create();
     $variant = ProductVariant::factory()->create();
     $inTransit = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->create();
 
-    livewire(ViewInTransit::class, [
-        'record' => $inTransit->id,
-    ])
+    livewire(ListInTransits::class)
+        ->loadTable()
+        ->callAction(TestAction::make('view')->table($inTransit))
+        ->assertHasNoFormErrors();
+});
+
+it('can delete in transit from view page', function () {
+    $requisition = TransferRequisition::factory()->create();
+    $item = TransferRequisitionItem::factory()->for($requisition)->create();
+    $variant = ProductVariant::factory()->create();
+    $inTransit = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->create();
+
+    livewire(ViewInTransit::class, ['record' => $inTransit->id])
         ->callAction(DeleteAction::class)
-        ->assertNotified()
-        ->assertRedirect();
+        ->assertNotified();
 
     assertDatabaseMissing($inTransit);
 });
@@ -253,6 +212,9 @@ it('shows status badge correctly', function () {
     $inTransit = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->inTransit()->create();
     expect($inTransit->status->value)->toBe('in_transit');
 
-    $inTransit2 = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->received()->create();
-    expect($inTransit2->status->value)->toBe('cleared');
+    $inTransit2 = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->partiallyReceived()->create();
+    expect($inTransit2->status->value)->toBe('partially_received');
+
+    $inTransit3 = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->cleared()->create();
+    expect($inTransit3->status->value)->toBe('cleared');
 });

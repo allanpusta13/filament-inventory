@@ -9,6 +9,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Collection;
 
 class LowStockAlertsWidget extends TableWidget
 {
@@ -18,7 +19,7 @@ class LowStockAlertsWidget extends TableWidget
 
     protected int|string|array $columnSpanFull = 'full';
 
-    public function getLowStockAlerts()
+    public function getLowStockAlerts(): Collection
     {
         $cacheKey = 'low_stock_alerts_'.auth()->id().'_'.optional(auth()->user()->warehouses->first())?->id;
 
@@ -29,46 +30,51 @@ class LowStockAlertsWidget extends TableWidget
             return ProductVariant::whereHas('stockMovements', function ($query) use ($warehouseIds) {
                 $query->whereIn('warehouse_id', $warehouseIds);
             })
-                ->with(['stockMovements' => function ($query) use ($warehouseIds) {
-                    $query->whereIn('warehouse_id', $warehouseIds);
-                }])
                 ->get()
                 ->filter(function ($variant) use ($warehouseIds) {
-                    $totalStock = $variant->stockMovements
-                        ->whereIn('warehouse_id', $warehouseIds)
-                        ->sum('quantity');
-
-                    return $totalStock <= $variant->reorder_point;
+                    foreach ($warehouseIds as $warehouseId) {
+                        if ($variant->availableQuantity($warehouseId) <= $variant->reorder_point) {
+                            return true;
+                        }
+                    }
+                    return false;
                 })
                 ->map(function ($variant) use ($warehouseIds) {
-                    $totalStock = $variant->stockMovements
-                        ->whereIn('warehouse_id', $warehouseIds)
-                        ->sum('quantity');
-
+                    $warehouseData = [];
+                    foreach ($warehouseIds as $warehouseId) {
+                        $available = $variant->availableQuantity($warehouseId);
+                        if ($available <= $variant->reorder_point) {
+                            $warehouseData[] = [
+                                'warehouse_id' => $warehouseId,
+                                'current_stock' => $available,
+                                'shortfall' => $variant->reorder_point - $available,
+                            ];
+                        }
+                    }
                     return [
                         'variant_id' => $variant->id,
                         'sku' => $variant->sku,
                         'name' => $variant->name,
                         'reorder_point' => $variant->reorder_point,
-                        'current_stock' => $variant->stockMovements
-                            ->whereIn('warehouse_id', $warehouseIds)
-                            ->sum('quantity'),
-                        'shortfall' => $variant->reorder_point - $variant->stockMovements
-                            ->whereIn('warehouse_id', $warehouseIds)
-                            ->sum('quantity'),
+                        'warehouses' => $warehouseData,
                     ];
                 })
                 ->values();
         });
     }
 
+    private function getAlertForVariant(Collection $alerts, int $variantId): ?array
+    {
+        return $alerts->firstWhere('variant_id', $variantId);
+    }
+
     public function table(Table $table): Table
     {
+        $alerts = $this->getLowStockAlerts();
+
         return $table
             ->query(
-                ProductVariant::whereHas('stockMovements', function ($query) {
-                    $query->whereIn('warehouse_id', auth()->user()->warehouses->pluck('id'));
-                })
+                ProductVariant::whereIn('id', $alerts->pluck('variant_id'))
             )
             ->columns([
                 TextColumn::make('sku')
@@ -88,13 +94,21 @@ class LowStockAlertsWidget extends TableWidget
                     ->sortable(),
 
                 TextColumn::make('current_stock')
-                    ->label('CURRENT STOCK')
+                    ->label('AVAILABLE STOCK')
+                    ->getStateUsing(function ($record) use ($alerts) {
+                        $alert = $this->getAlertForVariant($alerts, $record->id);
+                        return $alert['warehouses'][0]['current_stock'] ?? 0;
+                    })
                     ->numeric()
                     ->sortable()
                     ->color(fn ($state, $record) => $state <= $record->reorder_point ? 'danger' : 'success'),
 
                 TextColumn::make('shortfall')
                     ->label('SHORTFALL')
+                    ->getStateUsing(function ($record) use ($alerts) {
+                        $alert = $this->getAlertForVariant($alerts, $record->id);
+                        return $alert['warehouses'][0]['shortfall'] ?? 0;
+                    })
                     ->numeric()
                     ->sortable()
                     ->color('danger'),
