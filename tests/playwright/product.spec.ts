@@ -73,9 +73,12 @@ test.describe('ProductResource E2E Tests', () => {
     await expect(page.getByRole('heading', { name: `View ${uniqueSku}` })).toBeVisible({ timeout: 10000 });
 
     await page.goto('http://127.0.0.1:8000/admin/products');
-    await page.fill('input[placeholder*="Search"]', uniqueSku);
+    const searchInput = page.getByRole('searchbox', { name: 'Search', exact: true });
+    await searchInput.fill(uniqueSku);
     await page.keyboard.press('Enter');
-    await expect(page.locator(`text=${uniqueSku}`)).toBeVisible({ timeout: 5000 });
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+    await expect(page.getByRole('row').nth(1)).toContainText(uniqueSku);
   });
 
   test('can sort products by column', async ({ page }) => {
@@ -94,6 +97,6 @@ test.describe('ProductResource E2E Tests', () => {
     await page.getByRole('button', { name: 'Sku' }).click();
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
-    await expect(page.locator('tbody tr').first()).toContainText('AAA-SORT');
+    await expect(page.getByRole('row').nth(1)).toContainText('AAA-SORT');
   });
 });
