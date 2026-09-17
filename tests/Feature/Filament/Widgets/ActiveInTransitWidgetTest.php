@@ -209,3 +209,118 @@ describe('ActiveInTransitWidget', function () {
         expect($inTransits->first()['variant_sku'])->toBe($substitute->sku);
     });
 });
+
+    it('gate check: non-admin receives 403', function () {
+        $nonAdmin = User::factory()->create();
+        $this->actingAs($nonAdmin);
+
+        $widget = new ActiveInTransitWidget();
+        $response = $this->get('/widget/active-in-transit');
+
+        $response->assertStatus(403);
+    });
+
+    it('sql injection rejection in warehouse context', function () {
+        $widget = new ActiveInTransitWidget();
+        $response = $this->get('/widget/active-in-transit?warehouse_id=' . mysql_real_escape_string("'"' OR 1=1 --"));
+
+        $response->assertStatus(400);
+        $this->assertDontSee('SQL');
+    });
+
+    it('xss script rejection in variant names', function () {
+        $scriptVariant = ProductVariant::factory()->create();
+
+        $widget = new ActiveInTransitWidget();
+        $inTransits = $widget->getActiveInTransits(true);
+
+        expect($inTransits)->not->toContain('<script>');
+    });
+
+    it('warehouse id scoping on every query using user warehouses', function () {
+        $otherWarehouse = Warehouse::factory()->create();
+        $this->user->warehouses()->syncWithoutDetaching([$this->origin->id]);
+
+        $widget = new ActiveInTransitWidget();
+        $inTransits = $widget->getActiveInTransits(true);
+
+        expect($inTransits)->not->toContain($otherWarehouse->id);
+    });
+
+    it('cross-warehouse access denial', function () {
+        $unauthorizedWarehouse = Warehouse::factory()->create();
+        $unauthorizedVariant = ProductVariant::factory()->create();
+        $this->service->recordMovement($unauthorizedVariant->id, $unauthorizedWarehouse->id, StockMovementType::Receive, 500);
+
+        $requisition = TransferRequisition::factory()->create([
+            'from_warehouse_id' => $unauthorizedWarehouse->id,
+            'to_warehouse_id' => $this->destination->id,
+            'status' => TransferRequisitionStatus::Confirmed,
+        ]);
+        TransferRequisitionItem::factory()->create([
+            'transfer_requisition_id' => $requisition->id,
+            'product_variant_id' => $unauthorizedVariant->id,
+            'requested_unit_name' => 'Box',
+            'requested_unit_ratio' => 24,
+            'requested_qty' => 5,
+            'requested_base_qty' => 120,
+            'approved_base_qty' => 100,
+            'approved_unit_name' => 'Box',
+            'approved_unit_ratio' => 24,
+            'approved_qty' => 5,
+        ]);
+        $this->service->dispatchTransfer($requisition->fresh('items')->id);
+
+        $widget = new ActiveInTransitWidget();
+        $inTransits = $widget->getActiveInTransits(true);
+
+        expect($inTransits->count())->toBe(0);
+    });
+
+    it('null warehouse assignment gracefully', function () {
+        $variantWithoutWarehouse = ProductVariant::factory()->create();
+
+        $widget = new ActiveInTransitWidget();
+        $inTransits = $widget->getActiveInTransits(true);
+
+        expect($inTransits->count())->toBe(0);
+    });
+
+    it('cache bypass preserves warehouse scoping', function () {
+        Cache::tags(['warehouse:'.$this->origin->id])->flush();
+
+        $widget = new ActiveInTransitWidget();
+        $first = $widget->getActiveInTransits(true);
+        $second = $widget->getActiveInTransits(true);
+
+        expect($second)->toEqual($first);
+    });
+
+    it('generic error messages no internal id leaks', function () {
+        $response = $this->get('/widget/active-in-transit?warehouse_id=invalid');
+
+        $response->assertStatus(422);
+        $response->assertDontSee('1');
+        $response->assertDontSee('warehouse');
+    });
+
+    it('unitratio positive integer validation', function () {
+        $invalidRatioVariant = ProductVariant::factory()->create();
+
+        $widget = new ActiveInTransitWidget();
+        $inTransits = $widget->getActiveInTransits(true);
+
+        expect($inTransits->count())->toBe(0);
+    });
+
+    it('per-warehouse cache keys', function () {
+        $otherWarehouse = Warehouse::factory()->create();
+        $this->user->warehouses()->syncWithoutDetaching([$this->origin->id, $otherWarehouse->id]);
+
+        $widget = new ActiveInTransitWidget();
+        $inTransitsFromOrigin = $widget->getActiveInTransits(true);
+
+        $this->assertTrue(Cache::has('active_in_transit_'.$this->user->id.'_'.$this->origin->id));
+        $this->assertFalse(Cache::has('active_in_transit_'.$this->user->id.'_'.$otherWarehouse->id));
+    });
+});

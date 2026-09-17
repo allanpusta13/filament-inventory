@@ -14,7 +14,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class StockMovement extends Model
 {
     use SoftDeletes;
-    /** @use HasFactory<\Database\Factories\StockMovementFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -30,6 +29,16 @@ class StockMovement extends Model
         'reference_code',
         'created_by',
     ];
+
+    protected static function booted(): void
+    {
+        static::deleting(function (self $model) {
+            if (! $model->isForceDeleting()) {
+                self::where('related_movement_id', $model->id)
+                    ->update(['related_movement_id' => null]);
+            }
+        });
+    }
 
     public function productVariant(): BelongsTo
     {

@@ -15,7 +15,6 @@ use App\Models\TransferRequisitionItem;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\InventoryService;
-use Exception;
 
 beforeEach(function () {
     $this->service = new InventoryService();
