@@ -1,0 +1,38 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'Draft' => 'Borrador',
+    'Requested' => 'Solicitado',
+    'Under review (fulfiller)' => 'En revisión (proveedor)',
+    'Under review (requestor)' => 'En revisión (solicitante)',
+    'Confirmed' => 'Confirmado',
+    'Dispatched' => 'Despachado',
+    'Partially received' => 'Parcialmente recibido',
+    'Completed' => 'Completado',
+    'Closed with loss' => 'Cerrado con pérdida',
+    'Cancelled' => 'Cancelado',
+    'In transit' => 'En tránsito',
+    'Cleared' => 'Despachado',
+    'Receive' => 'Recibir',
+    'Ship' => 'Enviar',
+    'Transfer Out' => 'Transferencia salida',
+    'Transfer In' => 'Transferencia entrada',
+    'Transit Out' => 'Tránsito salida',
+    'Transit In' => 'Tránsito entrada',
+    'Adjustment' => 'Ajuste',
+    'Loss' => 'Pérdida',
+    'Fulfiller' => 'Proveedor',
+    'Requestor' => 'Solicitante',
+    'Cost' => 'Costo',
+    'Sale' => 'Venta',
+    'Pending' => 'Pendiente',
+    'Accepted' => 'Aceptado',
+    'Rejected' => 'Rechazado',
+    'Superseded' => 'Suplantado',
+    'Administrator' => 'Administrador',
+    'Logistics Auditor' => 'Auditor logístico',
+    'Branch Manager' => 'Gerente de sucursal',
+    'Warehouse Staff' => 'Personal de almacén',
+];
