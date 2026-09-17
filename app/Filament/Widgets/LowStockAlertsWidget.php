@@ -110,10 +110,10 @@ class LowStockAlertsWidget extends TableWidget
                         return $alert['warehouses'][0]['shortfall'] ?? 0;
                     })
                     ->numeric()
-                    ->sortable()
+                    
                     ->color('danger'),
             ])
             ->paginated(false)
-            ->defaultSort('shortfall', 'desc');
+            ->defaultSort('id', 'desc');
     }
 }
