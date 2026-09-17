@@ -4,65 +4,96 @@ test.describe('ProductResource E2E Tests', () => {
   test.use({ storageState: './tests/playwright/.auth/user.json' });
 
   test('can render product index page', async ({ page }) => {
-    await page.goto('http://filament-inventory.test/admin/products');
-    await expect(page.locator('text=Product Variants')).toBeVisible();
+    await page.goto('http://127.0.0.1:8000/admin/products');
+    await expect(page.getByRole('heading', { name: 'Product Variants' })).toBeVisible();
   });
 
-  test('can create a product variant', async ({ page }) => {
-    await page.goto('http://filament-inventory.test/admin/products/create');
-    await expect(page.locator('text=CREATE PRODUCT VARIANT')).toBeVisible();
+  test('can create product variant', async ({ page }) => {
+    const uniqueSku = `E2E-TEST-${Date.now()}`;
+    await page.goto('http://127.0.0.1:8000/admin/products/create');
+    await expect(page.getByRole('heading', { name: 'Create Product Variant' })).toBeVisible();
 
-    await page.fill('input[name="sku"]', 'E2E-TEST-001');
-    await page.fill('input[name="name"]', 'E2E Test Variant');
-    await page.fill('input[name="base_unit_name"]', 'piece');
-    await page.fill('input[name="reorder_point"]', '10');
-    await page.click('button:has-text("CREATE")');
+    await page.locator('select[id="form.product_id"]').selectOption({ index: 1 });
+    await page.fill('input[id="form.sku"]', uniqueSku);
+    await page.fill('input[id="form.name"]', 'E2E Test Variant');
+    await page.fill('input[id="form.base_unit_name"]', 'piece');
+    await page.fill('input[id="form.reorder_point"]', '10');
+    await page.click('button:has-text("Create")');
 
-    await expect(page.locator('text=Created successfully')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('text=E2E-TEST-001')).toBeVisible();
+    await expect(page.getByRole('heading', { name: `View ${uniqueSku}` })).toBeVisible({ timeout: 10000 });
   });
 
-  test('can edit a product variant', async ({ page }) => {
-    await page.goto('http://filament-inventory.test/admin/products/create');
-    await page.fill('input[name="sku"]', 'E2E-EDIT-001');
-    await page.fill('input[name="name"]', 'Original Name');
-    await page.fill('input[name="base_unit_name"]', 'piece');
-    await page.fill('input[name="reorder_point"]', '5');
-    await page.click('button:has-text("CREATE")');
-    await expect(page.locator('text=Created successfully')).toBeVisible({ timeout: 10000 });
+  test('can edit product variant', async ({ page }) => {
+    const uniqueSku = `E2E-EDIT-${Date.now()}`;
+    await page.goto('http://127.0.0.1:8000/admin/products/create');
+    await page.locator('select[id="form.product_id"]').selectOption({ index: 1 });
+    await page.fill('input[id="form.sku"]', uniqueSku);
+    await page.fill('input[id="form.name"]', 'Original Name');
+    await page.fill('input[id="form.base_unit_name"]', 'piece');
+    await page.fill('input[id="form.reorder_point"]', '5');
+    await page.click('button:has-text("Create")');
+    await expect(page.getByRole('heading', { name: `View ${uniqueSku}` })).toBeVisible({ timeout: 10000 });
 
-    await page.click('text=Edit');
-    await page.fill('input[name="name"]', 'Updated Name');
-    await page.click('button:has-text("SAVE")');
-    await expect(page.locator('text=Saved successfully')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('text=Updated Name')).toBeVisible();
+    const productId = page.url().split('/').pop();
+    await page.goto(`http://127.0.0.1:8000/admin/products/${productId}/edit`);
+    await expect(page.getByRole('heading', { name: `Edit ${uniqueSku}` })).toBeVisible({ timeout: 10000 });
+    await page.fill('input[id="form.name"]', 'Updated Name');
+    await page.click('button:has-text("Save changes")');
+    await page.waitForLoadState('networkidle');
+    await page.goto(`http://127.0.0.1:8000/admin/products/${productId}`);
+    await expect(page.getByRole('heading', { name: `View ${uniqueSku}` })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=Updated Name')).toBeVisible({ timeout: 5000 });
   });
 
-  test('can delete a product variant', async ({ page }) => {
-    await page.goto('http://filament-inventory.test/admin/products/create');
-    await page.fill('input[name="sku"]', 'E2E-DELETE-001');
-    await page.fill('input[name="name"]', 'To Delete');
-    await page.fill('input[name="base_unit_name"]', 'piece');
-    await page.fill('input[name="reorder_point"]', '1');
-    await page.click('button:has-text("CREATE")');
-    await expect(page.locator('text=Created successfully')).toBeVisible({ timeout: 10000 });
+  test('can delete product variant', async ({ page }) => {
+    const uniqueSku = `E2E-DELETE-${Date.now()}`;
+    await page.goto('http://127.0.0.1:8000/admin/products/create');
+    await page.locator('select[id="form.product_id"]').selectOption({ index: 1 });
+    await page.fill('input[id="form.sku"]', uniqueSku);
+    await page.fill('input[id="form.name"]', 'Delete Variant');
+    await page.fill('input[id="form.base_unit_name"]', 'piece');
+    await page.fill('input[id="form.reorder_point"]', '1');
+    await page.click('button:has-text("Create")');
+    await expect(page.getByRole('heading', { name: `View ${uniqueSku}` })).toBeVisible({ timeout: 10000 });
 
-    await page.click('text=Delete');
-    await page.click('button:has-text("DELETE")');
-    await expect(page.locator('text=Deleted successfully')).toBeVisible({ timeout: 10000 });
+    await page.getByRole('button', { name: 'Delete' }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click();
+    await expect(page.getByRole('heading', { name: 'Product Variants' })).toBeVisible({ timeout: 10000 });
   });
 
   test('can filter products by search', async ({ page }) => {
-    await page.goto('http://filament-inventory.test/admin/products');
-    await page.fill('input[placeholder*="Search"]', 'E2E-TEST');
+    const uniqueSku = `E2E-FILTER-${Date.now()}`;
+    await page.goto('http://127.0.0.1:8000/admin/products/create');
+    await page.locator('select[id="form.product_id"]').selectOption({ index: 1 });
+    await page.fill('input[id="form.sku"]', uniqueSku);
+    await page.fill('input[id="form.name"]', 'Filter Test Product');
+    await page.fill('input[id="form.base_unit_name"]', 'piece');
+    await page.fill('input[id="form.reorder_point"]', '10');
+    await page.click('button:has-text("Create")');
+    await expect(page.getByRole('heading', { name: `View ${uniqueSku}` })).toBeVisible({ timeout: 10000 });
+
+    await page.goto('http://127.0.0.1:8000/admin/products');
+    await page.fill('input[placeholder*="Search"]', uniqueSku);
     await page.keyboard.press('Enter');
-    await expect(page.locator('text=E2E-TEST-001')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator(`text=${uniqueSku}`)).toBeVisible({ timeout: 5000 });
   });
 
   test('can sort products by column', async ({ page }) => {
-    await page.goto('http://filament-inventory.test/admin/products');
-    await page.click('text=SKU');
-    await page.waitForTimeout(500);
-    await expect(page.locator('tbody tr').first()).toContainText('E2E');
+    const uniqueSku = `AAA-SORT-${Date.now()}`;
+    await page.goto('http://127.0.0.1:8000/admin/products/create');
+    await page.locator('select[id="form.product_id"]').selectOption({ index: 1 });
+    await page.fill('input[id="form.sku"]', uniqueSku);
+    await page.fill('input[id="form.name"]', 'Sort Test Product');
+    await page.fill('input[id="form.base_unit_name"]', 'piece');
+    await page.fill('input[id="form.reorder_point"]', '10');
+    await page.click('button:has-text("Create")');
+    await expect(page.getByRole('heading', { name: `View ${uniqueSku}` })).toBeVisible({ timeout: 10000 });
+
+    await page.goto('http://127.0.0.1:8000/admin/products');
+    // Click SKU header once for ascending sort (AAA-SORT should be first)
+    await page.getByRole('button', { name: 'Sku' }).click();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+    await expect(page.locator('tbody tr').first()).toContainText('AAA-SORT');
   });
 });
