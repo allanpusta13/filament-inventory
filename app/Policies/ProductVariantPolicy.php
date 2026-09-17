@@ -51,6 +51,6 @@ class ProductVariantPolicy
 
     public function adjustStock(User $user, ProductVariant $variant): bool
     {
-        return true;
+        return $user->isAdmin();
     }
 }

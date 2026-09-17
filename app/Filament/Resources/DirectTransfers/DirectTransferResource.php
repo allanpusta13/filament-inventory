@@ -6,7 +6,9 @@ namespace App\Filament\Resources\DirectTransfers;
 
 use App\Filament\Resources\DirectTransfers\Pages\CreateDirectTransfer;
 use App\Filament\Resources\DirectTransfers\Pages\ListDirectTransfers;
+use App\Filament\Resources\DirectTransfers\Pages\ViewDirectTransfer;
 use App\Filament\Resources\DirectTransfers\Schemas\DirectTransferForm;
+use App\Filament\Resources\DirectTransfers\Schemas\DirectTransferInfolist;
 use App\Filament\Resources\DirectTransfers\Tables\DirectTransfersTable;
 use App\Models\StockMovement;
 use Filament\Resources\Resource;
@@ -34,12 +36,17 @@ class DirectTransferResource extends Resource
         return DirectTransfersTable::configure($table);
     }
 
+    public static function infolist(Schema $schema): Schema
+    {
+        return DirectTransferInfolist::configure($schema);
+    }
+
     public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
     {
         return parent::getEloquentQuery()
             ->whereIn('type', [\App\Enums\StockMovementType::TransferOut, \App\Enums\StockMovementType::TransferIn])
             ->whereNotNull('related_movement_id')
-            ->with(['productVariant', 'warehouse']);
+            ->with(['productVariant', 'warehouse', 'relatedMovement.warehouse', 'createdBy']);
     }
 
     public static function getPages(): array
@@ -47,6 +54,7 @@ class DirectTransferResource extends Resource
         return [
             'index' => ListDirectTransfers::route('/'),
             'create' => CreateDirectTransfer::route('/create'),
+            'view' => ViewDirectTransfer::route('/{record}'),
         ];
     }
 }

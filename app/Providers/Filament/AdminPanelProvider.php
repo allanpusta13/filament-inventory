@@ -18,10 +18,6 @@ use Filament\Support\Enums\Platform;
 use Filament\Support\Enums\Width;
 use Filament\Widgets\AccountWidget;
 use Filament\Widgets\FilamentInfoWidget;
-use App\Filament\Widgets\StatsOverview;
-use App\Filament\Widgets\LowStockAlertsWidget;
-use App\Filament\Widgets\RecentMovementsWidget;
-use App\Filament\Widgets\ActiveInTransitWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -59,10 +55,7 @@ final class AdminPanelProvider extends PanelProvider
             ])
             // ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
-                StatsOverview::class,
-                LowStockAlertsWidget::class,
-                RecentMovementsWidget::class,
-                ActiveInTransitWidget::class,
+
                 // AccountWidget::class,
                 // FilamentInfoWidget::class,
             ])

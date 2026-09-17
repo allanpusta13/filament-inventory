@@ -155,7 +155,75 @@ class TransferRequisitionsTable
                     ->icon(Heroicon::QrCode)
                     ->color('success')
                     ->authorize('receive')
-                    ->visible(fn ($record) => in_array($record->status, ['dispatched', 'partially_received'])),
+                    ->visible(fn ($record) => in_array($record->status, ['dispatched', 'partially_received']))
+                    ->url(fn ($record) => route('stn.scan', ['transferRequisition' => $record->id])),
+
+                Action::make('recordLoss')
+                    ->label('RECORD LOSS')
+                    ->name('recordLoss')
+                    ->icon(Heroicon::ExclamationTriangle)
+                    ->color('danger')
+                    ->authorize('recordLoss')
+                    ->visible(fn ($record) => in_array($record->status->value, ['dispatched', 'partially_received', 'completed']))
+                    ->modalWidth(\Filament\Support\Enums\Width::Large)
+                    ->schema([
+                        \Filament\Forms\Components\Select::make('product_variant_id')
+                            ->label('Product Variant')
+                            ->options(fn ($record) => $record->items->pluck('productVariant.name', 'product_variant_id')->toArray())
+                            ->required()
+                            ->searchable()
+                            ->preload(),
+                        \Filament\Forms\Components\Select::make('loss_category')
+                            ->label('Loss Category')
+                            ->options([
+                                'shortfall' => 'Shortfall',
+                                'damage' => 'Damage',
+                                'spoilage' => 'Spoilage',
+                                'theft' => 'Theft',
+                                'other' => 'Other',
+                            ])
+                            ->required(),
+                        \Filament\Forms\Components\TextInput::make('lost_base_qty')
+                            ->label('Lost Quantity (Base)')
+                            ->numeric()
+                            ->required()
+                            ->minValue(0),
+                        \Filament\Forms\Components\TextInput::make('damaged_base_qty')
+                            ->label('Damaged Quantity (Base)')
+                            ->numeric()
+                            ->default(0)
+                            ->minValue(0),
+                        \Filament\Forms\Components\TextInput::make('total_financial_loss')
+                            ->label('Total Financial Loss')
+                            ->numeric()
+                            ->required()
+                            ->minValue(0),
+                        \Filament\Forms\Components\Textarea::make('notes')
+                            ->label('Notes')
+                            ->columnSpanFull(),
+                    ])
+                    ->action(function (array $data, $record) {
+                        $variant = \App\Models\ProductVariant::find($data['product_variant_id']);
+                        $unitCost = \App\Models\LossLedger::snapshotUnitCostFrom($variant);
+                        $record->lossLedgers()->create([
+                            'transfer_requisition_item_id' => $record->items->where('product_variant_id', $data['product_variant_id'])->first()?->id,
+                            'product_variant_id' => $data['product_variant_id'],
+                            'warehouse_id' => $record->to_warehouse_id,
+                            'loss_category' => $data['loss_category'],
+                            'lost_base_qty' => $data['lost_base_qty'],
+                            'damaged_base_qty' => $data['damaged_base_qty'],
+                            'unit_cost_price' => $unitCost,
+                            'total_financial_loss' => $data['total_financial_loss'],
+                            'notes' => $data['notes'],
+                            'recorded_by' => auth()->id(),
+                            'recorded_at' => now(),
+                        ]);
+                        \Filament\Notifications\Notification::make()
+                            ->title('Loss recorded')
+                            ->success()
+                            ->send();
+                    })
+                    ->requiresConfirmation(),
 
                 // Cancellation only pre-dispatch
                 Action::make('cancel')

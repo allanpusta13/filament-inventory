@@ -11,12 +11,12 @@ class WarehousePolicy
 {
     public function viewAny(User $user): bool
     {
-        return true;
+        return $user->isAdmin();
     }
 
     public function view(User $user, Warehouse $warehouse): bool
     {
-        return true;
+        return $user->isAdmin() || $user->canAccessWarehouse($warehouse);
     }
 
     public function create(User $user): bool
@@ -26,37 +26,37 @@ class WarehousePolicy
 
     public function update(User $user, Warehouse $warehouse): bool
     {
-        return $user->isAdmin();
+        return $user->isAdmin() || $user->canAccessWarehouse($warehouse);
     }
 
     public function delete(User $user, Warehouse $warehouse): bool
     {
-        return $user->isAdmin();
+        return false;
     }
 
     public function restore(User $user, Warehouse $warehouse): bool
     {
-        return $user->isAdmin();
+        return false;
     }
 
     public function forceDelete(User $user, Warehouse $warehouse): bool
     {
-        return $user->isAdmin();
+        return false;
     }
 
     public function deleteAny(User $user): bool
     {
-        return $user->isAdmin();
+        return false;
     }
 
     public function restoreAny(User $user): bool
     {
-        return $user->isAdmin();
+        return false;
     }
 
     public function forceDeleteAny(User $user): bool
     {
-        return $user->isAdmin();
+        return false;
     }
 
     public function adjustStock(User $user): bool
@@ -66,6 +66,6 @@ class WarehousePolicy
 
     public function recordLoss(User $user): bool
     {
-        return $user->isAdmin();
+        return true;
     }
 }

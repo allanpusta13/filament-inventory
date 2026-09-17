@@ -31,32 +31,32 @@ class LossLedgerPolicy
 
     public function delete(User $user, LossLedger $lossLedger): bool
     {
-        return $user->isAdmin();
+        return false;
     }
 
     public function restore(User $user, LossLedger $lossLedger): bool
     {
-        return $user->isAdmin();
+        return false;
     }
 
     public function forceDelete(User $user, LossLedger $lossLedger): bool
     {
-        return $user->isAdmin();
+        return false;
     }
 
     public function deleteAny(User $user): bool
     {
-        return $user->isAdmin();
+        return false;
     }
 
     public function restoreAny(User $user): bool
     {
-        return $user->isAdmin();
+        return false;
     }
 
     public function forceDeleteAny(User $user): bool
     {
-        return $user->isAdmin();
+        return false;
     }
 
     public function recordLoss(User $user): bool

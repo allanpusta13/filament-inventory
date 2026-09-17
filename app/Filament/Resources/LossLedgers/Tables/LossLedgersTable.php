@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\LossLedgers\Tables;
 
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -99,7 +100,57 @@ class LossLedgersTable
             ])
             ->actions([
                 ViewAction::make(),
-                DeleteAction::make(),
+                DeleteAction::make()
+                    ->authorize('delete'),
+                Action::make('recordLoss')
+                    ->label('RECORD LOSS')
+                    ->icon('heroicon-m-exclamation-triangle')
+                    ->color('danger')
+                    ->authorize('recordLoss')
+                    ->modalWidth(\Filament\Support\Enums\Width::Large)
+                    ->schema([
+                        \Filament\Forms\Components\Select::make('product_variant_id')
+                            ->label('Product Variant')
+                            ->relationship('productVariant', 'name')
+                            ->searchable()
+                            ->preload()
+                            ->required(),
+                        \Filament\Forms\Components\TextInput::make('loss_category')
+                            ->label('Loss Category')
+                            ->required()
+                            ->datalist(['shortfall', 'damage', 'spoilage', 'theft', 'other']),
+                        \Filament\Forms\Components\TextInput::make('lost_base_qty')
+                            ->label('Lost Quantity (Base)')
+                            ->numeric()
+                            ->required()
+                            ->minValue(0),
+                        \Filament\Forms\Components\TextInput::make('damaged_base_qty')
+                            ->label('Damaged Quantity (Base)')
+                            ->numeric()
+                            ->default(0)
+                            ->minValue(0),
+                        \Filament\Forms\Components\TextInput::make('total_financial_loss')
+                            ->label('Total Financial Loss')
+                            ->numeric()
+                            ->required()
+                            ->minValue(0),
+                        \Filament\Forms\Components\Textarea::make('notes')
+                            ->label('Notes')
+                            ->columnSpanFull(),
+                    ])
+                    ->action(function (array $data, $record) {
+                        $record->lossLedgers()->create([
+                            'product_variant_id' => $data['product_variant_id'],
+                            'loss_category' => $data['loss_category'],
+                            'lost_base_qty' => $data['lost_base_qty'],
+                            'damaged_base_qty' => $data['damaged_base_qty'],
+                            'total_financial_loss' => $data['total_financial_loss'],
+                            'notes' => $data['notes'],
+                            'recorded_by' => auth()->id(),
+                            'recorded_at' => now(),
+                        ]);
+                    })
+                    ->requiresConfirmation(),
             ])
             ->bulkActions([
                 BulkActionGroup::make([

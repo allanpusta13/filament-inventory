@@ -64,7 +64,7 @@ class TransferRequisitionResource extends Resource
     {
         return parent::getEloquentQuery()
             ->when(auth()->user()?->isAdmin() === false, function (Builder $query) {
-                $warehouseIds = auth()->user()->warehouses()->pluck('warehouses.id');
+                $warehouseIds = auth()->user()->warehouses()->pluck('warehouses.id')->toArray();
                 $query->where(function ($q) use ($warehouseIds) {
                     $q->whereIn('from_warehouse_id', $warehouseIds)
                         ->orWhereIn('to_warehouse_id', $warehouseIds);

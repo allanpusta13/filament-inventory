@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace App\Filament\Resources\InTransits\Tables;
 
 use App\Enums\InTransitStatus;
-use Filament\Actions\BulkActionGroup;
+use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -61,7 +60,7 @@ class InTransitsTable
 
                 TextColumn::make('created_at')
                     ->label('CREATED')
-                    ->dateTime('M d, Y H:i')
+                    ->dateTime('M d, Y')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
@@ -73,11 +72,14 @@ class InTransitsTable
             ])
             ->recordActions([
                 ViewAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
+
+                Action::make('scanToReceive')
+                    ->label('RECEIVE INTAKE')
+                    ->icon('heroicon-m-qr-code')
+                    ->color('success')
+                    ->authorize('receive')
+                    ->visible(fn ($record) => in_array($record->status, [InTransitStatus::InTransit, InTransitStatus::PartiallyReceived]))
+                    ->url(fn ($record) => route('stn.scan', ['transferRequisition' => $record->transfer_requisition_id])),
             ]);
     }
 }

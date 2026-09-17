@@ -485,4 +485,32 @@ class InventoryService
             ]);
         });
     }
+
+    /**
+     * Quick stock adjustment from product table action.
+     * Creates a stock movement with the given type (adjustment, receive, ship).
+     */
+    public function adjustStock(
+        int $productVariantId,
+        int $warehouseId,
+        int $adjustmentQty,
+        string $adjustmentType,
+        ?string $notes = null,
+    ): StockMovement {
+        $type = match ($adjustmentType) {
+            'adjustment' => StockMovementType::Adjustment,
+            'receive' => StockMovementType::Receive,
+            'ship' => StockMovementType::Ship,
+            default => throw new Exception("Invalid adjustment type: {$adjustmentType}"),
+        };
+
+        return $this->recordMovement(
+            productVariantId: $productVariantId,
+            warehouseId: $warehouseId,
+            type: $type,
+            baseQuantity: $adjustmentQty,
+            referenceType: 'quick_adjustment',
+            notes: $notes,
+        );
+    }
 }

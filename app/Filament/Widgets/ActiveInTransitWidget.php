@@ -46,6 +46,7 @@ class ActiveInTransitWidget extends TableWidget
 
             return $results->map(function ($inTransit) {
                 $requisition = $inTransit->transferRequisition;
+
                 return [
                     'id' => $inTransit->id,
                     'requisition_ref' => $requisition?->reference_code ?? 'N/A',
@@ -105,13 +106,7 @@ class ActiveInTransitWidget extends TableWidget
 
                 TextColumn::make('status')
                     ->label('STATUS')
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        InTransitStatus::InTransit->value => 'info',
-                        InTransitStatus::PartiallyReceived->value => 'warning',
-                        InTransitStatus::Cleared->value => 'success',
-                        default => 'gray',
-                    }),
+                    ->badge(),
 
                 TextColumn::make('dispatched_at')
                     ->label('DISPATCHED')

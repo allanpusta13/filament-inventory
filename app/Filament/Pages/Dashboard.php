@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace App\Filament\Pages;
 
 use App\Enums\UserRole;
+use App\Filament\Widgets\ActiveInTransitWidget;
+use App\Filament\Widgets\LowStockAlertsWidget;
+use App\Filament\Widgets\RecentMovementsWidget;
+use App\Filament\Widgets\StatsOverview;
 use Filament\Pages\Dashboard as BaseDashboard;
 
 final class Dashboard extends BaseDashboard
@@ -39,14 +43,17 @@ final class Dashboard extends BaseDashboard
     public function getHeaderWidgets(): array
     {
         return [
-            // BentoStatsWidget::class,
+            //
         ];
     }
 
     public function getWidgets(): array
     {
         return [
-            // BentoStatsWidget::class,
+            StatsOverview::class,
+            LowStockAlertsWidget::class,
+            RecentMovementsWidget::class,
+            ActiveInTransitWidget::class,
         ];
     }
 }

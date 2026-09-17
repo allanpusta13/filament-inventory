@@ -21,7 +21,7 @@ class StockMovementPolicy
 
     public function create(User $user): bool
     {
-        return $user->isAdmin();
+        return false;
     }
 
     public function update(User $user, StockMovement $movement): bool
@@ -31,31 +31,31 @@ class StockMovementPolicy
 
     public function delete(User $user, StockMovement $movement): bool
     {
-        return $user->isAdmin();
+        return false;
     }
 
     public function restore(User $user, StockMovement $movement): bool
     {
-        return $user->isAdmin();
+        return false;
     }
 
     public function forceDelete(User $user, StockMovement $movement): bool
     {
-        return $user->isAdmin();
+        return false;
     }
 
     public function deleteAny(User $user): bool
     {
-        return $user->isAdmin();
+        return false;
     }
 
     public function restoreAny(User $user): bool
     {
-        return $user->isAdmin();
+        return false;
     }
 
     public function forceDeleteAny(User $user): bool
     {
-        return $user->isAdmin();
+        return false;
     }
 }

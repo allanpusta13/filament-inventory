@@ -80,4 +80,13 @@ class TransferRequisitionPolicy
             TransferRequisitionStatus::Confirmed,
         ], true);
     }
+
+    public function recordLoss(User $user, TransferRequisition $requisition): bool
+    {
+        return in_array($requisition->status, [
+            TransferRequisitionStatus::Dispatched,
+            TransferRequisitionStatus::PartiallyReceived,
+            TransferRequisitionStatus::Completed,
+        ], true);
+    }
 }

@@ -6,8 +6,6 @@ namespace App\Filament\Resources\Warehouses\Tables;
 
 use App\Models\Warehouse;
 use Filament\Actions\Action;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Support\Enums\Alignment;
 use Filament\Support\Enums\FontWeight;
@@ -101,15 +99,6 @@ class WarehousesTable
                     ->slideOver()
                     ->icon(Heroicon::PencilSquare)
                     ->closeModalByClickingAway(false),
-
-                DeleteAction::make()
-                    ->slideOver()
-                    ->icon(Heroicon::Trash)
-                    ->requiresConfirmation(),
-
-                DeleteBulkAction::make()
-                    ->icon(Heroicon::Trash)
-                    ->requiresConfirmation(),
 
                 Action::make('manualStockAdjustment')
                     ->label('Record Adjustment')

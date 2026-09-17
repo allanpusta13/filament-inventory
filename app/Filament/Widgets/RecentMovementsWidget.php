@@ -83,18 +83,7 @@ class RecentMovementsWidget extends TableWidget
 
                 TextColumn::make('type')
                     ->label('TYPE')
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        StockMovementType::Receive->value => 'success',
-                        StockMovementType::Ship->value => 'info',
-                        StockMovementType::TransferIn->value => 'success',
-                        StockMovementType::TransferOut->value => 'info',
-                        StockMovementType::TransitIn->value => 'success',
-                        StockMovementType::TransitOut->value => 'info',
-                        StockMovementType::Adjustment->value => 'warning',
-                        StockMovementType::Loss->value => 'danger',
-                        default => 'gray',
-                    }),
+                    ->badge(),
 
                 TextColumn::make('quantity')
                     ->label('QTY (BASE)')

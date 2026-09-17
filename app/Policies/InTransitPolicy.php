@@ -31,32 +31,32 @@ class InTransitPolicy
 
     public function delete(User $user, InTransit $inTransit): bool
     {
-        return $user->isAdmin();
+        return false;
     }
 
     public function restore(User $user, InTransit $inTransit): bool
     {
-        return $user->isAdmin();
+        return false;
     }
 
     public function forceDelete(User $user, InTransit $inTransit): bool
     {
-        return $user->isAdmin();
+        return false;
     }
 
     public function deleteAny(User $user): bool
     {
-        return $user->isAdmin();
+        return false;
     }
 
     public function restoreAny(User $user): bool
     {
-        return $user->isAdmin();
+        return false;
     }
 
     public function forceDeleteAny(User $user): bool
     {
-        return $user->isAdmin();
+        return false;
     }
 
     public function receive(User $user, InTransit $inTransit): bool

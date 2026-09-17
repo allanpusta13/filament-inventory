@@ -22,19 +22,13 @@ class WarehouseResource extends Resource
 {
     protected static ?string $model = Warehouse::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'System Admin';
+    protected static string|UnitEnum|null $navigationGroup = 'SYSTEM ADMIN';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::BuildingOffice;
 
     protected static ?string $recordTitleAttribute = 'name';
 
-    protected static ?int $navigationSort = 2; // [31, 32]
-
-    // Admin-Only Authorization Gate [31, 32, 34, 35]
-    public static function canViewAny(): bool
-    {
-        return auth()->user()?->isAdmin() ?? false; // [34-36]
-    }
+    protected static ?int $navigationSort = 2;
 
     public static function form(Schema $schema): Schema
     {
@@ -68,7 +62,6 @@ class WarehouseResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        // N+1 Query Eager-Loading Override [31, 32, 38]
         return parent::getEloquentQuery()->with(['users']);
     }
 }

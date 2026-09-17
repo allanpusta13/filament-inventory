@@ -48,14 +48,14 @@ enum MovementType: string implements HasColor, HasIcon, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Receive => 'Receive',
-            self::Ship => 'Ship',
-            self::TransferOut => 'Transfer Out',
-            self::TransferIn => 'Transfer In',
-            self::TransitOut => 'Transit Out',
-            self::TransitIn => 'Transit In',
-            self::Adjustment => 'Adjustment',
-            self::Loss => 'Loss',
+            self::Receive => __('Receive'),
+            self::Ship => __('Ship'),
+            self::TransferOut => __('Transfer Out'),
+            self::TransferIn => __('Transfer In'),
+            self::TransitOut => __('Transit Out'),
+            self::TransitIn => __('Transit In'),
+            self::Adjustment => __('Adjustment'),
+            self::Loss => __('Loss'),
         };
     }
 

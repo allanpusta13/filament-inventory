@@ -16,8 +16,8 @@ enum PriceType: string implements HasColor, HasIcon, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Cost => 'Cost',
-            self::Sale => 'Sale',
+            self::Cost => __('Cost'),
+            self::Sale => __('Sale'),
         };
     }
 

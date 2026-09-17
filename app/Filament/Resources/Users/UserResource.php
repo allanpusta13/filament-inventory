@@ -19,7 +19,7 @@ final class UserResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'System Admin';
+    protected static string|UnitEnum|null $navigationGroup = 'SYSTEM ADMIN';
 
     protected static BackedEnum|string|null $navigationIcon = Heroicon::OutlinedUsers;
 
