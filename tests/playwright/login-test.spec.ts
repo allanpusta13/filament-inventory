@@ -7,7 +7,7 @@ test('login test', async ({ page }) => {
   console.log('Starting login test...');
 
   try {
-    await page.goto('http://filament-inventory.test/login', { waitUntil: 'networkidle', timeout: 30000 });
+    await page.goto('http://127.0.0.1:8000/admin/login', { waitUntil: 'networkidle', timeout: 30000 });
     console.log('Page loaded:', page.url());
 
     // Check if we're already on the login page
