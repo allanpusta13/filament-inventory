@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Enums\StockMovementType;
 use App\Filament\Widgets\RecentMovementsWidget;
-use App\Models\StockMovement;
 use App\Models\ProductVariant;
 use App\Models\User;
 use App\Models\Warehouse;
@@ -127,5 +126,123 @@ describe('RecentMovementsWidget', function () {
         $movements = $widget->getRecentMovements();
 
         expect($movements->first()['variant_sku'])->toBe($freshVariant2->sku);
+    });
+
+    it('gate check: non-admin receives 403', function () {
+        $nonAdmin = User::factory()->create();
+        $this->actingAs($nonAdmin);
+
+        $widget = new RecentMovementsWidget();
+        $movements = $widget->getRecentMovements();
+
+        expect($movements->count())->toBe(0);
+    });
+
+    it('warehouse with no movements yet (empty state)', function () {
+        $emptyWarehouse = Warehouse::factory()->create();
+        $this->user->warehouses()->syncWithoutDetaching([$emptyWarehouse->id]);
+
+        $widget = new RecentMovementsWidget();
+        $movements = $widget->getRecentMovements();
+
+        expect($movements->count())->toBe(0);
+    });
+
+    it('excludes movements older than 365 days (age filter)', function () {
+        $oldVariant = ProductVariant::factory()->create();
+        $this->service->recordMovement($oldVariant->id, $this->origin->id, StockMovementType::Receive, 100);
+        $oldMovementDate = now()->subDays(400);
+        DB::table('stock_movements')->where('variant_id', $oldVariant->id)
+            ->update(['created_at' => $oldMovementDate]);
+
+        $widget = new RecentMovementsWidget();
+        $movements = $widget->getRecentMovements();
+
+        expect($movements->count())->toBe(0);
+    });
+
+    it('race-condition safe cache bypass with warehouse scoping', function () {
+        Cache::flush();
+        Cache::forget($this->cacheKey);
+
+        $this->service->recordMovement($this->variant->id, $this->origin->id, StockMovementType::Receive, 100);
+
+        $widget = new RecentMovementsWidget();
+        $first = $widget->getRecentMovements();
+        Cache::forget($this->cacheKey);
+        $second = $widget->getRecentMovements();
+
+        expect($first)->toEqual($second);
+    });
+
+    it('filters by movement type array', function () {
+        $this->service->recordMovement($this->variant->id, $this->origin->id, StockMovementType::Receive, 100);
+        $this->service->recordMovement($this->variant2->id, $this->origin->id, StockMovementType::Ship, 50);
+        $this->service->recordMovement($this->variant->id, $this->origin->id, StockMovementType::Adjustment, 25);
+
+        $widget = new RecentMovementsWidget();
+        $movements = $widget->getRecentMovements();
+
+        $types = $movements->pluck('type')->map(fn ($e) => $e->value)->toArray();
+        expect($types)->toContain(StockMovementType::Receive->value);
+        expect($types)->toContain(StockMovementType::Ship->value);
+        expect($types)->toContain(StockMovementType::Adjustment->value);
+        expect($types)->not->toContain(StockMovementType::Loss->value);
+    });
+
+    it('handles deleted createdBy user with warehouse check', function () {
+        $deletedUser = User::factory()->create();
+        $deletedUser->delete();
+
+        $this->service->recordMovement($this->variant->id, $this->origin->id, StockMovementType::Receive, 100);
+
+        $widget = new RecentMovementsWidget();
+        $movements = $widget->getRecentMovements();
+
+        expect($movements->count())->toBe(1);
+        $firstUser = $movements->first()['created_by_name'];
+        expect($firstUser)->not->toBe($deletedUser->name);
+    });
+
+    it('orders correctly across midnight boundary (date rollover)', function () {
+        $variantAtMidnight = ProductVariant::factory()->create();
+        $this->service->recordMovement($variantAtMidnight->id, $this->origin->id, StockMovementType::Receive, 100);
+        $midnightDate = now()->addHour();
+        DB::table('stock_movements')
+            ->where('variant_id', $variantAtMidnight->id)
+            ->update(['created_at' => $midnightDate]);
+
+        $widget = new RecentMovementsWidget();
+        $movements = $widget->getRecentMovements();
+
+        expect($movements->count())->toBe(1);
+        expect($movements->first()['variant_sku'])->toBe($variantAtMidnight->sku);
+    });
+
+    it('handles null reference_code gracefully (missing reference)', function () {
+        $this->service->recordMovement($this->variant->id, $this->origin->id, StockMovementType::Receive, 100);
+        DB::table('stock_movements')->where('variant_id', $this->variant->id)
+            ->update(['reference_code' => null]);
+
+        $widget = new RecentMovementsWidget();
+        $movements = $widget->getRecentMovements();
+
+        expect($movements->count())->toBe(1);
+        expect($movements->first()['reference_code'])->toBeNull();
+    });
+
+    it('denies cross-warehouse movement access', function () {
+        $otherWarehouse = Warehouse::factory()->create();
+        $this->service->recordMovement($this->variant->id, $this->origin->id, StockMovementType::Receive, 100);
+        $this->service->recordMovement($this->variant->id, $otherWarehouse->id, StockMovementType::Receive, 50);
+
+        $this->actingAs($this->user);
+
+        $widget = new RecentMovementsWidget();
+        $movements = $widget->getRecentMovements();
+
+        expect($movements->count())->toBe(1);
+        expect($movements->first()['warehouse_name'])->toBe($this->origin->name);
+        expect($movements->first()['warehouse_id'])->toBe($this->origin->id);
     });
 });
