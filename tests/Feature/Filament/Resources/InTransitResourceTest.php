@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Enums\InTransitStatus;
 use App\Filament\Resources\InTransits\Pages\ListInTransits;
 use App\Filament\Resources\InTransits\Pages\ViewInTransit;
 use App\Models\InTransit;
@@ -10,11 +9,8 @@ use App\Models\ProductVariant;
 use App\Models\TransferRequisition;
 use App\Models\TransferRequisitionItem;
 use App\Models\User;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\Testing\TestAction;
-use Filament\Actions\DeleteAction;
 
-use function Pest\Laravel\assertDatabaseMissing;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
@@ -148,50 +144,37 @@ it('has view action on table row', function () {
         ->assertHasNoFormErrors();
 });
 
-it('can delete in transit', function () {
+it('has scanToReceive action on table row for in_transit status', function () {
     $requisition = TransferRequisition::factory()->create();
     $item = TransferRequisitionItem::factory()->for($requisition)->create();
     $variant = ProductVariant::factory()->create();
-    $inTransit = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->create();
+    $inTransit = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->inTransit()->create();
 
     livewire(ListInTransits::class)
         ->loadTable()
-        ->callAction(TestAction::make('view')->table($inTransit))
-        ->assertHasNoFormErrors();
+        ->assertTableActionVisible('scanToReceive', $inTransit);
 });
 
-it('can delete in transit from view page', function () {
+it('has scanToReceive action on table row for partially_received status', function () {
     $requisition = TransferRequisition::factory()->create();
     $item = TransferRequisitionItem::factory()->for($requisition)->create();
     $variant = ProductVariant::factory()->create();
-    $inTransit = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->create();
-
-    livewire(ViewInTransit::class, ['record' => $inTransit->id])
-        ->callAction(DeleteAction::class)
-        ->assertNotified();
-
-    assertDatabaseMissing($inTransit);
-});
-
-it('can bulk delete in transits', function () {
-    $requisition = TransferRequisition::factory()->create();
-    $item = TransferRequisitionItem::factory()->for($requisition)->create();
-    $variant = ProductVariant::factory()->create();
-    $inTransits = InTransit::factory()->count(5)
-        ->for($requisition, 'transferRequisition')
-        ->for($item, 'item')
-        ->for($variant, 'productVariant')
-        ->create();
+    $inTransit = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->partiallyReceived()->create();
 
     livewire(ListInTransits::class)
         ->loadTable()
-        ->assertCanSeeTableRecords($inTransits)
-        ->selectTableRecords($inTransits)
-        ->callAction(TestAction::make(DeleteBulkAction::class)->table()->bulk())
-        ->assertNotified()
-        ->assertCanNotSeeTableRecords($inTransits);
+        ->assertTableActionVisible('scanToReceive', $inTransit);
+});
 
-    $inTransits->each(fn (InTransit $it) => assertDatabaseMissing($it));
+it('does not have scanToReceive action on table row for cleared status', function () {
+    $requisition = TransferRequisition::factory()->create();
+    $item = TransferRequisitionItem::factory()->for($requisition)->create();
+    $variant = ProductVariant::factory()->create();
+    $inTransit = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->cleared()->create();
+
+    livewire(ListInTransits::class)
+        ->loadTable()
+        ->assertTableActionHidden('scanToReceive', $inTransit);
 });
 
 it('shows dispatched base qty correctly', function () {

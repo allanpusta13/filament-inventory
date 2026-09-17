@@ -34,16 +34,23 @@
     "PostToolUse": [
       {
         "matcher": "Write|Edit",
-        "matcher-patterns": ["**/*.php"],
+        "matcher-patterns": [
+          "**/*.php"
+        ],
         "command": "./vendor/bin/pint \"$FILE_PATH\"",
         "description": "Auto-format edited PHP files with Laravel Pint"
       },
       {
         "matcher": "Write|Edit",
-        "matcher-patterns": ["**/*.php"],
+        "matcher-patterns": [
+          "**/*.php"
+        ],
         "command": "./vendor/bin/phpstan analyse \"$FILE_PATH\" --level=6 --no-progress",
         "description": "Run PHPStan on edited PHP files"
       }
     ]
+  },
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   }
 }

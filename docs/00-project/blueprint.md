@@ -1948,12 +1948,25 @@ class ProductsTable
 |---|---|
 | ProductPolicy | viewAny, view, create, update, delete (blocks while active children exist), restore, forceDelete |
 | ProductVariantPolicy | viewAny, view, create, update, delete, restore, forceDelete (always false), setPrice, adjustStock |
-| TransferRequisitionPolicy | viewAny, view, create, update, delete, restore, forceDelete, confirm, dispatch, receive, **cancel (enforces the five-state pre-dispatch allowlist server-side — not just via UI `->visible()`, per E2E Scenario 6 in Section 9)** `[FIX v10]` |
-| StockMovementPolicy | viewAny, view (all other methods return false) |
-| InTransitPolicy | viewAny, view, receive |
-| LossLedgerPolicy | viewAny, view, recordLoss (delete always false) |
-| WarehousePolicy | viewAny, view, create, update, adjustStock, recordLoss |
-| UserPolicy | viewAny, view, create, update |
+| TransferRequisitionPolicy | viewAny, view, create, update, delete, restore, forceDelete (admin only), confirm, dispatch, receive, cancel (enforces the five-state pre-dispatch allowlist server-side — not just via UI `->visible()`, per E2E Scenario 6 in Section 9) `[FIX v10]` |
+| TransferRequisitionItemRevisionPolicy | viewAny, view, create, update, delete, restore, forceDelete (admin only), deleteAny, restoreAny, forceDeleteAny |
+| StockMovementPolicy | viewAny, view, create (false), update (false), delete (false), restore (false), forceDelete (false), deleteAny (false), restoreAny (false), forceDeleteAny (false) — **immutable audit trail** |
+| InTransitPolicy | viewAny, view, create (false), update (false), delete (false), restore (false), forceDelete (false), deleteAny (false), restoreAny (false), forceDeleteAny (false), receive |
+| LossLedgerPolicy | viewAny, view, create (false), update (false), delete (false), restore (false), forceDelete (false), deleteAny (false), restoreAny (false), forceDeleteAny (false), recordLoss |
+| WarehousePolicy | viewAny, view, create (admin), update, delete (false), restore (false), forceDelete (false), deleteAny (false), restoreAny (false), forceDeleteAny (false), adjustStock (all users), recordLoss (all users) |
+| UserPolicy | viewAny, view, create (admin), update (admin or self), delete (admin, not self), restore (admin), forceDelete (admin), deleteAny (admin), restoreAny (admin), forceDeleteAny (admin) |
+
+> **`[FIX v10]` Critical implementation note:** `TransferRequisitionPolicy::cancel()` must independently re-verify the five-state allowlist in PHP, not merely rely on the Filament action's `->visible()` closure. `->visible()` only controls DOM rendering (per Principle #12) — a malicious or buggy client could still invoke the underlying Livewire action method directly against a `Dispatched` requisition if the policy itself doesn't also enforce the boundary. This is exactly what Playwright E2E Scenario 6 (Section 9) is designed to catch.
+
+> **Implementation extensions beyond blueprint (intentional):**
+> - **WarehousePolicy**: `adjustStock` and `recordLoss` return `true` for all authenticated users (operational flexibility)
+> - **UserPolicy**: `delete` includes self-protection guard (`$user->id !== $model->id`), `restore`/`forceDelete` admin-only
+> - **ProductPolicy**: `delete` blocks if active variants exist (referential integrity)
+> - **TransferRequisitionPolicy**: `forceDelete` admin-only (stronger than base CRUD)
+> - **StockMovementPolicy**: All mutating methods return `false` — immutable ledger by design
+> - **InTransitPolicy** / **LossLedgerPolicy**: Full CRUD + bulk methods all return `false` — read-only audit resources
+> - **TransferRequisitionItemRevisionPolicy**: Full CRUD + bulk methods with admin-only `forceDelete*` — negotiated audit trail
+> - **ProductVariantPolicy**: `setPrice` (all users), `adjustStock` (admin only) — catalog management
 
 > **`[FIX v10]` Critical implementation note:** `TransferRequisitionPolicy::cancel()` must independently re-verify the five-state allowlist in PHP, not merely rely on the Filament action's `->visible()` closure. `->visible()` only controls DOM rendering (per Principle #12) — a malicious or buggy client could still invoke the underlying Livewire action method directly against a `Dispatched` requisition if the policy itself doesn't also enforce the boundary. This is exactly what Playwright E2E Scenario 6 (Section 9) is designed to catch.
 

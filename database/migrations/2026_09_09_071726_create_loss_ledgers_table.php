@@ -23,6 +23,7 @@ return new class() extends Migration
             $table->decimal('total_financial_loss', 15, 4); // Total financial write-off
 
             $table->string('loss_category')->default('shortfall');
+            $table->text('notes')->nullable();
             $table->foreignId('recorded_by')->nullable()->constrained('users');
             $table->timestamp('recorded_at')->useCurrent();
             $table->timestamps();

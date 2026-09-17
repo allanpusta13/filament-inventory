@@ -8,12 +8,9 @@ use App\Filament\Resources\Warehouses\Pages\ListWarehouses;
 use App\Filament\Resources\Warehouses\Pages\ViewWarehouse;
 use App\Models\User;
 use App\Models\Warehouse;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\Testing\TestAction;
 
 use function Pest\Laravel\assertDatabaseHas;
-use function Pest\Laravel\assertDatabaseMissing;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
@@ -122,17 +119,6 @@ it('has edit action on table row', function () {
         ->assertHasNoFormErrors();
 });
 
-it('has delete action on table row', function () {
-    $warehouse = Warehouse::factory()->create();
-
-    livewire(ListWarehouses::class)
-        ->loadTable()
-        ->callAction(TestAction::make('delete')->table($warehouse))
-        ->assertNotified();
-
-    assertDatabaseMissing($warehouse);
-});
-
 it('can create warehouse', function () {
     $newWarehouseData = Warehouse::factory()->make();
 
@@ -178,33 +164,6 @@ it('can update warehouse', function () {
         'name' => $updatedData->name,
         'location' => $updatedData->location,
     ]);
-});
-
-it('can delete warehouse', function () {
-    $warehouse = Warehouse::factory()->create();
-
-    livewire(ViewWarehouse::class, [
-        'record' => $warehouse->id,
-    ])
-        ->callAction(DeleteAction::class)
-        ->assertNotified()
-        ->assertRedirect();
-
-    assertDatabaseMissing($warehouse);
-});
-
-it('can bulk delete warehouses', function () {
-    $warehouses = Warehouse::factory()->count(5)->create();
-
-    livewire(ListWarehouses::class)
-        ->loadTable()
-        ->assertCanSeeTableRecords($warehouses)
-        ->selectTableRecords($warehouses)
-        ->callAction(TestAction::make(DeleteBulkAction::class)->table()->bulk())
-        ->assertNotified()
-        ->assertCanNotSeeTableRecords($warehouses);
-
-    $warehouses->each(fn (Warehouse $warehouse) => assertDatabaseMissing($warehouse));
 });
 
 it('can validate unique code', function (string $column) {

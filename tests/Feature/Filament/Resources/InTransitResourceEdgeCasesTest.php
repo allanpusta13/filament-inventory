@@ -9,9 +9,7 @@ use App\Models\TransferRequisition;
 use App\Models\TransferRequisitionItem;
 use App\Models\User;
 use App\Models\Warehouse;
-use Filament\Actions\DeleteAction;
 
-use function Pest\Laravel\assertDatabaseMissing;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
@@ -126,20 +124,6 @@ describe('InTransitResource edge cases', function () {
                 'productVariant.name' => 'View Variant',
                 'dispatched_base_qty' => '50',
             ]);
-    });
-
-    it('handles soft delete gracefully', function () {
-        $requisition = TransferRequisition::factory()->create();
-        $item = TransferRequisitionItem::factory()->for($requisition)->create();
-        $variant = ProductVariant::factory()->create();
-        $inTransit = InTransit::factory()->for($requisition, 'transferRequisition')->for($item, 'item')->for($variant, 'productVariant')->create();
-
-        livewire(ViewInTransit::class, ['record' => $inTransit->id])
-            ->callAction(DeleteAction::class)
-            ->assertNotified()
-            ->assertRedirect();
-
-        assertDatabaseMissing($inTransit);
     });
 
     it('handles in transit with partially received status', function () {

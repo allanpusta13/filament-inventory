@@ -4,16 +4,11 @@ declare(strict_types=1);
 
 use App\Filament\Resources\Warehouses\Pages\CreateWarehouse;
 use App\Filament\Resources\Warehouses\Pages\EditWarehouse;
-use App\Filament\Resources\Warehouses\Pages\ListWarehouses;
 use App\Filament\Resources\Warehouses\Pages\ViewWarehouse;
 use App\Models\User;
 use App\Models\Warehouse;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\Testing\TestAction;
 
 use function Pest\Laravel\assertDatabaseHas;
-use function Pest\Laravel\assertDatabaseMissing;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
@@ -127,7 +122,7 @@ describe('WarehouseResource edge cases', function () {
             ->assertNotNotified();
     });
 
-    it('defaults is_active to true on create', function () {
+    it('defaults is_active true on create', function () {
         livewire(CreateWarehouse::class)
             ->fillForm([
                 'code' => 'WH-NEW',
@@ -156,7 +151,7 @@ describe('WarehouseResource edge cases', function () {
         expect($warehouse->is_active)->toBeFalse();
     });
 
-    // Search/filter/sort tests - using direct database assertions with isolated data
+    // Search/filter/sort tests - using direct database assertions isolated data
     it('can search warehouses by code', function () {
         Warehouse::truncate();
         $wh1 = Warehouse::factory()->create(['code' => 'WH-MNL', 'name' => 'Manila Main', 'location' => 'Manila, Philippines']);
@@ -341,31 +336,6 @@ describe('WarehouseResource edge cases', function () {
         ]);
     });
 
-    it('deletes warehouse via view page action', function () {
-        $warehouse = Warehouse::factory()->create();
-
-        livewire(ViewWarehouse::class, ['record' => $warehouse->id])
-            ->callAction(DeleteAction::class)
-            ->assertNotified()
-            ->assertRedirect();
-
-        assertDatabaseMissing($warehouse);
-    });
-
-    it('bulk deletes warehouses', function () {
-        $warehouses = Warehouse::factory()->count(5)->create();
-
-        livewire(ListWarehouses::class)
-            ->loadTable()
-            ->assertCanSeeTableRecords($warehouses)
-            ->selectTableRecords($warehouses)
-            ->callAction(TestAction::make(DeleteBulkAction::class)->table()->bulk())
-            ->assertNotified()
-            ->assertCanNotSeeTableRecords($warehouses);
-
-        $warehouses->each(fn (Warehouse $w) => assertDatabaseMissing($w));
-    });
-
     it('displays user count in table', function () {
         Warehouse::truncate();
         User::truncate();
@@ -385,17 +355,6 @@ describe('WarehouseResource edge cases', function () {
 
         expect($wh1->users_count)->toBe(2);
         expect($wh2->users_count)->toBe(1);
-    });
-
-    it('handles delete gracefully', function () {
-        $warehouse = Warehouse::factory()->create();
-
-        livewire(ViewWarehouse::class, ['record' => $warehouse->id])
-            ->callAction(DeleteAction::class)
-            ->assertNotified()
-            ->assertRedirect();
-
-        assertDatabaseMissing($warehouse);
     });
 
     it('handles warehouse with no users assigned', function () {
