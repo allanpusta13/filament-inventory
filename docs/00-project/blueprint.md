@@ -1822,9 +1822,9 @@ LowStockAlertsWidgetTest::cache_miss_correctly_recomputes_all_variants()        
   - `TransferRequisitionRevisionActionsTest`: table accept/reject, edit page header actions, counter modal, guard error notifications, approved_* field updates.
   - Playwright E2E Scenario 8: negotiate → accept → counter → reject → confirm flow.
 2. **Event + notification layer** — `InventoryBelowReorderPoint`, `TransferDispatched`, `TransferReceived`, `LossRecorded` events for operational alerting. The `StatsOverviewWidget` (300s TTL) is not an alerting strategy.
-3. **`->form()` vs `->schema()` on actions** — `->schema([...])` is the canonical v5 form. Verify against the pinned minor before Phase 05.
-4. **Placeholder deprecation status** — verify against the pinned `^5.0` minor during Phase 05/08. If deprecation-warned, switch to the documented v5 replacement.
-5. **`createOptionForm` auto-select behaviour** — verify in Phase 05; if the newly created option is not auto-selected after save, dispatch a `$refresh` event.
+3. **`[P0]` `->form()` vs `->schema()` on actions** — `->schema([...])` is the canonical v5 form. **Audit all Actions for `->form()` calls; replace with `->schema()`.** Verify against the pinned minor before Phase 05.
+4. **`[P0]` Placeholder replacement** — **Replace `Placeholder` in wizard review steps with `WizardReviewStep` Livewire component.** Verify against the pinned `^5.0` minor during Phase 05/08.
+5. **`[P0]` `createOptionForm` auto-select behaviour** — **Test inline Product create → variant Select auto-selects new Product; fix with `$refresh` if needed.** Verify in Phase 05.
 6. **Panel `->strictAuthorization()` role coverage** — enumerate every policy method before enabling strict mode.
 7. **`[NEW v10]` Low-stock widget scaling threshold** — the accepted-risk per-variant-loop-plus-cache approach (Section 7) should be revisited once `product_variants` count exceeds roughly 5,000–10,000 active rows, or if production APM shows cache-miss dashboard loads exceeding ~1–2 seconds. Upgrade path: single grouped-aggregate SQL query, as detailed in Section 7's accepted-risk note.
 
@@ -2046,6 +2046,9 @@ class ProductsTable
 | `[FIX v11]` CancelAction restricted to five pre-dispatch states, both ->authorize() and ->visible() | ✅ |
 | `[FIX v11]` ext-bcmath declared as required PHP extension in composer.json | ✅ |
 | `[FIX v11]` LowStockAlertsWidget scaling risk explicitly documented as accepted, with upgrade path stated | ✅ (accepted risk, not a defect) |
+| `[P0]` All Actions use `->schema()`, zero `->form()` calls | [ ] |
+| `[P0]` Wizard review steps use `WizardReviewStep` component, not `Placeholder` | [ ] |
+| `[P0]` `createOptionForm` auto-selects new option after save | [ ] |
 
 ---
 
