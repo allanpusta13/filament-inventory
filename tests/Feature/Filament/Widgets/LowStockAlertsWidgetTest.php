@@ -102,7 +102,7 @@ describe('LowStockAlertsWidget - edge case security tests', function () {
             'name' => "<script>alert('xss')</script>",
         ]);
 
-        $this->service->recordMovement($variant->id, $warehouse->id, \App\Enums\StockMovementType::Receive, 5);
+        $this->service->recordMovement($variant->id, $warehouse->id, StockMovementType::Receive, 5);
 
         $response = $this->actingAs($this->user)
             ->get('/widgets/low-stock-alerts');
@@ -116,7 +116,7 @@ describe('LowStockAlertsWidget - edge case security tests', function () {
         $warehouse2 = Warehouse::factory()->create();
         $variant = ProductVariant::factory()->create(['reorder_point' => 10]);
 
-        $this->service->recordMovement($variant->id, $warehouse1->id, \App\Enums\StockMovementType::Receive, 5);
+        $this->service->recordMovement($variant->id, $warehouse1->id, StockMovementType::Receive, 5);
 
         $response = $this->actingAs($this->user)
             ->get('/widgets/low-stock-alerts');
@@ -131,7 +131,7 @@ describe('LowStockAlertsWidget - edge case security tests', function () {
         $warehouse2 = Warehouse::factory()->create();
         $variant = ProductVariant::factory()->create(['reorder_point' => 10]);
 
-        $this->service->recordMovement($variant->id, $warehouse1->id, \App\Enums\StockMovementType::Receive, 5);
+        $this->service->recordMovement($variant->id, $warehouse1->id, StockMovementType::Receive, 5);
 
         $otherUser = User::factory()->create();
         $response = $this->actingAs($otherUser)
@@ -144,7 +144,7 @@ describe('LowStockAlertsWidget - edge case security tests', function () {
         $warehouse = Warehouse::factory()->create();
         $variant = ProductVariant::factory()->create(['reorder_point' => 10, 'barcode' => null]);
 
-        $this->service->recordMovement($variant->id, $warehouse->id, \App\Enums\StockMovementType::Receive, 5);
+        $this->service->recordMovement($variant->id, $warehouse->id, StockMovementType::Receive, 5);
 
         $response = $this->actingAs($this->user)
             ->get('/widgets/low-stock-alerts');
@@ -158,12 +158,12 @@ describe('LowStockAlertsWidget - edge case security tests', function () {
         $warehouse = Warehouse::factory()->create();
         $variant = ProductVariant::factory()->create(['reorder_point' => 10]);
 
-        $this->service->recordMovement($variant->id, $warehouse->id, \App\Enums\StockMovementType::Receive, 5);
+        $this->service->recordMovement($variant->id, $warehouse->id, StockMovementType::Receive, 5);
 
         $widget = new LowStockAlertsWidget();
         $firstResult = $widget->getLowStockAlerts();
 
-        $this->service->recordMovement($variant->id, $warehouse->id, \App\Enums\StockMovementType::Issue, 2);
+        $this->service->recordMovement($variant->id, $warehouse->id, StockMovementType::Issue, 2);
 
         Cache::forget('low_stock_alerts_'.$this->user->id.'_'.$warehouse->id);
 

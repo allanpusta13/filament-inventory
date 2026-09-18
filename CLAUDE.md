@@ -5,189 +5,414 @@
 
 The Laravel Boost guidelines are specifically curated by Laravel maintainers for this application. These guidelines should be followed closely to ensure the best experience when building Laravel applications.
 
-## Foundational Context
+# CLAUDE.md
 
-This application is a Laravel application running on PHP 8.4. You are an expert with the Laravel ecosystem. Always use the APIs that match the installed major version of each package — do not assume a version.
+This file is the AI coding agent's project-specific contract. Read it before making changes.
 
-Before relying on a package's API, confirm its installed version:
-- PHP packages: run `composer show --direct` to list direct dependencies with versions, or `composer show <vendor/package>` for a single package.
-- JS packages: check `package.json` for the installed versions.
+Keep it synchronized with the actual project. It must reflect reality, not an outdated plan.
+
+---
+
+## Authority and Operating Model
+
+This project follows the Vibe Coding Standard.
+
+Canonical documents:
+
+- `docs/00-project/blueprint.md` — the system/project blueprint: **WHAT the system is and how it is structured**.
+- `docs/00-project/vibe-coding/standard.md` — the Vibe Coding development standard: **WHAT + WHEN**.
+- `docs/00-project/vibe-coding/guideline.md` — rationale and implementation guidance: **WHY + HOW TO THINK**.
+- `CLAUDE.md` — the AI-facing project contract and project-specific enforcement layer: **HOW THE AI BEHAVES**.
+
+For non-trivial work, use the System Blueprint, Vibe Coding Standard, Guideline, approved specifications, and this file together.
+
+`CLAUDE.md` is the AI-facing enforcement layer for this project. It must not silently override current user instructions, the PRD, approved specifications, or explicit architectural/product/security decisions.
+
+Do not create alternate copies of these canonical documents.
+
+### Authority order
+
+When requirements conflict, use this order unless the project explicitly defines a different authority:
+
+1. Current user instruction
+2. Approved PRD/specification/acceptance criteria
+3. Approved implementation plan
+4. Project `CLAUDE.md`
+5. Vibe Coding Standard and Guideline
+6. Project Blueprint and durable documentation
+7. General framework/package knowledge
+
+Historical documentation is context, not authority.
+
+---
+
+## Vibe Coding Standard
+
+The project follows the phased Vibe Coding workflow:
+
+- Phase 0 — Discovery
+- Phase 1 — Plan
+- Phase 2 — Build
+- Phase 3 — Test / Refine
+- Phase 4 — Deploy / Monitor
+- Phase 5 — Document / Grow
+
+For Phases 0–3, each task must receive Council review before it is marked complete.
+
+The agent must follow the Non-Trivial Work Gate for work that can materially affect product behavior, architecture, security, data, dependencies, scope, or multiple application areas.
+
+---
+
+## Non-Trivial Work Gate
+
+For non-trivial work:
+
+1. Analyze the request.
+2. Perform required Discovery.
+3. Create an explicit implementation plan.
+4. Council-audit the plan.
+5. Save the plan under `docs/00-project/ai/plans/pending/`.
+6. Present the plan and material decisions to the user.
+7. Do not implement until the user explicitly approves the plan.
+8. Record the approved plan under `docs/00-project/ai/plans/approved/`.
+9. Execute only the approved scope.
+10. If a material deviation becomes necessary, stop and request approval.
+11. Verify the implementation with evidence.
+12. Record meaningful durable documentation in the appropriate project documentation location.
+
+A message such as `continue` does not bypass an outstanding approval gate.
+
+Routine edits clearly implied by an approved requirement do not require a new plan.
+
+### Non-trivial work includes
+
+- new features or meaningful behavior changes
+- database/schema changes
+- new or changed authorization/security behavior
+- new dependencies
+- changes across multiple architectural layers
+- destructive or irreversible operations
+- changes affecting multiple Resources, domains, or integrations
+- meaningful UI/UX behavior changes
+- production deployment or operational changes
+
+---
+
+## Council Audit
+
+The Council consists of:
+
+- Product / PM
+- Security
+- Architecture
+- QA
+- Skeptic
+
+For every Phase 0–3 task, review:
+
+- **Product / PM:** Does this satisfy the requirement, no more and no less?
+- **Security:** Are authentication, authorization, validation, data exposure, upload, dependency, or abuse risks addressed?
+- **Architecture:** Does it fit the existing structure without unnecessary complexity?
+- **QA:** Is the behavior verifiable and appropriately tested?
+- **Skeptic:** What could a critical reviewer flag that the other perspectives missed?
+
+The agent may resolve non-material findings autonomously. If resolving a finding requires a product, architecture, security, dependency, scope, or destructive decision, stop and ask the user.
+
+---
+
+## Strict Agent Autonomy
+
+The agent may decide routine implementation details that are clearly implied by approved requirements.
+
+The agent must stop and ask the user before making a:
+
+- product decision
+- architectural decision
+- material security decision
+- scope decision
+- dependency/package decision
+- destructive or irreversible change
+- migration that drops or irreversibly changes data
+- file deletion
+- decision where requirements conflict or are ambiguous
+
+Do not silently choose an interpretation when the project owner must decide.
+
+### No guessing
+
+```text
+Known requirement              -> follow it
+Clearly implied implementation -> decide
+Ambiguous requirement          -> stop and ask
+Conflicting requirement        -> stop and ask
+Material architecture choice   -> stop and ask
+Material security choice       -> stop and ask
+New dependency                 -> stop and ask
+Destructive/irreversible       -> stop and ask
+Scope expansion                -> stop and ask
+```
+
+---
+
+## Standard AI Development Tools
+
+### Context7
+
+Context7 is a standard AI reference tool.
+
+Use Context7 for version-sensitive framework, package, SDK, API, setup, configuration, and integration research before implementing against external libraries.
+
+Rules:
+
+- Prefer Context7 for current, version-specific external documentation instead of relying on model memory.
+- Target the exact installed or approved package version whenever versioned documentation is available.
+- Confirm the installed package version locally before implementation.
+- Use Context7 to understand the documented API, then verify compatibility against the actual codebase and tests.
+- Context7 does not replace local code inspection, Laravel Boost, tests, security review, or user approval.
+- Record important version-specific findings in the implementation plan or `docs/02-research/` when they materially affect the implementation.
+- Do not store Context7 credentials, API keys, or tokens in the repository.
+
+### EnvKit
+
+EnvKit is the standard local PHP development environment for supported platforms.
+
+When EnvKit is used, document the project's site, PHP version, database, and required services in this file or the appropriate AI reference.
+
+EnvKit MCP may be used for local environment inspection and management.
+
+#### EnvKit MCP autonomy boundary
+
+Safe/read-only operations may be performed autonomously, including:
+
+- inspect site status
+- inspect service status
+- inspect diagnostics
+- inspect logs
+- inspect available versions
+- inspect databases and configuration
+
+Destructive or consequential operations require explicit user approval unless they are already covered by an approved implementation plan, including:
+
+- deleting/removing sites
+- deleting databases
+- destructive data operations
+- changing environment state that can materially affect data, services, or other projects
+- irreversible or difficult-to-recover environment changes
+- Git push/commit operations unless explicitly authorized by the approved workflow
+
+EnvKit is local-only infrastructure. It is not a production or staging management authority.
+
+---
+
+## Laravel Boost
+
+Laravel Boost is an MCP server with Laravel-specific tools.
+
+Prefer Boost tools over manual alternatives when the relevant Boost capability is available.
+
+Use:
+
+- `database-query` for read-only database queries instead of raw SQL in Tinker.
+- `database-schema` to inspect database structure before writing migrations or models.
+- `get-absolute-url` to resolve the correct scheme, domain, and port before sharing a project URL.
+- `browser-logs` for recent browser logs, errors, and exceptions.
+- `search-docs` for Laravel ecosystem documentation when the required documentation is available through Boost.
+
+Do not assume an MCP tool exists merely because it is named in documentation. Inspect the available tool capabilities when necessary.
+
+---
+
+## Version Verification
+
+Always use APIs matching the versions actually installed in the project.
+
+Before relying on a package API:
+
+- PHP / Composer packages: `composer show --direct` or `composer show <vendor/package>`
+- JavaScript packages: inspect `package.json` and the lockfile when relevant
+- Laravel / Filament behavior: use the installed version and appropriate official documentation
+- Version-sensitive external documentation: use Context7
+
+Never assume a package version from memory.
+
+---
 
 ## Skills Activation
 
-This project has domain-specific skills available in `**/skills/**`. You MUST activate the relevant skill whenever you work in that domain—don't wait until you're stuck.
+If the project contains domain-specific skills under `**/skills/`, activate the relevant skill whenever working in that domain.
 
-## Conventions
+Do not wait until blocked before using a relevant skill.
 
-- You must follow all existing code conventions used in this application. When creating or editing a file, check sibling files for the correct structure, approach, and naming.
-- Use descriptive names for variables and methods. For example, `isRegisteredForDiscounts`, not `discount()`.
-- Check for existing components to reuse before writing a new one.
+For testing, read the applicable testing skill before writing or substantially modifying tests.
 
-## Verification Scripts
-
-- Do not create verification scripts or tinker when tests cover that functionality and prove they work. Unit and feature tests are more important.
-
-## Application Structure & Architecture
-
-- Stick to existing directory structure; don't create new base folders without approval.
-- Do not change the application's dependencies without approval.
-
-## Frontend Bundling
-
-- If the user doesn't see a frontend change reflected in the UI, it could mean they need to run `npm run build`, `npm run dev`, or `composer run dev`. Ask them.
-
-## Documentation Files
-
-- You must only create documentation files if explicitly requested by the user.
-
-## Replies
-
-- Be concise in your explanations - focus on what's important rather than explaining obvious details.
-
-=== boost rules ===
-
-# Laravel Boost
-
-## Tools
-
-- Laravel Boost is an MCP server with tools designed specifically for this application. Prefer Boost tools over manual alternatives like shell commands or file reads.
-- Use `database-query` to run read-only queries against the database instead of writing raw SQL in tinker.
-- Use `database-schema` to inspect table structure before writing migrations or models.
-- Use `get-absolute-url` to resolve the correct scheme, domain, and port for project URLs. Always use this before sharing a URL with the user.
-- Use `browser-logs` to read browser logs, errors, and exceptions. Only recent logs are useful, ignore old entries.
-
-## Searching Documentation (IMPORTANT)
-
-- Use `search-docs` before changes that depend on Laravel ecosystem APIs, behavior, configuration, or version-specific syntax. Skip it for copy-only edits and other changes where package documentation is irrelevant. Reuse sufficient results already in context instead of searching again.
-- Pass a `packages` array to scope results when you know which packages are relevant.
-- Use multiple broad, topic-based queries: `['rate limiting', 'routing rate limiting', 'routing']`. Expect the most relevant results first.
-- Do not add package names to queries because package info is already shared. Use `test resource table`, not `filament 4 test resource table`.
-
-### Search Syntax
-
-1. Use words for auto-stemmed AND logic: `rate limit` matches both "rate" AND "limit".
-2. Use `"quoted phrases"` for exact position matching: `"infinite scroll"` requires adjacent words in order.
-3. Combine words and phrases for mixed queries: `middleware "rate limit"`.
-4. Use multiple queries for OR logic: `queries=["authentication", "middleware"]`.
+---
 
 ## Project Rules
 
-- This project contains committed, area-grouped rules in `.ai/rules` when that directory exists (settled decisions, non-obvious traps, standing constraints). Framework and package guidelines that only apply to specific paths (testing, frontend, components) also live there, under `.ai/rules/boost` — this is not just recorded decisions, it is load-bearing guidance you have not seen inline. Before you enter plan mode or create/edit any file, you MUST first: open @.ai/rules/index.md (it maps file globs to rule files), read every rule file whose globs cover the path(s) in scope, and run `grep -rin 'keyword' .ai/rules` to catch what a path match alone misses. Do not write code until you have read and are following every matching rule. If `.ai/rules` does not exist, continue without it.
-- Record durable rules with `record-rule` so the next agent or teammate inherits them instead of working them out again. Pass a `glob` (e.g. `app/Http/Controllers/**`), a short `title`, and a few-line `note`. Always use `record-rule`, never your native memory or notes tool — native memory is personal and session-scoped; only `.ai/rules` is shared with the team and persists in the repo.
+If `.ai/rules/` exists:
 
-## Artisan
+1. Open `.ai/rules/index.md`.
+2. Read every rule whose glob covers the files in scope.
+3. Search `.ai/rules/` for relevant keywords when necessary to catch rules not obvious from path matching.
+4. Follow all matching rules before editing files.
 
-- Run Artisan commands directly via the command line (e.g., `php artisan route:list`). Use `php artisan list` to discover available commands and `php artisan [command] --help` to check parameters.
-- Inspect routes with `php artisan route:list`. Filter with: `--method=GET`, `--name=users`, `--path=api`, `--except-vendor`, `--only-vendor`.
-- Read configuration values using dot notation: `php artisan config:show app.name`, `php artisan config:show database.default`. Or read config files directly from the `config/` directory.
+Do not write code until applicable project rules have been read.
 
-## Tinker
+Durable project rules should be recorded in `.ai/rules/` using the project's approved rule-recording mechanism.
 
-- Execute PHP in app context for debugging and testing code. Do not create models without user approval, prefer tests with factories instead. Prefer existing Artisan commands over custom tinker code.
-- Always use single quotes to prevent shell expansion: `php artisan tinker --execute 'Your::code();'`
-  - Double quotes for PHP strings inside: `php artisan tinker --execute 'User::where("active", true)->count();'`
+If `.ai/rules/` does not exist, continue without it.
 
-=== php rules ===
+---
 
-# PHP
+## Tech Stack Baseline
 
-- Always use curly braces for control structures, even for single-line bodies.
-- Use PHP 8 constructor property promotion: `public function __construct(public GitHub $github) { }`. Do not leave empty zero-parameter `__construct()` methods unless the constructor is private.
-- Use explicit return type declarations and type hints for all method parameters: `function isAccessible(User $user, ?string $path = null): bool`
-- Use TitleCase for Enum keys: `FavoritePerson`, `BestLake`, `Monthly`.
-- Prefer PHPDoc blocks over inline comments. Only add inline comments for exceptionally complex logic.
-- Use array shape type definitions in PHPDoc blocks.
+| Layer | Version | Notes |
+|---|---|---|
+| PHP | `^8.4` | Project baseline |
+| Laravel | `^13.0` | Application framework |
+| Filament | `^5.6` | Filament v5 |
+| Livewire | `^4.0` | Filament 5 stack |
+| Alpine.js | `^3.x` | Frontend dependency |
+| Tailwind CSS | `^4.x` | Project styling |
+| Pest | `^4.0` | Unit + Feature tests |
+| Playwright | latest | Standalone E2E |
 
-=== deployments rules ===
+The actual project's installed versions are authoritative.
 
-# Deployment
+### Additional installed packages
 
-- Laravel can be deployed using [Laravel Cloud](https://cloud.laravel.com/), which is the fastest way to deploy and scale production Laravel applications.
+Keep this section synchronized with approved direct dependencies.
 
-=== herd rules ===
+Do not assume an unlisted package is installed.
 
-# Laravel Herd
+---
 
-- The application is served by Laravel Herd at `https?://[kebab-case-project-dir].test`. Use the `get-absolute-url` tool to generate valid URLs. Never run commands to serve the site. It is always available.
-- Use the `herd` CLI to manage services, PHP versions, and sites (e.g. `herd sites`, `herd services:start <service>`, `herd php:list`). Run `herd list` to discover all available commands.
+## Application Structure and Architecture
 
-=== tests rules ===
+- Follow the existing directory structure.
+- Do not create new base directories without approval.
+- Do not change application dependencies without approval.
+- Check sibling files before creating or modifying a file.
+- Follow existing naming, structure, and implementation conventions.
+- Reuse existing components and services before creating new ones.
+- Do not perform unrelated refactors.
+- Do not silently introduce architectural patterns that are not already established or approved.
 
-# Test Enforcement
+---
 
-- Test every code change by adding or updating a test.
-- Run the affected tests and ensure they pass.
-- Test the changed behavior and its important failure modes, but do not add tests beyond them.
-- Read the `testing-best-practices` skill before writing tests.
+## Laravel Core
 
-=== laravel/core rules ===
-
-# Do Things the Laravel Way
-
-- Use `php artisan make:` commands to create new files (i.e. migrations, controllers, models, etc.). You can list available Artisan commands using `php artisan list` and check their parameters with `php artisan [command] --help`.
-- If you're creating a generic PHP class, use `php artisan make:class`.
-- Pass `--no-interaction` to all Artisan commands to ensure they work without user input. You should also pass the correct `--options` to ensure correct behavior.
-
-### Model Creation
-
-- When creating new models, create useful factories and seeders for them too. Ask the user if they need any other things, using `php artisan make:model --help` to check the available options.
-
-## APIs & Eloquent Resources
-
-- For APIs, default to using Eloquent API Resources and API versioning unless existing API routes do not, then you should follow existing application convention.
-
-## URL Generation
-
-- When generating links to other pages, prefer named routes and the `route()` function.
-
-## Testing
-
-- When creating models for tests, use the factories for the models. Check if the factory has custom states that can be used before manually setting up the model.
-- Faker: Use methods such as `$this->faker->word()` or `fake()->randomDigit()`. Follow existing conventions whether to use `$this->faker` or `fake()`.
-- When creating tests, make use of `php artisan make:test [options] {name}` to create a feature test, and pass `--unit` to create a unit test. Most tests should be feature tests.
-
-## Vite Error
-
-- If you receive an "Illuminate\Foundation\ViteException: Unable to locate file in Vite manifest" error, you can run `npm run build` or ask the user to run `npm run dev` or `composer run dev`.
-
-=== pint/core rules ===
-
-# Laravel Pint Code Formatter
-
-- If you have modified any PHP files, you must run `vendor/bin/pint --dirty --format agent` before finalizing changes to ensure your code matches the project's expected style.
-- Do not run `vendor/bin/pint --test --format agent`, simply run `vendor/bin/pint --format agent` to fix any formatting issues.
-
-=== pest/core rules ===
-
-# Pest
-
-- This project uses Pest. Create tests with `php artisan make:test --pest {name}`.
-- Do not include the test suite directory in `{name}`. Use `SomeFeatureTest`, not `Feature/SomeFeatureTest`.
-- Read the `testing-best-practices` skill for guidance on coverage, naming, structure, dependency isolation, and review.
-- Do not delete tests or test files without approval. They are part of the application.
-
-## Running Tests
-
-- Run the narrowest set of tests that covers the change. Pass a file path or `--filter=testName` to `php artisan test --compact`.
-- Rerun a test after each change to it.
-- Run `vendor/bin/pest` to call the test runner directly. It accepts the same file path and `--filter=testName` arguments.
-- After the feature tests pass, ask the user to run the complete suite with `php artisan test --compact`.
-
-=== filament/filament/core rules ===
-
-## Filament
-
-- Filament is a Laravel UI framework built on Livewire, Alpine.js, and Tailwind CSS. UIs are defined in PHP via fluent, chainable components. Follow existing conventions in this app.
-- Use the `search-docs` tool for official documentation on Artisan commands, code examples, testing, relationships, and idiomatic practices. If `search-docs` is unavailable, refer to https://filamentphp.com/docs.
+- Use Laravel conventions appropriate to the installed Laravel version.
+- Prefer `php artisan make:*` commands for generated Laravel files.
+- Use `--no-interaction` for Artisan commands.
+- Inspect command help before using unfamiliar options.
+- Prefer named routes and `route()` for generated links.
+- Use factories for test data and inspect existing factory states before creating manual setup.
+- Most application behavior should be covered by Feature tests rather than Unit tests.
+- Use Eloquent API Resources and API versioning for APIs unless existing project conventions establish otherwise.
+- Do not create models or other persistent structures merely for debugging without approval.
 
 ### Artisan
 
-- Always use Filament-specific Artisan commands to create files. Find available commands with the `list-artisan-commands` tool, or run `php artisan --help`.
-- Inspect required options before running, and always pass `--no-interaction`.
+Use:
 
-### Patterns
+```bash
+php artisan list
+php artisan <command> --help
+php artisan route:list
+php artisan config:show app.name
+php artisan config:show database.default
+```
 
-Always use static `make()` methods to initialize components. Most configuration methods accept a `Closure` for dynamic values.
+Use the narrowest command necessary.
+
+### Tinker
+
+- Prefer existing Artisan commands or tests over custom Tinker code.
+- Always use single quotes around the `--execute` argument to avoid shell expansion.
+- Do not use Tinker as a substitute for tests.
+- Do not create persistent data without approval.
+
+---
+
+## PHP Rules
+
+- Use curly braces for control structures, including single-line bodies.
+- Use PHP 8 constructor property promotion where appropriate.
+- Do not leave empty zero-parameter constructors unless the constructor is private.
+- Use explicit return types.
+- Type all method parameters.
+- Use TitleCase for Enum keys.
+- Prefer PHPDoc blocks for explanatory documentation.
+- Use inline comments only for exceptionally complex logic.
+- Use array-shape definitions in PHPDoc where they improve type clarity.
+- Follow existing project conventions for imports, formatting, and naming.
+
+---
+
+## Filament v5
+
+- Use Filament v5 APIs and conventions only.
+- Use the Schemas API for Resource schemas.
+- Do not introduce legacy Resource patterns from earlier Filament versions.
+- Use Filament-specific Artisan generators where available.
+- Inspect command options before generating files.
+- Always use `--no-interaction`.
+
+### Authorization
+
+- Resource authorization must be enforced through the appropriate Model Policy.
+- Do not assume a fixed set of five Policy methods.
+- Wire every ability actually used by the Resource and its actions, including applicable bulk, restore, or force-delete abilities.
+- UI visibility is not authorization.
+- Server-side authorization is mandatory.
+- Panel access must use the project's approved authorization approach.
+- Do not add a permissions package without approval through the Package Decision Gate.
+
+### Filament schema patterns
+
+- Use static `make()` methods.
+- Use `Get` for conditional form logic.
+- Use `Set` with `afterStateUpdated()` for reactive field changes.
+- Prefer `live(onBlur: true)` for text inputs when per-keystroke updates are unnecessary.
+- Compose layouts using the installed Filament v5 schema components and existing project conventions.
+- Use `Repeater` with `relationship()` for appropriate inline HasMany management.
+- Use `state()` for derived table values.
+- Use appropriate relationship and enum filters.
+- Use `Filament\Actions\` for actions.
+
+### Filament namespaces
+
+Follow the installed Filament version. For the current v5 baseline:
+
+- Form fields: `Filament\Forms\Components\`
+- Infolist entries: `Filament\Infolists\Components\`
+- Layout/schema components: `Filament\Schemas\Components\`
+- Schema utilities: `Filament\Schemas\Components\Utilities\`
+- Table columns: `Filament\Tables\Columns\`
+- Table filters: `Filament\Tables\Filters\`
+- Actions: `Filament\Actions\`
+- Icons: `Filament\Support\Icons\Heroicon`
+
+Do not use legacy action namespaces.
+
+### Common Filament mistakes
+
+- Never assume public file visibility. Private is the safe default; explicitly configure public visibility when required.
+- Never assume a layout spans the full width; configure column spans intentionally.
+- Use `Select::make(...)->relationship(...)` for BelongsTo fields according to the installed Filament API.
+- Use `Repeater::schema()`, not legacy `fields()`.
+- Do not add `dehydrated(false)` to fields that must be persisted.
+- Preserve correct property types when overriding Filament Page, Resource, and Widget properties.
+
+---
+
+
+## Sample Snippets
+
+These snippets are reference patterns. Use them as examples, not as a substitute for checking the installed Filament API and the project's existing conventions.
+
+### Conditional form field visibility
 
 Use `Get $get` to read other form field values for conditional logic:
 
@@ -204,12 +429,14 @@ Select::make('type')
 TextInput::make('company_name')
     ->required()
     ->visible(fn (Get $get): bool => $get('type') === 'business'),
-
 </code-snippet>
 
-Use `Set $set` inside `->afterStateUpdated()` on a `->live()` field to mutate another field reactively. Prefer `->live(onBlur: true)` on text inputs to avoid per-keystroke updates:
+### Reactive field update
+
+Use `Set $set` inside `afterStateUpdated()` on a `live()` field to mutate another field reactively. Prefer `live(onBlur: true)` on text inputs when per-keystroke updates are unnecessary:
 
 <code-snippet name="Reactive field update" lang="php">
+use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Utilities\Set;
 use Illuminate\Support\Str;
 
@@ -223,12 +450,14 @@ TextInput::make('title')
 
 TextInput::make('slug')
     ->required(),
-
 </code-snippet>
 
-Compose layout by nesting `Section` and `Grid`. Children need explicit `->columnSpan()` or `->columnSpanFull()`:
+### Section and Grid layout
+
+Compose layout by nesting `Section` and `Grid`. Configure column spans intentionally:
 
 <code-snippet name="Section and Grid layout" lang="php">
+use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 
@@ -243,13 +472,15 @@ Section::make('Details')
                 ->columnSpanFull(),
         ]),
     ]),
-
 </code-snippet>
 
-Use `Repeater` for inline `HasMany` management. `->relationship()` with no args binds to the relationship matching the field name:
+### Repeater for HasMany
+
+Use `Repeater` for appropriate inline `HasMany` management. `relationship()` binds the repeater to the corresponding model relationship:
 
 <code-snippet name="Repeater for HasMany" lang="php">
 use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\TextInput;
 
 Repeater::make('qualifications')
     ->relationship()
@@ -260,10 +491,11 @@ Repeater::make('qualifications')
             ->required(),
     ])
     ->columns(2),
-
 </code-snippet>
 
-Use `state()` with a `Closure` to compute derived column values:
+### Computed table column value
+
+Use `state()` with a closure to compute derived column values:
 
 <code-snippet name="Computed table column value" lang="php">
 use Filament\Tables\Columns\TextColumn;
@@ -273,7 +505,9 @@ TextColumn::make('full_name')
 
 </code-snippet>
 
-Use `SelectFilter` for enum or relationship filters, and `Filter` with a `->query()` closure for custom logic:
+### Table filters
+
+Use `SelectFilter` for enum or relationship filters, and `Filter` with a `query()` closure for custom logic:
 
 <code-snippet name="Table filters" lang="php">
 use Filament\Tables\Filters\Filter;
@@ -288,13 +522,14 @@ SelectFilter::make('author')
 
 Filter::make('verified')
     ->query(fn (Builder $query) => $query->whereNotNull('email_verified_at')),
-
 </code-snippet>
 
-Actions are buttons that encapsulate optional modal forms and behavior:
+### Action with modal form
 
-<code-snippet name="Action with modal form" lang="php">
-use Filament\Actions\Action;
+Actions encapsulate optional modal forms and behavior:
+
+<code-snippet name="Action with modal form" lang="php">ment\Actions\Action;
+use Filament\Forms\Components\TextInput;
 
 Action::make('updateEmail')
     ->schema([
@@ -303,15 +538,9 @@ Action::make('updateEmail')
             ->required(),
     ])
     ->action(fn (array $data, User $record) => $record->update($data)),
-
 </code-snippet>
 
-### Testing
-
-Testing setup (requires `pestphp/pest-plugin-livewire` in `composer.json`):
-
-- Always call `$this->actingAs(User::factory()->create())` before testing panel functionality.
-- For edit pages, pass `['record' => $user->id]`, use `->call('save')` (not `->call('create')`), and do not assert `->assertRedirect()` (edit pages do not redirect after save).
+### Table test
 
 <code-snippet name="Table test" lang="php">
 use function Pest\Livewire\livewire;
@@ -321,11 +550,13 @@ livewire(ListUsers::class)
     ->searchTable($users->first()->name)
     ->assertCanSeeTableRecords($users->take(1))
     ->assertCanNotSeeTableRecords($users->skip(1));
+```
 
-</code-snippet>
+### Create resource test
 
 <code-snippet name="Create resource test" lang="php">
 use function Pest\Laravel\assertDatabaseHas;
+use function Pest\Livewire\livewire;
 
 livewire(CreateUser::class)
     ->fillForm([
@@ -341,10 +572,16 @@ assertDatabaseHas(User::class, [
     'name' => 'Test',
     'email' => 'test@example.com',
 ]);
-
 </code-snippet>
 
+### Edit resource test
+
+For edit pages, pass the record identifier and call `save()` rather than `create()`:
+
 <code-snippet name="Edit resource test" lang="php">
+use function Pest\Laravel\assertDatabaseHas;
+use function Pest\Livewire\livewire;
+
 livewire(EditUser::class, ['record' => $user->id])
     ->fillForm(['name' => 'Updated'])
     ->call('save')
@@ -355,10 +592,13 @@ assertDatabaseHas(User::class, [
     'id' => $user->id,
     'name' => 'Updated',
 ]);
+```
 
-</code-snippet>
+### Testing validation
 
 <code-snippet name="Testing validation" lang="php">
+use function Pest\Livewire\livewire;
+
 livewire(CreateUser::class)
     ->fillForm([
         'name' => null,
@@ -370,23 +610,24 @@ livewire(CreateUser::class)
         'email' => 'email',
     ])
     ->assertNotNotified();
-
 </code-snippet>
 
-Use `->callAction(DeleteAction::class)` for page actions, or `->callAction(TestAction::make('name')->table($record))` for table actions:
+### Calling actions
+
+Use the installed Filament testing API for page and table actions. For table actions, use `TestAction::make(...)->table($record)`:
 
 <code-snippet name="Calling actions" lang="php">
 use Filament\Actions\Testing\TestAction;
+use function Pest\Livewire\livewire;
 
 livewire(ListUsers::class)
     ->callAction(TestAction::make('promote')->table($user), [
         'role' => 'admin',
     ])
     ->assertNotified();
-
 </code-snippet>
 
-### Correct Namespaces
+### Correct namespaces
 
 - Form fields (`TextInput`, `Select`, `Repeater`, etc.): `Filament\Forms\Components\`
 - Infolist entries (`TextEntry`, `IconEntry`, etc.): `Filament\Infolists\Components\`
@@ -396,6 +637,7 @@ livewire(ListUsers::class)
 - Table filters (`SelectFilter`, `Filter`, etc.): `Filament\Tables\Filters\`
 - Actions (`DeleteAction`, `CreateAction`, etc.): `Filament\Actions\`. Never use `Filament\Tables\Actions\`, `Filament\Forms\Actions\`, or any other sub-namespace for actions.
 - Icons: `Filament\Support\Icons\Heroicon` enum (e.g., `Heroicon::PencilSquare`)
+
 
 ### Common Mistakes
 
@@ -408,5 +650,408 @@ livewire(ListUsers::class)
   - `$navigationIcon`: `protected static string | BackedEnum | null` (not `?string`)
   - `$navigationGroup`: `protected static string | UnitEnum | null` (not `?string`)
   - `$view`: `protected string` (not `protected static string`) on `Page` and `Widget` classes
+
+## Testing Standard
+
+### Pest
+
+Use Pest for:
+
+- Unit tests in `tests/Unit/`
+- Feature tests in `tests/Feature/`
+- Filament Resource behavior using the appropriate Livewire testing helpers
+
+Create tests with:
+
+```bash
+php artisan make:test --pest SomeFeatureTest
+```
+
+Use the narrowest relevant test command.
+
+### Standalone Playwright
+
+Use standalone Playwright for:
+
+- full browser E2E flows
+- critical user journeys
+- cross-browser checks
+- responsive browser checks
+- browser-level acceptance verification
+
+Do not duplicate browser coverage in a separate Pest Browser standard.
+
+### Testing requirements
+
+- Test every code change by adding or updating appropriate tests unless the change is genuinely non-testable.
+- Run affected tests and ensure they pass.
+- Test changed behavior and important failure modes.
+- Do not add unrelated test coverage.
+- Do not delete tests without approval.
+- Use factories and existing factory states.
+- Rerun a test after modifying that test.
+- After focused tests pass, run the broader suite when appropriate and report exactly what was run.
+
+### Filament testing
+
+For panel functionality, authenticate with the appropriate project user.
+
+For edit pages:
+
+- pass the record identifier using the installed testing API
+- call the save action
+- do not assume an edit save redirects unless the installed project behavior explicitly does so
+
+Test notifications, validation, database state, authorization, and action behavior where relevant.
+
+---
+
+## Verification and Evidence
+
+Never claim completion based only on code generation.
+
+Before marking work complete, use appropriate evidence:
+
+- focused tests
+- broader tests when appropriate
+- Laravel Pint
+- build checks
+- migration/schema verification
+- authorization checks
+- browser verification
+- logs/diagnostics
+- package/dependency audit when relevant
+
+State what was actually verified.
+
+Do not claim a test, build, browser flow, command, or tool operation was executed if it was not.
+
+---
+
+## Code Style and Formatting
+
+- Follow project formatting conventions.
+- Use Laravel Pint for PHP changes.
+- After modifying PHP files, run:
+
+```bash
+vendor/bin/pint --dirty --format agent
+```
+
+- Do not leave unused imports or dead code created by the change.
+- Do not run broad formatting that changes unrelated files unless approved.
+
+---
+
+## Security — Non-Negotiable
+
+Run a security pass after every feature or material behavior change.
+
+Review:
+
+1. Authentication
+2. Authorization
+3. Record-level access
+4. Mass assignment
+5. Input validation
+6. File upload/storage security
+7. Dependency security
+8. Rate limiting / abuse protection
+
+Also consider:
+
+- sensitive data exposure
+- insecure direct object access
+- unsafe file paths
+- queue/job authorization
+- webhook validation
+- logging of secrets
+- environment credentials
+- browser-accessible private resources
+
+Never treat UI hiding as a security control.
+
+---
+
+## Package Decision Gate
+
+Before adding any Composer/npm package not already approved:
+
+1. Identify the concrete requirement.
+2. Confirm the package solves it.
+3. Check whether existing Laravel, Filament, PHP, or project functionality is sufficient.
+4. Review maintenance, security, compatibility, and cost implications.
+5. Stop and ask the user for approval when the dependency is a material decision.
+
+Default: **no new package**.
+
+Do not install packages merely because they are commonly used.
+
+---
+
+## Destructive Change Gate
+
+Stop and ask before:
+
+- deleting files
+- dropping tables or columns
+- irreversible data migrations
+- destructive data transformations
+- deleting databases
+- removing sites
+- replacing important configuration without a reversible plan
+- destructive EnvKit MCP operations
+- other difficult-to-recover environment changes
+
+An approved implementation plan may authorize such an operation only when the operation and safeguards are explicitly within its approved scope.
+
+---
+
+## Directory Conventions
+
+Use existing project structure. When the Vibe Coding Standard baseline applies:
+
+```text
+app/Filament/Resources/{Model}Resource.php
+app/Filament/Resources/{Model}Resource/Schemas/
+app/Filament/Resources/{Model}Resource/Pages/
+app/Filament/Resources/{Model}Resource/RelationManagers/
+app/Policies/{Model}Policy.php
+app/Mcp/                     (only when MCP integration is approved)
+tests/Unit/
+tests/Feature/
+tests/e2e/                   (standalone Playwright)
+```
+
+Do not create these directories merely because they appear in the standard. Follow the actual project structure.
+
+---
+
+## AI Operating Directory
+
+```text
+docs/00-project/
+├── ai/
+│   ├── README.md
+│   ├── references/
+│   └── plans/
+│       ├── pending/
+│       └── approved/
+├── vibe-coding/
+│   ├── standard.md
+│   └── guideline.md
+├── architecture-decisions/
+├── plans/
+├── screenshots/
+├── prompts/
+└── followups/
+```
+
+### AI references
+
+Use `docs/00-project/ai/references/` for supporting project-specific context such as:
+
+- domain rules
+- naming conventions
+- UI conventions
+- testing conventions
+- integration notes
+- approved AI tooling configuration
+
+References are advisory. They do not override current requirements or authority.
+
+### AI plans
+
+- `pending/` contains plans awaiting user approval.
+- `approved/` contains plans that have received explicit user approval and are being executed.
+- The user must explicitly approve the plan in conversation.
+- A file containing `APPROVED` is not sufficient evidence of user approval by itself.
+
+### Project plans
+
+`docs/00-project/ai/plans/` is the AI working/approval workflow.
+
+`docs/00-project/plans/` is durable project documentation for owner/reference.
+
+Do not silently use one as a substitute for the other.
+
+---
+
+## Tolaria Vault
+
+Tolaria Vault is a documentation library for the project owner's reference.
+
+It is not:
+
+- an AI authority
+- an instruction source
+- a decision engine
+- an enforcement mechanism
+- an execution controller
+- a replacement for current user instructions, approved specifications, `CLAUDE.md`, or the Vibe Coding Standard
+
+### Standard documentation paths
+
+```text
+docs/00-project/architecture-decisions/
+docs/00-project/plans/
+docs/00-project/screenshots/
+docs/00-project/prompts/
+docs/00-project/followups/
+docs/01-issues/
+docs/02-research/
+docs/03-daily-logs/
+docs/04-changelog/CHANGELOG.md
+```
+
+### Documentation rules
+
+- Store approved/meaningful durable task plans in `docs/00-project/plans/`.
+- Store non-obvious architectural decisions in `docs/00-project/architecture-decisions/`.
+- Store selected permanent visual evidence in `docs/00-project/screenshots/`.
+- Store task prompt references in `docs/00-project/prompts/`.
+- Store relevant follow-up prompts in `docs/00-project/followups/`.
+- Do not create a follow-up document when the prompt is exactly `continue`.
+- Store issue documentation in `docs/01-issues/`.
+- Store framework/package/technical research in `docs/02-research/`.
+- Store meaningful session summaries in `docs/03-daily-logs/`.
+- Update the changelog for meaningful project-level changes, not every edit.
+- Never intentionally store secrets, credentials, tokens, or sensitive production data.
+
+Only create documentation when required by the Vibe Coding workflow, project rules, an approved task, or an explicit user request.
+
+---
+
+## Documentation Research
+
+When research materially affects implementation:
+
+- record the package/framework version
+- record the source/tool used
+- record the date when information may become stale
+- distinguish documented behavior from project-specific inference
+- do not treat historical research as current authority without verification
+
+For version-sensitive external dependencies, Context7 is the standard AI reference tool.
+
+---
+
+## Deviation Protocol
+
+If implementation intentionally deviates from the Vibe Coding Standard:
+
+1. Identify the rule.
+2. Explain why the project requires the deviation.
+3. State the tradeoff.
+4. Ask the user when it is a material decision.
+5. Update `CLAUDE.md` if the deviation becomes a standing project rule.
+
+Do not silently weaken or bypass a standard.
+
+---
+
+## Task Contract
+
+For non-trivial agentic tasks, establish:
+
+1. Objective
+2. Scope
+3. Governing inputs
+4. Actions
+5. Constraints
+6. Expected output
+7. Verification
+8. Council audit
+9. Stop conditions
+
+Do not expand scope because an unrelated improvement is noticed.
+
+---
+
+## Progress Reporting
+
+After each meaningful step, provide one concise line describing what was completed before moving to the next step.
+
+Do not report hypothetical work as completed work.
+
+---
+
+## Frontend Bundling
+
+If a frontend change is not reflected locally:
+
+- determine whether the project uses `npm run build`
+- `npm run dev`
+- `composer run dev`
+- EnvKit's frontend tooling
+- another project-specific development command
+
+Do not blindly run development servers when the environment already manages them.
+
+---
+
+## Laravel / Local Environment
+
+If the project uses EnvKit, follow its documented project configuration.
+
+If the project uses another local environment, follow that project's actual environment contract.
+
+Do not assume Herd, Laragon, Docker, EnvKit, or another local stack is installed merely because it appears in a standard document.
+
+Never run a command to serve the site when the project's environment already manages the web server.
+
+Before sharing a project URL, use the project's URL resolution mechanism, such as Laravel Boost's `get-absolute-url`, when available.
+
+---
+
+## Deployment
+
+Deployment is outside the authority of a local development stack such as EnvKit.
+
+Follow the project's explicit deployment configuration and approved deployment plan.
+
+Do not deploy production changes without the required approval.
+
+---
+
+## Agent Behavior Summary
+
+```text
+Current requirement          -> follow it
+Approved plan                -> execute within scope
+Existing convention          -> follow it
+Context7 documentation       -> use for version-sensitive research
+Laravel Boost                -> prefer when applicable
+EnvKit read-only inspection  -> may perform autonomously
+EnvKit destructive action    -> approval required unless explicitly planned
+New dependency               -> approval required
+Architecture decision        -> ask user
+Product decision             -> ask user
+Material security decision   -> ask user
+Ambiguous requirement       -> ask user
+Destructive change           -> ask user
+Material deviation           -> ask user
+Completion claim             -> provide evidence
+```
+
+---
+
+## Living Contract
+
+`CLAUDE.md` must remain aligned with the actual project.
+
+When the project changes:
+
+- update installed versions
+- update approved dependencies
+- update directory conventions
+- update testing conventions
+- update architectural rules
+- update security requirements
+- update local environment configuration
+- update approved AI tooling
+- document approved deviations
+
+Do not allow this file to become a second, conflicting source of truth.
 
 </laravel-boost-guidelines>

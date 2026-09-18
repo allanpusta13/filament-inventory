@@ -8,8 +8,8 @@ use App\Models\ProductVariant;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 class LowStockAlertsWidget extends TableWidget
 {
@@ -37,6 +37,7 @@ class LowStockAlertsWidget extends TableWidget
                             return true;
                         }
                     }
+
                     return false;
                 })
                 ->map(function ($variant) use ($warehouseIds) {
@@ -51,6 +52,7 @@ class LowStockAlertsWidget extends TableWidget
                             ];
                         }
                     }
+
                     return [
                         'variant_id' => $variant->id,
                         'sku' => $variant->sku,
@@ -61,11 +63,6 @@ class LowStockAlertsWidget extends TableWidget
                 })
                 ->values();
         });
-    }
-
-    private function getAlertForVariant(Collection $alerts, int $variantId): ?array
-    {
-        return $alerts->firstWhere('variant_id', $variantId);
     }
 
     public function table(Table $table): Table
@@ -97,6 +94,7 @@ class LowStockAlertsWidget extends TableWidget
                     ->label('AVAILABLE STOCK')
                     ->getStateUsing(function ($record) use ($alerts) {
                         $alert = $this->getAlertForVariant($alerts, $record->id);
+
                         return $alert['warehouses'][0]['current_stock'] ?? 0;
                     })
                     ->numeric()
@@ -107,13 +105,19 @@ class LowStockAlertsWidget extends TableWidget
                     ->label('SHORTFALL')
                     ->getStateUsing(function ($record) use ($alerts) {
                         $alert = $this->getAlertForVariant($alerts, $record->id);
+
                         return $alert['warehouses'][0]['shortfall'] ?? 0;
                     })
                     ->numeric()
-                    
+
                     ->color('danger'),
             ])
             ->paginated(false)
             ->defaultSort('id', 'desc');
+    }
+
+    private function getAlertForVariant(Collection $alerts, int $variantId): ?array
+    {
+        return $alerts->firstWhere('variant_id', $variantId);
     }
 }

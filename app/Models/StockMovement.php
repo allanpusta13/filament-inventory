@@ -13,8 +13,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class StockMovement extends Model
 {
-    use SoftDeletes;
     use HasFactory;
+    use SoftDeletes;
 
     protected $fillable = [
         'product_variant_id',
@@ -29,16 +29,6 @@ class StockMovement extends Model
         'reference_code',
         'created_by',
     ];
-
-    protected static function booted(): void
-    {
-        static::deleting(function (self $model) {
-            if (! $model->isForceDeleting()) {
-                self::where('related_movement_id', $model->id)
-                    ->update(['related_movement_id' => null]);
-            }
-        });
-    }
 
     public function productVariant(): BelongsTo
     {
@@ -68,6 +58,16 @@ class StockMovement extends Model
     public function reference(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    protected static function booted(): void
+    {
+        static::deleting(function (self $model) {
+            if (! $model->isForceDeleting()) {
+                self::where('related_movement_id', $model->id)
+                    ->update(['related_movement_id' => null]);
+            }
+        });
     }
 
     protected function casts(): array

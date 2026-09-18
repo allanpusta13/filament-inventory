@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Widgets;
 
-use App\Enums\StockMovementType;
 use App\Models\StockMovement;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
