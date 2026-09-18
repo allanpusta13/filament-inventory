@@ -164,7 +164,7 @@ class TransferRequisitionsTable
                     ->icon(Heroicon::ExclamationTriangle)
                     ->color('danger')
                     ->authorize('recordLoss')
-                    ->visible(fn ($record) => in_array($record->status->value, ['dispatched', 'partially_received']))
+                    ->visible(fn ($record) => in_array($record->status->value, [TransferRequisitionStatus::Dispatched->value, TransferRequisitionStatus::PartiallyReceived->value]))
                     ->modalWidth(\Filament\Support\Enums\Width::Large)
                     ->schema([
                         \Filament\Forms\Components\Select::make('product_variant_id')

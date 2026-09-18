@@ -77,7 +77,7 @@ class ProductVariant extends Model
     }
 
     /**
-     * [FIX v10] Reservation scope is intentionally and permanently bounded
+     * [FIX v11] Reservation scope is intentionally and permanently bounded
      * to Confirmed status only. Once TransferRequisition transitions to
      * Dispatched, the reserved quantity is superseded by the TransitOut
      * stock_movement (already reflected in onHandQuantity()). In-transit
