@@ -22,4 +22,13 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/stn/print-direct/{movement}', [STNManifestController::class, 'printDirectTransfer'])
         ->name('stn.print-direct');
+
+    // Widget routes for testing
+    Route::get('/widgets/low-stock-alerts', function () {
+        return view('filament.widgets.low-stock-alerts');
+    })->name('widgets.low-stock-alerts');
+
+    Route::get('/widgets/recent-movements', function () {
+        return view('filament.widgets.recent-movements');
+    })->name('widgets.recent-movements');
 });

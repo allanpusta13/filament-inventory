@@ -59,6 +59,11 @@ class ProductVariant extends Model
         return $this->hasMany(TransferRequisitionItem::class);
     }
 
+    public function lossLedgers(): HasMany
+    {
+        return $this->hasMany(LossLedger::class);
+    }
+
     public function isBelowReorderPoint(int $currentBaseQty): bool
     {
         return $currentBaseQty <= $this->reorder_point;

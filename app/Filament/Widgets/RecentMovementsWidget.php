@@ -33,6 +33,7 @@ class RecentMovementsWidget extends TableWidget
 
             $query = StockMovement::whereIn('warehouse_id', $warehouseIds)
                 ->with(['productVariant.product', 'warehouse', 'createdBy'])
+                ->where('created_at', '>=', now()->subDays(365))
                 ->latest('created_at')
                 ->limit(20);
 
@@ -43,12 +44,14 @@ class RecentMovementsWidget extends TableWidget
                     'id' => $movement->id,
                     'variant_sku' => $movement->productVariant?->sku ?? 'N/A',
                     'variant_name' => $movement->productVariant?->name ?? 'N/A',
+                    'warehouse_id' => $movement->warehouse_id,
                     'warehouse_name' => $movement->warehouse?->name ?? 'N/A',
                     'type' => $movement->type,
                     'quantity' => $movement->quantity,
                     'unit_name' => $movement->unit_name_used,
                     'created_at' => $movement->created_at,
                     'created_by' => $movement->createdBy?->name ?? 'System',
+                    'created_by_name' => $movement->createdBy?->name ?? 'System',
                     'reference_code' => $movement->reference_code,
                 ];
             });

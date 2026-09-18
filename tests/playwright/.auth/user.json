@@ -1,0 +1,57 @@
+{
+  "cookies": [
+    {
+      "name": "remember_web_59ba36addc2b2f9401580f014c7f58ea4e30989d",
+      "value": "eyJpdiI6IjZnMU5QY1hBYkgvQ3YwczY4Uk5UWVE9PSIsInZhbHVlIjoicXZiMkxKQjIyWTZJMVI0WDNrYklnRGJwZEVWNm5pWFdCUFdSb2xnUmdmZUR3VlErMGZCV1hycEc1Rk9GL1lzT1c4UVhlRVk1N0UrR1E0NGFlVlhvR0tEaS9TOEJsVUhzVCtrY2FOelhocFdkdHc3b1J2OTE5U3A5QWdVYjFBd080SWdwNENtOHlPZVFMYW52OGEvRHZLdUpoYnhMZEFuNStrMkpDSVBKRUJFPSIsIm1hYyI6ImUwODY1ODQwYTA3ZmFjZTQ4NzI0MWQxNDNiN2Q4ODdmNTFiYzE5NjY3M2ViYzRhMGVlMjIzY2Y4MWNhYzRiYWYiLCJ0YWciOiIifQ%3D%3D",
+      "domain": "127.0.0.1",
+      "path": "/",
+      "expires": 1824226649.16787,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "XSRF-TOKEN",
+      "value": "eyJpdiI6InJHUHJCMk9WZnZpSi9wMzZzeHJmckE9PSIsInZhbHVlIjoiQXpGZkY0cGo5RE9WYXpkQ2Y2bmZhaGNuRWQ0ekZIWll4V241VjFVS3JhOStmSGk3bFJGZlhLdnJTUHFGb3l4dmYzQnpRY2lFa3J5a0hnT0hMT015VE5pYWU5REpmTHgrZlBWYnRVVU9zWmY0cCtGTGh0ZkZRR0FaQmJYc3ZmQjQiLCJtYWMiOiJiZmExNWNlZThiNjA4YjZlNWZiYTc4MGIzZThiNzNjNmExM2NhNGMzNmFkNTk2MTg1OGFiYWQ2NGQ0ZDVjOGEzIiwidGFnIjoiIn0%3D",
+      "domain": "127.0.0.1",
+      "path": "/",
+      "expires": 1789673849.378717,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "multi-_warehouse_inventory_system_session",
+      "value": "eyJpdiI6IlUvdWhmV0tRUmwzcStkNk8xZUxkTnc9PSIsInZhbHVlIjoiUmZ0ZE4wdHFtM1IxcE5VR2lOd0lWZDJUZEU0bVVJZXJPdUVQL2pOMXBwR2RFeVFVL3k1VnlLeEZjSXpKMFM0Y2dYd3VSdUl1SkFRT2p0bElJeVA4N1Q2UkcxdVJ1QURvTzVKTjZsTkxQZFkwMXVseE5hM0Npc2UwN3NPaDlyaW4iLCJtYWMiOiI0ZjUyYjczNGRjNjM0MDZlN2FkNzdhMTY3ZDE4MDU0MTUwODIyZWM4ZGJlZTY5Yzg4MjgwODI2YWVhMGQxMzdkIiwidGFnIjoiIn0%3D",
+      "domain": "127.0.0.1",
+      "path": "/",
+      "expires": 1789673849.378802,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "http://127.0.0.1:8000",
+      "localStorage": [
+        {
+          "name": "theme",
+          "value": "system"
+        },
+        {
+          "name": "isOpenDesktop",
+          "value": "true"
+        },
+        {
+          "name": "isOpen",
+          "value": "true"
+        },
+        {
+          "name": "collapsedGroups",
+          "value": "[]"
+        }
+      ]
+    }
+  ]
+}

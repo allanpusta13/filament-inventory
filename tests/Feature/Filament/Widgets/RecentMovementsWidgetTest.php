@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\InventoryService;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
 
@@ -152,7 +153,7 @@ describe('RecentMovementsWidget', function () {
         $oldVariant = ProductVariant::factory()->create();
         $this->service->recordMovement($oldVariant->id, $this->origin->id, StockMovementType::Receive, 100);
         $oldMovementDate = now()->subDays(400);
-        DB::table('stock_movements')->where('variant_id', $oldVariant->id)
+        DB::table('stock_movements')->where('product_variant_id', $oldVariant->id)
             ->update(['created_at' => $oldMovementDate]);
 
         $widget = new RecentMovementsWidget();
@@ -209,7 +210,7 @@ describe('RecentMovementsWidget', function () {
         $this->service->recordMovement($variantAtMidnight->id, $this->origin->id, StockMovementType::Receive, 100);
         $midnightDate = now()->addHour();
         DB::table('stock_movements')
-            ->where('variant_id', $variantAtMidnight->id)
+            ->where('product_variant_id', $variantAtMidnight->id)
             ->update(['created_at' => $midnightDate]);
 
         $widget = new RecentMovementsWidget();
@@ -221,7 +222,7 @@ describe('RecentMovementsWidget', function () {
 
     it('handles null reference_code gracefully (missing reference)', function () {
         $this->service->recordMovement($this->variant->id, $this->origin->id, StockMovementType::Receive, 100);
-        DB::table('stock_movements')->where('variant_id', $this->variant->id)
+        DB::table('stock_movements')->where('product_variant_id', $this->variant->id)
             ->update(['reference_code' => null]);
 
         $widget = new RecentMovementsWidget();
