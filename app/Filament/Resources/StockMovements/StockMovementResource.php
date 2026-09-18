@@ -19,9 +19,9 @@ class StockMovementResource extends Resource
 {
     protected static ?string $model = StockMovement::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'OPERATIONS';
+    protected static string|UnitEnum|null $navigationGroup = 'AUDIT';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 2;
 
     protected static ?string $recordTitleAttribute = 'reference_code';
 

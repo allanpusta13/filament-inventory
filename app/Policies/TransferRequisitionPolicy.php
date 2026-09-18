@@ -86,7 +86,6 @@ class TransferRequisitionPolicy
         return in_array($requisition->status, [
             TransferRequisitionStatus::Dispatched,
             TransferRequisitionStatus::PartiallyReceived,
-            TransferRequisitionStatus::Completed,
         ], true);
     }
 }

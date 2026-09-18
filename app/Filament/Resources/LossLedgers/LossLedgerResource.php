@@ -18,9 +18,9 @@ class LossLedgerResource extends Resource
 {
     protected static ?string $model = LossLedger::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'OPERATIONS';
+    protected static string|UnitEnum|null $navigationGroup = 'AUDIT';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 3;
 
     protected static ?string $recordTitleAttribute = 'id';
 

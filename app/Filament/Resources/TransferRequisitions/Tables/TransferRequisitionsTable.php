@@ -164,7 +164,7 @@ class TransferRequisitionsTable
                     ->icon(Heroicon::ExclamationTriangle)
                     ->color('danger')
                     ->authorize('recordLoss')
-                    ->visible(fn ($record) => in_array($record->status->value, ['dispatched', 'partially_received', 'completed']))
+                    ->visible(fn ($record) => in_array($record->status->value, ['dispatched', 'partially_received']))
                     ->modalWidth(\Filament\Support\Enums\Width::Large)
                     ->schema([
                         \Filament\Forms\Components\Select::make('product_variant_id')
@@ -172,7 +172,9 @@ class TransferRequisitionsTable
                             ->options(fn ($record) => $record->items->pluck('productVariant.name', 'product_variant_id')->toArray())
                             ->required()
                             ->searchable()
-                            ->preload(),
+                            ->preload()
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(fn ($set, $get) => $set('total_financial_loss', null)),
                         \Filament\Forms\Components\Select::make('loss_category')
                             ->label('Loss Category')
                             ->options([
@@ -187,17 +189,22 @@ class TransferRequisitionsTable
                             ->label('Lost Quantity (Base)')
                             ->numeric()
                             ->required()
-                            ->minValue(0),
+                            ->minValue(0)
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(fn ($set, $get) => $set('total_financial_loss', null)),
                         \Filament\Forms\Components\TextInput::make('damaged_base_qty')
                             ->label('Damaged Quantity (Base)')
                             ->numeric()
                             ->default(0)
-                            ->minValue(0),
+                            ->minValue(0)
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(fn ($set, $get) => $set('total_financial_loss', null)),
                         \Filament\Forms\Components\TextInput::make('total_financial_loss')
-                            ->label('Total Financial Loss')
+                            ->label('Total Financial Loss (Auto-calculated)')
                             ->numeric()
-                            ->required()
-                            ->minValue(0),
+                            ->minValue(0)
+                            ->disabled()
+                            ->dehydrated(false),
                         \Filament\Forms\Components\Textarea::make('notes')
                             ->label('Notes')
                             ->columnSpanFull(),
@@ -205,6 +212,8 @@ class TransferRequisitionsTable
                     ->action(function (array $data, $record) {
                         $variant = \App\Models\ProductVariant::find($data['product_variant_id']);
                         $unitCost = \App\Models\LossLedger::snapshotUnitCostFrom($variant);
+                        $totalQty = (int) $data['lost_base_qty'] + (int) $data['damaged_base_qty'];
+                        $totalFinancialLoss = \App\Models\LossLedger::calculateTotalFinancialLoss($unitCost, $totalQty);
                         $record->lossLedgers()->create([
                             'transfer_requisition_item_id' => $record->items->where('product_variant_id', $data['product_variant_id'])->first()?->id,
                             'product_variant_id' => $data['product_variant_id'],
@@ -213,7 +222,7 @@ class TransferRequisitionsTable
                             'lost_base_qty' => $data['lost_base_qty'],
                             'damaged_base_qty' => $data['damaged_base_qty'],
                             'unit_cost_price' => $unitCost,
-                            'total_financial_loss' => $data['total_financial_loss'],
+                            'total_financial_loss' => $totalFinancialLoss,
                             'notes' => $data['notes'],
                             'recorded_by' => auth()->id(),
                             'recorded_at' => now(),

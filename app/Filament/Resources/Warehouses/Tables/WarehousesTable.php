@@ -104,7 +104,7 @@ class WarehousesTable
                     ->label('Record Adjustment')
                     ->slideOver()
                     ->icon(Heroicon::AdjustmentsHorizontal)
-                    ->form([
+                    ->schema([
                         // Select::make('product_variant_id')
                         //     ->label('PRODUCT VARIANT')
                         //     ->relationship('productVariant', 'sku')

@@ -48,6 +48,11 @@ class LossLedger extends Model
         return (string) ($variant->currentPrice?->cost_price ?? '0.0000');
     }
 
+    public static function calculateTotalFinancialLoss(string $unitCost, int $totalQty): string
+    {
+        return bcadd(bcmul($unitCost, (string) $totalQty, 4), '0', 4);
+    }
+
     public function transferRequisition(): BelongsTo
     {
         return $this->belongsTo(TransferRequisition::class);

@@ -8,6 +8,7 @@ use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 
 class ProductForm
@@ -21,7 +22,8 @@ class ProductForm
                 ->createOptionForm(fn (Schema $schema) => $schema->components([
                     TextInput::make('name')->required()->maxLength(255),
                     TextInput::make('category')->nullable(),
-                ])),
+                ]))
+                ->afterStateUpdated(fn (Set $set, ?string $state) => $set('product_id', $state)),
             TextInput::make('sku')->required()->unique(ignoreRecord: true)->maxLength(255),
             TextInput::make('barcode')->nullable()->unique(ignoreRecord: true)->maxLength(255),
             TextInput::make('name')->required(),

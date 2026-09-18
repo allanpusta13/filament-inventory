@@ -19,9 +19,9 @@ class InTransitResource extends Resource
 {
     protected static ?string $model = InTransit::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'OPERATIONS';
+    protected static string|UnitEnum|null $navigationGroup = 'AUDIT';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 1;
 
     protected static ?string $recordTitleAttribute = 'id';
 
