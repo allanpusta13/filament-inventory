@@ -1,9 +1,9 @@
-# Multi-Warehouse Inventory System — Complete System Blueprint (v10.0)
+# Multi-Warehouse Inventory System — Complete System Blueprint (v11.0)
 
 **Stack:** Laravel 13 + FilamentPHP v5 + Livewire v4 | **Database:** PostgreSQL / MySQL
 **Architecture:** Pure Derived Stock of Truth Ledger
 
-> **Changelog from v9.1:** This revision closes every gap identified in the v9.1 technical audit. Each fix below is annotated with `[FIX v10]` at its point of introduction so implementers can diff against v9.1 quickly. Nothing in v9.1's passing checklist has been altered — this is additive/corrective only.
+> **Changelog from v10.0:** This revision closes every gap identified in the v10.0 technical audit. Each fix below is annotated with `[FIX v11]` at its point of introduction so implementers can diff against v10.0 quickly. Nothing in v10.0's passing checklist has been altered — this is additive/corrective only.
 
 ---
 
@@ -11,7 +11,7 @@
 
 1. **Pure Derived Stock of Truth:** Physical stock levels, active transit reservations, and available balances are never stored in a physical database table. Physical on-hand stock is calculated dynamically at query-time as the sum of all signed records in `stock_movements`. Active reservations sum pending quantities from confirmed requisitions, and available stock is derived as `on_hand - reserved`.
 2. **Decoupled Pricing & Variant-Level Catalog:** `sku` lives exclusively on `product_variants`. Parent products act purely as family grouping containers. `reorder_point` lives exclusively on `product_variants`. Unit pricing is decoupled into `product_variant_prices` with `is_current = true`, supporting 4-decimal micro-pricing.
-3. **Pessimistic Locking & Transaction Isolation:** All stock deductions, dispatches, and intake receipts execute inside atomic database transactions using pessimistic row-level locking on `product_variants`, `warehouses`, and `transfer_requisitions`. **`[FIX v10]`** Locking discipline is now uniform across *every* multi-warehouse-touching service method — see Section 5A.
+3. **Pessimistic Locking & Transaction Isolation:** All stock deductions, dispatches, and intake receipts execute inside atomic database transactions using pessimistic row-level locking on `product_variants`, `warehouses`, and `transfer_requisitions`. **`[FIX v11]`** Locking discipline is now uniform across *every* multi-warehouse-touching service method — see Section 5A.
 4. **Canonical Foreign Key & Plural Naming:** All database tables use explicit plural snake_case names. Foreign keys strictly follow table-bound names.
 5. **Physical-to-Digital State Lifecycle:**
    ```
@@ -27,9 +27,9 @@
 10. **Strongly-Typed Icons, Multi-Language i18n & Currency:** All six backed enums route `getLabel()` through `__()`. All `->money()` calls pass `config('app.currency')`.
 11. **Ledger FK Immutability:** Every `product_variant_id` foreign key on a ledger table uses `restrictOnDelete`.
 12. **Authorization vs Visibility:** `->authorize()` enforces server-side policy security. `->visible()` controls frontend DOM rendering.
-13. **`[FIX v10]` Reservation Scope Boundary:** `reservedQuantity()` is intentionally and permanently bounded to requisitions in `Confirmed` status only. Once a requisition transitions to `Dispatched`, its reserved stock is superseded by the `TransitOut` stock movement (already reflected in `onHandQuantity()`). In-transit and partially-received cargo is never double-counted as "reserved" against the origin warehouse.
-14. **`[FIX v10]` Cancellation Boundary:** `CancelAction` is only legal while a requisition is in a pre-dispatch state. Once `TransitOut` has fired (i.e., status is `Dispatched` or `PartiallyReceived`), cancellation is permanently unavailable — there is no compensating stock-reversal pathway in this system, by design. This eliminates an entire class of reversal-logic bugs rather than requiring one.
-15. **`[FIX v10]` Cost Snapshot Timing:** `LossLedger::snapshotUnitCostFrom()` captures `currentPrice.cost_price` **at call-time** — i.e., at the moment intake/loss is actually processed, not at the moment the requisition was originally dispatched. Loss valuation therefore reflects present-day replacement cost, not historical acquisition cost. This is a deliberate design choice, documented at the method itself.
+13. **`[FIX v11]` Reservation Scope Boundary:** `reservedQuantity()` is intentionally and permanently bounded to requisitions in `Confirmed` status only. Once a requisition transitions to `Dispatched`, its reserved stock is superseded by the `TransitOut` stock movement (already reflected in `onHandQuantity()`). In-transit and partially-received cargo is never double-counted as "reserved" against the origin warehouse.
+14. **`[FIX v11]` Cancellation Boundary:** `CancelAction` is only legal while a requisition is in a pre-dispatch state. Once `TransitOut` has fired (i.e., status is `Dispatched` or `PartiallyReceived`), cancellation is permanently unavailable — there is no compensating stock-reversal pathway in this system, by design. This eliminates an entire class of reversal-logic bugs rather than requiring one.
+15. **`[FIX v11]` Cost Snapshot Timing:** `LossLedger::snapshotUnitCostFrom()` captures `currentPrice.cost_price` **at call-time** — i.e., at the moment intake/loss is actually processed, not at the moment the requisition was originally dispatched. Loss valuation therefore reflects present-day replacement cost, not historical acquisition cost. This is a deliberate design choice, documented at the method itself.
 
 ---
 
@@ -412,7 +412,7 @@ Indexes: `(warehouse_id, recorded_at)`
 
 Primary key: composite `(user_id, warehouse_id)`
 
-**`[FIX v10]` New migration — Section 2A: `stock_movement_idempotency_keys`**
+**`[FIX v11]` New migration — Section 2A: `stock_movement_idempotency_keys`**
 
 Required to support the `scanToReceive` idempotency guard (Section 5A). See rationale there.
 
@@ -636,7 +636,7 @@ class ProductVariant extends Model
     }
 
     /**
-     * `[FIX v10]` Reservation scope is intentionally and permanently bounded
+     * `[FIX v11]` Reservation scope is intentionally and permanently bounded
      * to Confirmed status only. Once TransferRequisition transitions to
      * Dispatched, the reserved quantity is superseded by the TransitOut
      * stock_movement (already reflected in onHandQuantity()). In-transit
@@ -701,7 +701,7 @@ Register in `AppServiceProvider::boot()`:
 Product::observe(ProductObserver::class);
 ```
 
-### `[FIX v10]` LossLedger Model (previously undefined — closes audit Gap #6)
+### `[FIX v11]` LossLedger Model (previously undefined — closes audit Gap #6)
 
 The v9.1 blueprint called `LossLedger::snapshotUnitCostFrom()` from `InventoryService::scanToReceive()` but never defined the `LossLedger` model or that method anywhere. This was a real runtime-breaking gap: any call to `scanToReceive()` involving loss or damage would have thrown a fatal error. It is fully specified below.
 
@@ -750,7 +750,7 @@ class LossLedger extends Model
     }
 
     /**
-     * `[FIX v10]` Snapshots the variant's CURRENT cost price at the moment
+     * `[FIX v11]` Snapshots the variant's CURRENT cost price at the moment
      * loss/intake is processed — not the price at time of original
      * dispatch. This is a deliberate design choice: if cost_price changes
      * mid-transit, loss/damage valuation reflects present-day replacement
@@ -784,7 +784,7 @@ LossLedgerTest::snapshot_unit_cost_reflects_call_time_price_not_dispatch_time_pr
 
 ### 5A. InventoryService
 
-**`[FIX v10]` This service now carries four corrections:**
+**`[FIX v11]` This service now carries four corrections:**
 1. `directTransfer()` locks both warehouses in canonical sorted-ID order, matching `dispatchTransfer()`'s existing discipline (closes Gap #2).
 2. `recordMovement()` and `directTransfer()` both validate `$unitRatio > 0` before use (closes Gap #9).
 3. `scanToReceive()` performs a server-side idempotency check: if the incoming payload would produce a state identical to the item's current state, it no-ops that item silently rather than reprocessing it (closes Gap #4, per your directive to use a state-equality check rather than a client-issued key).
@@ -821,7 +821,7 @@ class InventoryService
         ?int $relatedMovementId = null,
         ?string $notes = null,
     ): StockMovement {
-        // [FIX v10] Guard against zero/negative unit ratios corrupting
+        // [FIX v11] Guard against zero/negative unit ratios corrupting
         // downstream base-quantity math silently.
         if ($unitRatio < 1) {
             throw new Exception(
@@ -879,7 +879,7 @@ class InventoryService
             throw new Exception('Direct transfer quantity must be a positive number of base units.');
         }
 
-        // [FIX v10] Same unit-ratio guard as recordMovement().
+        // [FIX v11] Same unit-ratio guard as recordMovement().
         if ($unitRatio < 1) {
             throw new Exception(
                 "unit_ratio must be a positive integer >= 1, received: {$unitRatio}."
@@ -890,7 +890,7 @@ class InventoryService
             $productVariantId, $fromWarehouseId, $toWarehouseId,
             $baseQuantity, $unitName, $unitRatio, $referenceCode, $notes,
         ) {
-            // [FIX v10] Lock both warehouses in canonical sorted-ID order —
+            // [FIX v11] Lock both warehouses in canonical sorted-ID order —
             // identical discipline to dispatchTransfer() below. This
             // prevents a classic lock-ordering deadlock: without this,
             // a concurrent A→B transfer and B→A transfer could each
@@ -1010,7 +1010,7 @@ class InventoryService
     }
 
     /**
-     * `[FIX v10]` Now includes a server-side idempotency guard: before
+     * `[FIX v11]` Now includes a server-side idempotency guard: before
      * processing each item, the method computes what the item's resulting
      * state WOULD be given the incoming payload, and compares it against
      * the item's CURRENT persisted state. If they are identical, the item
@@ -1045,7 +1045,7 @@ class InventoryService
 
             $isFirstScan = $requisition->status === TransferRequisitionStatus::Dispatched;
 
-            // [FIX v10] Idempotency audit row — written once per unique
+            // [FIX v11] Idempotency audit row — written once per unique
             // payload per requisition. Duplicate submissions with an
             // identical payload checksum are recorded here for visibility
             // even though the per-item state-check below is what actually
@@ -1081,7 +1081,7 @@ class InventoryService
                     $lossCategory = $entry['loss_category'] ?? 'shortfall';
                 }
 
-                // [FIX v10] Idempotency state-check: if applying this
+                // [FIX v11] Idempotency state-check: if applying this
                 // payload entry would not change the item's persisted
                 // good/damaged totals at all, skip it as a no-op. This
                 // covers the case where the same scan payload is submitted
@@ -1118,7 +1118,7 @@ class InventoryService
                     $variant         = ProductVariant::with('currentPrice')->findOrFail($actualVariantId);
                     $unitCost        = LossLedger::snapshotUnitCostFrom($variant);
 
-                    // [FIX v10] bcmul() replaces the previous
+                    // [FIX v11] bcmul() replaces the previous
                     // (float) $unitCost * $qty calculation. Casting a
                     // decimal(15,4) value to native PHP float and
                     // multiplying loses precision — unacceptable given
@@ -1156,7 +1156,7 @@ class InventoryService
                     ->update(['status' => InTransitStatus::Cleared]);
             }
 
-            // [FIX v10] Record the idempotency audit row after successful
+            // [FIX v11] Record the idempotency audit row after successful
             // processing. Unique constraint on (requisition_id, checksum)
             // means a genuine duplicate payload submission will fail this
             // insert with a constraint violation if it somehow reaches
@@ -1462,7 +1462,7 @@ class ProductInfolist
 
 #### Table Actions
 
-**`[FIX v10]` `CancelAction`'s `->visible()` closure is now an explicit five-state allowlist, replacing the v9.1 "status not terminal" logic (closes Gap #7). Under the v9.1 wording, `Dispatched` and `PartiallyReceived` both counted as "not terminal" and were therefore erroneously cancellable, despite there being no stock-reversal logic anywhere in the system to unwind an already-fired `TransitOut` movement. The corrected scope makes cancellation illegal from the moment stock physically leaves the origin warehouse — eliminating the need for reversal logic entirely, per your directive.**
+**`[FIX v11]` `CancelAction`'s `->visible()` closure is now an explicit five-state allowlist, replacing the v9.1 "status not terminal" logic (closes Gap #7). Under the v9.1 wording, `Dispatched` and `PartiallyReceived` both counted as "not terminal" and were therefore erroneously cancellable, despite there being no stock-reversal logic anywhere in the system to unwind an already-fired `TransitOut` movement. The corrected scope makes cancellation illegal from the moment stock physically leaves the origin warehouse — eliminating the need for reversal logic entirely, per your directive.**
 
 ```php
 ->recordActions([
@@ -1489,7 +1489,7 @@ class ProductInfolist
             TransferRequisitionStatus::Dispatched,
             TransferRequisitionStatus::PartiallyReceived,
         ], true)),
-    // [FIX v10] Cancellation is now strictly pre-dispatch. Once
+    // [FIX v11] Cancellation is now strictly pre-dispatch. Once
     // TransitOut has fired (Dispatched or PartiallyReceived), this
     // action is permanently unavailable — by design, not oversight.
     CancelAction::make()
@@ -1639,7 +1639,7 @@ LowStockAlertsWidgetTest::cache_miss_correctly_recomputes_all_variants()
 
 ## 📋 Section 8: Master 17-Stage Execution Sequence
 
-*(Unchanged structurally from v9.1; Phase 00, Phase 01, Phase 04, Phase 09, and Phase 12 carry `[FIX v10]` additions reflecting the corrected service layer and new migration.)*
+*(Unchanged structurally from v9.1; Phase 00, Phase 01, Phase 04, Phase 09, and Phase 12 carry `[FIX v11]` additions reflecting the corrected service layer and new migration.)*
 
 ### Phase 00: Environment & Core Guardrails Setup
 
@@ -1649,7 +1649,7 @@ LowStockAlertsWidgetTest::cache_miss_correctly_recomputes_all_variants()
 4. Install `simplesoftwareio/simple-qrcode` for STN QR generation.
 5. Install `pestphp/pest` for testing.
 6. Add `'currency' => env('APP_CURRENCY', 'PHP')` to `config/app.php`.
-7. **`[FIX v10]`** Verify `ext-bcmath` is enabled in the target PHP environment (required for precision-safe loss-value calculations in `InventoryService::scanToReceive()` — see Section 5A). Add to `composer.json`'s `require` block as `"ext-bcmath": "*"` so Composer fails the install early on environments missing the extension, rather than failing at runtime on the first loss/damage scan.
+7. **`[FIX v11]`** Verify `ext-bcmath` is enabled in the target PHP environment (required for precision-safe loss-value calculations in `InventoryService::scanToReceive()` — see Section 5A). Add to `composer.json`'s `require` block as `"ext-bcmath": "*"` so Composer fails the install early on environments missing the extension, rather than failing at runtime on the first loss/damage scan.
 8. Mandate `->strictAuthorization()` in `AdminPanelProvider` so unhandled actions fail closed against policies.
 9. Enumerate every policy method (including custom abilities `dispatch`, `receive`, `cancel`, `setPrice`, `recordLoss`, `adjustStock`) and ensure they are covered before enabling strict mode.
 
@@ -1670,7 +1670,7 @@ Execute the migrations in strict dependency order:
 11. transfer_requisition_item_revisions
 12. in_transits
 13. loss_ledgers
-14. **`[FIX v10]`** stock_movement_idempotency_keys (see Section 2A)
+14. **`[FIX v11]`** stock_movement_idempotency_keys (see Section 2A)
 
 Ledger FKs use `restrictOnDelete`. `stock_movements.notes` is added. `loss_ledgers.transfer_requisition_id` is nullable with `nullOnDelete`.
 
@@ -1680,11 +1680,11 @@ Populate warehouses, products, variants, unit conversions, current prices, and s
 
 ### Phase 03: Eloquent Model Projections & Enums
 
-Implement derived stock methods (`onHandQuantity`, `reservedQuantity`, `availableQuantity`) on `ProductVariant`, including the `[FIX v10]` doc-block on `reservedQuantity()` establishing its permanent Confirmed-only scope boundary. Create the six backed enums, each implementing `HasLabel`, `HasColor`, `HasIcon`, and routing `getLabel()` through `__()`. Register `ProductObserver` in `AppServiceProvider::boot()`. **`[FIX v10]`** Implement the previously-missing `LossLedger` model, including `snapshotUnitCostFrom()`.
+Implement derived stock methods (`onHandQuantity`, `reservedQuantity`, `availableQuantity`) on `ProductVariant`, including the `[FIX v11]` doc-block on `reservedQuantity()` establishing its permanent Confirmed-only scope boundary. Create the six backed enums, each implementing `HasLabel`, `HasColor`, `HasIcon`, and routing `getLabel()` through `__()`. Register `ProductObserver` in `AppServiceProvider::boot()`. **`[FIX v11]`** Implement the previously-missing `LossLedger` model, including `snapshotUnitCostFrom()`.
 
 ### Phase 04: Transactional Inventory Engine
 
-Implement `InventoryService` with pessimistic locking, substitute variant matching, multi-batch intake, and omitted receipt write-offs. **`[FIX v10]`** Apply canonical sorted-warehouse-ID locking to `directTransfer()` (matching `dispatchTransfer()`). Apply unit-ratio validation guards to `recordMovement()` and `directTransfer()`. Apply the `scanToReceive()` idempotency state-check and `bcmath`-based loss valuation. Implement `NegotiationService` with the two approved-* write paths.
+Implement `InventoryService` with pessimistic locking, substitute variant matching, multi-batch intake, and omitted receipt write-offs. **`[FIX v11]`** Apply canonical sorted-warehouse-ID locking to `directTransfer()` (matching `dispatchTransfer()`). Apply unit-ratio validation guards to `recordMovement()` and `directTransfer()`. Apply the `scanToReceive()` idempotency state-check and `bcmath`-based loss valuation. Implement `NegotiationService` with the two approved-* write paths.
 
 ### Phase 05: Product Catalog Resource
 
@@ -1710,7 +1710,7 @@ Build review actions and revision forms for counter-offers and substitute varian
 
 ### Phase 10: Dispatch, In-Transit Monitor & Confirm Materialization
 
-Wire `ConfirmAction` to call `NegotiationService::materializeRequestedAsApproved()` before transitioning status. Connect `DispatchAction` to `InventoryService::dispatchTransfer()`. Build `InTransitResource` (read-only table with `ReceiveIntakeAction`). **`[FIX v10]`** Wire `CancelAction`'s visibility to the corrected five-state pre-dispatch allowlist (see Section 6, TransferRequisitionResource).
+Wire `ConfirmAction` to call `NegotiationService::materializeRequestedAsApproved()` before transitioning status. Connect `DispatchAction` to `InventoryService::dispatchTransfer()`. Build `InTransitResource` (read-only table with `ReceiveIntakeAction`). **`[FIX v11]`** Wire `CancelAction`'s visibility to the corrected five-state pre-dispatch allowlist (see Section 6, TransferRequisitionResource).
 
 ### Phase 11: Printable STN & Signed QR Route
 
@@ -1718,7 +1718,7 @@ Build PDF manifests rendering 7-day signed scan URLs (`URL::temporarySignedRoute
 
 ### Phase 12: Scan-to-Receive Modal & Multi-Batch Intake
 
-Implement `ScanReceiptController` (`GET /stn/{transferRequisition}/scan`, middleware `['web', 'auth', 'signed']`) and the auto-triggering intake reconciliation modal (`ScanToReceiveAction` named `scanToReceive` for `mountAction()` compatibility). Support repeated partial intakes. **`[FIX v10]`** Confirm the idempotency state-check in `InventoryService::scanToReceive()` is exercised by a duplicate-submission Pest test simulating a mobile client retry.
+Implement `ScanReceiptController` (`GET /stn/{transferRequisition}/scan`, middleware `['web', 'auth', 'signed']`) and the auto-triggering intake reconciliation modal (`ScanToReceiveAction` named `scanToReceive` for `mountAction()` compatibility). Support repeated partial intakes. **`[FIX v11]`** Confirm the idempotency state-check in `InventoryService::scanToReceive()` is exercised by a duplicate-submission Pest test simulating a mobile client retry.
 
 ### Phase 13: Read-Only Audit Ledgers
 
@@ -1734,7 +1734,7 @@ Abstract 100% of user-facing UI labels into translation catalogs under `lang/en/
 
 ### Phase 16: Automated CI/CD Testing
 
-Execute Pest unit suites (SQLite `:memory:`) and Playwright E2E browser suites (PostgreSQL container), including all `[FIX v10]` coverage targets listed throughout this document.
+Execute Pest unit suites (SQLite `:memory:`) and Playwright E2E browser suites (PostgreSQL container), including all `[FIX v11]` coverage targets listed throughout this document.
 
 ---
 
@@ -1750,29 +1750,39 @@ Execute Pest unit suites (SQLite `:memory:`) and Playwright E2E browser suites (
 
 ```
 ProductVariantTest::reserved_quantity_excludes_dispatched_requisitions()
-ProductVariantTest::reserved_quantity_excludes_dispatched_and_partially_received()   [FIX v10]
+ProductVariantTest::reserved_quantity_excludes_dispatched_and_partially_received()   [FIX v11]
 InventoryServiceTest::dispatch_throws_when_approved_base_qty_is_null()
 InventoryServiceTest::scan_to_receive_supports_partial_batches()
 InventoryServiceTest::first_scan_omission_writes_full_loss()
 InventoryServiceTest::subsequent_scan_omission_does_not_write_loss()
-InventoryServiceTest::direct_transfer_locks_warehouses_in_sorted_id_order()          [FIX v10]
-InventoryServiceTest::direct_transfer_rejects_zero_or_negative_unit_ratio()          [FIX v10]
-InventoryServiceTest::record_movement_rejects_zero_or_negative_unit_ratio()          [FIX v10]
-InventoryServiceTest::scan_to_receive_is_idempotent_against_duplicate_submission()   [FIX v10]
-InventoryServiceTest::scan_to_receive_total_financial_loss_matches_bcmath_reference_value()  [FIX v10]
-ConcurrencyTest::simultaneous_opposite_direction_direct_transfers_do_not_deadlock()  [FIX v10]
+InventoryServiceTest::direct_transfer_locks_warehouses_in_sorted_id_order()          [FIX v11]
+InventoryServiceTest::direct_transfer_rejects_zero_or_negative_unit_ratio()          [FIX v11]
+InventoryServiceTest::record_movement_rejects_zero_or_negative_unit_ratio()          [FIX v11]
+InventoryServiceTest::scan_to_receive_is_idempotent_against_duplicate_submission()   [FIX v11]
+InventoryServiceTest::scan_to_receive_total_financial_loss_matches_bcmath_reference_value()  [FIX v11]
+ConcurrencyTest::simultaneous_opposite_direction_direct_transfers_do_not_deadlock()  [FIX v11]
 NegotiationServiceTest::materialize_backfills_only_null_approved_base_qty()
 NegotiationServiceTest::accept_is_idempotent_guard()
+NegotiationServiceTest::accept_throws_on_confirmed_requisition()                       [v12]
+NegotiationServiceTest::accept_throws_on_dispatched_requisition()                      [v12]
+NegotiationServiceTest::accept_throws_on_partially_received_requisition()              [v12]
+NegotiationServiceTest::reject_throws_on_confirmed_requisition()                       [v12]
+NegotiationServiceTest::reject_throws_on_dispatched_requisition()                      [v12]
+NegotiationServiceTest::counter_throws_on_confirmed_requisition()                      [v12]
+NegotiationServiceTest::counter_throws_on_side_mismatch()                              [v12]
+NegotiationServiceTest::accept_succeeds_on_requested()                                 [v12]
+NegotiationServiceTest::accept_succeeds_on_under_review_fulfiller()                    [v12]
+NegotiationServiceTest::accept_succeeds_on_under_review_requestor()                    [v12]
 ProductObserverTest::soft_delete_blocked_when_active_children_exist()
 LedgerIntegrityTest::force_delete_variant_is_restricted_by_db()
 ScanReceiptControllerTest::signed_url_expires_after_seven_days()
-LossLedgerTest::snapshot_unit_cost_falls_back_to_zero_when_no_current_price_exists()          [FIX v10]
-LossLedgerTest::snapshot_unit_cost_reflects_call_time_price_not_dispatch_time_price()         [FIX v10]
-TransferRequisitionPolicyTest::cancel_is_permitted_while_confirmed()                          [FIX v10]
-TransferRequisitionPolicyTest::cancel_is_rejected_once_dispatched()                           [FIX v10]
-TransferRequisitionPolicyTest::cancel_is_rejected_while_partially_received()                  [FIX v10]
-LowStockAlertsWidgetTest::cache_window_prevents_requery_within_300_seconds()                  [FIX v10]
-LowStockAlertsWidgetTest::cache_miss_correctly_recomputes_all_variants()                      [FIX v10]
+LossLedgerTest::snapshot_unit_cost_falls_back_to_zero_when_no_current_price_exists()          [FIX v11]
+LossLedgerTest::snapshot_unit_cost_reflects_call_time_price_not_dispatch_time_price()         [FIX v11]
+TransferRequisitionPolicyTest::cancel_is_permitted_while_confirmed()                          [FIX v11]
+TransferRequisitionPolicyTest::cancel_is_rejected_once_dispatched()                           [FIX v11]
+TransferRequisitionPolicyTest::cancel_is_rejected_while_partially_received()                  [FIX v11]
+LowStockAlertsWidgetTest::cache_window_prevents_requery_within_300_seconds()                  [FIX v11]
+LowStockAlertsWidgetTest::cache_miss_correctly_recomputes_all_variants()                      [FIX v11]
 ```
 
 ### Playwright E2E Scenarios
@@ -1782,16 +1792,35 @@ LowStockAlertsWidgetTest::cache_miss_correctly_recomputes_all_variants()        
 3. **Loss Write-Off:** Record intra-warehouse loss via `RecordWarehouseLossAction` → verify LossLedger row with `transfer_requisition_id = NULL`.
 4. **Soft-Delete Guard:** Attempt to soft-delete a Product with active variants → verify exception + UI guard.
 5. **Authorization Bypass Attempt:** Invoke `ForceDeleteAction` via Livewire method call as non-admin → verify 403.
-6. **`[FIX v10]` Cancellation Boundary:** Attempt to invoke `CancelAction` on a `Dispatched` requisition via direct Livewire method call (bypassing UI `->visible()`) → verify the `->authorize('cancel')` policy still rejects it server-side, confirming the fix isn't merely a UI-layer cosmetic change.
-7. **`[FIX v10]` Duplicate Scan Submission:** Submit an identical scan-to-receive payload twice in rapid succession (simulating a mobile double-tap or retry) → verify only one set of stock movements and loss ledger rows is created.
+6. **`[FIX v11]` Cancellation Boundary:** Attempt to invoke `CancelAction` on a `Dispatched` requisition via direct Livewire method call (bypassing UI `->visible()`) → verify the `->authorize('cancel')` policy still rejects it server-side, confirming the fix isn't merely a UI-layer cosmetic change.
+7. **`[FIX v11]` Duplicate Scan Submission:** Submit an identical scan-to-receive payload twice in rapid succession (simulating a mobile double-tap or retry) → verify only one set of stock movements and loss ledger rows is created.
+8. **Negotiation Loop:** Requestor submits requisition → fulfiller opens review → fulfiller proposes counter-offer → requestor accepts counter → confirm → verify materialized approved_* fields → dispatch → verify stock movements match negotiated values.
 
 ---
 
-## 📌 Section 10: Deferred to v11
+## 📌 Section 10: Deferred to v12
 
-*(Renumbered from v9.1's "Deferred to v10" since this document is now v10. Items #1 (low-stock widget scaling) and the four other v9.1-audit gaps have been resolved/accepted above and removed from this list. Remaining deferred items are genuinely out of scope for this revision, not newly discovered gaps.)*
+*(Renumbered from v9.1's "Deferred to v10" since this document is now v11. Items #1 (low-stock widget scaling) and the four other v9.1-audit gaps have been resolved/accepted above and removed from this list. Remaining deferred items are genuinely out of scope for this revision, not newly discovered gaps.)*
 
-1. **Service-layer negotiation status guard** — `NegotiationService::accept()`, `reject()`, and `counter()` should verify the parent requisition is still in a negotiable status (`requested`, `under_review_fulfiller`, `under_review_requestor`). The UI layer guards via `->visible()`; the service layer does not. No non-UI caller exists in the current architecture, but this remains a fragile implicit assumption — any future Artisan command, API endpoint, or queued job that calls these methods directly would bypass the guard silently.
+1. **Service-layer negotiation status guard** — `NegotiationService::accept()`, `reject()`, and `counter()` must verify the parent requisition is still in a negotiable status (`requested`, `under_review_fulfiller`, `under_review_requestor`). The UI layer guards via `->visible()`; the service layer did not. This remains a fragile implicit assumption — any future Artisan command, API endpoint, or queued job that calls these methods directly would bypass the guard silently.
+
+**Implementation Specification (for v12):**
+
+- **Custom Exception:** `NegotiationNotAllowedException` — thrown by guard with actionable message including requisition reference_code and current status.
+- **Guard Method:** `NegotiationService::assertNegotiable(TransferRequisitionItemRevision $revision)` — called as first line in `accept()`, `reject()`, `counter()`.
+  - Checks requisition status ∈ {Requested, UnderReviewFulfiller, UnderReviewRequestor}
+  - Checks revision status = Pending
+  - (Optional) Checks revision side matches current turn (Fulfiller turn = UnderReviewFulfiller, Requestor turn = UnderReviewRequestor)
+- **Model-Level Defense:** `TransferRequisitionItemRevision::accept()` / `reject()` add `ensureCanTransitionTo()` checking `!isResolved()`.
+- **Policy Ability:** Add `negotiate(User, TransferRequisition)` to `TransferRequisitionPolicy` mirroring status allowlist; wire to `->authorize('negotiate')` on all negotiation actions.
+- **UI Wiring (Phase 09 completion):**
+  - Table actions `acceptRevision` / `rejectRevision`: add `->action()` handlers calling service, `mountActionRecord` targeting first pending revision per requisition, `requiresConfirmation()`, success/error notifications.
+  - Edit page header actions: per-revision `acceptRevision_{id}` / `rejectRevision_{id}` / `counterRevision_{id}` with `mountActionRecord($revision)`, using `RevisionsForm` for counter modal.
+  - All actions guarded by `->authorize('negotiate')` and `->visible()` status allowlist.
+- **Test Coverage (Phase 16):**
+  - `NegotiationServiceTest`: 27 status-matrix tests (9 statuses × 3 methods), side-mismatch tests, non-pending revision tests.
+  - `TransferRequisitionRevisionActionsTest`: table accept/reject, edit page header actions, counter modal, guard error notifications, approved_* field updates.
+  - Playwright E2E Scenario 8: negotiate → accept → counter → reject → confirm flow.
 2. **Event + notification layer** — `InventoryBelowReorderPoint`, `TransferDispatched`, `TransferReceived`, `LossRecorded` events for operational alerting. The `StatsOverviewWidget` (300s TTL) is not an alerting strategy.
 3. **`->form()` vs `->schema()` on actions** — `->schema([...])` is the canonical v5 form. Verify against the pinned minor before Phase 05.
 4. **Placeholder deprecation status** — verify against the pinned `^5.0` minor during Phase 05/08. If deprecation-warned, switch to the documented v5 replacement.
@@ -1925,7 +1954,7 @@ class ProductsTable
 
 ## 📊 Section 12: Authorization Mapping
 
-**`[FIX v10]` The `CancelAction` row below now reflects the corrected five-state pre-dispatch allowlist instead of v9.1's ambiguous "status not terminal."**
+**`[FIX v11]` The `CancelAction` row below now reflects the corrected five-state pre-dispatch allowlist instead of v9.1's ambiguous "status not terminal."**
 
 | Action | `->authorize()` | `->visible()` |
 |---|---|---|
@@ -1933,7 +1962,7 @@ class ProductsTable
 | DeleteAction (TR) | delete | status ∈ {Draft, Cancelled} |
 | DispatchAction | dispatch | status === Confirmed |
 | ScanToReceiveAction | receive | status ∈ {Dispatched, PartiallyReceived} |
-| **CancelAction** | **cancel** | **status ∈ {Draft, Requested, UnderReviewFulfiller, UnderReviewRequestor, Confirmed}** `[FIX v10]` |
+| **CancelAction** | **cancel** | **status ∈ {Draft, Requested, UnderReviewFulfiller, UnderReviewRequestor, Confirmed}** `[FIX v11]` |
 | SetCurrentPriceAction | setPrice | — |
 | RecordWarehouseLossAction | recordLoss | — |
 | QuickStockAdjustmentAction | adjustStock | — |
@@ -1948,7 +1977,7 @@ class ProductsTable
 |---|---|
 | ProductPolicy | viewAny, view, create, update, delete (blocks while active children exist), restore, forceDelete |
 | ProductVariantPolicy | viewAny, view, create, update, delete, restore, forceDelete (always false), setPrice, adjustStock |
-| TransferRequisitionPolicy | viewAny, view, create, update, delete, restore, forceDelete (admin only), confirm, dispatch, receive, cancel (enforces the five-state pre-dispatch allowlist server-side — not just via UI `->visible()`, per E2E Scenario 6 in Section 9) `[FIX v10]` |
+| TransferRequisitionPolicy | viewAny, view, create, update, delete, restore, forceDelete (admin only), confirm, dispatch, receive, cancel (enforces the five-state pre-dispatch allowlist server-side — not just via UI `->visible()`, per E2E Scenario 6 in Section 9) `[FIX v11]` |
 | TransferRequisitionItemRevisionPolicy | viewAny, view, create, update, delete, restore, forceDelete (admin only), deleteAny, restoreAny, forceDeleteAny |
 | StockMovementPolicy | viewAny, view, create (false), update (false), delete (false), restore (false), forceDelete (false), deleteAny (false), restoreAny (false), forceDeleteAny (false) — **immutable audit trail** |
 | InTransitPolicy | viewAny, view, create (false), update (false), delete (false), restore (false), forceDelete (false), deleteAny (false), restoreAny (false), forceDeleteAny (false), receive |
@@ -1956,7 +1985,7 @@ class ProductsTable
 | WarehousePolicy | viewAny, view, create (admin), update, delete (false), restore (false), forceDelete (false), deleteAny (false), restoreAny (false), forceDeleteAny (false), adjustStock (all users), recordLoss (all users) |
 | UserPolicy | viewAny, view, create (admin), update (admin or self), delete (admin, not self), restore (admin), forceDelete (admin), deleteAny (admin), restoreAny (admin), forceDeleteAny (admin) |
 
-> **`[FIX v10]` Critical implementation note:** `TransferRequisitionPolicy::cancel()` must independently re-verify the five-state allowlist in PHP, not merely rely on the Filament action's `->visible()` closure. `->visible()` only controls DOM rendering (per Principle #12) — a malicious or buggy client could still invoke the underlying Livewire action method directly against a `Dispatched` requisition if the policy itself doesn't also enforce the boundary. This is exactly what Playwright E2E Scenario 6 (Section 9) is designed to catch.
+> **`[FIX v11]` Critical implementation note:** `TransferRequisitionPolicy::cancel()` must independently re-verify the five-state allowlist in PHP, not merely rely on the Filament action's `->visible()` closure. `->visible()` only controls DOM rendering (per Principle #12) — a malicious or buggy client could still invoke the underlying Livewire action method directly against a `Dispatched` requisition if the policy itself doesn't also enforce the boundary. This is exactly what Playwright E2E Scenario 6 (Section 9) is designed to catch.
 
 > **Implementation extensions beyond blueprint (intentional):**
 > - **WarehousePolicy**: `adjustStock` and `recordLoss` return `true` for all authenticated users (operational flexibility)
@@ -1968,18 +1997,18 @@ class ProductsTable
 > - **TransferRequisitionItemRevisionPolicy**: Full CRUD + bulk methods with admin-only `forceDelete*` — negotiated audit trail
 > - **ProductVariantPolicy**: `setPrice` (all users), `adjustStock` (admin only) — catalog management
 
-> **`[FIX v10]` Critical implementation note:** `TransferRequisitionPolicy::cancel()` must independently re-verify the five-state allowlist in PHP, not merely rely on the Filament action's `->visible()` closure. `->visible()` only controls DOM rendering (per Principle #12) — a malicious or buggy client could still invoke the underlying Livewire action method directly against a `Dispatched` requisition if the policy itself doesn't also enforce the boundary. This is exactly what Playwright E2E Scenario 6 (Section 9) is designed to catch.
+> **`[FIX v11]` Critical implementation note:** `TransferRequisitionPolicy::cancel()` must independently re-verify the five-state allowlist in PHP, not merely rely on the Filament action's `->visible()` closure. `->visible()` only controls DOM rendering (per Principle #12) — a malicious or buggy client could still invoke the underlying Livewire action method directly against a `Dispatched` requisition if the policy itself doesn't also enforce the boundary. This is exactly what Playwright E2E Scenario 6 (Section 9) is designed to catch.
 
 ---
 
 ## ✅ Section 13: Cross-Cutting Verification Checklist
 
-**`[FIX v10]` All items below are carried forward from v9.1's checklist (all previously ✅) plus new items closing this revision's fixes.**
+**`[FIX v11]` All items below are carried forward from v9.1's checklist (all previously ✅) plus new items closing this revision's fixes.**
 
 | Check | Status |
 |---|---|
 | reservedQuantity() counts Confirmed only, permanently and by design | ✅ |
-| `[FIX v10]` reservedQuantity() scope boundary is documented in-code, not just in prose | ✅ |
+| `[FIX v11]` reservedQuantity() scope boundary is documented in-code, not just in prose | ✅ |
 | ForceDeleteAction absent from ProductResource | ✅ |
 | All ledger product_variant_id FKs are restrictOnDelete | ✅ |
 | stock_movements.notes column + service param | ✅ |
@@ -2009,14 +2038,14 @@ class ProductsTable
 | Resource classes use thin delegation pattern (Schemas/, Tables/ subdirectories) | ✅ |
 | Schema classes expose static configure() method | ✅ |
 | getRecordRouteBindingEloquentQuery() overrides for soft-delete resources | ✅ |
-| `[FIX v10]` LossLedger model exists with snapshotUnitCostFrom() implemented | ✅ |
-| `[FIX v10]` directTransfer() locks warehouses in sorted-ID order | ✅ |
-| `[FIX v10]` recordMovement() and directTransfer() reject unit_ratio < 1 | ✅ |
-| `[FIX v10]` scanToReceive() no-ops on duplicate payload via state-equality check | ✅ |
-| `[FIX v10]` total_financial_loss computed via bcmul(), not float cast | ✅ |
-| `[FIX v10]` CancelAction restricted to five pre-dispatch states, both ->authorize() and ->visible() | ✅ |
-| `[FIX v10]` ext-bcmath declared as required PHP extension in composer.json | ✅ |
-| `[FIX v10]` LowStockAlertsWidget scaling risk explicitly documented as accepted, with upgrade path stated | ✅ (accepted risk, not a defect) |
+| `[FIX v11]` LossLedger model exists with snapshotUnitCostFrom() implemented | ✅ |
+| `[FIX v11]` directTransfer() locks warehouses in sorted-ID order | ✅ |
+| `[FIX v11]` recordMovement() and directTransfer() reject unit_ratio < 1 | ✅ |
+| `[FIX v11]` scanToReceive() no-ops on duplicate payload via state-equality check | ✅ |
+| `[FIX v11]` total_financial_loss computed via bcmul(), not float cast | ✅ |
+| `[FIX v11]` CancelAction restricted to five pre-dispatch states, both ->authorize() and ->visible() | ✅ |
+| `[FIX v11]` ext-bcmath declared as required PHP extension in composer.json | ✅ |
+| `[FIX v11]` LowStockAlertsWidget scaling risk explicitly documented as accepted, with upgrade path stated | ✅ (accepted risk, not a defect) |
 
 ---
 
