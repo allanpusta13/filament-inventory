@@ -128,3 +128,23 @@ test-widget3.php
 # Remove run_tests
 run_tests.php
 
+
+*.png
+*.json
+run_phase2_sweep.js
+run_phase1_soak.js
+analyze_soak.js
+crawl_surfaces.js
+crawl_surfaces.cjs
+test_login.js
+docs/audit_artifacts/*.png
+docs/audit_artifacts/*.json
+*.png
+*.json
+crawl_surfaces.js
+crawl_surfaces.cjs
+test_login.js
+run_phase1_soak.js
+run_phase2_sweep.js
+analyze_soak.js
+docs/audit_artifacts/

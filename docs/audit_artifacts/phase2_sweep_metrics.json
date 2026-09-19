@@ -1,0 +1,487 @@
+[
+  {
+    "surface": {
+      "id": "S01",
+      "name": "Panel Shell & Navigation",
+      "url": "http://127.0.0.1:8000/admin"
+    },
+    "metrics": {
+      "buttonCount": 148,
+      "buttonsSample": [
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        }
+      ],
+      "tableMetrics": [
+        {
+          "headerBg": "rgba(0, 0, 0, 0)",
+          "cellPadding": "0px 0px 0px 4px"
+        },
+        {
+          "headerBg": "rgba(0, 0, 0, 0)",
+          "cellPadding": "0px 0px 0px 4px"
+        },
+        {
+          "headerBg": "rgba(0, 0, 0, 0)",
+          "cellPadding": "0px 0px 0px 4px"
+        }
+      ]
+    }
+  },
+  {
+    "surface": {
+      "id": "S02",
+      "name": "Admin Dashboard",
+      "url": "http://127.0.0.1:8000/admin"
+    },
+    "metrics": {
+      "buttonCount": 148,
+      "buttonsSample": [
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        }
+      ],
+      "tableMetrics": [
+        {
+          "headerBg": "rgba(0, 0, 0, 0)",
+          "cellPadding": "0px 0px 0px 4px"
+        },
+        {
+          "headerBg": "rgba(0, 0, 0, 0)",
+          "cellPadding": "0px 0px 0px 4px"
+        },
+        {
+          "headerBg": "rgba(0, 0, 0, 0)",
+          "cellPadding": "0px 0px 0px 4px"
+        }
+      ]
+    }
+  },
+  {
+    "surface": {
+      "id": "S03",
+      "name": "Product Variants Resource",
+      "url": "http://127.0.0.1:8000/admin/products"
+    },
+    "metrics": {
+      "buttonCount": 152,
+      "buttonsSample": [
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        }
+      ],
+      "tableMetrics": [
+        {
+          "headerBg": "rgba(0, 0, 0, 0)",
+          "cellPadding": "0px 0px 0px 4px"
+        }
+      ]
+    }
+  },
+  {
+    "surface": {
+      "id": "S04",
+      "name": "Stock Movements Resource",
+      "url": "http://127.0.0.1:8000/admin/stock-movements"
+    },
+    "metrics": {
+      "buttonCount": 125,
+      "buttonsSample": [
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        }
+      ],
+      "tableMetrics": []
+    }
+  },
+  {
+    "surface": {
+      "id": "S05",
+      "name": "Direct Transfers Resource",
+      "url": "http://127.0.0.1:8000/admin/direct-transfers"
+    },
+    "metrics": {
+      "buttonCount": 129,
+      "buttonsSample": [
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        }
+      ],
+      "tableMetrics": [
+        {
+          "headerBg": "rgba(0, 0, 0, 0)"
+        }
+      ]
+    }
+  },
+  {
+    "surface": {
+      "id": "S06",
+      "name": "Transfer Requisitions Resource",
+      "url": "http://127.0.0.1:8000/admin/transfer-requisitions"
+    },
+    "metrics": {
+      "buttonCount": 135,
+      "buttonsSample": [
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        }
+      ],
+      "tableMetrics": [
+        {
+          "headerBg": "rgba(0, 0, 0, 0)",
+          "cellPadding": "0px 0px 0px 4px"
+        }
+      ]
+    }
+  },
+  {
+    "surface": {
+      "id": "S07",
+      "name": "In-Transits Resource",
+      "url": "http://127.0.0.1:8000/admin/in-transits"
+    },
+    "metrics": {
+      "buttonCount": 130,
+      "buttonsSample": [
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        }
+      ],
+      "tableMetrics": [
+        {
+          "headerBg": "rgba(0, 0, 0, 0)",
+          "cellPadding": "0px 0px 0px 4px"
+        }
+      ]
+    }
+  },
+  {
+    "surface": {
+      "id": "S08",
+      "name": "Loss Ledgers Resource",
+      "url": "http://127.0.0.1:8000/admin/loss-ledgers"
+    },
+    "metrics": {
+      "buttonCount": 132,
+      "buttonsSample": [
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        }
+      ],
+      "tableMetrics": [
+        {
+          "headerBg": "rgba(0, 0, 0, 0)",
+          "cellPadding": "0px 0px 0px 4px"
+        }
+      ]
+    }
+  },
+  {
+    "surface": {
+      "id": "S09",
+      "name": "Warehouses Resource",
+      "url": "http://127.0.0.1:8000/admin/warehouses"
+    },
+    "metrics": {
+      "buttonCount": 126,
+      "buttonsSample": [
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        }
+      ],
+      "tableMetrics": []
+    }
+  },
+  {
+    "surface": {
+      "id": "S10",
+      "name": "Users Resource",
+      "url": "http://127.0.0.1:8000/admin/users"
+    },
+    "metrics": {
+      "buttonCount": 141,
+      "buttonsSample": [
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        },
+        {
+          "text": "",
+          "bg": "rgba(0, 0, 0, 0)",
+          "height": "36px",
+          "borderRadius": "8px"
+        }
+      ],
+      "tableMetrics": [
+        {
+          "headerBg": "rgba(0, 0, 0, 0)",
+          "cellPadding": "16px 12px 16px 16px"
+        }
+      ]
+    }
+  }
+]
