@@ -24,7 +24,7 @@ trait StockActions
             ->label('Receive Stock')
             ->icon('heroicon-o-arrow-down-tray')
             ->color('success')
-            ->form([
+            ->schema([
                 Select::make('product_id')
                     ->label('Product')
                     ->options(Product::pluck('name', 'id'))
@@ -66,7 +66,7 @@ trait StockActions
             ->label('Ship Stock')
             ->icon('heroicon-o-arrow-up-tray')
             ->color('danger')
-            ->form([
+            ->schema([
                 Select::make('product_id')
                     ->label('Product')
                     ->options(Product::pluck('name', 'id'))
@@ -114,7 +114,7 @@ trait StockActions
         return Action::make('transferStock')
             ->label('Transfer Stock')
             ->icon('heroicon-o-arrows-right-left')
-            ->form([
+            ->schema([
                 Select::make('product_id')
                     ->label('Product')
                     ->options(Product::pluck('name', 'id'))
@@ -161,7 +161,7 @@ trait StockActions
             ->label('Adjustment')
             ->icon('heroicon-o-calculator')
             ->color('warning')
-            ->form([
+            ->schema([
                 Select::make('product_id')
                     ->label('Product')
                     ->options(Product::pluck('name', 'id'))
@@ -204,7 +204,7 @@ trait StockActions
             ->label('Quick Receive')
             ->icon('heroicon-o-plus')
             ->color('success')
-            ->form([
+            ->schema([
                 Select::make('warehouse_id')
                     ->label('Warehouse')
                     ->options(fn (): Collection => $this->getWarehouseOptions())
