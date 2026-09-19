@@ -154,6 +154,64 @@ Scope expansion                -> stop and ask
 
 ---
 
+
+## AI Behavioral Principles
+
+These principles govern how the coding agent reasons, communicates, uses evidence, and handles uncertainty. They complement the project development rules above; they do not replace the Authority and Operating Model, the Non-Trivial Work Gate, Council review, or explicit user approval.
+
+### Epistemic Discipline
+
+The agent must distinguish between:
+
+- **Stated** — explicitly provided by the user or an approved project source.
+- **Observed** — directly verified from the repository, configuration, tool output, tests, or other available evidence.
+- **Inferred** — a conclusion derived from observed information but not explicitly stated.
+- **Proposed** — an implementation option that has not yet been approved.
+- **Approved** — a decision explicitly authorized by the user or an approved governing artifact.
+
+Do not present an inference as a stated requirement, a proposal as an approved decision, or an unverified assumption as an observed fact. When the distinction materially affects implementation, state which category applies.
+
+### Evidence and Verification Honesty
+
+Never claim to have inspected, run, tested, verified, consulted, used, or confirmed something that was not actually inspected, run, tested, verified, consulted, used, or confirmed. If evidence is unavailable, say what is unknown and what evidence would be required. Tool output is evidence, not automatically a project decision.
+
+### Context Awareness
+
+Before asking the user to repeat information, check the available project context, current conversation, project files, approved plans, and applicable documentation. Use existing context when it is sufficient. If multiple materially different interpretations remain possible, identify the ambiguity and follow the Strict Agent Autonomy rules.
+
+### No Unsupported Generalization
+
+Do not turn one observed example into a project-wide rule without evidence. Inspect related implementations and applicable project rules before establishing a convention.
+
+### Facts, Inferences, and Recommendations
+
+For non-trivial implementation reasoning, distinguish **FACT**, **OBSERVATION**, **INFERENCE**, **RECOMMENDATION**, and **APPROVED DECISION**. Do not collapse these categories when doing so could hide a material decision.
+
+### Tool Use
+
+Use the appropriate available tool when it materially improves accuracy. Existing tool preferences remain authoritative, including Context7 for version-sensitive external documentation, Laravel Boost for applicable Laravel-specific MCP capabilities, EnvKit MCP for supported local environment operations, and project-specific skills. Do not use a tool merely because it exists, and do not claim that a tool establishes facts beyond the evidence it returned.
+
+### External Knowledge vs Project Truth
+
+General framework or package knowledge is not automatically project truth. When external knowledge conflicts with the installed codebase, installed package version, approved specification, or explicit user decision, identify and verify the conflict and follow the applicable authority order. Ask the user when a material decision remains unresolved.
+
+### Communication
+
+Keep progress and final responses concise and information-dense. State what was actually completed, important findings, unresolved decisions, and verification performed. Distinguish completed work from proposed next steps. Do not report hypothetical, intended, or partially completed work as completed.
+
+### Decision Boundaries
+
+The agent may make routine implementation decisions when clearly implied by approved requirements and existing project conventions. Stop and ask the user for material decisions involving product behavior, architecture, security, dependencies, scope, data integrity, destructive operations, conflicting requirements, ambiguous acceptance criteria, or new project-wide conventions.
+
+### Privacy and Sensitive Information
+
+Handle project and user information conservatively. Do not intentionally place secrets, credentials, tokens, private keys, passwords, or sensitive production data into source code, documentation, plans, screenshots, logs, prompts, AI references, changelogs, or test fixtures. Avoid exposing sensitive values in reports. Use placeholders or redaction when documenting sensitive configuration.
+
+### Durable Knowledge
+
+Only promote an observation into a durable project rule when it has been established as a project convention or explicitly approved. Do not turn temporary implementation details or speculative ideas into permanent rules without justification.
+
+
 ## Standard AI Development Tools
 
 ### Context7
@@ -416,7 +474,7 @@ These snippets are reference patterns. Use them as examples, not as a substitute
 
 Use `Get $get` to read other form field values for conditional logic:
 
-<code-snippet name="Conditional form field visibility" lang="php">
+```php
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Utilities\Get;
@@ -429,13 +487,13 @@ Select::make('type')
 TextInput::make('company_name')
     ->required()
     ->visible(fn (Get $get): bool => $get('type') === 'business'),
-</code-snippet>
+```
 
 ### Reactive field update
 
 Use `Set $set` inside `afterStateUpdated()` on a `live()` field to mutate another field reactively. Prefer `live(onBlur: true)` on text inputs when per-keystroke updates are unnecessary:
 
-<code-snippet name="Reactive field update" lang="php">
+```php
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Utilities\Set;
 use Illuminate\Support\Str;
@@ -450,13 +508,13 @@ TextInput::make('title')
 
 TextInput::make('slug')
     ->required(),
-</code-snippet>
+```
 
 ### Section and Grid layout
 
 Compose layout by nesting `Section` and `Grid`. Configure column spans intentionally:
 
-<code-snippet name="Section and Grid layout" lang="php">
+```php
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
@@ -472,13 +530,13 @@ Section::make('Details')
                 ->columnSpanFull(),
         ]),
     ]),
-</code-snippet>
+```
 
 ### Repeater for HasMany
 
 Use `Repeater` for appropriate inline `HasMany` management. `relationship()` binds the repeater to the corresponding model relationship:
 
-<code-snippet name="Repeater for HasMany" lang="php">
+```php
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\TextInput;
 
@@ -491,25 +549,24 @@ Repeater::make('qualifications')
             ->required(),
     ])
     ->columns(2),
-</code-snippet>
+```
 
 ### Computed table column value
 
 Use `state()` with a closure to compute derived column values:
 
-<code-snippet name="Computed table column value" lang="php">
+```php
 use Filament\Tables\Columns\TextColumn;
 
 TextColumn::make('full_name')
     ->state(fn (User $record): string => "{$record->first_name} {$record->last_name}"),
-
-</code-snippet>
+```
 
 ### Table filters
 
 Use `SelectFilter` for enum or relationship filters, and `Filter` with a `query()` closure for custom logic:
 
-<code-snippet name="Table filters" lang="php">
+```php
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
@@ -522,13 +579,14 @@ SelectFilter::make('author')
 
 Filter::make('verified')
     ->query(fn (Builder $query) => $query->whereNotNull('email_verified_at')),
-</code-snippet>
+```
 
 ### Action with modal form
 
 Actions encapsulate optional modal forms and behavior:
 
-<code-snippet name="Action with modal form" lang="php">ment\Actions\Action;
+```php
+use Filament\Actions\Action;
 use Filament\Forms\Components\TextInput;
 
 Action::make('updateEmail')
@@ -538,11 +596,11 @@ Action::make('updateEmail')
             ->required(),
     ])
     ->action(fn (array $data, User $record) => $record->update($data)),
-</code-snippet>
+```
 
 ### Table test
 
-<code-snippet name="Table test" lang="php">
+```php
 use function Pest\Livewire\livewire;
 
 livewire(ListUsers::class)
@@ -554,7 +612,7 @@ livewire(ListUsers::class)
 
 ### Create resource test
 
-<code-snippet name="Create resource test" lang="php">
+```php
 use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Livewire\livewire;
 
@@ -572,13 +630,13 @@ assertDatabaseHas(User::class, [
     'name' => 'Test',
     'email' => 'test@example.com',
 ]);
-</code-snippet>
+```
 
 ### Edit resource test
 
 For edit pages, pass the record identifier and call `save()` rather than `create()`:
 
-<code-snippet name="Edit resource test" lang="php">
+```php
 use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Livewire\livewire;
 
@@ -596,7 +654,7 @@ assertDatabaseHas(User::class, [
 
 ### Testing validation
 
-<code-snippet name="Testing validation" lang="php">
+```php
 use function Pest\Livewire\livewire;
 
 livewire(CreateUser::class)
@@ -610,13 +668,13 @@ livewire(CreateUser::class)
         'email' => 'email',
     ])
     ->assertNotNotified();
-</code-snippet>
+```
 
 ### Calling actions
 
 Use the installed Filament testing API for page and table actions. For table actions, use `TestAction::make(...)->table($record)`:
 
-<code-snippet name="Calling actions" lang="php">
+```php
 use Filament\Actions\Testing\TestAction;
 use function Pest\Livewire\livewire;
 
@@ -625,7 +683,7 @@ livewire(ListUsers::class)
         'role' => 'admin',
     ])
     ->assertNotified();
-</code-snippet>
+```
 
 ### Correct namespaces
 
@@ -635,21 +693,17 @@ livewire(ListUsers::class)
 - Schema utilities (`Get`, `Set`, etc.): `Filament\Schemas\Components\Utilities\`
 - Table columns (`TextColumn`, `IconColumn`, etc.): `Filament\Tables\Columns\`
 - Table filters (`SelectFilter`, `Filter`, etc.): `Filament\Tables\Filters\`
-- Actions (`DeleteAction`, `CreateAction`, etc.): `Filament\Actions\`. Never use `Filament\Tables\Actions\`, `Filament\Forms\Actions\`, or any other sub-namespace for actions.
-- Icons: `Filament\Support\Icons\Heroicon` enum (e.g., `Heroicon::PencilSquare`)
+- Actions (`DeleteAction`, `CreateAction`, etc.): `Filament\Actions\`
+- Icons: `Filament\Support\Icons\Heroicon`
 
+### Common mistakes
 
-### Common Mistakes
-
-- **Never assume public file visibility.** File visibility is `private` by default. Always use `->visibility('public')` when public access is needed.
-- **Never assume full-width layout.** `Grid`, `Section`, `Fieldset`, and `Repeater` do not span all columns by default.
-- **Use `Select::make('author_id')->relationship('author', 'name')` for BelongsTo fields.** `BelongsToSelect` does not exist in v4.
-- **`Repeater` uses `->schema()`, not `->fields()`.**
-- **Never add `->dehydrated(false)` to fields that need to be saved.** It strips the value from form state before `->action()` or the save handler runs. Only use it for helper/UI-only fields.
-- **Use correct property types when overriding `Page`, `Resource`, and `Widget` properties.** These properties have union types or changed modifiers that must be preserved:
-  - `$navigationIcon`: `protected static string | BackedEnum | null` (not `?string`)
-  - `$navigationGroup`: `protected static string | UnitEnum | null` (not `?string`)
-  - `$view`: `protected string` (not `protected static string`) on `Page` and `Widget` classes
+- **Never assume public file visibility.** File visibility is private by default. Explicitly configure public visibility when public access is required.
+- **Never assume full-width layout.** `Grid`, `Section`, `Fieldset`, and `Repeater` do not necessarily span all columns by default; configure column spans intentionally.
+- **Use relationship selects for BelongsTo fields** according to the installed Filament API.
+- **`Repeater` uses `schema()`, not `fields()`.**
+- **Do not add `dehydrated(false)` to fields that need to be saved.** Use it only for helper/UI-only fields when appropriate.
+- **Preserve correct property types** when overriding `Page`, `Resource`, and `Widget` properties; verify the installed Filament version before overriding framework properties.
 
 ## Testing Standard
 
@@ -1054,4 +1108,3 @@ When the project changes:
 
 Do not allow this file to become a second, conflicting source of truth.
 
-</laravel-boost-guidelines>

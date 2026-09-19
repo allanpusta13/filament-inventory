@@ -1,121 +1,68 @@
-# AI Implementation Plan — [Feature / Task]
+# AI Implementation Plan
 
-## Metadata
-
-- **Status:** PENDING
-- **Created:** YYYY-MM-DD
-- **Updated:** YYYY-MM-DD
-- **Plan version:** 1
-- **Approval:** Not approved
+Status: `PENDING`
 
 ## Objective
 
-Describe exactly what this task must achieve.
+## Scope
+### In Scope
+### Out of Scope
 
 ## Governing Inputs
-
-- PRD:
+- User request:
 - Approved specification:
-- Relevant existing implementation:
-- Relevant AI references:
-- Other constraints:
-
-## Scope
-
-### In scope
-
-- 
-
-### Out of scope
-
-- 
+- System Blueprint:
+- Existing conventions:
+- Research:
 
 ## Discovery Findings
-
-- 
+### Graphify
+- Updated:
+- Relationships/impact:
+- Findings requiring verification:
+### Direct Source Inspection
+### Context7
+### EnvKit
 
 ## Council Review
-
 ### Product / PM
-
-- Finding:
-- Decision needed:
-
 ### Security
-
-- Finding:
-- Decision needed:
-
 ### Architecture
-
-- Finding:
-- Decision needed:
-
 ### QA
-
-- Finding:
-- Verification requirement:
-
 ### Skeptic
 
-- Finding:
-- Risk / assumption:
-
 ## Decisions Requiring User Approval
-
-List only decisions that materially affect product behavior, architecture, security, dependencies, scope, data, or destructive operations.
-
-- 
+1.
 
 ## Implementation Tasks
-
 ### Phase 0 — Discovery
-
-- [ ] Task
-
+- [ ]
 ### Phase 1 — Plan
-
-- [ ] Task
-
+- [ ]
 ### Phase 2 — Build
-
-- [ ] Task
-
-### Phase 3 — Test & Refine
-
-- [ ] Task
+- [ ]
+### Phase 3 — Test / Refine
+- [ ]
 
 ## Verification / Evidence
-
-- [ ] Pest Unit / Feature tests
+- [ ] Pest Unit/Feature
 - [ ] Standalone Playwright E2E where applicable
-- [ ] Security pass
-- [ ] Lint / formatting
-- [ ] Build / migration verification where applicable
-- [ ] Acceptance criteria verified
+- [ ] Security verification
+- [ ] Build/static checks where applicable
+- [ ] Runtime verification
+- [ ] Graphify refresh after material changes
 
 ## Stop Conditions
+Stop for material product, architecture, security, data, dependency, destructive/consequential, or plan-deviation decisions.
 
-Implementation must stop and return to the user if:
+## Approval Metadata
+- Council status:
+- User approval:
+- Approved date:
 
-- a material product decision appears
-- a material architectural decision appears
-- a material security decision appears
-- a new dependency is required
-- scope must expand
-- a destructive or irreversible operation is required
-- the approved plan no longer describes the required implementation
-
-## Approval
-
-- **Status:** PENDING
-- **Approved by:** —
-- **Approved at:** —
-- **Approval source:** User approval in conversation required
-
-## Completion
-
-- **Status:** —
-- **Completed at:** —
-- **Evidence:** —
-- **Deviations:** —
+## Completion Metadata
+- Status:
+- Tests:
+- Evidence:
+- Deviations:
+- Completion date:

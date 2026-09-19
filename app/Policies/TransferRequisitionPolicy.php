@@ -81,6 +81,15 @@ class TransferRequisitionPolicy
         ], true);
     }
 
+    public function negotiate(User $user, TransferRequisition $requisition): bool
+    {
+        return in_array($requisition->status, [
+            TransferRequisitionStatus::Requested,
+            TransferRequisitionStatus::UnderReviewFulfiller,
+            TransferRequisitionStatus::UnderReviewRequestor,
+        ], true);
+    }
+
     public function recordLoss(User $user, TransferRequisition $requisition): bool
     {
         return in_array($requisition->status, [

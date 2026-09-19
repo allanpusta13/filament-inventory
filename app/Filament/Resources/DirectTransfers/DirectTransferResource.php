@@ -20,6 +20,8 @@ class DirectTransferResource extends Resource
 {
     protected static ?string $model = StockMovement::class;
 
+    protected static ?string $navigationLabel = 'Direct Transfers';
+
     protected static string|UnitEnum|null $navigationGroup = 'OPERATIONS';
 
     protected static ?int $navigationSort = 2;

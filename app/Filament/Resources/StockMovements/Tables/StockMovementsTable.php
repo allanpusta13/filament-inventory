@@ -39,13 +39,6 @@ class StockMovementsTable
                 TextColumn::make('type')
                     ->label('Movement Type')
                     ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'receive', 'transfer_in', 'transit_in' => 'success',
-                        'ship', 'transfer_out', 'transit_out' => 'info',
-                        'adjustment' => 'warning',
-                        'loss' => 'danger',
-                        default => 'gray',
-                    })
                     ->searchable()
                     ->sortable(),
 

@@ -113,20 +113,25 @@ class TransferRequisitionItemRevision extends Model
 
     public function accept(): void
     {
-        if ($this->isResolved()) {
-            throw new Exception("Revision {$this->id} is already resolved ({$this->status->value}).");
-        }
-
+        $this->ensureCanTransitionTo(RevisionStatus::Accepted);
         $this->update(['status' => RevisionStatus::Accepted, 'responded_at' => now()]);
     }
 
     public function reject(): void
     {
+        $this->ensureCanTransitionTo(RevisionStatus::Rejected);
+        $this->update(['status' => RevisionStatus::Rejected, 'responded_at' => now()]);
+    }
+
+    public function ensureCanTransitionTo(RevisionStatus $targetStatus): void
+    {
         if ($this->isResolved()) {
-            throw new Exception("Revision {$this->id} is already resolved ({$this->status->value})..");
+            throw new Exception("Revision {$this->id} already resolved ({$this->status->value}).");
         }
 
-        $this->update(['status' => RevisionStatus::Rejected, 'responded_at' => now()]);
+        if ($this->status === RevisionStatus::Superseded) {
+            throw new Exception("Revision {$this->id} is superseded and cannot be {$targetStatus->value}.");
+        }
     }
 
     public function casts(): array

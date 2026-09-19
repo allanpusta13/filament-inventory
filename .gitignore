@@ -128,3 +128,7 @@ test-widget3.php
 # Remove run_tests
 run_tests.php
 
+docs/audit_artifacts/
+docs/audit_artifacts/
+docs/00-project/ai/references/
+tests/playwright/

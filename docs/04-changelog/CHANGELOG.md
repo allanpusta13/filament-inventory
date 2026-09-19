@@ -1,16 +1,10 @@
 # Changelog
 
-All notable project-level changes should be recorded here.
+## Unreleased
 
-## [Unreleased]
-
-- Established the Vibe Coding Standard and canonical documentation layout.
-
-## Documentation naming
-
-- Renamed `docs/00-project/vibe-coding/blueprint.md` to `docs/00-project/vibe-coding/standard.md` to distinguish the Vibe Coding Standard from the project/system blueprint at `docs/00-project/blueprint.md`.
-- Updated all package references accordingly.
-
-- Renamed the Vibe Coding process document to `standard.md` to distinguish it from `docs/00-project/blueprint.md`, the system/project blueprint.
-- Added Context7 as the standard AI reference tool for version-sensitive dependency research.
-- Added EnvKit as the standard local PHP development environment for supported platforms, with bounded MCP autonomy.
+- Added mandatory Graphify-first session initialization and primary codebase knowledge-layer policy.
+- Preserved Context7 as the required version-sensitive external reference tool.
+- Preserved EnvKit as the standard local PHP environment/tooling layer with safe-operation autonomy and approval boundaries.
+- Added compatible AI behavioral principles: epistemic discipline, outcome truthfulness, context awareness, scope discipline, uncertainty handling, destructive-action protection, browser safety, and agent/subagent discipline.
+- Preserved strict user authority for material product, architecture, security, data, dependency, and consequential decisions.
+- Preserved Council review, non-trivial work approval gate, Evidence Before Done, and Pest Unit/Feature + standalone Playwright E2E.

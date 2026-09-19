@@ -1,22 +1,35 @@
 # Standard AI Tools
 
+## Graphify
+
+**Role:** primary codebase knowledge layer.
+
+**Required first operation:** update Graphify at the beginning of every AI session, verify it is current/available, then use it for code structure, relationships, dependencies, callers/callees, and impact analysis.
+
+**Rules:** verify important findings against source/tests/runtime; treat inferred/ambiguous edges as hypotheses; refresh after material code changes; never claim it was used/updated unless it actually was.
+
+**Boundary:** Graphify is context, not project authority.
+
 ## Context7
 
-Context7 is a standard AI reference tool for version-sensitive framework, package, SDK, API, setup, configuration, and integration work. Use it before implementation when the external dependency's version or current API materially matters.
+**Role:** required reference tool for version-sensitive framework, package, library, and API research.
 
-Rules:
-- Prefer version-specific documentation matching the project's installed or approved version.
-- Do not treat Context7 output as authorization or as a replacement for tests and local code inspection.
-- Record material source/version decisions in the plan or research record.
-- Never commit Context7 API keys or credentials.
+**Boundary:** does not override project-specific requirements, source, Blueprint, approved plans, tests, or user decisions.
 
 ## EnvKit
 
-EnvKit is the standard local PHP development environment for supported platforms. When used, document the project site, PHP version, database, and required services.
+**Role:** standard local PHP development environment/tooling layer.
 
-EnvKit MCP autonomy is bounded:
-- safe/read-only inspection and diagnostics: autonomous
-- destructive/consequential environment changes: explicit user approval unless already covered by an approved plan
-- production/staging management: outside EnvKit's authority
+**Autonomy:** safe/read-only operations are autonomous; destructive/consequential operations require explicit approval unless already in an approved plan; production/staging is outside EnvKit authority.
 
-This document is reference guidance. `CLAUDE.md`, the Vibe Coding Standard, approved specifications, and current user instructions remain authoritative.
+## Relationship
+
+```text
+Graphify   → What is connected in this codebase?
+Context7   → What does this version of the external technology do?
+EnvKit     → What is happening in the local development environment?
+Pest       → Does Unit/Feature behavior pass?
+Playwright → Does browser behavior pass E2E?
+Blueprint  → What is the system supposed to be?
+User       → What material decision is approved?
+```

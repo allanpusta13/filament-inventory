@@ -3,7 +3,13 @@
     "name": "codewithdennis/larament",
     "type": "project",
     "description": "Larament is a time-saving starter kit to quickly launch Laravel 13.x projects. It includes FilamentPHP 5.x pre-installed and configured, along with additional tools and features to streamline your development workflow.",
-    "keywords": ["laravel", "framework", "filamentphp", "starter-kit", "larament"],
+    "keywords": [
+        "laravel",
+        "framework",
+        "filamentphp",
+        "starter-kit",
+        "larament"
+    ],
     "license": "MIT",
     "require": {
         "php": "^8.3",
@@ -89,7 +95,8 @@
             "@php artisan config:clear --ansi",
             "@php artisan test"
         ],
-        "pest": "./vendor/bin/pest --parallel",
+        "pest": "./vendor/bin/pest",
+        "pest:parallel": "./vendor/bin/pest --parallel",
         "rector": "./vendor/bin/rector process --ansi",
         "pint": "./vendor/bin/pint",
         "phpstan": "./vendor/bin/phpstan analyse",

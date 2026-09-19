@@ -6,10 +6,12 @@ namespace App\Services;
 
 use App\Enums\NegotiationSide;
 use App\Enums\RevisionStatus;
+use App\Enums\TransferRequisitionStatus;
+use App\Exceptions\NegotiationNotAllowedException;
+use App\Models\TransferRequisition;
 use App\Models\TransferRequisitionItem;
 use App\Models\TransferRequisitionItemRevision;
 use App\Models\User;
-use Exception;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -23,6 +25,45 @@ use Illuminate\Support\Facades\DB;
  */
 class NegotiationService
 {
+    /**
+     * Guard: verify the requisition is in a negotiable status and the revision
+     * is still pending. Throws NegotiationNotAllowedException with actionable
+     * message if guard fails.
+     */
+    public function assertNegotiable(TransferRequisitionItemRevision $revision, string $action): void
+    {
+        $requisition = $revision->item->transferRequisition;
+
+        if (! in_array($requisition->status, [
+            TransferRequisitionStatus::Requested,
+            TransferRequisitionStatus::UnderReviewFulfiller,
+            TransferRequisitionStatus::UnderReviewRequestor,
+        ], true)) {
+            throw new NegotiationNotAllowedException($requisition, $action);
+        }
+
+        if ($revision->status->isResolved()) {
+            throw new NegotiationNotAllowedException(
+                $requisition,
+                "{$action} (revision {$revision->id} is {$revision->status->value})"
+            );
+        }
+
+        // Optional: verify side matches current turn
+        $expectedSide = match ($requisition->status) {
+            TransferRequisitionStatus::UnderReviewFulfiller => NegotiationSide::Fulfiller,
+            TransferRequisitionStatus::UnderReviewRequestor => NegotiationSide::Requestor,
+            default => null,
+        };
+
+        if ($expectedSide !== null && $revision->side !== $expectedSide) {
+            throw new NegotiationNotAllowedException(
+                $requisition,
+                "{$action} (wrong side: {$revision->side->value}, expected {$expectedSide->value})"
+            );
+        }
+    }
+
     /**
      * Open a new negotiation thread on an item, or start a counter-thread if
      * $respondsTo is given. Prefer TransferRequisitionItemRevision::counterWith()
@@ -71,11 +112,9 @@ class NegotiationService
      */
     public function accept(TransferRequisitionItemRevision $revision): void
     {
-        DB::transaction(function () use ($revision) {
-            if ($revision->status->isResolved()) {
-                throw new Exception("Revision {$revision->id} is already resolved ({$revision->status->value}) and cannot be accepted again.");
-            }
+        $this->assertNegotiable($revision, 'accept');
 
+        DB::transaction(function () use ($revision) {
             $revision->accept();
 
             $revision->item()->update([
@@ -90,11 +129,9 @@ class NegotiationService
 
     public function reject(TransferRequisitionItemRevision $revision): void
     {
-        DB::transaction(function () use ($revision) {
-            if ($revision->status->isResolved()) {
-                throw new Exception("Revision {$revision->id} is already resolved ({$revision->status->value}) and cannot be rejected.");
-            }
+        $this->assertNegotiable($revision, 'reject');
 
+        DB::transaction(function () use ($revision) {
             $revision->reject();
         });
     }
@@ -111,9 +148,7 @@ class NegotiationService
         ?int $substituteProductVariantId = null,
         ?string $reason = null,
     ): TransferRequisitionItemRevision {
-        if ($revision->status->isResolved()) {
-            throw new Exception("Revision {$revision->id} is already resolved ({$revision->status->value}) and cannot be countered.");
-        }
+        $this->assertNegotiable($revision, 'counter');
 
         return $revision->counterWith([
             'user_id' => $user->id,
