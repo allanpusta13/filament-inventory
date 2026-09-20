@@ -68,7 +68,8 @@ class DirectTransfersTable
                     ->label('WAREHOUSE')
                     ->relationship('warehouse', 'name')
                     ->searchable()
-                    ->preload(),
+                    ->preload()
+                    ->visible(fn (): bool => auth()->user()?->isAdmin() ?? false || auth()->user()?->isAuditor() ?? false),
             ])
             ->recordActions([
                 ViewAction::make(),

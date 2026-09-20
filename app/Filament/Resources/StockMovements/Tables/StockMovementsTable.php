@@ -78,7 +78,8 @@ class StockMovementsTable
 
                 SelectFilter::make('warehouse_id')
                     ->relationship('warehouse', 'name')
-                    ->label('Warehouse'),
+                    ->label('Warehouse')
+                    ->visible(fn (): bool => auth()->user()?->isAdmin() ?? false || auth()->user()?->isAuditor() ?? false),
 
                 TrashedFilter::make(),
             ])

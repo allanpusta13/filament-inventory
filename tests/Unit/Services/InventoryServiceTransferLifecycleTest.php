@@ -275,10 +275,12 @@ describe('scanToReceive', function () {
     });
 
     it('falls back to a zero cost snapshot when the variant has no current price', function () {
-        $requisition = makeConfirmedRequisition($this->service, $this->origin, $this->destination, $this->variant);
+        $variantWithoutPrice = ProductVariant::factory()->withoutPrice()->create();
+        $this->service->recordMovement($variantWithoutPrice->id, $this->origin->id, StockMovementType::Receive, 1000);
+
+        $requisition = makeConfirmedRequisition($this->service, $this->origin, $this->destination, $variantWithoutPrice);
         $this->service->dispatchTransfer($requisition->id);
 
-        // No ProductVariantPrice ever created for $this->variant.
         $this->service->scanToReceive($requisition->id, []);
 
         $ledger = LossLedger::where('transfer_requisition_id', $requisition->id)->first();

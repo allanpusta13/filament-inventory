@@ -73,13 +73,15 @@ class TransferRequisitionsTable
                     ->label('ORIGIN WAREHOUSE')
                     ->relationship('fromWarehouse', 'name')
                     ->searchable()
-                    ->preload(),
+                    ->preload()
+                    ->visible(fn (): bool => auth()->user()?->isAdmin() ?? false || auth()->user()?->isAuditor() ?? false),
 
                 SelectFilter::make('to_warehouse_id')
                     ->label('RECEIVING WAREHOUSE')
                     ->relationship('toWarehouse', 'name')
                     ->searchable()
-                    ->preload(),
+                    ->preload()
+                    ->visible(fn (): bool => auth()->user()?->isAdmin() ?? false || auth()->user()?->isAuditor() ?? false),
 
                 TrashedFilter::make(),
             ])

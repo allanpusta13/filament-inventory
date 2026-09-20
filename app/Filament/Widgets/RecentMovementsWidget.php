@@ -21,6 +21,12 @@ class RecentMovementsWidget extends TableWidget
     public function getRecentMovements(bool $bypassCache = false)
     {
         $user = auth()->user();
+
+        // Hide sensitive movement data from non-admin/auditor roles
+        if (! ($user?->isAdmin() ?? false) && ! ($user?->isAuditor() ?? false)) {
+            return collect();
+        }
+
         $firstWarehouseId = optional($user->warehouses->first())?->id;
         $cacheKey = 'recent_movements_'.$user->id.'_'.$firstWarehouseId;
 
@@ -50,7 +56,6 @@ class RecentMovementsWidget extends TableWidget
                     'quantity' => $movement->quantity,
                     'unit_name' => $movement->unit_name_used,
                     'created_at' => $movement->created_at,
-                    'created_by' => $movement->createdBy?->name ?? 'System',
                     'created_by_name' => $movement->createdBy?->name ?? 'System',
                     'reference_code' => $movement->reference_code,
                 ];
@@ -71,17 +76,14 @@ class RecentMovementsWidget extends TableWidget
                 TextColumn::make('productVariant.sku')
                     ->label('SKU')
                     ->fontFamily('mono')
-                    ->searchable()
                     ->copyable(),
 
                 TextColumn::make('productVariant.name')
                     ->label('VARIANT')
-                    ->searchable()
                     ->limit(30),
 
                 TextColumn::make('warehouse.name')
-                    ->label('WAREHOUSE')
-                    ->searchable(),
+                    ->label('WAREHOUSE'),
 
                 TextColumn::make('type')
                     ->label('TYPE')
@@ -90,20 +92,19 @@ class RecentMovementsWidget extends TableWidget
                 TextColumn::make('quantity')
                     ->label('QTY (BASE)')
                     ->numeric()
-                    ->color(fn (int $state): string => $state >= 0 ? 'success' : 'danger'),
+                    ->color(fn (int $state): string => $state < 0 ? 'danger' : 'success'),
 
                 TextColumn::make('unit_name')
-                    ->label('UNIT')
-                    ->badge(),
+                    ->label('UNIT'),
 
                 TextColumn::make('created_at')
                     ->label('TIME')
-                    ->since(),
+                    ->since()
+                    ->sortable(),
 
                 TextColumn::make('reference_code')
                     ->label('REF')
-                    ->limit(20)
-                    ->placeholder('—'),
+                    ->limit(20),
             ])
             ->paginated(false)
             ->defaultSort('created_at', 'desc');

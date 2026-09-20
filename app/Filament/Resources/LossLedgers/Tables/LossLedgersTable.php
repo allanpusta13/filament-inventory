@@ -96,7 +96,8 @@ class LossLedgersTable
 
                 SelectFilter::make('warehouse_id')
                     ->label('WAREHOUSE')
-                    ->relationship('warehouse', 'name'),
+                    ->relationship('warehouse', 'name')
+                    ->visible(fn (): bool => auth()->user()?->isAdmin() ?? false || auth()->user()?->isAuditor() ?? false),
             ])
             ->actions([
                 ViewAction::make(),
@@ -138,13 +139,17 @@ class LossLedgersTable
                             ->label('Notes')
                             ->columnSpanFull(),
                     ])
-                    ->action(function (array $data, $record) {
-                        $record->lossLedgers()->create([
+                    ->action(function (array $data) {
+                        $variant = \App\Models\ProductVariant::find($data['product_variant_id']);
+                        $unitCost = \App\Models\LossLedger::snapshotUnitCostFrom($variant);
+                        $totalQty = (int) $data['lost_base_qty'] + (int) $data['damaged_base_qty'];
+                        $totalFinancialLoss = \App\Models\LossLedger::calculateTotalFinancialLoss($unitCost, $totalQty);
+                        \App\Models\LossLedger::create([
                             'product_variant_id' => $data['product_variant_id'],
                             'loss_category' => $data['loss_category'],
                             'lost_base_qty' => $data['lost_base_qty'],
                             'damaged_base_qty' => $data['damaged_base_qty'],
-                            'total_financial_loss' => $data['total_financial_loss'],
+                            'total_financial_loss' => $totalFinancialLoss,
                             'notes' => $data['notes'],
                             'recorded_by' => auth()->id(),
                             'recorded_at' => now(),

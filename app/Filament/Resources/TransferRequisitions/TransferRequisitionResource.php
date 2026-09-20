@@ -63,6 +63,7 @@ class TransferRequisitionResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
+            ->with(['fromWarehouse', 'toWarehouse', 'items.productVariant', 'requestedBy', 'approvedBy'])
             ->when(auth()->user()?->isAdmin() === false, function (Builder $query) {
                 $warehouseIds = auth()->user()->warehouses()->pluck('warehouses.id')->toArray();
                 $query->where(function ($q) use ($warehouseIds) {

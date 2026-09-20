@@ -21,10 +21,16 @@ class LowStockAlertsWidget extends TableWidget
 
     public function getLowStockAlerts(): Collection
     {
+        $user = auth()->user();
+
+        // Hide sensitive low stock data from non-admin/auditor roles
+        if (! ($user?->isAdmin() ?? false) && ! ($user?->isAuditor() ?? false)) {
+            return collect();
+        }
+
         $cacheKey = 'low_stock_alerts_'.auth()->id().'_'.optional(auth()->user()->warehouses->first())?->id;
 
-        return Cache::remember($cacheKey, 300, function () {
-            $user = auth()->user();
+        return Cache::remember($cacheKey, 300, function () use ($user) {
             $warehouseIds = $user->warehouses->pluck('id')->toArray();
 
             return ProductVariant::whereHas('stockMovements', function ($query) use ($warehouseIds) {
@@ -109,7 +115,6 @@ class LowStockAlertsWidget extends TableWidget
                         return $alert['warehouses'][0]['shortfall'] ?? 0;
                     })
                     ->numeric()
-
                     ->color('danger'),
             ])
             ->paginated(false)

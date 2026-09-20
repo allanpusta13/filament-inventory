@@ -42,6 +42,7 @@ final class AdminPanelProvider extends PanelProvider
             )
             ->sidebarCollapsibleOnDesktop()
             ->maxContentWidth(Width::Full)
+            ->sidebarWidth('280px')
 //            ->topNavigation()
             ->colors([
                 'primary' => Color::Blue,

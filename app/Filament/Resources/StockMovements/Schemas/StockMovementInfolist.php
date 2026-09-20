@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\StockMovements\Schemas;
 
+use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Schema;
 
@@ -74,6 +75,13 @@ class StockMovementInfolist
             TextEntry::make('updated_at')
                 ->label('Updated At')
                 ->dateTime('M d, Y H:i'),
+
+            IconEntry::make('createdBy.name')
+                ->label('Created By')
+                ->icon('heroicon-o-user-circle')
+                ->iconColor('primary')
+                ->size(IconEntry\IconEntrySize::Large)
+                ->extraAttributes(['aria-label' => 'Created by user']),
         ]);
     }
 }
