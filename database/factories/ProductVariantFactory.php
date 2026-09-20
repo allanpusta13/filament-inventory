@@ -6,6 +6,7 @@ namespace Database\Factories;
 
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\ProductVariantPrice;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -14,7 +15,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 class ProductVariantFactory extends Factory
 {
     /**
-     * Define the model's default state.
+     * Define model's default state.
      *
      * @return array<string, mixed>
      */
@@ -30,5 +31,17 @@ class ProductVariantFactory extends Factory
             'attributes' => ['roast' => fake()->randomElement(['Light', 'Medium', 'Dark'])],
             'images' => [],
         ];
+    }
+
+    public function withPrice(): static
+    {
+        return $this->state([])->afterCreating(function (ProductVariant $variant) {
+            ProductVariantPrice::factory()->forVariant($variant)->create();
+        });
+    }
+
+    public function withoutPrice(): static
+    {
+        return $this->state([]);
     }
 }
