@@ -17,7 +17,6 @@ use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Support\Enums\Platform;
 use Filament\Support\Enums\Width;
-use Filament\Support\Icons\Heroicon;
 use Filament\Widgets\AccountWidget;
 use Filament\Widgets\FilamentInfoWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -52,14 +51,10 @@ final class AdminPanelProvider extends PanelProvider
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->navigationGroups([
-                NavigationGroup::make('CATALOG')
-                   ,
-                NavigationGroup::make('OPERATIONS')
-                    ,
-                NavigationGroup::make('AUDIT LEDGERS')
-                    ,
-                NavigationGroup::make('SYSTEM ADMIN')
-                   ,
+                NavigationGroup::make('CATALOG'),
+                NavigationGroup::make('OPERATIONS'),
+                NavigationGroup::make('AUDIT LEDGERS'),
+                NavigationGroup::make('SYSTEM ADMIN'),
             ])
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->strictAuthorization()
