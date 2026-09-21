@@ -863,6 +863,8 @@ Simple CRUD resources, System Admin-style (like `WarehouseResource`) — drawer 
 
 The following is a working sketch, not final production code — it follows the parent blueprint's thin-Resource / `Schemas/` / `Tables/` directory split (Section 1) exactly, so an implementer can drop these files into the same directory shape as `TransferRequisitionResource`. Names, field lists, and modal widths match the abstract description above; adjust only where Phase 0 of the implementation prompt's codebase audit finds real divergence.
 
+> **`[Verified v11.1]`** Cross-checked against Filament v5's own documentation (`filamentphp.com/docs/5.x`) on 2026-09-21: the official resource generator places **Form, Table, and Infolist** classes all under the same `Schemas/` subdirectory (e.g. `App\Filament\Resources\Customers\Schemas\CustomerForm`, `.../CustomerInfolist`) — there is no separate `Infolists/` directory in v5, and table classes alone get their own `Tables/` subdirectory. The directory tree below and the parent blueprint's own `TransferRequisitionInfolist` placement already follow this correctly. Also confirmed against the docs: table actions accept a `->schema([...])` closure that can be a function of the acted-upon `$record` (injected as a typed parameter, the same as the `->action(function (array $data, Post $record) {...})` closure signature), which is exactly the mechanism `receivePurchase`'s and `dispatchSale`'s per-line-item dynamic modals below rely on — this is standard, documented v5 behavior, not a novel technique.
+
 ```
 app/Filament/Resources/
 ├── PurchaseOrders/
@@ -1505,6 +1507,246 @@ class SupplierForm
 `CustomerForm` is field-for-field identical (same shape as `Supplier` — kept as two separate classes rather than a shared trait/base, matching the parent blueprint's preference for explicit, un-abstracted resource code per the thin-class pattern in Section 1).
 
 `SupplierResource` / `CustomerResource` themselves follow `WarehouseResource`'s exact thin pattern (Section 6, "System Admin" of the parent blueprint) — drawer-style `EditAction`/`CreateAction` at `Width::Large`, no infolist needed for such simple master data, standard `DeleteAction`/`RestoreAction` pair guarded by `restrictOnDelete` at the DB layer.
+
+### PurchaseOrderInfolist.php
+
+Mirrors `TransferRequisitionInfolist`'s structure (profile grid + repeatable line-item entry) — placed under `Schemas/`, per the `[Verified v11.1]` note above.
+
+```php
+namespace App\Filament\Resources\PurchaseOrders\Schemas;
+
+use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
+use Filament\Support\Enums\FontWeight;
+use Filament\Support\Icons\Heroicon;
+
+class PurchaseOrderInfolist
+{
+    public static function configure(Schema $schema): Schema
+    {
+        return $schema
+            ->schema([
+                Grid::make(3)
+                    ->schema([
+                        Section::make('PURCHASE ORDER PROFILE')
+                            ->icon(Heroicon::DocumentText)
+                            ->schema([
+                                Grid::make(2)
+                                    ->schema([
+                                        TextEntry::make('reference_code')
+                                            ->label('REFERENCE CODE')
+                                            ->weight(FontWeight::Bold)
+                                            ->size('lg')
+                                            ->copyable()
+                                            ->color('primary'),
+
+                                        TextEntry::make('status')
+                                            ->label('STATUS')
+                                            ->badge(),
+
+                                        TextEntry::make('supplier.name')
+                                            ->label('SUPPLIER')
+                                            ->icon(Heroicon::BuildingStorefront),
+
+                                        TextEntry::make('warehouse.name')
+                                            ->label('RECEIVING WAREHOUSE')
+                                            ->icon(Heroicon::BuildingOffice2),
+
+                                        TextEntry::make('update_cost_price')
+                                            ->label('UPDATES CATALOG COST')
+                                            ->badge()
+                                            ->color(fn (bool $state) => $state ? 'warning' : 'gray')
+                                            ->formatStateUsing(fn (bool $state) => $state ? 'Yes' : 'No'),
+                                    ]),
+                            ])
+                            ->columnSpan(2),
+
+                        Section::make('SIGN-OFFS')
+                            ->icon(Heroicon::ShieldCheck)
+                            ->schema([
+                                TextEntry::make('orderedBy.name')
+                                    ->label('ORDERED BY')
+                                    ->icon(Heroicon::User)
+                                    ->placeholder('—'),
+
+                                TextEntry::make('receivedBy.name')
+                                    ->label('RECEIVED BY')
+                                    ->icon(Heroicon::ArchiveBoxArrowDown)
+                                    ->placeholder('Pending Intake'),
+
+                                TextEntry::make('ordered_at')
+                                    ->label('ORDERED AT')
+                                    ->dateTime('M j, Y H:i')
+                                    ->placeholder('—'),
+
+                                TextEntry::make('received_at')
+                                    ->label('RECEIVED AT')
+                                    ->dateTime('M j, Y H:i')
+                                    ->placeholder('—'),
+                            ])
+                            ->columnSpan(1),
+
+                        Section::make('LINE ITEMS')
+                            ->icon(Heroicon::ClipboardDocumentList)
+                            ->schema([
+                                RepeatableEntry::make('items')
+                                    ->label('')
+                                    ->schema([
+                                        Grid::make(6)
+                                            ->schema([
+                                                TextEntry::make('productVariant.sku')
+                                                    ->label('SKU')
+                                                    ->weight(FontWeight::Bold)
+                                                    ->columnSpan(1),
+
+                                                TextEntry::make('productVariant.name')
+                                                    ->label('PRODUCT')
+                                                    ->columnSpan(2),
+
+                                                TextEntry::make('ordered_base_qty')
+                                                    ->label('ORDERED (BASE)')
+                                                    ->numeric()
+                                                    ->columnSpan(1),
+
+                                                TextEntry::make('received_base_qty')
+                                                    ->label('RECEIVED (BASE)')
+                                                    ->numeric()
+                                                    ->columnSpan(1),
+
+                                                TextEntry::make('unit_cost_price')
+                                                    ->label('UNIT COST')
+                                                    ->money('PHP', locale: 'en_PH', decimals: 4)
+                                                    ->columnSpan(1),
+                                            ]),
+                                    ]),
+                            ])
+                            ->columnSpanFull(),
+                    ]),
+            ]);
+    }
+}
+```
+
+### SalesOrderInfolist.php
+
+Same shape, adjusted for the sales side's line-total and status-badge coloring.
+
+```php
+namespace App\Filament\Resources\SalesOrders\Schemas;
+
+use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
+use Filament\Support\Enums\FontWeight;
+use Filament\Support\Icons\Heroicon;
+
+class SalesOrderInfolist
+{
+    public static function configure(Schema $schema): Schema
+    {
+        return $schema
+            ->schema([
+                Grid::make(3)
+                    ->schema([
+                        Section::make('SALES ORDER PROFILE')
+                            ->icon(Heroicon::DocumentText)
+                            ->schema([
+                                Grid::make(2)
+                                    ->schema([
+                                        TextEntry::make('reference_code')
+                                            ->label('REFERENCE CODE')
+                                            ->weight(FontWeight::Bold)
+                                            ->size('lg')
+                                            ->copyable()
+                                            ->color('primary'),
+
+                                        TextEntry::make('status')
+                                            ->label('STATUS')
+                                            ->badge(),
+
+                                        TextEntry::make('customer.name')
+                                            ->label('CUSTOMER')
+                                            ->icon(Heroicon::UserGroup),
+
+                                        TextEntry::make('warehouse.name')
+                                            ->label('DISPATCHING WAREHOUSE')
+                                            ->icon(Heroicon::BuildingOffice2),
+                                    ]),
+                            ])
+                            ->columnSpan(2),
+
+                        Section::make('SIGN-OFFS')
+                            ->icon(Heroicon::ShieldCheck)
+                            ->schema([
+                                TextEntry::make('orderedBy.name')
+                                    ->label('ORDERED BY')
+                                    ->icon(Heroicon::User)
+                                    ->placeholder('—'),
+
+                                TextEntry::make('dispatchedBy.name')
+                                    ->label('DISPATCHED BY')
+                                    ->icon(Heroicon::Truck)
+                                    ->placeholder('Pending Dispatch'),
+
+                                TextEntry::make('confirmed_at')
+                                    ->label('CONFIRMED AT')
+                                    ->dateTime('M j, Y H:i')
+                                    ->placeholder('—'),
+
+                                TextEntry::make('dispatched_at')
+                                    ->label('DISPATCHED AT')
+                                    ->dateTime('M j, Y H:i')
+                                    ->placeholder('—'),
+                            ])
+                            ->columnSpan(1),
+
+                        Section::make('LINE ITEMS')
+                            ->icon(Heroicon::ClipboardDocumentList)
+                            ->schema([
+                                RepeatableEntry::make('items')
+                                    ->label('')
+                                    ->schema([
+                                        Grid::make(6)
+                                            ->schema([
+                                                TextEntry::make('productVariant.sku')
+                                                    ->label('SKU')
+                                                    ->weight(FontWeight::Bold)
+                                                    ->columnSpan(1),
+
+                                                TextEntry::make('productVariant.name')
+                                                    ->label('PRODUCT')
+                                                    ->columnSpan(2),
+
+                                                TextEntry::make('base_qty')
+                                                    ->label('ORDERED (BASE)')
+                                                    ->numeric()
+                                                    ->columnSpan(1),
+
+                                                TextEntry::make('dispatched_base_qty')
+                                                    ->label('DISPATCHED (BASE)')
+                                                    ->numeric()
+                                                    ->columnSpan(1),
+
+                                                TextEntry::make('unit_sale_price_snapshot')
+                                                    ->label('SNAPSHOT PRICE')
+                                                    ->money('PHP', locale: 'en_PH', decimals: 4)
+                                                    ->columnSpan(1),
+                                            ]),
+                                    ]),
+                            ])
+                            ->columnSpanFull(),
+                    ]),
+            ]);
+    }
+}
+```
+
+**Note on `unit_sale_price_snapshot` display:** shown here read-only in the infolist as-is — never recomputed from the current catalog price at render time, since that would defeat the entire point of A4's call-time snapshot. If the infolist ever appears to show a "stale" price compared to the catalog, that's correct behavior, not a bug — it's the historical price the sale actually confirmed at.
 
 ---
 
