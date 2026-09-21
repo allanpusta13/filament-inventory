@@ -2729,6 +2729,20 @@ Heavy widget sums are wrapped in `Cache::remember('stats_overview_...', 300)` to
 - `RecentMovementsWidget::getType()` returns `'line'` — single dataset line chart (7-day daily buckets)
 - Role-based gate check in `getData()`: only Admin/Auditor roles receive computed data; others receive empty structure
 - Cache keys: `low_stock_alerts_chart_{userId}_{firstWarehouseId}` (300s), `recent_movements_chart_{userId}_{firstWarehouseId}` (60s)
+- `$columnSpan = 1` for both (bento grid: LowStock 1 col, RecentMovements 1 col)
+
+**LowStockAlertsWidget Query Pattern (v11 implementation):**
+- Filters variants with `reorder_point > 0` that have stock movements in accessible warehouses
+- For each variant, sums `onHandQuantity()` across all accessible warehouses (single aggregate via `stock_movements` per warehouse)
+- Filters to variants where `total_stock <= reorder_point`
+- Sorts by `total_stock` ascending (most critical first)
+- Labels: "SKU - Name", Datasets: Current Stock (green), Reorder Point (red)
+
+**RecentMovementsWidget Query Pattern (v11 implementation):**
+- Daily buckets over last 7 days (M j format labels)
+- Single aggregate query: `stock_movements` where `warehouse_id` in user's warehouses and `created_at >= 7 days ago`
+- Groups by day, counts movements per day
+- Dataset: Movement Count (blue line, filled, tension 0.3)
 
 **Edge Case Security Coverage:**
 - Non-admin/non-auditor gate check returns empty data (no 403 on widget data endpoint)
