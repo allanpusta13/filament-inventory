@@ -2925,6 +2925,25 @@ LowStockAlertsWidgetTest::cache_miss_correctly_recomputes_all_variants()        
 
 *(Unchanged from v9.1 — verified current against Filament v5's public documentation and community-release notes as of this revision. `strictAuthorization()` confirmed to exist and behave as described: unhandled policy methods fail closed rather than defaulting to permissive access.)*
 
+### Navigation Group Registration (Centralized)
+
+Navigation groups registered centrally in `AdminPanelProvider` via `->navigationGroups()` with fixed display order:
+
+```php
+->navigationGroups([
+    NavigationGroup::make('CATALOG')
+        ->icon(Heroicon::CubeTransparent),
+    NavigationGroup::make('OPERATIONS')
+        ->icon(Heroicon::OutlinedRectangleStack),
+    NavigationGroup::make('AUDIT LEDGERS')
+        ->icon(Heroicon::QueueList),
+    NavigationGroup::make('SYSTEM ADMIN')
+        ->icon(Heroicon::BuildingOffice),
+])
+```
+
+Per-resource `$navigationSort` and `$navigationIcon` remain on Resource class. Group-level icons set here; resource-level icons still control sidebar item appearance. Inter-group order controlled solely by array order passed to `->navigationGroups()` — alphabetical not used.
+
 ### Locked Namespaces
 
 ```php

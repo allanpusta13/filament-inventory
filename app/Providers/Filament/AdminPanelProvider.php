@@ -11,11 +11,13 @@ use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\NavigationGroup;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Support\Enums\Platform;
 use Filament\Support\Enums\Width;
+use Filament\Support\Icons\Heroicon;
 use Filament\Widgets\AccountWidget;
 use Filament\Widgets\FilamentInfoWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -49,6 +51,16 @@ final class AdminPanelProvider extends PanelProvider
             ])
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
+            ->navigationGroups([
+                NavigationGroup::make('CATALOG')
+                    ->icon(Heroicon::CubeTransparent),
+                NavigationGroup::make('OPERATIONS')
+                    ->icon(Heroicon::OutlinedRectangleStack),
+                NavigationGroup::make('AUDIT LEDGERS')
+                    ->icon(Heroicon::QueueList),
+                NavigationGroup::make('SYSTEM ADMIN')
+                    ->icon(Heroicon::BuildingOffice),
+            ])
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->strictAuthorization()
             ->pages([
