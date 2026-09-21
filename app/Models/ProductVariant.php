@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\SalesOrderStatus;
 use App\Enums\TransferRequisitionStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -102,9 +103,33 @@ class ProductVariant extends Model
             ->sum('approved_base_qty');
     }
 
+    /**
+     * New in this addendum. Deliberately SEPARATE from reservedQuantity(),
+     * which per [FIX v11] Principle #13 is permanently scoped to Confirmed
+     * transfer_requisitions only and must not be widened. Sales reservations
+     * are a distinct concern with a distinct lifecycle and are summed here
+     * instead, then combined in availableQuantity() below.
+     */
+    public function reservedForSalesQuantity(int $warehouseId): int
+    {
+        return (int) SalesOrderItem::where('product_variant_id', $this->id)
+            ->whereHas('salesOrder', function ($query) use ($warehouseId) {
+                $query->where('warehouse_id', $warehouseId)
+                    ->where('status', SalesOrderStatus::Confirmed);
+            })
+            ->sum('base_qty');
+    }
+
+    /**
+     * [FIX v11.1] availableQuantity() now nets out BOTH transfer reservations
+     * and sales reservations. This REPLACES the parent blueprint's
+     * availableQuantity() body — reservedQuantity() itself is untouched.
+     */
     public function availableQuantity(int $warehouseId): int
     {
-        return $this->onHandQuantity($warehouseId) - $this->reservedQuantity($warehouseId);
+        return $this->onHandQuantity($warehouseId)
+            - $this->reservedQuantity($warehouseId)
+            - $this->reservedForSalesQuantity($warehouseId);
     }
 
     protected function casts(): array

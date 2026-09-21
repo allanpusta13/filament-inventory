@@ -179,13 +179,14 @@ Add two new cases to the existing `StockMovementType` enum (no migration needed 
 ```php
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Supplier extends Model
 {
-    use SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = ['name', 'contact_person', 'phone', 'email', 'address', 'is_active'];
 
@@ -202,7 +203,7 @@ class Supplier extends Model
 
 class Customer extends Model
 {
-    use SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = ['name', 'contact_person', 'phone', 'email', 'address', 'is_active'];
 
@@ -224,6 +225,7 @@ class Customer extends Model
 namespace App\Models;
 
 use App\Enums\PurchaseOrderStatus;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -231,7 +233,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PurchaseOrder extends Model
 {
-    use SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'reference_code', 'supplier_id', 'warehouse_id', 'status',
@@ -256,6 +258,8 @@ class PurchaseOrder extends Model
 
 class PurchaseOrderItem extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'purchase_order_id', 'product_variant_id', 'ordered_unit_name',
         'ordered_unit_ratio', 'ordered_qty', 'ordered_base_qty',
@@ -283,6 +287,7 @@ class PurchaseOrderItem extends Model
 namespace App\Models;
 
 use App\Enums\SalesOrderStatus;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -290,7 +295,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SalesOrder extends Model
 {
-    use SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'reference_code', 'customer_id', 'warehouse_id', 'status',
@@ -312,6 +317,8 @@ class SalesOrder extends Model
 
 class SalesOrderItem extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'sales_order_id', 'product_variant_id', 'unit_name', 'unit_ratio',
         'qty', 'base_qty', 'unit_sale_price_snapshot', 'dispatched_base_qty', 'notes',
@@ -371,6 +378,308 @@ public function availableQuantity(int $warehouseId): int
         - $this->reservedForSalesQuantity($warehouseId);
 }
 ```
+
+---
+
+## 🏭 Model Factories (previously missing — required for every test in this addendum)
+
+**Every Pest test specified elsewhere in this addendum — service layer, policy, widget, and concurrency — depends on factories for the six new models.** None were specified in earlier drafts of this addendum. This is a closeable gap of the same shape as the parent blueprint's own `[FIX v11]` Gap #6 (`LossLedger` was called from `scanToReceive()` but never defined) — a dependency assumed by the spec but never actually supplied. Fixed here.
+
+Add `HasFactory` to each new model (`Supplier`, `Customer`, `PurchaseOrder`, `PurchaseOrderItem`, `SalesOrder`, `SalesOrderItem`) — the addendum's earlier Model Additions section omitted the trait on all six; add it alongside `SoftDeletes` where applicable, matching the parent blueprint's own `ProductVariant`/`TransferRequisition` pattern (`use HasFactory, SoftDeletes;`).
+
+```php
+namespace Database\Factories;
+
+use App\Models\Supplier;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+class SupplierFactory extends Factory
+{
+    protected $model = Supplier::class;
+
+    public function definition(): array
+    {
+        return [
+            'name'           => fake()->company(),
+            'contact_person' => fake()->name(),
+            'phone'          => fake()->phoneNumber(),
+            'email'          => fake()->companyEmail(),
+            'address'        => fake()->address(),
+            'is_active'      => true,
+        ];
+    }
+
+    public function inactive(): static
+    {
+        return $this->state(fn () => ['is_active' => false]);
+    }
+}
+```
+
+```php
+namespace Database\Factories;
+
+use App\Models\Customer;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+class CustomerFactory extends Factory
+{
+    protected $model = Customer::class;
+
+    public function definition(): array
+    {
+        return [
+            'name'           => fake()->company(),
+            'contact_person' => fake()->name(),
+            'phone'          => fake()->phoneNumber(),
+            'email'          => fake()->companyEmail(),
+            'address'        => fake()->address(),
+            'is_active'      => true,
+        ];
+    }
+
+    public function inactive(): static
+    {
+        return $this->state(fn () => ['is_active' => false]);
+    }
+}
+```
+
+```php
+namespace Database\Factories;
+
+use App\Enums\PurchaseOrderStatus;
+use App\Models\PurchaseOrder;
+use App\Models\Supplier;
+use App\Models\User;
+use App\Models\Warehouse;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+class PurchaseOrderFactory extends Factory
+{
+    protected $model = PurchaseOrder::class;
+
+    public function definition(): array
+    {
+        return [
+            'reference_code'    => 'PO-'.fake()->unique()->numerify('######'),
+            'supplier_id'       => Supplier::factory(),
+            'warehouse_id'      => Warehouse::factory(),
+            'status'            => PurchaseOrderStatus::Draft,
+            'update_cost_price' => false,
+            'ordered_by'        => User::factory(),
+        ];
+    }
+
+    /**
+     * [EDGE CASE SUPPORT] Ordered state — sets ordered_at, does NOT create
+     * items. Chain ->has(PurchaseOrderItem::factory()->count(n)) separately,
+     * since item count/content varies per test.
+     */
+    public function ordered(): static
+    {
+        return $this->state(fn () => [
+            'status'     => PurchaseOrderStatus::Ordered,
+            'ordered_at' => now(),
+        ]);
+    }
+
+    public function partiallyReceived(): static
+    {
+        return $this->state(fn () => [
+            'status'     => PurchaseOrderStatus::PartiallyReceived,
+            'ordered_at' => now()->subDay(),
+        ]);
+    }
+
+    public function completed(): static
+    {
+        return $this->state(fn () => [
+            'status'      => PurchaseOrderStatus::Completed,
+            'ordered_at'  => now()->subDays(2),
+            'received_at' => now(),
+        ]);
+    }
+
+    public function cancelled(): static
+    {
+        return $this->state(fn () => [
+            'status'       => PurchaseOrderStatus::Cancelled,
+            'cancelled_at' => now(),
+        ]);
+    }
+
+    public function withCostUpdate(): static
+    {
+        return $this->state(fn () => ['update_cost_price' => true]);
+    }
+}
+```
+
+```php
+namespace Database\Factories;
+
+use App\Models\ProductVariant;
+use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderItem;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+class PurchaseOrderItemFactory extends Factory
+{
+    protected $model = PurchaseOrderItem::class;
+
+    public function definition(): array
+    {
+        $qty  = fake()->numberBetween(1, 50);
+        $unitRatio = 1;
+
+        return [
+            'purchase_order_id'  => PurchaseOrder::factory(),
+            'product_variant_id' => ProductVariant::factory(),
+            'ordered_unit_name'  => 'pcs',
+            'ordered_unit_ratio' => $unitRatio,
+            'ordered_qty'        => $qty,
+            'ordered_base_qty'   => $qty * $unitRatio,
+            'unit_cost_price'    => fake()->randomFloat(4, 1, 500),
+            'received_base_qty'  => 0,
+        ];
+    }
+
+    /**
+     * [EDGE CASE SUPPORT] Fully received — required for cancel-guard tests
+     * (`cancel_rejected_once_any_stock_received`) and idempotency no-op
+     * tests (`receive_purchase` on an item with nothing outstanding).
+     */
+    public function fullyReceived(): static
+    {
+        return $this->state(fn (array $attrs) => [
+            'received_base_qty' => $attrs['ordered_base_qty'],
+        ]);
+    }
+
+    public function partiallyReceived(int $receivedBaseQty): static
+    {
+        return $this->state(fn () => ['received_base_qty' => $receivedBaseQty]);
+    }
+}
+```
+
+```php
+namespace Database\Factories;
+
+use App\Enums\SalesOrderStatus;
+use App\Models\Customer;
+use App\Models\SalesOrder;
+use App\Models\User;
+use App\Models\Warehouse;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+class SalesOrderFactory extends Factory
+{
+    protected $model = SalesOrder::class;
+
+    public function definition(): array
+    {
+        return [
+            'reference_code' => 'SO-'.fake()->unique()->numerify('######'),
+            'customer_id'    => Customer::factory(),
+            'warehouse_id'   => Warehouse::factory(),
+            'status'         => SalesOrderStatus::Draft,
+            'ordered_by'     => User::factory(),
+        ];
+    }
+
+    public function confirmed(): static
+    {
+        return $this->state(fn () => [
+            'status'       => SalesOrderStatus::Confirmed,
+            'confirmed_at' => now(),
+        ]);
+    }
+
+    public function partiallyDispatched(): static
+    {
+        return $this->state(fn () => [
+            'status'        => SalesOrderStatus::PartiallyDispatched,
+            'confirmed_at'  => now()->subDay(),
+            'dispatched_at' => now(),
+        ]);
+    }
+
+    public function completed(): static
+    {
+        return $this->state(fn () => [
+            'status'        => SalesOrderStatus::Completed,
+            'confirmed_at'  => now()->subDays(2),
+            'dispatched_at' => now(),
+        ]);
+    }
+
+    public function cancelled(): static
+    {
+        return $this->state(fn () => [
+            'status'       => SalesOrderStatus::Cancelled,
+            'cancelled_at' => now(),
+        ]);
+    }
+}
+```
+
+```php
+namespace Database\Factories;
+
+use App\Models\ProductVariant;
+use App\Models\SalesOrder;
+use App\Models\SalesOrderItem;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+class SalesOrderItemFactory extends Factory
+{
+    protected $model = SalesOrderItem::class;
+
+    public function definition(): array
+    {
+        $qty = fake()->numberBetween(1, 30);
+        $unitRatio = 1;
+
+        return [
+            'sales_order_id'           => SalesOrder::factory(),
+            'product_variant_id'       => ProductVariant::factory(),
+            'unit_name'                => 'pcs',
+            'unit_ratio'               => $unitRatio,
+            'qty'                      => $qty,
+            'base_qty'                 => $qty * $unitRatio,
+            // [EDGE CASE SUPPORT] Deliberately defaults to '0.0000', NOT a
+            // random fake price. Per Principle A4, this field is only ever
+            // meant to be populated by SalesService::confirmSalesOrder()'s
+            // call-time snapshot — a factory default of anything else would
+            // let tests accidentally pass by coincidence rather than by
+            // actually exercising the snapshot logic. Tests that need a
+            // *confirmed* order with a real snapshot value should build the
+            // order via the service (confirmSalesOrder()), not by faking
+            // this field directly.
+            'unit_sale_price_snapshot' => '0.0000',
+            'dispatched_base_qty'      => 0,
+        ];
+    }
+
+    public function dispatched(?int $dispatchedBaseQty = null): static
+    {
+        return $this->state(fn (array $attrs) => [
+            'dispatched_base_qty' => $dispatchedBaseQty ?? $attrs['base_qty'],
+        ]);
+    }
+
+    public function withSnapshotPrice(string $price): static
+    {
+        return $this->state(fn () => ['unit_sale_price_snapshot' => $price]);
+    }
+}
+```
+
+**Usage note for the tests already specified elsewhere in this addendum:** wherever a test needs a *realistic* confirmed sales order (with a genuine price snapshot) rather than a raw factory state, build it through `SalesService::confirmSalesOrder()` against a factory-created `Draft` order, not through `SalesOrderItemFactory::withSnapshotPrice()` directly — the latter is for tests that need to assert something *about* the snapshot value itself (e.g. `SalesServiceTest::confirm_snapshots_sale_price_at_confirm_time_not_dispatch_time`) without caring how it got there, while the former is for tests that need the snapshot to have been produced by the actual code path under test.
+
+**Test checkpoint:** `FactoryTest::all_six_new_model_factories_produce_valid_persistable_records()` — a single smoke test creating one of each new factory (and its default nested relations) and asserting it saves without constraint violations. Cheap insurance against a factory silently drifting out of sync with its migration as the schema evolves.
 
 ---
 
