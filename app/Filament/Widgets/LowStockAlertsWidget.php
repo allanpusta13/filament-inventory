@@ -12,9 +12,7 @@ class LowStockAlertsWidget extends ChartWidget
 {
     protected ?string $heading = 'Low Stock Alerts';
 
-    protected int|string|array $columnSpan = 'full';
-
-    protected int|string|array $columnSpanFull = 'full';
+    protected int|string|array $columnSpan = 1;
 
     protected function getType(): string
     {

@@ -13,9 +13,7 @@ class RecentMovementsWidget extends ChartWidget
 {
     protected ?string $heading = 'Recent Movements';
 
-    protected int|string|array $columnSpan = 'full';
-
-    protected int|string|array $columnSpanFull = 'full';
+    protected int|string|array $columnSpan = 1;
 
     protected function getType(): string
     {
