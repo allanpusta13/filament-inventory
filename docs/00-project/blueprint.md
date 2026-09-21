@@ -2132,6 +2132,7 @@ class TransferRequisitionInfolist
 
 **Model:** `App\Models\StockMovement`
 **Navigation Group:** OPERATIONS, Sort: 2
+**Navigation Icon:** `Heroicon::ArrowPath`
 
 Query scope:
 
@@ -2149,7 +2150,8 @@ Query scope:
 #### 4.1 InTransitResource
 
 **Model:** `App\Models\InTransit`
-**Navigation Group:** OPERATIONS, Sort: 3
+**Navigation Group:** AUDIT LEDGERS, Sort: 1
+**Navigation Icon:** `Heroicon::Truck`
 **Base Route:** `/admin/in-transits`
 
 Read-only resource monitoring active in-transit shipments. No create/edit pages — records are created exclusively by `InventoryService::dispatchTransfer()`.
@@ -2346,7 +2348,8 @@ class InTransitInfolist
 #### 4.2 StockMovementResource
 
 **Model:** `App\Models\StockMovement`
-**Navigation Group:** AUDIT, Sort: 1
+**Navigation Group:** AUDIT LEDGERS, Sort: 2
+**Navigation Icon:** `Heroicon::QueueList`
 **Base Route:** `/admin/stock-movements`
 
 Read-only resource providing immutable audit trail of all stock mutations. No create/edit pages.
@@ -2424,7 +2427,8 @@ public static function getTableFooter(Table $table): View
 #### 4.3 LossLedgerResource
 
 **Model:** `App\Models\LossLedger`
-**Navigation Group:** AUDIT, Sort: 2
+**Navigation Group:** AUDIT LEDGERS, Sort: 3
+**Navigation Icon:** `Heroicon::ExclamationTriangle`
 **Base Route:** `/admin/loss-ledgers`
 
 Read-only resource providing financial loss audit trail. No create/edit pages — records are created by `scanToReceive()` and `recordLoss` action.

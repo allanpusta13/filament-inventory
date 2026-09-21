@@ -12,8 +12,10 @@ use App\Filament\Resources\Products\Schemas\ProductForm;
 use App\Filament\Resources\Products\Schemas\ProductInfolist;
 use App\Filament\Resources\Products\Tables\ProductsTable;
 use App\Models\ProductVariant;
+use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use UnitEnum;
 
@@ -22,6 +24,8 @@ class ProductResource extends Resource
     protected static ?string $model = ProductVariant::class;
 
     protected static string|UnitEnum|null $navigationGroup = 'CATALOG';
+
+    protected static BackedEnum|string|null $navigationIcon = Heroicon::CubeTransparent;
 
     protected static ?int $navigationSort = 1;
 

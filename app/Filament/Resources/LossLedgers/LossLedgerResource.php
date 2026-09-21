@@ -9,8 +9,10 @@ use App\Filament\Resources\LossLedgers\Pages\ViewLossLedger;
 use App\Filament\Resources\LossLedgers\Schemas\LossLedgerInfolist;
 use App\Filament\Resources\LossLedgers\Tables\LossLedgersTable;
 use App\Models\LossLedger;
+use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use UnitEnum;
 
@@ -18,9 +20,11 @@ class LossLedgerResource extends Resource
 {
     protected static ?string $model = LossLedger::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'AUDIT';
+    protected static string|UnitEnum|null $navigationGroup = 'AUDIT LEDGERS';
 
-    protected static ?int $navigationSort = 4;
+    protected static BackedEnum|string|null $navigationIcon = Heroicon::ExclamationTriangle;
+
+    protected static ?int $navigationSort = 3;
 
     protected static ?string $recordTitleAttribute = 'id';
 

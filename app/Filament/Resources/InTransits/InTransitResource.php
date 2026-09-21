@@ -9,8 +9,10 @@ use App\Filament\Resources\InTransits\Pages\ViewInTransit;
 use App\Filament\Resources\InTransits\Schemas\InTransitInfolist;
 use App\Filament\Resources\InTransits\Tables\InTransitsTable;
 use App\Models\InTransit;
+use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use UnitEnum;
@@ -19,7 +21,9 @@ class InTransitResource extends Resource
 {
     protected static ?string $model = InTransit::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'AUDIT';
+    protected static string|UnitEnum|null $navigationGroup = 'AUDIT LEDGERS';
+
+    protected static BackedEnum|string|null $navigationIcon = Heroicon::Truck;
 
     protected static ?int $navigationSort = 1;
 

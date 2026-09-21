@@ -11,8 +11,10 @@ use App\Filament\Resources\DirectTransfers\Schemas\DirectTransferForm;
 use App\Filament\Resources\DirectTransfers\Schemas\DirectTransferInfolist;
 use App\Filament\Resources\DirectTransfers\Tables\DirectTransfersTable;
 use App\Models\StockMovement;
+use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use UnitEnum;
 
@@ -23,6 +25,8 @@ class DirectTransferResource extends Resource
     protected static ?string $navigationLabel = 'Direct Transfers';
 
     protected static string|UnitEnum|null $navigationGroup = 'OPERATIONS';
+
+    protected static BackedEnum|string|null $navigationIcon = Heroicon::ArrowPath;
 
     protected static ?int $navigationSort = 2;
 
@@ -47,8 +51,7 @@ class DirectTransferResource extends Resource
     {
         return parent::getEloquentQuery()
             ->whereIn('type', [\App\Enums\StockMovementType::TransferOut, \App\Enums\StockMovementType::TransferIn])
-            ->whereNotNull('related_movement_id')
-            ->with(['productVariant', 'warehouse', 'relatedMovement.warehouse', 'createdBy']);
+            ->with(['productVariant.product', 'warehouse', 'relatedMovement']);
     }
 
     public static function getPages(): array
