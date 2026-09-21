@@ -125,6 +125,14 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
     }
 
     /**
+     * Check if the user is a guest (no access).
+     */
+    public function isGuest(): bool
+    {
+        return ($this->attributes['role'] ?? null) === UserRole::GUEST->value;
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

@@ -7,6 +7,19 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $sales_order_id
+ * @property int $product_variant_id
+ * @property string $unit_name
+ * @property int $unit_ratio
+ * @property int $qty
+ * @property int $base_qty
+ * @property string $unit_sale_price_snapshot
+ * @property int $dispatched_base_qty
+ * @property string|null $notes
+ * @property-read SalesOrder $salesOrder
+ * @property-read ProductVariant $productVariant
+ */
 class SalesOrderItem extends Model
 {
     protected $fillable = [

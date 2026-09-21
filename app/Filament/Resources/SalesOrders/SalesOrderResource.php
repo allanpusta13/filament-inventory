@@ -17,10 +17,13 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use UnitEnum;
 
 class SalesOrderResource extends Resource
 {
     protected static ?string $model = SalesOrder::class;
+
+    protected static string|UnitEnum|null $navigationGroup = 'SALES';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::Banknotes;
 

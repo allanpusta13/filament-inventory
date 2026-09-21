@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\StockMovementType;
+use App\Enums\UserRole;
 use App\Filament\Widgets\LowStockAlertsWidget;
 use App\Models\ProductVariant;
 use App\Models\User;
@@ -101,15 +102,15 @@ describe('LowStockAlertsWidget - edge case security tests', function () {
         $this->service->recordMovement($variant->id, $warehouse->id, StockMovementType::Receive, 5);
         $this->user->warehouses()->syncWithoutDetaching([$warehouse->id]);
 
-        // Create non-admin user
-        $nonAdmin = User::factory()->create(['role' => 'warehouse_staff']);
+        // Create non-admin user (no admin, auditor, branch_manager, or warehouse_staff roles)
+        $nonAdmin = User::factory()->create(['role' => UserRole::GUEST->value]);
         $nonAdmin->warehouses()->syncWithoutDetaching([$warehouse->id]);
         $this->actingAs($nonAdmin);
 
         $widget = new LowStockAlertsWidget();
         $result = callProtected($widget, 'getData');
 
-        // Non-admin/non-auditor should get empty data structure
+        // Non-admin/non-auditor/non-branch_manager/non-warehouse_staff should get empty data structure
         expect($result['labels'])->toBeEmpty()
             ->and($result['datasets'][0]['data'])->toBeEmpty()
             ->and($result['datasets'][1]['data'])->toBeEmpty();

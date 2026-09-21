@@ -25,7 +25,7 @@ class SalesVsPurchasesWidget extends ChartWidget
     {
         $user = auth()->user();
 
-        if (! ($user?->isAdmin() ?? false) && ! ($user?->isAuditor() ?? false)) {
+        if (! ($user?->isAdmin() ?? false) && ! ($user?->isAuditor() ?? false) && ! ($user?->isBranchManager() ?? false) && ! ($user?->isWarehouseStaff() ?? false)) {
             return $this->emptyData();
         }
 

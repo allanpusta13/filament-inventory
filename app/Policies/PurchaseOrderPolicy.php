@@ -12,30 +12,56 @@ class PurchaseOrderPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->isAdmin() || $user->isAuditor() || $user->isWarehouseStaff();
+        return $user->isAdmin() || $user->isAuditor() || $user->isBranchManager() || $user->isWarehouseStaff();
     }
 
     public function view(User $user, PurchaseOrder $purchaseOrder): bool
     {
-        return $user->isAdmin() || $user->isAuditor() || $user->isWarehouseStaff();
+        if ($user->isAdmin() || $user->isAuditor()) {
+            return true;
+        }
+
+        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
+            return $user->canAccessWarehouse($purchaseOrder->warehouse);
+        }
+
+        return false;
     }
 
     public function create(User $user): bool
     {
-        return $user->isAdmin() || $user->isWarehouseStaff();
+        return $user->isAdmin() || $user->isBranchManager() || $user->isWarehouseStaff();
     }
 
     public function update(User $user, PurchaseOrder $purchaseOrder): bool
     {
-        return $user->isAdmin() || ($user->isWarehouseStaff() && $purchaseOrder->status === PurchaseOrderStatus::Draft);
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
+            return $user->canAccessWarehouse($purchaseOrder->warehouse)
+                && $purchaseOrder->status === PurchaseOrderStatus::Draft;
+        }
+
+        return false;
     }
 
     public function delete(User $user, PurchaseOrder $purchaseOrder): bool
     {
-        return $user->isAdmin() || ($user->isWarehouseStaff() && in_array($purchaseOrder->status, [
-            PurchaseOrderStatus::Draft,
-            PurchaseOrderStatus::Cancelled,
-        ]));
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
+            return $user->canAccessWarehouse($purchaseOrder->warehouse)
+                && in_array($purchaseOrder->status, [
+                    PurchaseOrderStatus::Draft,
+                    PurchaseOrderStatus::Cancelled,
+                ]);
+        }
+
+        return false;
     }
 
     public function restore(User $user, PurchaseOrder $purchaseOrder): bool
@@ -50,22 +76,50 @@ class PurchaseOrderPolicy
 
     public function orderPurchase(User $user, PurchaseOrder $purchaseOrder): bool
     {
-        return $user->isAdmin() || ($user->isWarehouseStaff() && $purchaseOrder->status === PurchaseOrderStatus::Draft);
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
+            return $user->canAccessWarehouse($purchaseOrder->warehouse)
+                && $purchaseOrder->status === PurchaseOrderStatus::Draft;
+        }
+
+        return false;
     }
 
     public function receivePurchase(User $user, PurchaseOrder $purchaseOrder): bool
     {
-        return $user->isAdmin() || ($user->isWarehouseStaff() && in_array($purchaseOrder->status, [
-            PurchaseOrderStatus::Ordered,
-            PurchaseOrderStatus::PartiallyReceived,
-        ]));
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
+            return $user->canAccessWarehouse($purchaseOrder->warehouse)
+                && in_array($purchaseOrder->status, [
+                    PurchaseOrderStatus::Ordered,
+                    PurchaseOrderStatus::PartiallyReceived,
+                ]);
+        }
+
+        return false;
     }
 
     public function cancelPurchase(User $user, PurchaseOrder $purchaseOrder): bool
     {
-        return $user->isAdmin() || ($user->isWarehouseStaff() && in_array($purchaseOrder->status, [
-            PurchaseOrderStatus::Draft,
-            PurchaseOrderStatus::Ordered,
-        ]) && $purchaseOrder->items->every(fn ($item) => $item->received_base_qty === 0));
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
+            return $user->canAccessWarehouse($purchaseOrder->warehouse)
+                && in_array($purchaseOrder->status, [
+                    PurchaseOrderStatus::Draft,
+                    PurchaseOrderStatus::Ordered,
+                ])
+                && $purchaseOrder->items->every(fn ($item) => $item->received_base_qty === 0);
+        }
+
+        return false;
     }
 }

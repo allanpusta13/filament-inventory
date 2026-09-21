@@ -39,6 +39,11 @@ final class UserRoleSeeder extends Seeder
             ['name' => 'Inventory Auditor', 'role' => UserRole::AUDITOR->value, 'password' => Hash::make('password')]
         );
 
+        $guest = User::updateOrCreate(
+            ['email' => 'guest@example.com'],
+            ['name' => 'Guest User', 'role' => UserRole::GUEST->value, 'password' => Hash::make('password')]
+        );
+
         // Warehouse attachment is handled by DemoWorkflowSeeder (runs after this seeder)
         // because warehouses don't exist yet at this point.
     }

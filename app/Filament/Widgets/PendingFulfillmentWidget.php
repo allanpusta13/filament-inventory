@@ -14,11 +14,11 @@ class PendingFulfillmentWidget extends TableWidget
 
     protected int|string|array $columnSpan = 'full';
 
-    public function getTableQuery(): \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Eloquent\Relations\Relation|null
+    protected function getTableQuery(): \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Eloquent\Relations\Relation|null
     {
         $user = auth()->user();
 
-        if (! ($user?->isAdmin() ?? false) && ! ($user?->isAuditor() ?? false)) {
+        if (! ($user?->isAdmin() ?? false) && ! ($user?->isAuditor() ?? false) && ! ($user?->isBranchManager() ?? false) && ! ($user?->isWarehouseStaff() ?? false)) {
             return SalesOrder::query()->whereRaw('1 = 0');
         }
 

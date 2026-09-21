@@ -53,6 +53,8 @@ final class AdminPanelProvider extends PanelProvider
             ->navigationGroups([
                 NavigationGroup::make('CATALOG'),
                 NavigationGroup::make('OPERATIONS'),
+                NavigationGroup::make('PURCHASING'),
+                NavigationGroup::make('SALES'),
                 NavigationGroup::make('AUDIT LEDGERS'),
                 NavigationGroup::make('SYSTEM ADMIN'),
             ])

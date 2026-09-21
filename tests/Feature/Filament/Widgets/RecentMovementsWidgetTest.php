@@ -112,15 +112,15 @@ describe('RecentMovementsWidget - edge case security tests', function () {
     it('non_admin_receives_empty_data_on_gate_check', function () {
         $this->service->recordMovement($this->variant->id, $this->origin->id, StockMovementType::Receive, 100);
 
-        // Create non-admin user
-        $nonAdmin = User::factory()->create(['role' => 'warehouse_staff']);
-        $nonAdmin->warehouses()->syncWithoutDetaching([$this->origin->id]);
+        // Create non-admin user (role defaults to warehouse_staff but no warehouses assigned)
+        $nonAdmin = User::factory()->create();
+        $nonAdmin->warehouses()->sync([]);
         $this->actingAs($nonAdmin);
 
         $widget = new RecentMovementsWidget();
         $result = callProtected($widget, 'getData');
 
-        // Non-admin/non-auditor should get empty data structure
+        // Non-admin/non-auditor/non-branch_manager/non-warehouse_staff should get empty data structure
         expect($result['labels'])->toBeEmpty()
             ->and($result['datasets'][0]['data'])->toBeEmpty();
     });
