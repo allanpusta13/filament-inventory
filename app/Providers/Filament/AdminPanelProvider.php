@@ -53,13 +53,13 @@ final class AdminPanelProvider extends PanelProvider
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->navigationGroups([
                 NavigationGroup::make('CATALOG')
-                    ->icon(Heroicon::CubeTransparent),
+                   ,
                 NavigationGroup::make('OPERATIONS')
-                    ->icon(Heroicon::OutlinedRectangleStack),
+                    ,
                 NavigationGroup::make('AUDIT LEDGERS')
-                    ->icon(Heroicon::QueueList),
+                    ,
                 NavigationGroup::make('SYSTEM ADMIN')
-                    ->icon(Heroicon::BuildingOffice),
+                   ,
             ])
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->strictAuthorization()
@@ -86,6 +86,8 @@ final class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
+            ->databaseTransactions()
+            ->collapsibleNavigationGroups(false)
             ->databaseNotifications()
             ->globalSearchFieldSuffix(fn (): ?string => match (Platform::detect()) {
                 Platform::Windows, Platform::Linux => 'CTRL + K',
