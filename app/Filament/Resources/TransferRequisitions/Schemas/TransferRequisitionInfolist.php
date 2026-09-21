@@ -81,7 +81,7 @@ class TransferRequisitionInfolist
                                 RepeatableEntry::make('items')
                                     ->label('')
                                     ->schema([
-                                        Grid::make(4)
+                                        Grid::make(6)
                                             ->schema([
                                                 TextEntry::make('productVariant.sku')
                                                     ->label('ORIGINAL SKU')
@@ -106,6 +106,39 @@ class TransferRequisitionInfolist
                                                         ? "{$record->approved_qty} {$record->approved_unit_name}"
                                                         : 'Pending Verification')
                                                     ->color(fn ($record) => $record->approved_qty !== $record->requested_qty ? 'warning' : 'gray')
+                                                    ->columnSpan(1),
+
+                                                TextEntry::make('approved_base_qty')
+                                                    ->label('APPROVED (BASE)')
+                                                    ->numeric()
+                                                    ->columnSpan(1),
+
+                                                TextEntry::make('shipped_base_qty')
+                                                    ->label('SHIPPED (BASE)')
+                                                    ->numeric()
+                                                    ->columnSpan(1),
+
+                                                TextEntry::make('received_good_base_qty')
+                                                    ->label('RECEIVED GOOD (BASE)')
+                                                    ->numeric()
+                                                    ->columnSpan(1),
+
+                                                TextEntry::make('received_damaged_base_qty')
+                                                    ->label('RECEIVED DAMAGED (BASE)')
+                                                    ->numeric()
+                                                    ->color('danger')
+                                                    ->columnSpan(1),
+
+                                                TextEntry::make('lossCategory')
+                                                    ->label('LOSS CATEGORY')
+                                                    ->badge()
+                                                    ->color(fn (?string $state): string => match ($state) {
+                                                        'shortfall' => 'warning',
+                                                        'damage' => 'danger',
+                                                        'spoilage' => 'danger',
+                                                        'theft' => 'danger',
+                                                        default => 'gray',
+                                                    })
                                                     ->columnSpan(1),
                                             ]),
                                     ]),

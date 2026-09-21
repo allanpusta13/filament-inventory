@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\TransferRequisitionStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -20,7 +21,7 @@ return new class() extends Migration
 
             // String + PHP backed enum (App\Enums\TransferRequisitionStatus) instead of DB enum()
             // — this workflow's status list is expected to grow.
-            $table->string('status')->default('draft');
+            $table->string('status')->default(TransferRequisitionStatus::Draft->value);
 
             $table->foreignId('requested_by')->constrained('users');
             $table->foreignId('approved_by')->nullable()->constrained('users');

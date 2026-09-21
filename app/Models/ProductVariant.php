@@ -64,15 +64,16 @@ class ProductVariant extends Model
         return $this->hasMany(LossLedger::class);
     }
 
-    public function isBelowReorderPoint(int $currentBaseQty): bool
+    public function isBelowReorderPoint(int $warehouseId): bool
     {
-        return $currentBaseQty <= $this->reorder_point;
+        return $this->availableQuantity($warehouseId) <= $this->reorder_point;
     }
 
     public function onHandQuantity(int $warehouseId): int
     {
         return (int) StockMovement::where('product_variant_id', $this->id)
             ->where('warehouse_id', $warehouseId)
+            ->useIndex('stock_movements_product_variant_id_warehouse_id_index')
             ->sum('quantity');
     }
 

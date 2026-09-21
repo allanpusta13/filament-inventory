@@ -45,6 +45,10 @@ class LossLedger extends Model
      */
     public static function snapshotUnitCostFrom(ProductVariant $variant): string
     {
+        if (config('app.debug')) {
+            assert($variant->relationLoaded('currentPrice'), 'LossLedger::snapshotUnitCostFrom requires currentPrice eager-loaded to avoid N+1');
+        }
+
         return (string) ($variant->currentPrice?->cost_price ?? '0.0000');
     }
 

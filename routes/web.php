@@ -11,11 +11,11 @@ Route::view('/', 'welcome');
 Route::middleware(['auth'])->group(function () {
     Route::get('/transfers/scan/{transferRequisition}', [ScanReceiptController::class, 'show'])
         ->name('stn.scan')
-        ->middleware('throttle:scans');
+        ->middleware(['throttle:scans', 'signed']);
 
     Route::post('/transfers/scan/{transferRequisition}/receive', [ScanReceiptController::class, 'receive'])
         ->name('stn.scan.receive')
-        ->middleware('throttle:scans');
+        ->middleware(['throttle:scans', 'signed']);
 
     Route::get('/stn/print/{transferRequisition}', [STNManifestController::class, 'print'])
         ->name('stn.print');

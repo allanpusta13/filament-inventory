@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\ProductVariantPrice;
 use App\Models\ProductVariantUnitConversion;
+use App\Models\Warehouse;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\RestoreAction;
 use Illuminate\Support\Str;
@@ -602,9 +603,26 @@ describe('ProductResource edge cases', function () {
     it('handles variant with reorder_point integration', function () {
         $product = Product::factory()->create();
         $variant = ProductVariant::factory()->for($product)->create(['reorder_point' => 30]);
+        $warehouse = Warehouse::factory()->create();
 
-        expect($variant->isBelowReorderPoint(30))->toBeTrue();
-        expect($variant->isBelowReorderPoint(35))->toBeFalse();
-        expect($variant->isBelowReorderPoint(20))->toBeTrue();
+        expect($variant->isBelowReorderPoint($warehouse->id))->toBeTrue();
+
+        $variant->stockMovements()->create([
+            'warehouse_id' => $warehouse->id,
+            'type' => 'receive',
+            'quantity' => 35,
+            'unit_name_used' => 'piece',
+            'unit_ratio_used' => 1,
+        ]);
+        expect($variant->isBelowReorderPoint($warehouse->id))->toBeFalse();
+
+        $variant->stockMovements()->create([
+            'warehouse_id' => $warehouse->id,
+            'type' => 'adjustment',
+            'quantity' => -35,
+            'unit_name_used' => 'piece',
+            'unit_ratio_used' => 1,
+        ]);
+        expect($variant->isBelowReorderPoint($warehouse->id))->toBeTrue();
     });
 });

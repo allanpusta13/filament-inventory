@@ -29,7 +29,7 @@ return new class() extends Migration
             $table->integer('shipped_base_qty')->default(0);
             $table->integer('received_good_base_qty')->default(0);
             $table->integer('received_damaged_base_qty')->default(0);
-            $table->integer('received_qty')->nullable();
+            $table->integer('received_qty')->nullable()->default(0);
 
             $table->text('notes')->nullable();
             $table->timestamps();

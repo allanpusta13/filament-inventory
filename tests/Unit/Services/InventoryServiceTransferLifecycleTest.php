@@ -473,3 +473,65 @@ describe('v10: scanToReceive idempotency and precision', function () {
             ->and((string) $ledger->total_financial_loss)->toBe($expectedLoss);
     });
 });
+
+describe('v11: critical coverage targets', function () {
+    it('dispatch_throws_when_approved_base_qty_is_null', function () {
+        $requisition = TransferRequisition::factory()->create([
+            'from_warehouse_id' => $this->origin->id,
+            'to_warehouse_id' => $this->destination->id,
+            'status' => TransferRequisitionStatus::Confirmed,
+        ]);
+        TransferRequisitionItem::factory()->create([
+            'transfer_requisition_id' => $requisition->id,
+            'product_variant_id' => $this->variant->id,
+            'requested_base_qty' => 120,
+            'approved_base_qty' => null,
+            'approved_unit_name' => null,
+            'approved_unit_ratio' => null,
+        ]);
+
+        expect(fn () => $this->service->dispatchTransfer($requisition->fresh('items')->id))
+            ->toThrow(Exception::class, 'has no approved_base_qty');
+        expect($this->variant->onHandQuantity($this->origin->id))->toBe(1000);
+    });
+
+    it('scan_to_receive_supports_partial_batches', function () {
+        // Test partial batch receipt - receive in multiple scanToReceive calls
+        $requisition = TransferRequisition::factory()->create([
+            'from_warehouse_id' => $this->origin->id,
+            'to_warehouse_id' => $this->destination->id,
+            'status' => TransferRequisitionStatus::Confirmed,
+        ]);
+        TransferRequisitionItem::factory()->create([
+            'transfer_requisition_id' => $requisition->id,
+            'product_variant_id' => $this->variant->id,
+            'requested_base_qty' => 240,
+            'approved_base_qty' => 240,
+            'approved_unit_name' => 'Box',
+            'approved_unit_ratio' => 24,
+            'approved_qty' => 10,
+        ]);
+
+        $this->service->dispatchTransfer($requisition->fresh('items')->id);
+        $item = $requisition->fresh('items')->items->first();
+
+        // First batch: receive 3 boxes (72 base units)
+        $this->service->scanToReceive($requisition->id, [
+            $item->id => ['good_qty' => 3, 'damaged_qty' => 0],
+        ]);
+
+        expect($item->fresh()->received_good_base_qty)->toBe(72)
+            ->and($requisition->fresh()->status)->toBe(TransferRequisitionStatus::PartiallyReceived)
+            ->and($this->variant->onHandQuantity($this->destination->id))->toBe(72);
+
+        // Second batch: receive remaining 7 boxes (168 base units)
+        $this->service->scanToReceive($requisition->id, [
+            $item->id => ['good_qty' => 7, 'damaged_qty' => 0],
+        ]);
+
+        expect($item->fresh()->received_good_base_qty)->toBe(240)
+            ->and($requisition->fresh()->status)->toBe(TransferRequisitionStatus::Completed)
+            ->and($this->variant->onHandQuantity($this->destination->id))->toBe(240)
+            ->and(LossLedger::where('transfer_requisition_id', $requisition->id)->count())->toBe(0);
+    });
+});

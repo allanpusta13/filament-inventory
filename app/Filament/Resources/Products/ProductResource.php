@@ -45,7 +45,7 @@ class ProductResource extends Resource
     public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
     {
         return parent::getEloquentQuery()
-            ->with(['product', 'unitConversions', 'currentPrice', 'stockMovements.warehouse']);
+            ->with(['product', 'unitConversions', 'currentPrice']);
     }
 
     public static function getRecordRouteBindingEloquentQuery(): \Illuminate\Database\Eloquent\Builder

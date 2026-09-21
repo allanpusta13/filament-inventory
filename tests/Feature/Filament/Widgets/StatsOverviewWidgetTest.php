@@ -105,7 +105,7 @@ describe('StatsOverviewWidget', function () {
             $firstStats = $widget->getStats();
             $secondStats = $widget->getStats();
 
-            $cacheKey = 'stats_overview_' . $this->user->id . '_' . $this->origin->id;
+            $cacheKey = 'stats_overview_'.$this->user->id.'_'.$this->origin->id;
             expect(Cache::has($cacheKey))->toBeTrue();
         });
     });
@@ -207,7 +207,16 @@ describe('StatsOverviewWidget', function () {
             $requisition = makeConfirmedRequisitionForStats($this->service, $this->origin, $this->destination, $this->variant, 240);
             $this->service->dispatchTransfer($requisition->id);
 
-            // Simulate loss by receiving less than shipped
+            // Simulate loss by receiving less than shipped - first partial receipt (no damage, no loss ledger yet)
+            $this->service->scanToReceive($requisition->id, [
+                $requisition->items->first()->id => [
+                    'good_qty' => 5,
+                    'damaged_qty' => 0,
+                    'loss_category' => 'shortfall',
+                ],
+            ]);
+
+            // Second scan: complete the receipt with shortfall (5 of 10 boxes) - triggers LossLedger on final closure
             $this->service->scanToReceive($requisition->id, [
                 $requisition->items->first()->id => [
                     'good_qty' => 5,
@@ -227,6 +236,16 @@ describe('StatsOverviewWidget', function () {
             $requisition = makeConfirmedRequisitionForStats($this->service, $this->origin, $this->destination, $this->variant, 240);
             $this->service->dispatchTransfer($requisition->id);
 
+            // First partial receipt (no damage, no loss ledger yet)
+            $this->service->scanToReceive($requisition->id, [
+                $requisition->items->first()->id => [
+                    'good_qty' => 5,
+                    'damaged_qty' => 0,
+                    'loss_category' => 'shortfall',
+                ],
+            ]);
+
+            // Second scan: complete the receipt with shortfall - triggers LossLedger on final closure
             $this->service->scanToReceive($requisition->id, [
                 $requisition->items->first()->id => [
                     'good_qty' => 5,

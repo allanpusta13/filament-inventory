@@ -41,8 +41,12 @@ class ProductsTable
                     ->badge()
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('currentPrice.cost_price')
+                    ->money(config('app.currency'))
+                    ->label('COST PRICE'),
                 TextColumn::make('currentPrice.sale_price')
-                    ->money(config('app.currency')),
+                    ->money(config('app.currency'))
+                    ->label('SALE PRICE'),
                 TextColumn::make('reorder_point')
                     ->numeric()
                     ->sortable()

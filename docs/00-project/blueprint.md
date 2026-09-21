@@ -300,7 +300,7 @@ Indexes: `(product_variant_id, warehouse_id)`, `(reference_type, reference_id)`,
 | reference_code | string, unique | No | — |
 | from_warehouse_id | FK → warehouses.id (restrictOnDelete) | No | — |
 | to_warehouse_id | FK → warehouses.id (restrictOnDelete) | No | — |
-| status | string | No | draft |
+| status | string | No | TransferRequisitionStatus::Draft->value |
 | requested_by | FK → users.id | No | — |
 | approved_by | FK → users.id | Yes | — |
 | dispatched_by | FK → users.id | Yes | — |
@@ -314,6 +314,11 @@ Indexes: `(product_variant_id, warehouse_id)`, `(reference_type, reference_id)`,
 | created_at / updated_at | timestamp | Yes | — |
 
 Indexes: `status`, `(from_warehouse_id, to_warehouse_id)`
+
+**Key Implementation Notes:**
+- Uses string column + PHP backed enum (`App\Enums\TransferRequisitionStatus`) instead of DB `enum()` — workflow's status list expected to grow.
+- Both warehouse FKs use `restrictOnDelete`: a warehouse involved in any transfer cannot be deleted.
+- Soft deletes enabled via `$table->softDeletes()`.
 
 ### 8. transfer_requisition_items
 
@@ -334,9 +339,14 @@ Indexes: `status`, `(from_warehouse_id, to_warehouse_id)`
 | shipped_base_qty | integer | No | 0 |
 | received_good_base_qty | integer | No | 0 |
 | received_damaged_base_qty | integer | No | 0 |
-| received_qty | integer | Yes | — |
+| received_qty | integer | No | 0 |
 | notes | text | Yes | — |
 | created_at / updated_at | timestamp | Yes | — |
+
+**Key Implementation Notes:**
+- Both product_variant FKs use `restrictOnDelete`: a variant involved in a requisition item cannot be deleted.
+- `received_qty` has a default of 0 (not nullable).
+- Stores both requested and approved quantities with unit conversion tracking for negotiated revisions.
 
 Indexes: `transfer_requisition_id`
 
@@ -382,20 +392,28 @@ Indexes: `(transfer_requisition_id, status)`
 | Column | Type | Nullable | Default |
 |---|---|---|---|
 | id | bigint (PK) | No | — |
-| transfer_requisition_id | FK → transfer_requisitions.id (nullOnDelete) | Yes | — |
-| transfer_requisition_item_id | FK → transfer_requisition_items.id | Yes | — |
+| transfer_requisition_id | FK → transfer_requisitions.id (cascadeOnDelete) | No | — |
+| transfer_requisition_item_id | FK → transfer_requisition_items.id (cascadeOnDelete) | Yes | — |
 | product_variant_id | FK → product_variants.id (restrictOnDelete) | No | — |
-| warehouse_id | FK → warehouses.id | No | — |
+| warehouse_id | FK → warehouses.id (restrictOnDelete) | No | — |
 | lost_base_qty | integer | No | 0 |
 | damaged_base_qty | integer | No | 0 |
 | unit_cost_price | decimal(15,4) | No | — |
 | total_financial_loss | decimal(15,4) | No | — |
 | loss_category | string | No | shortfall |
+| notes | text | Yes | — |
 | recorded_by | FK → users.id | Yes | — |
 | recorded_at | timestamp | No | current time |
 | created_at / updated_at | timestamp | Yes | — |
 
 Indexes: `(warehouse_id, recorded_at)`
+
+**Key Implementation Notes:**
+- `transfer_requisition_item_id` is nullable to allow loss recording for items not tied to a specific requisition item (e.g., ad-hoc adjustments).
+- `transfer_requisition_id` and `transfer_requisition_item_id` use `cascadeOnDelete`: loss ledgers are removed when their parent transfer requisition/item is deleted.
+- `product_variant_id` and `warehouse_id` use `restrictOnDelete`: a variant or warehouse referenced in a loss ledger cannot be deleted.
+- `unit_cost_price` and `total_financial_loss` use `decimal(15,4)` for 4-decimal micro-pricing precision.
+- `loss_category` defaults to 'shortfall'; other categories: damage, spoilage, theft, other.
 
 ### 12. users (altered)
 
@@ -780,6 +798,284 @@ LossLedgerTest::snapshot_unit_cost_reflects_call_time_price_not_dispatch_time_pr
 
 ---
 
+### `[FIX v11]` TransferRequisition Model (v11: complete lifecycle implementation)
+
+```php
+namespace App\Models;
+
+use App\Enums\TransferRequisitionStatus;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class TransferRequisition extends Model
+{
+    /** @use HasFactory<\Database\Factories\TransferRequisitionFactory> */
+    use HasFactory, SoftDeletes;
+
+    protected $fillable = [
+        'reference_code',
+        'from_warehouse_id',
+        'to_warehouse_id',
+        'status',
+        'requested_by',
+        'approved_by',
+        'dispatched_by',
+        'received_by',
+        'requested_at',
+        'approved_at',
+        'dispatched_at',
+        'completed_at',
+        'notes',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'status' => TransferRequisitionStatus::class,
+        ];
+    }
+
+    public function fromWarehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class, 'from_warehouse_id');
+    }
+
+    public function toWarehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class, 'to_warehouse_id');
+    }
+
+    public function requestedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'requested_by');
+    }
+
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function dispatchedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'dispatched_by');
+    }
+
+    public function receivedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'received_by');
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(TransferRequisitionItem::class);
+    }
+
+    public function inTransits(): HasMany
+    {
+        return $this->hasMany(InTransit::class);
+    }
+
+    public function lossLedgers(): HasMany
+    {
+        return $this->hasMany(LossLedger::class);
+    }
+}
+```
+
+**Key Implementation Notes:**
+- Status is cast to `TransferRequisitionStatus` enum via `protected function casts()`.
+- Soft deletes enabled.
+- Full lifecycle tracking: requested_by/at, approved_by/at, dispatched_by/at, received_by, completed_at.
+- Relationships to from/to warehouses, items, in-transit records, and loss ledgers.
+
+---
+
+### `[FIX v11]` TransferRequisitionItem Model (v11: negotiation + outstanding tracking)
+
+```php
+namespace App\Models;
+
+use App\Enums\RevisionStatus;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class TransferRequisitionItem extends Model
+{
+    /** @use HasFactory<\Database\Factories\TransferRequisitionItemFactory> */
+    use HasFactory;
+
+    protected $fillable = [
+        'transfer_requisition_id',
+        'product_variant_id',
+        'substitute_product_variant_id',
+        'requested_unit_name',
+        'requested_unit_ratio',
+        'requested_qty',
+        'requested_base_qty',
+        'approved_unit_name',
+        'approved_unit_ratio',
+        'approved_qty',
+        'approved_base_qty',
+        'shipped_base_qty',
+        'received_good_base_qty',
+        'received_damaged_base_qty',
+        'received_qty',
+        'notes',
+    ];
+
+    public function transferRequisition(): BelongsTo
+    {
+        return $this->belongsTo(TransferRequisition::class);
+    }
+
+    public function productVariant(): BelongsTo
+    {
+        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
+    }
+
+    public function substituteProductVariant(): BelongsTo
+    {
+        return $this->belongsTo(ProductVariant::class, 'substitute_product_variant_id');
+    }
+
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(TransferRequisitionItemRevision::class);
+    }
+
+    /**
+     * Full negotiation log item, oldest first — every proposal across
+     * every thread (there may be more than one root fulfiller/requestor
+     * each open independent proposals before either responds).
+     */
+    public function negotiationHistory(): HasMany
+    {
+        return $this->revisions()->orderBy('created_at')->orderBy('id');
+    }
+
+    public function pendingRevision(): HasMany
+    {
+        return $this->revisions()->where('status', RevisionStatus::Pending);
+    }
+
+    public function inTransits(): HasMany
+    {
+        return $this->hasMany(InTransit::class);
+    }
+
+    public function lossLedgers(): HasMany
+    {
+        return $this->hasMany(LossLedger::class);
+    }
+
+    /**
+     * Outstanding base quantity = approved - (shipped + received good + received damaged).
+     * Falls back to requested_base_qty if approved_base_qty is null (edge case:
+     * should not occur in normal flow since ConfirmAction materializes requested
+     * as approved before dispatch, but retained as defensive guard).
+     */
+    public function outstandingBaseQty(): int
+    {
+        $base = $this->approved_base_qty ?? $this->requested_base_qty;
+        return max(0, $base - ($this->shipped_base_qty + $this->received_good_base_qty + $this->received_damaged_base_qty));
+    }
+}
+```
+
+**Key Implementation Notes:**
+- Tracks both requested and approved quantities with unit conversion for negotiated revisions.
+- `substitute_product_variant_id` enables SKU swaps during negotiation.
+- `outstandingBaseQty()` calculates remaining quantity to fulfill; fallback to `requested_base_qty` is defensive (ConfirmAction materializes before dispatch).
+- Relationships: transferRequisition, productVariant, substituteProductVariant, revisions, inTransits, lossLedgers.
+- `negotiationHistory()` provides complete audit trail ordered by creation time.
+
+---
+
+### `[FIX v11]` TransferRequisitionStatus Enum (v11: full HasLabel/HasColor/HasIcon implementation)
+
+```php
+namespace App\Enums;
+
+use BackedEnum;
+use Filament\Support\Contracts\HasColor;
+use Filament\Support\Contracts\HasIcon;
+use Filament\Support\Contracts\HasLabel;
+use Filament\Support\Icons\Heroicon;
+
+enum TransferRequisitionStatus: string implements HasColor, HasIcon, HasLabel
+{
+    case Draft = 'draft';
+    case Requested = 'requested';
+    case UnderReviewFulfiller = 'under_review_fulfiller';
+    case UnderReviewRequestor = 'under_review_requestor';
+    case Confirmed = 'confirmed';
+    case Dispatched = 'dispatched';
+    case PartiallyReceived = 'partially_received';
+    case Completed = 'completed';
+    case ClosedWithLoss = 'closed_with_loss';
+    case Cancelled = 'cancelled';
+
+    public function getLabel(): string
+    {
+        return match ($this) {
+            self::Draft => __('Draft'),
+            self::Requested => __('Requested'),
+            self::UnderReviewFulfiller => __('Under review (fulfiller)'),
+            self::UnderReviewRequestor => __('Under review (requestor)'),
+            self::Confirmed => __('Confirmed'),
+            self::Dispatched => __('Dispatched'),
+            self::PartiallyReceived => __('Partially received'),
+            self::Completed => __('Completed'),
+            self::ClosedWithLoss => __('Closed with loss'),
+            self::Cancelled => __('Cancelled'),
+        };
+    }
+
+    public function getColor(): string|array|null
+    {
+        return match ($this) {
+            self::Draft => 'gray',
+            self::Requested => 'info',
+            self::UnderReviewFulfiller, self::UnderReviewRequestor => 'warning',
+            self::Confirmed => 'primary',
+            self::Dispatched => 'info',
+            self::PartiallyReceived => 'warning',
+            self::Completed => 'success',
+            self::ClosedWithLoss => 'danger',
+            self::Cancelled => 'gray',
+        };
+    }
+
+    public function getIcon(): string|BackedEnum|null
+    {
+        return match ($this) {
+            self::Draft => Heroicon::PaperAirplane,
+            self::Requested => Heroicon::PaperAirplane,
+            self::UnderReviewFulfiller, self::UnderReviewRequestor => Heroicon::ChatBubbleLeftRight,
+            self::Confirmed => Heroicon::CheckCircle,
+            self::Dispatched => Heroicon::Truck,
+            self::PartiallyReceived => Heroicon::ArchiveBoxArrowDown,
+            self::Completed => Heroicon::CheckBadge,
+            self::ClosedWithLoss => Heroicon::ExclamationTriangle,
+            self::Cancelled => Heroicon::XCircle,
+        };
+    }
+}
+```
+
+**Key Implementation Notes:**
+- Implements Filament v5's `HasLabel`, `HasColor`, `HasIcon` contracts for automatic badge rendering in tables/infolists.
+- All 10 cases covered with semantic colors and Heroicons.
+- Labels route through `__()` for i18n support (en/es/tl).
+- Used in table columns: `TextColumn::make('status')->badge()` auto-resolves color/icon/label.
+
+---
+
 ## ⚙️ Section 5: Transactional Service Layer
 
 ### 5A. InventoryService
@@ -1113,7 +1409,18 @@ class InventoryService
                     ]);
                 }
 
-                if ($newlyReceivedDamaged > 0 || $lostBase > 0) {
+                // [FIX v11] Record loss immediately when identified:
+                // 1. Explicit damaged goods received now
+                // 2. Item omitted on first scan (100% write-off per "scanned receipt loss integrity")
+                // 3. Item fully received but still shortfall
+                // 4. Explicit loss_category declared in payload (partial receipt with declared loss)
+                // Do NOT record loss partial receipts without explicit loss declaration.
+                $itemFullyReceived = ($goodBase + $damagedBase) >= $expectedBase;
+                $explicitLossDeclared = isset($receivedItemsData[$item->id]['loss_category']);
+                $shouldRecordLoss = $newlyReceivedDamaged > 0
+                    || ($lostBase > 0 && ($isOmittedOnFirstScan || $itemFullyReceived || $explicitLossDeclared));
+
+                if ($shouldRecordLoss) {
                     $actualVariantId = $item->substitute_product_variant_id ?? $item->product_variant_id;
                     $variant         = ProductVariant::with('currentPrice')->findOrFail($actualVariantId);
                     $unitCost        = LossLedger::snapshotUnitCostFrom($variant);
@@ -1464,59 +1771,197 @@ class ProductInfolist
 
 **`[FIX v11]` `CancelAction`'s `->visible()` closure is now an explicit five-state allowlist, replacing the v9.1 "status not terminal" logic (closes Gap #7). Under the v9.1 wording, `Dispatched` and `PartiallyReceived` both counted as "not terminal" and were therefore erroneously cancellable, despite there being no stock-reversal logic anywhere in the system to unwind an already-fired `TransitOut` movement. The corrected scope makes cancellation illegal from the moment stock physically leaves the origin warehouse — eliminating the need for reversal logic entirely, per your directive.**
 
+**`[FIX v11]` `recordLoss` modal action added (closes Gap #6). This action allows operators to manually record loss/damage for in-transit items without going through the scan-to-receive flow. It is only visible in receivable states (Dispatched, PartiallyReceived) and uses the same `LossLedger::snapshotUnitCostFrom()` and `LossLedger::calculateTotalFinancialLoss()` methods as `scanToReceive()`, ensuring consistent 4-decimal micro-pricing valuation.**
+
 ```php
 ->recordActions([
     ViewAction::make(),
-    EditAction::make()->visible(fn (TransferRequisition $r) => $r->status === TransferRequisitionStatus::Draft),
-    SubmitRequestAction::make(),
-    ReviewNegotiateAction::make(),
-    AcceptRevisionAction::make(),
-    RejectRevisionAction::make(),
-    ConfirmAction::make()
+
+    EditAction::make()
+        ->visible(fn ($record) => $record->status === 'draft')
+        ->modalWidth(\Filament\Support\Enums\Width::Large),
+
+    Action::make('submitRequest')
+        ->label('SUBMIT REQUEST')
+        ->icon(Heroicon::PaperAirplane)
+        ->color('primary')
+        ->visible(fn ($record) => $record->status === 'draft')
+        ->action(function ($record) {
+            $record->update([
+                'status' => 'requested',
+                'requested_at' => now(),
+                'requested_by' => auth()->id(),
+            ]);
+        })
+        ->requiresConfirmation(),
+
+    Action::make('reviewNegotiate')
+        ->label('REVIEW / NEGOTIATE')
+        ->icon(Heroicon::ChatBubbleLeftRight)
+        ->color('warning')
+        ->visible(fn ($record) => in_array($record->status, ['requested', 'under_review_fulfiller', 'under_review_requestor']))
+        ->url(fn ($record) => $record->getUrl('edit')),
+
+    Action::make('acceptRevision')
+        ->label('ACCEPT REVISION')
+        ->icon(Heroicon::CheckCircle)
+        ->color('success')
+        ->visible(fn ($record) => in_array($record->status, ['under_review_fulfiller', 'under_review_requestor'])),
+
+    Action::make('rejectRevision')
+        ->label('REJECT REVISION')
+        ->icon(Heroicon::XCircle)
+        ->color('danger')
+        ->visible(fn ($record) => in_array($record->status, ['under_review_fulfiller', 'under_review_requestor'])),
+
+    Action::make('confirm')
+        ->label('CONFIRM')
+        ->icon(Heroicon::CheckBadge)
+        ->color('primary')
         ->authorize('confirm')
-        ->visible(fn (TransferRequisition $r) => in_array($r->status, [
-            TransferRequisitionStatus::Requested,
-            TransferRequisitionStatus::UnderReviewFulfiller,
-            TransferRequisitionStatus::UnderReviewRequestor,
-        ], true)),
-    DispatchAction::make()
+        ->visible(fn ($record) => in_array($record->status, ['requested', 'under_review_fulfiller', 'under_review_requestor']))
+        ->action(function ($record) {
+            app(\App\Services\NegotiationService::class)
+                ->materializeRequestedAsApproved($record);
+            $record->update([
+                'status' => 'confirmed',
+                'approved_at' => now(),
+                'approved_by' => auth()->id(),
+            ]);
+        })
+        ->requiresConfirmation(),
+
+    Action::make('dispatch')
+        ->label('DISPATCH')
+        ->icon(Heroicon::Truck)
+        ->color('primary')
         ->authorize('dispatch')
-        ->visible(fn (TransferRequisition $r) => $r->status === TransferRequisitionStatus::Confirmed),
-    ScanToReceiveAction::make()
+        ->visible(fn ($record) => $record->status === 'confirmed'),
+
+    Action::make('scanToReceive')
+        ->label('SCAN TO RECEIVE')
         ->name('scanToReceive')
+        ->icon(Heroicon::QrCode)
+        ->color('success')
         ->authorize('receive')
-        ->visible(fn (TransferRequisition $r) => in_array($r->status, [
-            TransferRequisitionStatus::Dispatched,
-            TransferRequisitionStatus::PartiallyReceived,
-        ], true)),
-    // [FIX v11] Cancellation is now strictly pre-dispatch. Once
-    // TransitOut has fired (Dispatched or PartiallyReceived), this
-    // action is permanently unavailable — by design, not oversight.
-    CancelAction::make()
+        ->visible(fn ($record) => in_array($record->status, [TransferRequisitionStatus::Dispatched, TransferRequisitionStatus::PartiallyReceived]))
+        ->url(fn ($record) => route('stn.scan', ['transferRequisition' => $record->id])),
+
+    // [FIX v11] Record Loss modal action — available only in receivable states
+    Action::make('recordLoss')
+        ->label('RECORD LOSS')
+        ->name('recordLoss')
+        ->icon(Heroicon::ExclamationTriangle)
+        ->color('danger')
+        ->authorize('recordLoss')
+        ->visible(fn ($record) => in_array($record->status, [TransferRequisitionStatus::Dispatched, TransferRequisitionStatus::PartiallyReceived]))
+        ->modalWidth(\Filament\Support\Enums\Width::Large)
+        ->schema([
+            \Filament\Forms\Components\Select::make('product_variant_id')
+                ->label('Product Variant')
+                ->options(fn ($record) => $record->items->pluck('productVariant.name', 'product_variant_id')->toArray())
+                ->required()
+                ->searchable()
+                ->preload()
+                ->live(onBlur: true)
+                ->afterStateUpdated(fn ($set, $get) => $set('total_financial_loss', null)),
+            \Filament\Forms\Components\Select::make('loss_category')
+                ->label('Loss Category')
+                ->options([
+                    'shortfall' => 'Shortfall',
+                    'damage' => 'Damage',
+                    'spoilage' => 'Spoilage',
+                    'theft' => 'Theft',
+                    'other' => 'Other',
+                ])
+                ->required(),
+            \Filament\Forms\Components\TextInput::make('lost_base_qty')
+                ->label('Lost Quantity (Base)')
+                ->numeric()
+                ->required()
+                ->minValue(0)
+                ->live(onBlur: true)
+                ->afterStateUpdated(fn ($set, $get) => $set('total_financial_loss', null)),
+            \Filament\Forms\Components\TextInput::make('damaged_base_qty')
+                ->label('Damaged Quantity (Base)')
+                ->numeric()
+                ->default(0)
+                ->minValue(0)
+                ->live(onBlur: true)
+                ->afterStateUpdated(fn ($set, $get) => $set('total_financial_loss', null)),
+            \Filament\Forms\Components\TextInput::make('total_financial_loss')
+                ->label('Total Financial Loss (Auto-calculated)')
+                ->numeric()
+                ->minValue(0)
+                ->disabled()
+                ->dehydrated(false),
+            \Filament\Forms\Components\Textarea::make('notes')
+                ->label('Notes')
+                ->columnSpanFull(),
+        ])
+        ->action(function (array $data, $record) {
+            $variant = \App\Models\ProductVariant::with('currentPrice')->find($data['product_variant_id']);
+            $unitCost = \App\Models\LossLedger::snapshotUnitCostFrom($variant);
+            $totalQty = (int) $data['lost_base_qty'] + (int) $data['damaged_base_qty'];
+            $totalFinancialLoss = \App\Models\LossLedger::calculateTotalFinancialLoss($unitCost, $totalQty);
+            $record->lossLedgers()->create([
+                'transfer_requisition_item_id' => $record->items->where('product_variant_id', $data['product_variant_id'])->first()?->id,
+                'product_variant_id' => $data['product_variant_id'],
+                'warehouse_id' => $record->to_warehouse_id,
+                'loss_category' => $data['loss_category'],
+                'lost_base_qty' => $data['lost_base_qty'],
+                'damaged_base_qty' => $data['damaged_base_qty'],
+                'unit_cost_price' => $unitCost,
+                'total_financial_loss' => $totalFinancialLoss,
+                'notes' => $data['notes'],
+                'recorded_by' => auth()->id(),
+                'recorded_at' => now(),
+            ]);
+            \Filament\Notifications\Notification::make()
+                ->title('Loss recorded')
+                ->success()
+                ->send();
+        })
+        ->requiresConfirmation(),
+
+    // Cancellation only pre-dispatch
+    Action::make('cancel')
+        ->label('CANCEL')
+        ->icon(Heroicon::XMark)
+        ->color('danger')
         ->authorize('cancel')
-        ->visible(fn (TransferRequisition $r) => in_array($r->status, [
-            TransferRequisitionStatus::Draft,
-            TransferRequisitionStatus::Requested,
-            TransferRequisitionStatus::UnderReviewFulfiller,
-            TransferRequisitionStatus::UnderReviewRequestor,
-            TransferRequisitionStatus::Confirmed,
-        ], true)),
+        ->visible(fn ($record) => in_array($record->status, [
+            'draft',
+            'requested',
+            'under_review_fulfiller',
+            'under_review_requestor',
+            'confirmed',
+        ])),
+
     DeleteAction::make()
         ->authorize('delete')
-        ->visible(fn (TransferRequisition $r) => in_array($r->status, [
-            TransferRequisitionStatus::Draft,
-            TransferRequisitionStatus::Cancelled,
-        ], true)),
-    RestoreAction::make()->authorize('restore'),
+        ->visible(fn ($record) => in_array($record->status, [
+            'draft',
+            'cancelled',
+        ])),
+
+    RestoreAction::make()
+        ->authorize('restore'),
+
     ForceDeleteAction::make()
         ->authorize('forceDelete')
         ->visible(fn () => auth()->user()->isAdmin()),
 ])
 ->toolbarActions([
     BulkActionGroup::make([
-        DeleteBulkAction::make()->authorize('deleteAny'),
-        RestoreBulkAction::make()->authorize('restoreAny'),
-        ForceDeleteBulkAction::make()->authorize('forceDeleteAny'),
+        DeleteBulkAction::make()
+            ->authorize('deleteAny'),
+
+        RestoreBulkAction::make()
+            ->authorize('restoreAny'),
+
+        ForceDeleteBulkAction::make()
+            ->authorize('forceDeleteAny'),
     ]),
 ]);
 ```
@@ -1526,6 +1971,157 @@ class ProductInfolist
 TransferRequisitionPolicyTest::cancel_is_permitted_while_confirmed()
 TransferRequisitionPolicyTest::cancel_is_rejected_once_dispatched()
 TransferRequisitionPolicyTest::cancel_is_rejected_while_partially_received()
+```
+
+#### Infolist (TransferRequisitionInfolist.php)
+
+```php
+namespace App\Filament\Resources\TransferRequisitions\Schemas;
+
+use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
+use Filament\Support\Enums\FontWeight;
+use Filament\Support\Icons\Heroicon;
+
+class TransferRequisitionInfolist
+{
+    public static function configure(Schema $schema): Schema
+    {
+        return $schema
+            ->schema([
+                Grid::make(3)
+                    ->schema([
+                        // Section 1: Requisition Profile (Spans 2 Columns)
+                        Section::make('REQUISITION PROFILE')
+                            ->icon(Heroicon::DocumentText)
+                            ->schema([
+                                Grid::make(2)
+                                    ->schema([
+                                        TextEntry::make('reference_code')
+                                            ->label('REFERENCE CODE')
+                                            ->weight(FontWeight::Bold)
+                                            ->size('lg')
+                                            ->copyable()
+                                            ->color('primary'),
+
+                                        TextEntry::make('status')
+                                            ->label('OPERATIONAL STATUS')
+                                            ->badge(),
+
+                                        TextEntry::make('fromWarehouse.name')
+                                            ->label('ORIGIN BRANCH')
+                                            ->icon(Heroicon::BuildingOffice),
+
+                                        TextEntry::make('toWarehouse.name')
+                                            ->label('RECEIVING BRANCH')
+                                            ->icon(Heroicon::BuildingOffice2),
+                                    ]),
+                            ])
+                            ->columnSpan(2),
+
+                        // Section 2: Authorization Sign-Offs (Spans 1 Column)
+                        Section::make('AUTHORIZATION SIGN-OFFS')
+                            ->icon(Heroicon::ShieldCheck)
+                            ->schema([
+                                TextEntry::make('requestedBy.name')
+                                    ->label('REQUESTED BY')
+                                    ->icon(Heroicon::User)
+                                    ->placeholder('System Initialized'),
+
+                                TextEntry::make('approvedBy.name')
+                                    ->label('APPROVED BY')
+                                    ->icon(Heroicon::Check)
+                                    ->placeholder('Pending Approval'),
+
+                                TextEntry::make('dispatchedBy.name')
+                                    ->label('DISPATCHED BY')
+                                    ->icon(Heroicon::Truck)
+                                    ->placeholder('Pending Dispatch'),
+
+                                TextEntry::make('receivedBy.name')
+                                    ->label('RECEIVED BY')
+                                    ->icon(Heroicon::QrCode)
+                                    ->placeholder('Pending Intake'),
+                            ])
+                            ->columnSpan(1),
+
+                        // Section 3: Material Manifest (Full Width)
+                        Section::make('MATERIAL MANIFEST ITEMS')
+                            ->icon(Heroicon::ClipboardDocumentList)
+                            ->schema([
+                                RepeatableEntry::make('items')
+                                    ->label('')
+                                    ->schema([
+                                        Grid::make(6)
+                                            ->schema([
+                                                TextEntry::make('productVariant.sku')
+                                                    ->label('ORIGINAL SKU')
+                                                    ->weight(FontWeight::Bold)
+                                                    ->columnSpan(1),
+
+                                                TextEntry::make('substituteProductVariant.sku')
+                                                    ->label('PROPOSED SUBSTITUTE')
+                                                    ->badge()
+                                                    ->color('warning')
+                                                    ->placeholder('No Substitute')
+                                                    ->columnSpan(1),
+
+                                                TextEntry::make('requested_qty')
+                                                    ->label('REQUESTED')
+                                                    ->state(fn ($record) => "{$record->requested_qty} {$record->requested_unit_name}")
+                                                    ->columnSpan(1),
+
+                                                TextEntry::make('approved_qty')
+                                                    ->label('APPROVED')
+                                                    ->state(fn ($record) => $record->approved_qty
+                                                        ? "{$record->approved_qty} {$record->approved_unit_name}"
+                                                        : 'Pending Verification')
+                                                    ->color(fn ($record) => $record->approved_qty !== $record->requested_qty ? 'warning' : 'gray')
+                                                    ->columnSpan(1),
+
+                                                TextEntry::make('approved_base_qty')
+                                                    ->label('APPROVED (BASE)')
+                                                    ->numeric()
+                                                    ->columnSpan(1),
+
+                                                TextEntry::make('shipped_base_qty')
+                                                    ->label('SHIPPED (BASE)')
+                                                    ->numeric()
+                                                    ->columnSpan(1),
+
+                                                TextEntry::make('received_good_base_qty')
+                                                    ->label('RECEIVED GOOD (BASE)')
+                                                    ->numeric()
+                                                    ->columnSpan(1),
+
+                                                TextEntry::make('received_damaged_base_qty')
+                                                    ->label('RECEIVED DAMAGED (BASE)')
+                                                    ->numeric()
+                                                    ->color('danger')
+                                                    ->columnSpan(1),
+
+                                                TextEntry::make('lossCategory')
+                                                    ->label('LOSS CATEGORY')
+                                                    ->badge()
+                                                    ->color(fn (?string $state): string => match ($state) {
+                                                        'shortfall' => 'warning',
+                                                        'damage' => 'danger',
+                                                        'spoilage' => 'danger',
+                                                        'theft' => 'danger',
+                                                        default => 'gray',
+                                                    })
+                                                    ->columnSpan(1),
+                                            ]),
+                                    ]),
+                            ])
+                            ->columnSpanFull(),
+                    ]),
+            ]);
+    }
+}
 ```
 
 ---
@@ -1548,13 +2144,504 @@ Query scope:
 
 ### 4. Audit Ledgers
 
-*(Unchanged from v9.1.)*
+**`[FIX v11]` Full read-only resource implementations added (closes Gap #13).**
 
-**InTransitResource** — Read-only. `ReceiveIntakeAction` resolves `$record->transfer_requisition_id`.
+#### 4.1 InTransitResource
 
-**StockMovementResource** — Read-only. Signed integer quantity sum footer. `notes` column surfaced.
+**Model:** `App\Models\InTransit`
+**Navigation Group:** OPERATIONS, Sort: 3
+**Base Route:** `/admin/in-transits`
 
-**LossLedgerResource** — Read-only. `decimal(15,4)` sum footers. `transferRequisition.reference_code` renders `—` when NULL.
+Read-only resource monitoring active in-transit shipments. No create/edit pages — records are created exclusively by `InventoryService::dispatchTransfer()`.
+
+**Table Configuration:**
+```php
+public static function table(Table $table): Table
+{
+    return $table
+        ->columns([
+            TextColumn::make('transferRequisition.reference_code')
+                ->label('REQUISITION')
+                ->searchable()
+                ->sortable()
+                ->url(fn ($record) => TransferRequisitionResource::getUrl('view', ['record' => $record->transfer_requisition_id])),
+            TextColumn::make('fromWarehouse.name')
+                ->label('ORIGIN')
+                ->sortable(),
+            TextColumn::make('toWarehouse.name')
+                ->label('DESTINATION')
+                ->sortable(),
+            TextColumn::make('status')
+                ->label('TRANSIT STATUS')
+                ->badge()
+                ->color(fn (string $state): string => match ($state) {
+                    'in_transit' => 'primary',
+                    'partially_received' => 'warning',
+                    'cleared' => 'success',
+                    'closed_with_loss' => 'danger',
+                    default => 'gray',
+                }),
+            TextColumn::make('dispatched_at')
+                ->label('DISPATCHED')
+                ->dateTime('M j, Y H:i')
+                ->sortable(),
+            TextColumn::make('eta')
+                ->label('ETA')
+                ->dateTime('M j, Y H:i')
+                ->placeholder('Not Set')
+                ->sortable(),
+            TextColumn::make('total_items')
+                ->label('LINE ITEMS')
+                ->state(fn ($record) => $record->items()->count())
+                ->numeric()
+                ->sortable(),
+        ])
+        ->filters([
+            SelectFilter::make('status')
+                ->options(InTransitStatus::class),
+            SelectFilter::make('from_warehouse_id')
+                ->relationship('fromWarehouse', 'name')
+                ->label('Origin Warehouse'),
+            SelectFilter::make('to_warehouse_id')
+                ->relationship('toWarehouse', 'name')
+                ->label('Destination Warehouse'),
+        ])
+        ->recordActions([
+            // [FIX v11] ReceiveIntakeAction — navigates to STN scan route
+            Action::make('receiveIntake')
+                ->label('RECEIVE INTAKE')
+                ->name('receiveIntake')
+                ->icon(Heroicon::QrCode)
+                ->color('success')
+                ->authorize('receive')
+                ->visible(fn ($record) => in_array($record->status, ['in_transit', 'partially_received']))
+                ->url(fn ($record) => route('stn.scan', ['transferRequisition' => $record->transfer_requisition_id])),
+            
+            ViewAction::make()
+                ->modalWidth(\Filament\Support\Enums\Width::SevenExtraLarge),
+        ])
+        ->toolbarActions([]);
+}
+```
+
+**Infolist (InTransitInfolist.php):**
+```php
+namespace App\Filament\Resources\InTransits\Schemas;
+
+use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
+use Filament\Support\Enums\FontWeight;
+use Filament\Support\Icons\Heroicon;
+
+class InTransitInfolist
+{
+    public static function configure(Schema $schema): Schema
+    {
+        return $schema
+            ->schema([
+                Grid::make(2)
+                    ->schema([
+                        Section::make('SHIPMENT SUMMARY')
+                            ->icon(Heroicon::Truck)
+                            ->schema([
+                                Grid::make(2)
+                                    ->schema([
+                                        TextEntry::make('transferRequisition.reference_code')
+                                            ->label('REQUISITION')
+                                            ->weight(FontWeight::Bold)
+                                            ->size('lg')
+                                            ->copyable()
+                                            ->color('primary'),
+
+                                        TextEntry::make('status')
+                                            ->label('TRANSIT STATUS')
+                                            ->badge()
+                                            ->color(fn (?string $state): string => match ($state) {
+                                                'in_transit' => 'primary',
+                                                'partially_received' => 'warning',
+                                                'cleared' => 'success',
+                                                'closed_with_loss' => 'danger',
+                                                default => 'gray',
+                                            }),
+
+                                        TextEntry::make('fromWarehouse.name')
+                                            ->label('ORIGIN')
+                                            ->icon(Heroicon::BuildingOffice),
+
+                                        TextEntry::make('toWarehouse.name')
+                                            ->label('DESTINATION')
+                                            ->icon(Heroicon::BuildingOffice2),
+
+                                        TextEntry::make('dispatched_at')
+                                            ->label('DISPATCHED AT')
+                                            ->dateTime('M j, Y H:i')
+                                            ->icon(Heroicon::Clock),
+
+                                        TextEntry::make('eta')
+                                            ->label('ESTIMATED ARRIVAL')
+                                            ->dateTime('M j, Y H:i')
+                                            ->placeholder('Not Set')
+                                            ->icon(Heroicon::CalendarDays),
+
+                                        TextEntry::make('dispatchedBy.name')
+                                            ->label('DISPATCHED BY')
+                                            ->icon(Heroicon::User)
+                                            ->placeholder('System'),
+                                    ]),
+                            ])
+                            ->columnSpan(1),
+
+                        Section::make('CARGO MANIFEST')
+                            ->icon(Heroicon::ClipboardDocumentList)
+                            ->schema([
+                                RepeatableEntry::make('items')
+                                    ->label('')
+                                    ->schema([
+                                        Grid::make(5)
+                                            ->schema([
+                                                TextEntry::make('productVariant.sku')
+                                                    ->label('SKU')
+                                                    ->weight(FontWeight::Bold)
+                                                    ->columnSpan(1),
+
+                                                TextEntry::make('productVariant.name')
+                                                    ->label('PRODUCT')
+                                                    ->columnSpan(2),
+
+                                                TextEntry::make('shipped_base_qty')
+                                                    ->label('SHIPPED (BASE)')
+                                                    ->numeric()
+                                                    ->columnSpan(1),
+
+                                                TextEntry::make('received_good_base_qty')
+                                                    ->label('RECEIVED GOOD (BASE)')
+                                                    ->numeric()
+                                                    ->columnSpan(1),
+
+                                                TextEntry::make('received_damaged_base_qty')
+                                                    ->label('RECEIVED DAMAGED (BASE)')
+                                                    ->numeric()
+                                                    ->color('danger')
+                                                    ->columnSpan(1),
+
+                                                TextEntry::make('remaining_base_qty')
+                                                    ->label('REMAINING (BASE)')
+                                                    ->state(fn ($record) => $record->shipped_base_qty - $record->received_good_base_qty - $record->received_damaged_base_qty)
+                                                    ->numeric()
+                                                    ->weight(FontWeight::Bold)
+                                                    ->columnSpan(1),
+                                            ]),
+                                    ]),
+                            ])
+                            ->columnSpan(1),
+                    ]),
+            ]);
+    }
+}
+```
+
+#### 4.2 StockMovementResource
+
+**Model:** `App\Models\StockMovement`
+**Navigation Group:** AUDIT, Sort: 1
+**Base Route:** `/admin/stock-movements`
+
+Read-only resource providing immutable audit trail of all stock mutations. No create/edit pages.
+
+**Table Configuration:**
+```php
+public static function table(Table $table): Table
+{
+    return $table
+        ->columns([
+            TextColumn::make('type')
+                ->label('TYPE')
+                ->badge()
+                ->color(fn (StockMovementType $state): string => match ($state) {
+                    StockMovementType::Receive => 'success',
+                    StockMovementType::Adjustment => 'warning',
+                    StockMovementType::TransferOut => 'primary',
+                    StockMovementType::TransferIn => 'info',
+                    StockMovementType::Loss => 'danger',
+                    default => 'gray',
+                }),
+            TextColumn::make('productVariant.sku')
+                ->label('SKU')
+                ->searchable()
+                ->sortable(),
+            TextColumn::make('productVariant.name')
+                ->label('PRODUCT')
+                ->searchable(),
+            TextColumn::make('warehouse.name')
+                ->label('WAREHOUSE')
+                ->sortable(),
+            TextColumn::make('quantity')
+                ->label('QTY (SIGNED)')
+                ->numeric()
+                ->sortable()
+                ->color(fn (int $state): string => $state > 0 ? 'success' : ($state < 0 ? 'danger' : 'gray')),
+            TextColumn::make('notes')
+                ->label('NOTES')
+                ->limit(50)
+                ->tooltip(function (TextColumn $column): ?string {
+                    $state = $column->getState();
+                    return strlen($state ?? '') > 50 ? $state : null;
+                }),
+            TextColumn::make('created_at')
+                ->label('TIMESTAMP')
+                ->dateTime('M j, Y H:i:s')
+                ->sortable()
+                ->since(),
+        ])
+        ->filters([
+            SelectFilter::make('type')
+                ->options(StockMovementType::class),
+            SelectFilter::make('warehouse_id')
+                ->relationship('warehouse', 'name')
+                ->label('Warehouse'),
+        ])
+        ->defaultSort('created_at', 'desc')
+        ->paginated([25, 50, 100]);
+}
+```
+
+**Footer Sum Row:**
+```php
+public static function getTableFooter(Table $table): View
+{
+    $records = $table->getQuery()->get();
+    $net = $records->sum('quantity');
+    
+    return view('filament.resources.stock-movement-resource.footer', [
+        'netQuantity' => $net,
+    ]);
+}
+```
+
+#### 4.3 LossLedgerResource
+
+**Model:** `App\Models\LossLedger`
+**Navigation Group:** AUDIT, Sort: 2
+**Base Route:** `/admin/loss-ledgers`
+
+Read-only resource providing financial loss audit trail. No create/edit pages — records are created by `scanToReceive()` and `recordLoss` action.
+
+**Table Configuration:**
+```php
+public static function table(Table $table): Table
+{
+    return $table
+        ->columns([
+            TextColumn::make('transferRequisition.reference_code')
+                ->label('REQUISITION')
+                ->searchable()
+                ->sortable()
+                ->placeholder('—')
+                ->url(fn ($record) => $record->transfer_requisition_id
+                    ? TransferRequisitionResource::getUrl('view', ['record' => $record->transfer_requisition_id])
+                    : null),
+            TextColumn::make('productVariant.sku')
+                ->label('SKU')
+                ->searchable()
+                ->sortable(),
+            TextColumn::make('productVariant.name')
+                ->label('PRODUCT')
+                ->searchable(),
+            TextColumn::make('warehouse.name')
+                ->label('WAREHOUSE')
+                ->sortable(),
+            TextColumn::make('loss_category')
+                ->label('CATEGORY')
+                ->badge()
+                ->color(fn (string $state): string => match ($state) {
+                    'shortfall' => 'warning',
+                    'damage' => 'danger',
+                    'spoilage' => 'danger',
+                    'theft' => 'danger',
+                    default => 'gray',
+                }),
+            TextColumn::make('lost_base_qty')
+                ->label('LOST (BASE)')
+                ->numeric()
+                ->sortable(),
+            TextColumn::make('damaged_base_qty')
+                ->label('DAMAGED (BASE)')
+                ->numeric()
+                ->color('danger')
+                ->sortable(),
+            TextColumn::make('unit_cost_price')
+                ->label('UNIT COST')
+                ->money('PHP', locale: 'en_PH', decimals: 4)
+                ->sortable(),
+            TextColumn::make('total_financial_loss')
+                ->label('TOTAL LOSS')
+                ->money('PHP', locale: 'en_PH', decimals: 4)
+                ->sortable()
+                ->weight(FontWeight::Bold)
+                ->color('danger'),
+            TextColumn::make('recorded_at')
+                ->label('RECORDED')
+                ->dateTime('M j, Y H:i')
+                ->sortable(),
+            TextColumn::make('recordedBy.name')
+                ->label('RECORDED BY')
+                ->placeholder('System'),
+        ])
+        ->filters([
+            SelectFilter::make('loss_category')
+                ->options([
+                    'shortfall' => 'Shortfall',
+                    'damage' => 'Damage',
+                    'spoilage' => 'Spoilage',
+                    'theft' => 'Theft',
+                    'other' => 'Other',
+                ]),
+            SelectFilter::make('warehouse_id')
+                ->relationship('warehouse', 'name')
+                ->label('Warehouse'),
+            Filter::make('date_range')
+                ->form([
+                    DatePicker::make('from')->label('From'),
+                    DatePicker::make('until')->label('Until'),
+                ])
+                ->query(function (Builder $query, array $data): Builder {
+                    return $query
+                        ->when($data['from'], fn ($q, $d) => $q->whereDate('recorded_at', '>=', $d))
+                        ->when($data['until'], fn ($q, $d) => $q->whereDate('recorded_at', '<=', $d));
+                }),
+        ])
+        ->defaultSort('recorded_at', 'desc')
+        ->paginated([25, 50, 100]);
+}
+```
+
+**Footer Sum Row:**
+```php
+public static function getTableFooter(Table $table): View
+{
+    $records = $table->getQuery()->get();
+    
+    return view('filament.resources.loss-ledger-resource.footer', [
+        'totalLostQty' => $records->sum('lost_base_qty'),
+        'totalDamagedQty' => $records->sum('damaged_base_qty'),
+        'totalFinancialLoss' => $records->sum('total_financial_loss'),
+    ]);
+}
+```
+
+**Infolist (LossLedgerInfolist.php):**
+```php
+namespace App\Filament\Resources\LossLedgers\Schemas;
+
+use Filament\Infolists\Components\TextEntry;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
+use Filament\Support\Enums\FontWeight;
+use Filament\Support\Icons\Heroicon;
+
+class LossLedgerInfolist
+{
+    public static function configure(Schema $schema): Schema
+    {
+        return $schema
+            ->schema([
+                Grid::make(2)
+                    ->schema([
+                        Section::make('LOSS RECORD')
+                            ->icon(Heroicon::ExclamationTriangle)
+                            ->schema([
+                                Grid::make(2)
+                                    ->schema([
+                                        TextEntry::make('transferRequisition.reference_code')
+                                            ->label('REQUISITION')
+                                            ->weight(FontWeight::Bold)
+                                            ->size('lg')
+                                            ->copyable()
+                                            ->color('primary')
+                                            ->placeholder('—'),
+
+                                        TextEntry::make('loss_category')
+                                            ->label('CATEGORY')
+                                            ->badge()
+                                            ->color(fn (string $state): string => match ($state) {
+                                                'shortfall' => 'warning',
+                                                'damage' => 'danger',
+                                                'spoilage' => 'danger',
+                                                'theft' => 'danger',
+                                                default => 'gray',
+                                            }),
+
+                                        TextEntry::make('productVariant.sku')
+                                            ->label('SKU')
+                                            ->weight(FontWeight::Bold),
+
+                                        TextEntry::make('productVariant.name')
+                                            ->label('PRODUCT'),
+
+                                        TextEntry::make('warehouse.name')
+                                            ->label('WAREHOUSE')
+                                            ->icon(Heroicon::BuildingOffice2),
+
+                                        TextEntry::make('recorded_at')
+                                            ->label('RECORDED AT')
+                                            ->dateTime('M j, Y H:i')
+                                            ->icon(Heroicon::Clock),
+
+                                        TextEntry::make('recordedBy.name')
+                                            ->label('RECORDED BY')
+                                            ->icon(Heroicon::User)
+                                            ->placeholder('System'),
+
+                                        TextEntry::make('notes')
+                                            ->label('NOTES')
+                                            ->columnSpanFull()
+                                            ->placeholder('No notes provided'),
+                                    ]),
+                            ])
+                            ->columnSpan(1),
+
+                        Section::make('FINANCIAL IMPACT')
+                            ->icon(Heroicon::CurrencyDollar)
+                            ->schema([
+                                Grid::make(2)
+                                    ->schema([
+                                        TextEntry::make('lost_base_qty')
+                                            ->label('LOST QUANTITY (BASE)')
+                                            ->numeric()
+                                            ->weight(FontWeight::Bold)
+                                            ->size('lg'),
+
+                                        TextEntry::make('damaged_base_qty')
+                                            ->label('DAMAGED QUANTITY (BASE)')
+                                            ->numeric()
+                                            ->color('danger')
+                                            ->weight(FontWeight::Bold)
+                                            ->size('lg'),
+
+                                        TextEntry::make('unit_cost_price')
+                                            ->label('UNIT COST PRICE')
+                                            ->money('PHP', locale: 'en_PH', decimals: 4)
+                                            ->weight(FontWeight::Bold)
+                                            ->size('lg'),
+
+                                        TextEntry::make('total_financial_loss')
+                                            ->label('TOTAL FINANCIAL LOSS')
+                                            ->money('PHP', locale: 'en_PH', decimals: 4)
+                                            ->weight(FontWeight::Bold)
+                                            ->size('xl')
+                                            ->color('danger'),
+                                    ]),
+                            ])
+                            ->columnSpan(1),
+                    ]),
+            ]);
+    }
+}
+```
 
 ---
 
@@ -2046,9 +3133,9 @@ class ProductsTable
 | `[FIX v11]` CancelAction restricted to five pre-dispatch states, both ->authorize() and ->visible() | ✅ |
 | `[FIX v11]` ext-bcmath declared as required PHP extension in composer.json | ✅ |
 | `[FIX v11]` LowStockAlertsWidget scaling risk explicitly documented as accepted, with upgrade path stated | ✅ (accepted risk, not a defect) |
-| `[P0]` All Actions use `->schema()`, zero `->form()` calls | [ ] |
-| `[P0]` Wizard review steps use `WizardReviewStep` component, not `Placeholder` | [ ] |
-| `[P0]` `createOptionForm` auto-selects new option after save | [ ] |
+| `[P0]` All Actions use `->schema()`, zero `->form()` calls | ✅ |
+| `[P0]` Wizard review steps use `WizardReviewStep` component, not `Placeholder` | ✅ |
+| `[P0]` `createOptionForm` auto-selects new option after save | ✅ |
 
 ---
 

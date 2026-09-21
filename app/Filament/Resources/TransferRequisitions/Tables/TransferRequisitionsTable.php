@@ -157,7 +157,7 @@ class TransferRequisitionsTable
                     ->icon(Heroicon::QrCode)
                     ->color('success')
                     ->authorize('receive')
-                    ->visible(fn ($record) => in_array($record->status, ['dispatched', 'partially_received']))
+                    ->visible(fn ($record) => in_array($record->status, [TransferRequisitionStatus::Dispatched, TransferRequisitionStatus::PartiallyReceived]))
                     ->url(fn ($record) => route('stn.scan', ['transferRequisition' => $record->id])),
 
                 Action::make('recordLoss')
@@ -166,7 +166,7 @@ class TransferRequisitionsTable
                     ->icon(Heroicon::ExclamationTriangle)
                     ->color('danger')
                     ->authorize('recordLoss')
-                    ->visible(fn ($record) => in_array($record->status->value, [TransferRequisitionStatus::Dispatched->value, TransferRequisitionStatus::PartiallyReceived->value]))
+                    ->visible(fn ($record) => in_array($record->status, [TransferRequisitionStatus::Dispatched, TransferRequisitionStatus::PartiallyReceived]))
                     ->modalWidth(\Filament\Support\Enums\Width::Large)
                     ->schema([
                         \Filament\Forms\Components\Select::make('product_variant_id')
@@ -212,7 +212,7 @@ class TransferRequisitionsTable
                             ->columnSpanFull(),
                     ])
                     ->action(function (array $data, $record) {
-                        $variant = \App\Models\ProductVariant::find($data['product_variant_id']);
+                        $variant = \App\Models\ProductVariant::with('currentPrice')->find($data['product_variant_id']);
                         $unitCost = \App\Models\LossLedger::snapshotUnitCostFrom($variant);
                         $totalQty = (int) $data['lost_base_qty'] + (int) $data['damaged_base_qty'];
                         $totalFinancialLoss = \App\Models\LossLedger::calculateTotalFinancialLoss($unitCost, $totalQty);

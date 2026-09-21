@@ -249,7 +249,7 @@ it('classifies urgency onHandQuantity vs reorder_point', function () {
 
     // urgencyLevel removed in v10 - use isBelowReorderPoint directly
     $onHand = $variant->onHandQuantity($warehouse->id);
-    expect($variant->isBelowReorderPoint($onHand))->toBeFalse();
+    expect($variant->isBelowReorderPoint($warehouse->id))->toBeFalse();
 });
 
 it('handles multiple stock movements correctly PHP computation', function () {
@@ -354,7 +354,28 @@ it('reorder point integration test', function () {
     $variant->reorder_point = 30;
     $variant->save();
 
-    expect($variant->isBelowReorderPoint(30))->toBeTrue();
-    expect($variant->isBelowReorderPoint(35))->toBeFalse();
-    expect($variant->isBelowReorderPoint(20))->toBeTrue();
+    // No stock - available = 0, reorder_point = 30 -> 0 <= 30 = true
+    expect($variant->isBelowReorderPoint($warehouse->id))->toBeTrue();
+
+    // Add stock above reorder point
+    $variant->stockMovements()->create([
+        'warehouse_id' => $warehouse->id,
+        'type' => 'receive',
+        'quantity' => 35,
+        'unit_name_used' => 'piece',
+        'unit_ratio_used' => 1,
+    ]);
+    // available = 35, reorder_point = 30 -> 35 <= 30 = false
+    expect($variant->isBelowReorderPoint($warehouse->id))->toBeFalse();
+
+    // Remove stock to below reorder point
+    $variant->stockMovements()->create([
+        'warehouse_id' => $warehouse->id,
+        'type' => 'adjustment',
+        'quantity' => -35,
+        'unit_name_used' => 'piece',
+        'unit_ratio_used' => 1,
+    ]);
+    // available = 0, reorder_point = 30 -> 0 <= 30 = true
+    expect($variant->isBelowReorderPoint($warehouse->id))->toBeTrue();
 });

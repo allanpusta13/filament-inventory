@@ -348,9 +348,6 @@ class InventoryService
                     $damagedBase = 0;
                     $lostBase = $expectedBase - $alreadyReceived;
                     $lossCategory = 'omitted_from_intake';
-
-                    // Omitted items on first scan MUST be processed - skip idempotency check entirely
-                    $isOmittedOnFirstScan = true;
                 } else {
                     $entry = $receivedItemsData[$item->id];
                     $incomingGood = ($entry['good_qty'] ?? 0) * $ratio;
@@ -375,10 +372,9 @@ class InventoryService
                 // 100% loss ledger (per "scanned receipt loss integrity" rule).
                 // The idempotency check only applies when the item IS present
                 // in the payload but would produce no state change.
+                $isOmittedOnFirstScan = $isFirstScan && ! isset($receivedItemsData[$item->id]);
                 $wouldChangeGood = $goodBase !== $item->received_good_base_qty;
                 $wouldChangeDamaged = $damagedBase !== $item->received_damaged_base_qty;
-
-                $isOmittedOnFirstScan = $isFirstScan && ! isset($receivedItemsData[$item->id]);
 
                 if (! $isOmittedOnFirstScan && ! $wouldChangeGood && ! $wouldChangeDamaged) {
                     continue;
@@ -402,7 +398,19 @@ class InventoryService
                     ]);
                 }
 
-                if ($newlyReceivedDamaged > 0 || $lostBase > 0) {
+                $itemFullyReceived = ($goodBase + $damagedBase) >= $expectedBase;
+                $explicitLossDeclared = isset($receivedItemsData[$item->id]['loss_category']);
+
+                // [FIX v11] Record loss immediately when identified:
+                // 1. Explicit damaged goods received now
+                // 2. Item omitted on first scan (100% write-off per "scanned receipt loss integrity")
+                // 3. Item fully received but still has shortfall
+                // 4. Explicit loss_category declared in payload (partial receipt with declared loss)
+                // Do NOT record loss for partial receipts without explicit loss declaration.
+                $shouldRecordLoss = $newlyReceivedDamaged > 0
+                    || ($lostBase > 0 && ($isOmittedOnFirstScan || $itemFullyReceived || $explicitLossDeclared));
+
+                if ($shouldRecordLoss) {
                     $actualVariantId = $item->substitute_product_variant_id ?? $item->product_variant_id;
                     $variant = ProductVariant::with('currentPrice')->findOrFail($actualVariantId);
                     $unitCost = LossLedger::snapshotUnitCostFrom($variant);

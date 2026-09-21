@@ -52,6 +52,26 @@ class TransferRequisitionFactory extends Factory
         return $this->state(fn () => ['status' => TransferRequisitionStatus::Completed]);
     }
 
+    public function cancelled(): static
+    {
+        return $this->state(fn () => ['status' => TransferRequisitionStatus::Cancelled]);
+    }
+
+    public function closedWithLoss(): static
+    {
+        return $this->state(fn () => ['status' => TransferRequisitionStatus::ClosedWithLoss]);
+    }
+
+    public function underReviewFulfiller(): static
+    {
+        return $this->state(fn () => ['status' => TransferRequisitionStatus::UnderReviewFulfiller]);
+    }
+
+    public function underReviewRequestor(): static
+    {
+        return $this->state(fn () => ['status' => TransferRequisitionStatus::UnderReviewRequestor]);
+    }
+
     public function withItems(): static
     {
         return $this->afterCreating(function (TransferRequisition $requisition) {
