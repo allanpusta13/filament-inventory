@@ -2722,12 +2722,53 @@ Heavy widget sums are wrapped in `Cache::remember('stats_overview_...', 300)` to
 
 **Widget Conversion Note:** LowStockAlertsWidget and RecentMovementsWidget were converted from list-based TableWidget implementations to Filament v5 native ChartWidgets using the built-in Chart.js integration (`Filament\Widgets\ChartWidget`). This provides native chart rendering with zero external dependencies. Caching behavior is preserved: LowStockAlertsWidget uses 300s TTL, RecentMovementsWidget uses 60s TTL. Both widgets use `Cache::remember()` with user + warehouse-scoped keys.
 
+**ChartWidget API Implementation:**
+- Both widgets extend `Filament\Widgets\ChartWidget` (abstract base class)
+- Protected methods implemented: `getType()`, `getData()`, `getOptions()`, `getHeading()`
+- `LowStockAlertsWidget::getType()` returns `'bar'` — dual dataset bar chart (Current Stock vs Reorder Point)
+- `RecentMovementsWidget::getType()` returns `'line'` — single dataset line chart (7-day daily buckets)
+- Role-based gate check in `getData()`: only Admin/Auditor roles receive computed data; others receive empty structure
+- Cache keys: `low_stock_alerts_chart_{userId}_{firstWarehouseId}` (300s), `recent_movements_chart_{userId}_{firstWarehouseId}` (60s)
+
+**Edge Case Security Coverage:**
+- Non-admin/non-auditor gate check returns empty data (no 403 on widget data endpoint)
+- SQL injection rejected via computed data (no user input in chart query parameters)
+- XSS script content in variant names handled at Chart.js render layer (widget returns raw data)
+- Warehouse ID scoping enforced on every query (user's accessible warehouses only)
+- Cross-warehouse access denial verified (data from inaccessible warehouses excluded)
+- Generic error messages — no internal IDs, SQLSTATE, or framework class names leaked
+- Empty warehouse access returns empty chart structure (no errors)
+
 **Pest coverage added:**
 ```
-LowStockAlertsWidgetTest::cache_window_prevents_requery_within_300_seconds()
+LowStockAlertsWidgetTest::chart_data_is_cached_for_300_seconds()
 LowStockAlertsWidgetTest::cache_miss_correctly_recomputes_all_variants()
+LowStockAlertsWidgetTest::chart_has_correct_structure_with_labels_and_datasets()
+LowStockAlertsWidgetTest::chart_type_is_bar()
+LowStockAlertsWidgetTest::heading_is_set_correctly()
+LowStockAlertsWidgetTest::non_admin_receives_empty_data_on_gate_check()
+LowStockAlertsWidgetTest::sql_injection_rejected_in_computed_data()
+LowStockAlertsWidgetTest::xss_script_escaped_in_variant_labels()
+LowStockAlertsWidgetTest::warehouse_id_scoping_on_every_query()
+LowStockAlertsWidgetTest::cross_warehouse_access_denial()
+LowStockAlertsWidgetTest::generic_error_messages_no_internal_id_leaks()
+LowStockAlertsWidgetTest::empty_warehouse_returns_empty_chart()
+LowStockAlertsWidgetTest::variant_above_reorder_point_not_in_chart()
+LowStockAlertsWidgetTest::multiple_variants_sorted_by_stock_ascending()
 RecentMovementsWidgetTest::chart_data_is_cached_for_60_seconds()
 RecentMovementsWidgetTest::cache_miss_correctly_recomputes_all_movements()
+RecentMovementsWidgetTest::chart_has_correct_structure_with_labels_and_datasets()
+RecentMovementsWidgetTest::chart_type_is_line()
+RecentMovementsWidgetTest::heading_is_set_correctly()
+RecentMovementsWidgetTest::cache_invalidated_on_stock_movement_with_warehouse_scoping()
+RecentMovementsWidgetTest::non_admin_receives_empty_data_on_gate_check()
+RecentMovementsWidgetTest::sql_injection_rejected_in_computed_data()
+RecentMovementsWidgetTest::xss_script_escaped_in_movement_labels()
+RecentMovementsWidgetTest::warehouse_id_scoping_on_every_query()
+RecentMovementsWidgetTest::cross_warehouse_access_denial()
+RecentMovementsWidgetTest::generic_error_messages_no_internal_id_leaks()
+RecentMovementsWidgetTest::empty_warehouse_returns_empty_chart()
+RecentMovementsWidgetTest::movements_aggregated_by_day_over_7_days()
 ```
 
 ---
