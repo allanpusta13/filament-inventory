@@ -5,124 +5,192 @@ declare(strict_types=1);
 namespace App\Filament\Widgets;
 
 use App\Models\ProductVariant;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Table;
-use Filament\Widgets\TableWidget;
-use Illuminate\Support\Collection;
+use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\Cache;
 
-class LowStockAlertsWidget extends TableWidget
+class LowStockAlertsWidget extends ChartWidget
 {
-    protected static ?string $heading = 'Low Stock Alerts';
+    protected ?string $heading = 'Low Stock Alerts';
 
     protected int|string|array $columnSpan = 'full';
 
     protected int|string|array $columnSpanFull = 'full';
 
-    public function getLowStockAlerts(): Collection
+    protected function getType(): string
+    {
+        return 'bar';
+    }
+
+    protected function getData(): array
     {
         $user = auth()->user();
 
-        // Hide sensitive low stock data from non-admin/auditor roles
         if (! ($user?->isAdmin() ?? false) && ! ($user?->isAuditor() ?? false)) {
-            return collect();
+            return [
+                'labels' => [],
+                'datasets' => [
+                    [
+                        'label' => 'Current Stock',
+                        'data' => [],
+                        'backgroundColor' => 'rgba(34, 197, 94, 0.8)',
+                        'borderColor' => 'rgb(34, 197, 94)',
+                        'borderWidth' => 1,
+                    ],
+                    [
+                        'label' => 'Reorder Point',
+                        'data' => [],
+                        'backgroundColor' => 'rgba(239, 68, 68, 0.8)',
+                        'borderColor' => 'rgb(239, 68, 68)',
+                        'borderWidth' => 1,
+                    ],
+                ],
+            ];
         }
 
-        $cacheKey = 'low_stock_alerts_'.auth()->id().'_'.optional(auth()->user()->warehouses->first())?->id;
+        $firstWarehouseId = optional($user->warehouses->first())?->id;
+        $cacheKey = 'low_stock_alerts_chart_'.$user->id.'_'.$firstWarehouseId;
 
         return Cache::remember($cacheKey, 300, function () use ($user) {
-            $warehouseIds = $user->warehouses->pluck('id')->toArray();
-
-            return ProductVariant::whereHas('stockMovements', function ($query) use ($warehouseIds) {
-                $query->whereIn('warehouse_id', $warehouseIds);
-            })
-                ->get()
-                ->filter(function ($variant) use ($warehouseIds) {
-                    foreach ($warehouseIds as $warehouseId) {
-                        if ($variant->availableQuantity($warehouseId) <= $variant->reorder_point) {
-                            return true;
-                        }
-                    }
-
-                    return false;
-                })
-                ->map(function ($variant) use ($warehouseIds) {
-                    $warehouseData = [];
-                    foreach ($warehouseIds as $warehouseId) {
-                        $available = $variant->availableQuantity($warehouseId);
-                        if ($available <= $variant->reorder_point) {
-                            $warehouseData[] = [
-                                'warehouse_id' => $warehouseId,
-                                'current_stock' => $available,
-                                'shortfall' => $variant->reorder_point - $available,
-                            ];
-                        }
-                    }
-
-                    return [
-                        'variant_id' => $variant->id,
-                        'sku' => $variant->sku,
-                        'name' => $variant->name,
-                        'reorder_point' => $variant->reorder_point,
-                        'warehouses' => $warehouseData,
-                    ];
-                })
-                ->values();
+            return $this->computeChartData($user);
         });
     }
 
-    public function table(Table $table): Table
+    protected function getOptions(): array
     {
-        $alerts = $this->getLowStockAlerts();
-
-        return $table
-            ->query(
-                ProductVariant::whereIn('id', $alerts->pluck('variant_id'))
-            )
-            ->columns([
-                TextColumn::make('sku')
-                    ->label('SKU')
-                    ->searchable()
-                    ->sortable()
-                    ->copyable(),
-
-                TextColumn::make('name')
-                    ->label('NAME')
-                    ->searchable()
-                    ->sortable(),
-
-                TextColumn::make('reorder_point')
-                    ->label('REORDER POINT')
-                    ->numeric()
-                    ->sortable(),
-
-                TextColumn::make('current_stock')
-                    ->label('AVAILABLE STOCK')
-                    ->getStateUsing(function ($record) use ($alerts) {
-                        $alert = $this->getAlertForVariant($alerts, $record->id);
-
-                        return $alert['warehouses'][0]['current_stock'] ?? 0;
-                    })
-                    ->numeric()
-                    ->sortable()
-                    ->color(fn ($state, $record) => $state <= $record->reorder_point ? 'danger' : 'success'),
-
-                TextColumn::make('shortfall')
-                    ->label('SHORTFALL')
-                    ->getStateUsing(function ($record) use ($alerts) {
-                        $alert = $this->getAlertForVariant($alerts, $record->id);
-
-                        return $alert['warehouses'][0]['shortfall'] ?? 0;
-                    })
-                    ->numeric()
-                    ->color('danger'),
-            ])
-            ->paginated(false)
-            ->defaultSort('id', 'desc');
+        return [
+            'responsive' => true,
+            'maintainAspectRatio' => false,
+            'plugins' => [
+                'legend' => [
+                    'display' => true,
+                    'position' => 'bottom',
+                ],
+                'tooltip' => [
+                    'callbacks' => [
+                        'label' => 'function(context) {
+                            return context.dataset.label + ": " + context.parsed.y;
+                        }',
+                    ],
+                ],
+            ],
+            'scales' => [
+                'y' => [
+                    'beginAtZero' => true,
+                    'title' => [
+                        'display' => true,
+                        'text' => 'Quantity (Base Units)',
+                    ],
+                ],
+                'x' => [
+                    'title' => [
+                        'display' => true,
+                        'text' => 'Product Variants (SKU - Name)',
+                    ],
+                    'ticks' => [
+                        'maxRotation' => 45,
+                        'minRotation' => 45,
+                    ],
+                ],
+            ],
+        ];
     }
 
-    private function getAlertForVariant(Collection $alerts, int $variantId): ?array
+    private function computeChartData($user): array
     {
-        return $alerts->firstWhere('variant_id', $variantId);
+        $warehouseIds = $user->warehouses->pluck('id')->toArray();
+
+        if (empty($warehouseIds)) {
+            return [
+                'labels' => [],
+                'datasets' => [
+                    [
+                        'label' => 'Current Stock',
+                        'data' => [],
+                        'backgroundColor' => 'rgba(34, 197, 94, 0.8)',
+                        'borderColor' => 'rgb(34, 197, 94)',
+                        'borderWidth' => 1,
+                    ],
+                    [
+                        'label' => 'Reorder Point',
+                        'data' => [],
+                        'backgroundColor' => 'rgba(239, 68, 68, 0.8)',
+                        'borderColor' => 'rgb(239, 68, 68)',
+                        'borderWidth' => 1,
+                    ],
+                ],
+            ];
+        }
+
+        // Single aggregate query: sum stock_movements across all accessible warehouses per variant
+        // Compare against reorder_point, return only variants at or below reorder point
+        $lowStockVariants = ProductVariant::where('reorder_point', '>', 0)
+            ->whereHas('stockMovements', function ($query) use ($warehouseIds) {
+                $query->whereIn('warehouse_id', $warehouseIds);
+            })
+            ->get()
+            ->map(function ($variant) use ($warehouseIds) {
+                $totalStock = 0;
+                foreach ($warehouseIds as $warehouseId) {
+                    $totalStock += $variant->onHandQuantity($warehouseId);
+                }
+
+                return [
+                    'variant' => $variant,
+                    'total_stock' => $totalStock,
+                    'reorder_point' => $variant->reorder_point,
+                ];
+            })
+            ->filter(fn ($item) => $item['total_stock'] <= $item['reorder_point'])
+            ->sortBy('total_stock')
+            ->values();
+
+        if ($lowStockVariants->isEmpty()) {
+            return [
+                'labels' => [],
+                'datasets' => [
+                    [
+                        'label' => 'Current Stock',
+                        'data' => [],
+                        'backgroundColor' => 'rgba(34, 197, 94, 0.8)',
+                        'borderColor' => 'rgb(34, 197, 94)',
+                        'borderWidth' => 1,
+                    ],
+                    [
+                        'label' => 'Reorder Point',
+                        'data' => [],
+                        'backgroundColor' => 'rgba(239, 68, 68, 0.8)',
+                        'borderColor' => 'rgb(239, 68, 68)',
+                        'borderWidth' => 1,
+                    ],
+                ],
+            ];
+        }
+
+        $labels = $lowStockVariants->pluck(function ($item) {
+            return $item['variant']->sku.' - '.$item['variant']->name;
+        })->toArray();
+
+        $currentStockData = $lowStockVariants->pluck('total_stock')->toArray();
+        $reorderPointData = $lowStockVariants->pluck('reorder_point')->toArray();
+
+        return [
+            'labels' => $labels,
+            'datasets' => [
+                [
+                    'label' => 'Current Stock',
+                    'data' => $currentStockData,
+                    'backgroundColor' => 'rgba(34, 197, 94, 0.8)',
+                    'borderColor' => 'rgb(34, 197, 94)',
+                    'borderWidth' => 1,
+                ],
+                [
+                    'label' => 'Reorder Point',
+                    'data' => $reorderPointData,
+                    'backgroundColor' => 'rgba(239, 68, 68, 0.8)',
+                    'borderColor' => 'rgb(239, 68, 68)',
+                    'borderWidth' => 1,
+                ],
+            ],
+        ];
     }
 }

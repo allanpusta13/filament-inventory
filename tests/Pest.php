@@ -9,6 +9,18 @@ use Tests\TestCase;
 
 use function Pest\Laravel\actingAs;
 
+/**
+ * Call a protected method on an object using reflection.
+ */
+function callProtected(object $object, string $method, array $args = []): mixed
+{
+    $reflection = new ReflectionClass($object);
+    $method = $reflection->getMethod($method);
+    $method->setAccessible(true);
+
+    return $method->invoke($object, ...$args);
+}
+
 /*
 |--------------------------------------------------------------------------
 | Test Case

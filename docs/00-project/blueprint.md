@@ -2713,17 +2713,21 @@ Heavy widget sums are wrapped in `Cache::remember('stats_overview_...', 300)` to
 
 ### Dashboard Widget Definitions
 
-| Widget | Data Source | Cache TTL |
-|---|---|---|
-| StatsOverviewWidget | Total On-Hand Base Stock, Pending Requisitions, Active In-Transit Cargo, Total Write-Off Value | 300s |
-| LowStockAlertsWidget | Variants where `availableQuantity <= reorder_point` — **per-variant accessor loop, cached (see accepted-risk note above)** | 300s |
-| RecentMovementsWidget | Compact timeline of recent `stock_movements` | 60s |
-| ActiveInTransitWidget | InTransit rows where `status != cleared` | 300s |
+| Widget | Data Source | Cache TTL | Type |
+|---|---|---|---|
+| StatsOverviewWidget | Total On-Hand Base Stock, Pending Requisitions, Active In-Transit Cargo, Total Write-Off Value | 300s | TableWidget |
+| LowStockAlertsWidget | Variants where `availableQuantity <= reorder_point` — **per-variant accessor loop, cached (see accepted-risk note above)** | 300s | ChartWidget (bar) |
+| RecentMovementsWidget | Compact timeline of recent `stock_movements` (daily buckets, 7 days) | 60s | ChartWidget (line) |
+| ActiveInTransitWidget | InTransit rows where `status != cleared` | 300s | TableWidget |
+
+**Widget Conversion Note:** LowStockAlertsWidget and RecentMovementsWidget were converted from list-based TableWidget implementations to Filament v5 native ChartWidgets using the built-in Chart.js integration (`Filament\Widgets\ChartWidget`). This provides native chart rendering with zero external dependencies. Caching behavior is preserved: LowStockAlertsWidget uses 300s TTL, RecentMovementsWidget uses 60s TTL. Both widgets use `Cache::remember()` with user + warehouse-scoped keys.
 
 **Pest coverage added:**
 ```
 LowStockAlertsWidgetTest::cache_window_prevents_requery_within_300_seconds()
 LowStockAlertsWidgetTest::cache_miss_correctly_recomputes_all_variants()
+RecentMovementsWidgetTest::chart_data_is_cached_for_60_seconds()
+RecentMovementsWidgetTest::cache_miss_correctly_recomputes_all_movements()
 ```
 
 ---

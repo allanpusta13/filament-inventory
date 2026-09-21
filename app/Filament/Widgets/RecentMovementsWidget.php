@@ -5,108 +5,153 @@ declare(strict_types=1);
 namespace App\Filament\Widgets;
 
 use App\Models\StockMovement;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Table;
-use Filament\Widgets\TableWidget;
+use Filament\Widgets\ChartWidget;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
-class RecentMovementsWidget extends TableWidget
+class RecentMovementsWidget extends ChartWidget
 {
-    protected static ?string $heading = 'Recent Movements';
+    protected ?string $heading = 'Recent Movements';
 
     protected int|string|array $columnSpan = 'full';
 
     protected int|string|array $columnSpanFull = 'full';
 
-    public function getRecentMovements(bool $bypassCache = false)
+    protected function getType(): string
+    {
+        return 'line';
+    }
+
+    protected function getData(): array
     {
         $user = auth()->user();
 
-        // Hide sensitive movement data from non-admin/auditor roles
         if (! ($user?->isAdmin() ?? false) && ! ($user?->isAuditor() ?? false)) {
-            return collect();
+            return [
+                'labels' => [],
+                'datasets' => [
+                    [
+                        'label' => 'Movement Count',
+                        'data' => [],
+                        'borderColor' => 'rgb(59, 130, 246)',
+                        'backgroundColor' => 'rgba(59, 130, 246, 0.1)',
+                        'fill' => true,
+                        'tension' => 0.3,
+                    ],
+                ],
+            ];
         }
 
         $firstWarehouseId = optional($user->warehouses->first())?->id;
-        $cacheKey = 'recent_movements_'.$user->id.'_'.$firstWarehouseId;
-
-        if ($bypassCache) {
-            Cache::forget($cacheKey);
-        }
+        $cacheKey = 'recent_movements_chart_'.$user->id.'_'.$firstWarehouseId;
 
         return Cache::remember($cacheKey, 60, function () use ($user) {
-            $warehouseIds = $user->warehouses->pluck('id')->toArray();
-
-            $query = StockMovement::whereIn('warehouse_id', $warehouseIds)
-                ->with(['productVariant.product', 'warehouse', 'createdBy'])
-                ->where('created_at', '>=', now()->subDays(365))
-                ->latest('created_at')
-                ->limit(20);
-
-            $results = $query->get();
-
-            return $results->map(function ($movement) {
-                return [
-                    'id' => $movement->id,
-                    'variant_sku' => $movement->productVariant?->sku ?? 'N/A',
-                    'variant_name' => $movement->productVariant?->name ?? 'N/A',
-                    'warehouse_id' => $movement->warehouse_id,
-                    'warehouse_name' => $movement->warehouse?->name ?? 'N/A',
-                    'type' => $movement->type,
-                    'quantity' => $movement->quantity,
-                    'unit_name' => $movement->unit_name_used,
-                    'created_at' => $movement->created_at,
-                    'created_by_name' => $movement->createdBy?->name ?? 'System',
-                    'reference_code' => $movement->reference_code,
-                ];
-            });
+            return $this->computeChartData($user);
         });
     }
 
-    public function table(Table $table): Table
+    protected function getOptions(): array
     {
-        $movements = $this->getRecentMovements();
+        return [
+            'responsive' => true,
+            'maintainAspectRatio' => false,
+            'plugins' => [
+                'legend' => [
+                    'display' => false,
+                ],
+                'tooltip' => [
+                    'callbacks' => [
+                        'label' => 'function(context) {
+                            return "Movements: " + context.parsed.y;
+                        }',
+                    ],
+                ],
+            ],
+            'scales' => [
+                'y' => [
+                    'beginAtZero' => true,
+                    'title' => [
+                        'display' => true,
+                        'text' => 'Movement Count',
+                    ],
+                    'ticks' => [
+                        'stepSize' => 1,
+                    ],
+                ],
+                'x' => [
+                    'title' => [
+                        'display' => true,
+                        'text' => 'Last 7 Days',
+                    ],
+                ],
+            ],
+        ];
+    }
 
-        return $table
-            ->query(
-                StockMovement::whereIn('id', $movements->pluck('id'))
-                    ->with(['productVariant.product', 'warehouse', 'createdBy'])
-            )
-            ->columns([
-                TextColumn::make('productVariant.sku')
-                    ->label('SKU')
-                    ->fontFamily('mono')
-                    ->copyable(),
+    private function computeChartData($user): array
+    {
+        $warehouseIds = $user->warehouses->pluck('id')->toArray();
 
-                TextColumn::make('productVariant.name')
-                    ->label('VARIANT')
-                    ->limit(30),
+        if (empty($warehouseIds)) {
+            return [
+                'labels' => [],
+                'datasets' => [
+                    [
+                        'label' => 'Movement Count',
+                        'data' => [],
+                        'borderColor' => 'rgb(59, 130, 246)',
+                        'backgroundColor' => 'rgba(59, 130, 246, 0.1)',
+                        'fill' => true,
+                        'tension' => 0.3,
+                    ],
+                ],
+            ];
+        }
 
-                TextColumn::make('warehouse.name')
-                    ->label('WAREHOUSE'),
+        // Daily buckets over last 7 days for "recent" time window
+        $days = 7;
+        $startDate = Carbon::now()->subDays($days - 1)->startOfDay();
 
-                TextColumn::make('type')
-                    ->label('TYPE')
-                    ->badge(),
+        $movements = StockMovement::whereIn('warehouse_id', $warehouseIds)
+            ->where('created_at', '>=', $startDate)
+            ->get();
 
-                TextColumn::make('quantity')
-                    ->label('QTY (BASE)')
-                    ->numeric()
-                    ->color(fn (int $state): string => $state < 0 ? 'danger' : 'success'),
+        // Group by day
+        $buckets = [];
+        for ($i = 0; $i < $days; $i++) {
+            $date = Carbon::now()->subDays($days - 1 - $i)->startOfDay();
+            $buckets[$date->format('Y-m-d')] = 0;
+        }
 
-                TextColumn::make('unit_name')
-                    ->label('UNIT'),
+        foreach ($movements as $movement) {
+            $dayKey = Carbon::parse($movement->created_at)->format('Y-m-d');
+            if (isset($buckets[$dayKey])) {
+                $buckets[$dayKey]++;
+            }
+        }
 
-                TextColumn::make('created_at')
-                    ->label('TIME')
-                    ->since()
-                    ->sortable(),
+        $labels = array_map(function ($dateStr) {
+            return Carbon::parse($dateStr)->format('M j');
+        }, array_keys($buckets));
 
-                TextColumn::make('reference_code')
-                    ->label('REF')
-                    ->limit(20),
-            ])
-            ->paginated(false)
-            ->defaultSort('created_at', 'desc');
+        $data = array_values($buckets);
+
+        return [
+            'labels' => $labels,
+            'datasets' => [
+                [
+                    'label' => 'Movement Count',
+                    'data' => $data,
+                    'borderColor' => 'rgb(59, 130, 246)',
+                    'backgroundColor' => 'rgba(59, 130, 246, 0.1)',
+                    'fill' => true,
+                    'tension' => 0.3,
+                    'pointBackgroundColor' => 'rgb(59, 130, 246)',
+                    'pointBorderColor' => '#ffffff',
+                    'pointBorderWidth' => 2,
+                    'pointRadius' => 4,
+                ],
+            ],
+        ];
     }
 }
