@@ -6,7 +6,7 @@ test.describe('DirectTransferResource E2E Tests', () => {
   test('full direct transfer lifecycle: create -> submit -> receive at both warehouses', async ({ page }) => {
     // Step 1: Create direct transfer
     await page.goto('http://127.0.0.1:8000/admin/direct-transfers/create');
-    await expect(page.locator('text=CREATE DIRECT TRANSFER')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'INSTANT DIRECT TRANSFER' })).toBeVisible();
 
     // Step 1: Routing Pathways
     await page.selectOption('select[name="from_warehouse_id"]', { index: 1 });

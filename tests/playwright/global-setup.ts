@@ -2,10 +2,10 @@ import { test as setup, expect } from '@playwright/test';
 
 setup('authenticate as admin', async ({ page }) => {
   // Navigate to login page
-  await page.goto('http://filament-inventory.test/login');
+  await page.goto('http://127.0.0.1:8000/admin/login');
 
   // Fill login form
-  await page.fill('input[name="email"]', 'admin@test.com');
+  await page.fill('input[name="email"]', 'admin@example.com');
   await page.fill('input[name="password"]', 'password');
   await page.click('button[type="submit"]');
 

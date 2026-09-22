@@ -1,31 +1,41 @@
 {
   "cookies": [
     {
-      "name": "remember_web_59ba36addc2b2f9401580f014c7f58ea4e30989d",
-      "value": "eyJpdiI6IllnY3Q1d2NOWVpoam5KM05pa3RyNUE9PSIsInZhbHVlIjoiUnJqR3NEN29qNU1hdUpjZlJMRG10ZGtJZmp3eThNWis1OWNFVURmMTJNV2lLUzhhSmtaK2RqMC9qQ0FWVTZxbm1VaitieHhyT0x5Z2xPZW1mZk05alMwb0E1QkJjMGdyQ0VmU1pnR0dqR2x6enVnWXdxWGJJbllYbHZDdnhaaUt2NXpvaTlTLzNyT1Q4K25rM0ZKaXlvUW1yR2RhSkQ1TkFOenExbmx6dGxBSUNWeEMybnd3VDAwajNJVHBrQm1CdXBYRTR6K2Y0U2Q5SEtPcVhka0V1bGVydmZTcERKVHNpaEhQZzJyengxQT0iLCJtYWMiOiIwMDA2NGIzZWZmZTVhYTRiODVjYmI0ODE0YzkzYThjM2VmMzhkZmU2MDFhOGFjYjQzYzNmZTAwZjUzODI0OThlIiwidGFnIjoiIn0%3D",
+      "name": "PHPDEBUGBAR_STACK_DATA",
+      "value": "%5B%5D",
       "domain": "127.0.0.1",
       "path": "/",
-      "expires": 1824358558.883828,
+      "expires": -1,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "remember_web_59ba36addc2b2f9401580f014c7f58ea4e30989d",
+      "value": "eyJpdiI6InZFejBXa3lGUDNnU1N2M2J6L0FyL3c9PSIsInZhbHVlIjoiQ054bjRFUUxiZmFwaXI1NmdhcnZsNnUwUHhFQStmVmJsMGtIZm1WTEZpWTRESnEvNHBRNlFudGdLU1UxYTh6SVFYbjZsV1BJNzdxQ0c2Zll0K3lJUExpYnJRamo4U0FMKzFobk51dDVROWhFYVk4d1Exa1ROWUs5QVlwMlV2dXNEM1ZuUjhkS29KREczZkFKRXNQRUFYN3BkYzdzR0Z4ajd4SU0wcjVMbmQvMVdpb0ZLcThoRHBKNTkyMi9KTFdJa0k4ZlBBWHpDejRxelpoZlVVT2cwWnlQcTAzTmVSK2FUTmhUTjFUK2xiND0iLCJtYWMiOiI1YTYwN2JkMTk4YTFjOTIyNDRiMDVkMDhiZDE5ODc0MWNlMDEwNGJkMDc2NzBiN2QwYzQwZTBlMDdkMmM1YWFkIiwidGFnIjoiIn0%3D",
+      "domain": "127.0.0.1",
+      "path": "/",
+      "expires": 1824614503.119,
       "httpOnly": true,
       "secure": false,
       "sameSite": "Lax"
     },
     {
       "name": "XSRF-TOKEN",
-      "value": "eyJpdiI6InhuR3VqRFVYTjN1cU1OMm9lbVZnUHc9PSIsInZhbHVlIjoiTXlvZ0hQQ295R2hMc2w5RVNjb2JaUk5McTFjNWZwVy9KUGU3TU5DemF1SXljTG91bDBqOWtuQktIbGw1ajNnakVGbGVReVBTOUJIWHBqc0lLeGxETmVYODBHVGJpZEFDa3hsVVA1SkJKOUtuTkwvUCtWdzNndTBMa2l4Y0MxUnQiLCJtYWMiOiJkMzJiOGFlYzk4YTQ5MzExMGY1NjQwYTQ3Y2ZiODk4MWU1ZDQzN2M3ZjQ1OWVhNzc4ZjcxNjU2YjAyYTM1YjRhIiwidGFnIjoiIn0%3D",
+      "value": "eyJpdiI6ImliM1oxQnZObkZ6YTBMcFlLb0dUSUE9PSIsInZhbHVlIjoiRUdsbjA4ck5aeU9Qd2tLNi9NZFp2bzlXQWc1NHdYQ292MXdLUTNtZ01LSHZnakoyRHI1SlBQVjZZRHRVUCtOSW1XaGdNTzRFbjlZbE5XdmxMYy8xUzdKcnpTOVBIajU3REFLQmJLNitZK1FrckNnMXBBdEttYXdmajFMWW5HeXUiLCJtYWMiOiJlYmExYzI3Y2JiNzUwNDFhZDJjMzNlZGM1MzEyN2NkNmM0MDM3ZTEwMDlkNzM4ZjIyMDVhMjlkM2UyM2NiNmY3IiwidGFnIjoiIn0%3D",
       "domain": "127.0.0.1",
       "path": "/",
-      "expires": 1789805759.181163,
+      "expires": 1790061703.477,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
     },
     {
       "name": "multi-_warehouse_inventory_system_session",
-      "value": "eyJpdiI6IittanJENGRKeW1UWGpYZUttSVp4WlE9PSIsInZhbHVlIjoiSDQ0WlltT0hnOFVidmxiMlN3YUFEbklHc1FvQ2Z6cVYvamxpZVRYWmhhYlRUODJhYzUyRFA0ZXBxRks5VmJPeFgzZWljWWtzYnBMTzYyUHlJNTRrcHp5d1M2K1U4TlJQVzBUaG1QUGgxWmFUcGo0ZWVuWVpZYlYzSTBoVEU1aXUiLCJtYWMiOiIxN2ZjMDA4MDgwZDEwYWI2ZTNkOWMxZTM2MGM4ZDU5MmY4NmQ4MjZjNmUxYjZkNjljYjZkMjE5ZWQ2NDE0ZGQyIiwidGFnIjoiIn0%3D",
+      "value": "eyJpdiI6IlVNZ3NIYTkvckNpQ0VERGM3MVlxREE9PSIsInZhbHVlIjoiWlRERDI4VyszRVIxcWc0akpad1Q3dytKN2g3YnlCWmFycmZTTytnckNxR0NmQ1FhaTRuWTlSRmJScW1EbkpPWVk4ZkJTVnFSeUNpd1dwRXFUdnBxenVORXQ4S21RK2dJa1VodGJMeWlZdlFqelFUblhlUlh1elc4dTJkRWFLL0YiLCJtYWMiOiJiZTNlZWEwZmE2NzYwNDAwNDg2NjI4NDc0N2U3OTlkMDAyZDNmNGUxMDIzZjVjYjI5YjFjZWUwN2M0NGNiYTc1IiwidGFnIjoiIn0%3D",
       "domain": "127.0.0.1",
       "path": "/",
-      "expires": 1789805759.181255,
+      "expires": 1790061703.477,
       "httpOnly": true,
       "secure": false,
       "sameSite": "Lax"
@@ -36,20 +46,28 @@
       "origin": "http://127.0.0.1:8000",
       "localStorage": [
         {
-          "name": "theme",
-          "value": "system"
-        },
-        {
-          "name": "isOpenDesktop",
-          "value": "true"
-        },
-        {
           "name": "isOpen",
           "value": "true"
         },
         {
+          "name": "theme",
+          "value": "system"
+        },
+        {
           "name": "collapsedGroups",
           "value": "[]"
+        },
+        {
+          "name": "phpdebugbar-visible",
+          "value": "0"
+        },
+        {
+          "name": "phpdebugbar-height",
+          "value": "301"
+        },
+        {
+          "name": "isOpenDesktop",
+          "value": "true"
         }
       ]
     }
