@@ -7,151 +7,137 @@ namespace App\Services;
 use App\Enums\PurchaseOrderStatus;
 use App\Enums\StockMovementType;
 use App\Models\ProductVariant;
+use App\Models\ProductVariantPrice;
 use App\Models\PurchaseOrder;
 use App\Models\StockMovement;
+use Exception;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class PurchaseService
 {
-    /**
-     * Order a purchase order - change status from Draft to Ordered
-     */
-    public function orderPurchase(PurchaseOrder $purchaseOrder): void
+    use Concerns\GuardsOutstandingQuantity;
+
+    public function orderPurchase(PurchaseOrder $po): void
     {
-        DB::transaction(function () use ($purchaseOrder) {
-            $purchaseOrder->loadMissing('items.productVariant');
+        if ($po->status !== PurchaseOrderStatus::Draft) {
+            throw new Exception("Purchase order must be in draft to be ordered. Current: {$po->status->value}.");
+        }
 
-            if ($purchaseOrder->status !== PurchaseOrderStatus::Draft) {
-                throw ValidationException::withMessages([
-                    'status' => 'Only draft purchase orders can be ordered.',
-                ]);
-            }
+        if ($po->items()->count() === 0) {
+            throw new Exception('Purchase order must have at least one line item.');
+        }
 
-            if ($purchaseOrder->items->isEmpty()) {
-                throw ValidationException::withMessages([
-                    'items' => 'Cannot order a purchase order with no line items.',
-                ]);
-            }
-
-            $purchaseOrder->update([
-                'status' => PurchaseOrderStatus::Ordered,
-                'ordered_by' => auth()->id(),
-                'ordered_at' => now(),
-            ]);
-        });
+        $po->update([
+            'status' => PurchaseOrderStatus::Ordered,
+            'ordered_at' => now(),
+        ]);
     }
 
     /**
-     * Receive a purchase order - process receipt lines and create stock movements
+     * Receives a purchase order, in full or in part. Mirrors
+     * InventoryService::scanToReceive()'s incremental-receipt pattern,
+     * but without the loss/damage machinery — see Addendum Principle A7.
+     *
+     * $receivedItemsData: [purchase_order_item_id => received_base_qty, ...]
      */
-    public function receivePurchase(PurchaseOrder $purchaseOrder, array $receiptLines): void
+    public function receivePurchase(int $purchaseOrderId, array $receivedItemsData): void
     {
-        DB::transaction(function () use ($purchaseOrder, $receiptLines) {
-            $purchaseOrder->loadMissing(['items.productVariant', 'warehouse']);
+        DB::transaction(function () use ($purchaseOrderId, $receivedItemsData) {
+            $po = PurchaseOrder::with('items.productVariant.currentPrice')
+                ->lockForUpdate()
+                ->findOrFail($purchaseOrderId);
 
-            if (! in_array($purchaseOrder->status, [PurchaseOrderStatus::Ordered, PurchaseOrderStatus::PartiallyReceived])) {
-                throw ValidationException::withMessages([
-                    'status' => 'Only ordered or partially received purchase orders can be received.',
-                ]);
+            $allowed = [PurchaseOrderStatus::Ordered, PurchaseOrderStatus::PartiallyReceived];
+
+            if (! in_array($po->status, $allowed, true)) {
+                throw new Exception("Purchase order not in a receivable state. Current: {$po->status->value}.");
             }
 
-            $allFullyReceived = true;
-
-            foreach ($receiptLines as $line) {
-                $item = $purchaseOrder->items()->findOrFail($line['item_id']);
-
-                $receivedBaseQty = (int) $line['received_base_qty'];
-                $unitName = $line['unit_name'];
-                $unitRatio = (int) $line['unit_ratio'];
-                $notes = $line['notes'] ?? null;
-
-                $newReceivedBaseQty = $item->received_base_qty + $receivedBaseQty;
-
-                if ($newReceivedBaseQty > $item->ordered_base_qty) {
-                    throw ValidationException::withMessages([
-                        "items.{$item->id}.received_base_qty" => "Received quantity cannot exceed ordered quantity ({$item->ordered_base_qty} base units).",
-                    ]);
+            foreach ($po->items as $item) {
+                if (! isset($receivedItemsData[$item->id])) {
+                    continue;
                 }
+
+                $incomingQty = (int) $receivedItemsData[$item->id];
+
+                if ($incomingQty <= 0) {
+                    continue;
+                }
+
+                // [EDGE CASE] Over-receipt guard: never allow receiving more
+                // than was ordered. Supplier over-shipments must be handled
+                // as a separate line item / PO amendment, not silently
+                // absorbed here — this keeps ordered_base_qty a reliable
+                // upper bound for reporting.
+                $this->assertWithinOutstanding($item, $incomingQty, 'receive', $item->id);
+
+                $variant = ProductVariant::with('currentPrice')->lockForUpdate()->findOrFail($item->product_variant_id);
 
                 StockMovement::create([
                     'product_variant_id' => $item->product_variant_id,
-                    'warehouse_id' => $purchaseOrder->warehouse_id,
+                    'warehouse_id' => $po->warehouse_id,
                     'type' => StockMovementType::Purchase,
-                    'base_qty' => $receivedBaseQty,
-                    'unit_name' => $unitName,
-                    'unit_ratio' => $unitRatio,
+                    'quantity' => $incomingQty,
+                    'unit_name_used' => $item->ordered_unit_name,
+                    'unit_ratio_used' => $item->ordered_unit_ratio,
                     'reference_type' => PurchaseOrder::class,
-                    'reference_id' => $purchaseOrder->id,
-                    'notes' => $notes,
+                    'reference_id' => (string) $po->id,
+                    'reference_code' => $po->reference_code,
                     'created_by' => auth()->id(),
                 ]);
 
-                $item->update([
-                    'received_base_qty' => $newReceivedBaseQty,
-                ]);
+                // A4: opt-in cost-price update, one new is_current row per
+                // line item, only if the PO's unit_cost_price differs from
+                // the variant's existing current cost.
+                if ($po->update_cost_price) {
+                    $currentCost = $variant->currentPrice?->cost_price;
 
-                if ($newReceivedBaseQty < $item->ordered_base_qty) {
-                    $allFullyReceived = false;
+                    if ($currentCost === null || bccomp((string) $currentCost, (string) $item->unit_cost_price, 4) !== 0) {
+                        ProductVariantPrice::where('product_variant_id', $variant->id)
+                            ->where('is_current', true)
+                            ->update(['is_current' => false]);
+
+                        ProductVariantPrice::create([
+                            'product_variant_id' => $variant->id,
+                            'cost_price' => $item->unit_cost_price,
+                            'sale_price' => $variant->currentPrice?->sale_price ?? '0.0000',
+                            'effective_from' => now(),
+                            'is_current' => true,
+                            'set_by' => auth()->id(),
+                            'notes' => "Auto-updated from PO {$po->reference_code}",
+                        ]);
+                    }
                 }
 
-                if ($purchaseOrder->update_cost_price) {
-                    $productVariant = ProductVariant::findOrFail($item->product_variant_id);
-                    $productVariant->prices()->update(['is_current' => false]);
-
-                    $productVariant->prices()->create([
-                        'currency' => 'PHP',
-                        'price' => $item->unit_cost_price,
-                        'is_current' => true,
-                        'effective_from' => now(),
-                        'source' => 'purchase_receipt',
-                        'source_id' => $purchaseOrder->id,
-                    ]);
-                }
+                $item->update(['received_base_qty' => $item->received_base_qty + $incomingQty]);
             }
 
-            $newStatus = $allFullyReceived
-                ? PurchaseOrderStatus::Completed
-                : PurchaseOrderStatus::PartiallyReceived;
+            $allReceived = $po->items()
+                ->whereColumn('received_base_qty', '<', 'ordered_base_qty')
+                ->doesntExist();
 
-            $purchaseOrder->update([
-                'status' => $newStatus,
+            $po->update([
+                'status' => $allReceived ? PurchaseOrderStatus::Completed : PurchaseOrderStatus::PartiallyReceived,
                 'received_by' => auth()->id(),
-                'received_at' => $newStatus === PurchaseOrderStatus::Completed ? now() : $purchaseOrder->received_at,
+                'received_at' => $allReceived ? now() : $po->received_at,
             ]);
         });
     }
 
-    /**
-     * Cancel a purchase order - only allowed for Draft, Ordered, PartiallyReceived
-     * No reversal of stock movements - cancellation only pre-dispatch/receipt
-     */
-    public function cancelPurchaseOrder(PurchaseOrder $purchaseOrder): void
+    public function cancelPurchaseOrder(PurchaseOrder $po): void
     {
-        DB::transaction(function () use ($purchaseOrder) {
-            if (! in_array($purchaseOrder->status, [
-                PurchaseOrderStatus::Draft,
-                PurchaseOrderStatus::Ordered,
-                PurchaseOrderStatus::PartiallyReceived,
-            ])) {
-                throw ValidationException::withMessages([
-                    'status' => 'This purchase order cannot be cancelled.',
-                ]);
-            }
+        // Mirrors [FIX v11] Principle #14: no reversal pathway needed
+        // because cancellation is only legal before any stock has moved.
+        if ($po->items()->where('received_base_qty', '>', 0)->exists()) {
+            throw new Exception(
+                'Cannot cancel a purchase order that has already received stock. '.
+                'Use a return/adjustment instead.'
+            );
+        }
 
-            if ($purchaseOrder->status !== PurchaseOrderStatus::Draft) {
-                $receivedItems = $purchaseOrder->items()->where('received_base_qty', '>', 0)->exists();
-                if ($receivedItems) {
-                    throw ValidationException::withMessages([
-                        'status' => 'Cannot cancel a purchase order with received items. Use returns instead.',
-                    ]);
-                }
-            }
-
-            $purchaseOrder->update([
-                'status' => PurchaseOrderStatus::Cancelled,
-                'cancelled_at' => now(),
-            ]);
-        });
+        $po->update([
+            'status' => PurchaseOrderStatus::Cancelled,
+            'cancelled_at' => now(),
+        ]);
     }
 }

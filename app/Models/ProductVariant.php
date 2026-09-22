@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 class ProductVariant extends Model
 {
@@ -117,7 +118,7 @@ class ProductVariant extends Model
                 $query->where('warehouse_id', $warehouseId)
                     ->where('status', SalesOrderStatus::Confirmed);
             })
-            ->sum('base_qty');
+            ->sum(DB::raw('base_qty - dispatched_base_qty'));
     }
 
     /**

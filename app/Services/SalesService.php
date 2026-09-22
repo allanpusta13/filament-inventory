@@ -14,8 +14,8 @@ use Illuminate\Validation\ValidationException;
 class SalesService
 {
     /**
-     * Confirm a sales order - change status from Draft to Confirmed
-     * This creates the sales reservation (reservedForSalesQuantity)
+     * Confirm sales order - change status Draft to Confirmed
+     * This creates sales reservation (reservedForSalesQuantity)
      */
     public function confirmSalesOrder(SalesOrder $salesOrder): void
     {
@@ -30,7 +30,7 @@ class SalesService
 
             if ($salesOrder->items->isEmpty()) {
                 throw ValidationException::withMessages([
-                    'items' => 'Cannot confirm a sales order with no line items.',
+                    'items' => 'Cannot confirm sales order with no line items.',
                 ]);
             }
 
@@ -39,34 +39,35 @@ class SalesService
                 $available = $item->productVariant->availableQuantity($salesOrder->warehouse_id);
                 if ($available < $item->base_qty) {
                     throw ValidationException::withMessages([
-                        "items.{$item->id}.qty" => "Insufficient available stock for {$item->productVariant->sku}. Available: {$available}, Required: {$item->base_qty}",
+                        "items.{$item->id}.qty" => "Insufficient available stock {$item->productVariant->sku}. Available: {$available}, Required: {$item->base_qty}",
                     ]);
                 }
+            }
 
-                // Snapshot sale price at confirm time
+            // Snapshot sale price at confirm time
+            foreach ($salesOrder->items as $item) {
                 $currentPrice = $item->productVariant->currentPrice;
                 if ($currentPrice) {
                     $item->update([
-                        'unit_sale_price_snapshot' => $currentPrice->price,
+                        'unit_sale_price_snapshot' => $currentPrice->sale_price,
                     ]);
                 }
             }
 
             $salesOrder->update([
                 'status' => SalesOrderStatus::Confirmed,
-                'confirmed_by' => auth()->id(),
                 'confirmed_at' => now(),
             ]);
         });
     }
 
     /**
-     * Dispatch a sales order - process dispatch lines and create stock movements
+     * Dispatch sales order - process dispatch lines create stock movements
      */
     public function dispatchSale(SalesOrder $salesOrder, array $dispatchLines): void
     {
         DB::transaction(function () use ($salesOrder, $dispatchLines) {
-            $salesOrder->loadMissing(['items.productVariant', 'warehouse']);
+            $salesOrder->loadMissing(['items.productVariant']);
 
             if (! in_array($salesOrder->status, [
                 SalesOrderStatus::Confirmed,
@@ -77,19 +78,14 @@ class SalesService
                 ]);
             }
 
-            $allFullyDispatched = true;
-
             foreach ($dispatchLines as $line) {
                 $item = $salesOrder->items()->findOrFail($line['item_id']);
-
                 $dispatchedBaseQty = (int) $line['dispatched_base_qty'];
                 $unitName = $line['unit_name'];
                 $unitRatio = (int) $line['unit_ratio'];
-                $notes = $line['notes'] ?? null;
 
-                $newDispatchedBaseQty = $item->dispatched_base_qty + $dispatchedBaseQty;
-
-                if ($newDispatchedBaseQty > $item->base_qty) {
+                // Validate dispatch quantity does not exceed ordered quantity
+                if ($dispatchedBaseQty > $item->base_qty - $item->dispatched_base_qty) {
                     throw ValidationException::withMessages([
                         "items.{$item->id}.dispatched_base_qty" => "Dispatched quantity cannot exceed ordered quantity ({$item->base_qty} base units).",
                     ]);
@@ -103,27 +99,32 @@ class SalesService
                     ]);
                 }
 
+                $notes = $line['notes'] ?? null;
+
                 StockMovement::create([
                     'product_variant_id' => $item->product_variant_id,
                     'warehouse_id' => $salesOrder->warehouse_id,
                     'type' => StockMovementType::Sale,
-                    'base_qty' => -$dispatchedBaseQty, // Negative for outbound
-                    'unit_name' => $unitName,
-                    'unit_ratio' => $unitRatio,
+                    'quantity' => -$dispatchedBaseQty, // Negative for outbound
+                    'unit_name_used' => $unitName,
+                    'unit_ratio_used' => $unitRatio,
                     'reference_type' => SalesOrder::class,
                     'reference_id' => $salesOrder->id,
                     'notes' => $notes,
                     'created_by' => auth()->id(),
                 ]);
 
+                $newDispatchedBaseQty = $item->dispatched_base_qty + $dispatchedBaseQty;
+
                 $item->update([
                     'dispatched_base_qty' => $newDispatchedBaseQty,
                 ]);
-
-                if ($newDispatchedBaseQty < $item->base_qty) {
-                    $allFullyDispatched = false;
-                }
             }
+
+            // Check if ALL items in order are fully dispatched (not just those in dispatch lines)
+            $allFullyDispatched = $salesOrder->items()
+                ->whereColumn('dispatched_base_qty', '<', 'base_qty')
+                ->doesntExist();
 
             $newStatus = $allFullyDispatched
                 ? SalesOrderStatus::Dispatched
@@ -143,24 +144,22 @@ class SalesService
     public function recordReturn(SalesOrder $salesOrder, array $returnLines): void
     {
         DB::transaction(function () use ($salesOrder, $returnLines) {
-            $salesOrder->loadMissing(['items.productVariant', 'warehouse']);
+            $salesOrder->loadMissing(['items.productVariant']);
 
             if (! in_array($salesOrder->status, [
                 SalesOrderStatus::Dispatched,
                 SalesOrderStatus::Completed,
             ])) {
                 throw ValidationException::withMessages([
-                    'status' => 'Only dispatched or completed sales orders can have returns.',
+                    'status' => 'Only dispatched or completed sales orders can be returned.',
                 ]);
             }
 
             foreach ($returnLines as $line) {
                 $item = $salesOrder->items()->findOrFail($line['item_id']);
-
                 $returnBaseQty = (int) $line['return_base_qty'];
                 $unitName = $line['unit_name'];
                 $unitRatio = (int) $line['unit_ratio'];
-                $notes = $line['notes'] ?? null;
 
                 if ($returnBaseQty > $item->dispatched_base_qty) {
                     throw ValidationException::withMessages([
@@ -168,13 +167,15 @@ class SalesService
                     ]);
                 }
 
+                $notes = $line['notes'] ?? null;
+
                 StockMovement::create([
                     'product_variant_id' => $item->product_variant_id,
                     'warehouse_id' => $salesOrder->warehouse_id,
                     'type' => StockMovementType::SaleReturn,
-                    'base_qty' => $returnBaseQty, // Positive for inbound return
-                    'unit_name' => $unitName,
-                    'unit_ratio' => $unitRatio,
+                    'quantity' => $returnBaseQty, // Positive for inbound return
+                    'unit_name_used' => $unitName,
+                    'unit_ratio_used' => $unitRatio,
                     'reference_type' => SalesOrder::class,
                     'reference_id' => $salesOrder->id,
                     'notes' => $notes,
@@ -182,7 +183,6 @@ class SalesService
                 ]);
             }
 
-            // Update status to completed if not already
             if ($salesOrder->status === SalesOrderStatus::Dispatched) {
                 $salesOrder->update([
                     'status' => SalesOrderStatus::Completed,
@@ -192,8 +192,8 @@ class SalesService
     }
 
     /**
-     * Cancel a sales order - only allowed for Draft, Confirmed, PartiallyDispatched
-     * No reversal of stock movements - cancellation only pre-dispatch
+     * Cancel sales order - only allowed Draft, Confirmed, PartiallyDispatched
+     * No reversal stock movements - cancellation only pre-dispatch
      */
     public function cancelSalesOrder(SalesOrder $salesOrder): void
     {
@@ -204,7 +204,7 @@ class SalesService
                 SalesOrderStatus::PartiallyDispatched,
             ])) {
                 throw ValidationException::withMessages([
-                    'status' => 'This sales order cannot be cancelled.',
+                    'status' => 'This sales order cannot cancelled.',
                 ]);
             }
 
@@ -212,7 +212,7 @@ class SalesService
                 $dispatchedItems = $salesOrder->items()->where('dispatched_base_qty', '>', 0)->exists();
                 if ($dispatchedItems) {
                     throw ValidationException::withMessages([
-                        'status' => 'Cannot cancel a sales order with dispatched items. Use returns instead.',
+                        'status' => 'Cannot cancel sales order dispatched items. Use returns instead.',
                     ]);
                 }
             }

@@ -8,43 +8,55 @@
       "expires": -1,
       "httpOnly": true,
       "secure": false,
-      "sameSite": "Lax"
+      "sameSite": "None"
     },
     {
       "name": "remember_web_59ba36addc2b2f9401580f014c7f58ea4e30989d",
-      "value": "eyJpdiI6InpzQVRJeThnWFNtRkRaTGlUemJHWlE9PSIsInZhbHVlIjoiVExIbFltQm5qOGdNYUtHZTk1NVZrSFhmVkxpT3J2UkVCN2dWR0xWbDBYcXU5c1hhRXZmSEcwRmRrQzN3OE5CRUk3djQ2VVNmZlp4Q2hPODRXTzBxMVpaNWxKbmZWT29XUUdaN0ZZRm1UMG0xOXlrMTc2dkJLZExkQTVWamI4Y3AzSklzTTdLNUhyNXg1NGxPRERFKzlWMndXOFcwdzVhd3dkdDFLSFR3R3BNNGpBRlJoeG83Mld6OGlkK1NyZTd6b2tOSTVvKzV0L3hxd05lV0I4QzRieGNJOG5GYmxaUnVWeU9vcmVUZUlKST0iLCJtYWMiOiJhYmU1MGVkZDMyMjczYmExOTI3ZTBhNjZjMmUxNDI2MDhlNzM3ZmFlMDZhZTZiNjJmOTFkMTEyM2JlZWVkOWZhIiwidGFnIjoiIn0%3D",
+      "value": "eyJpdiI6Ikx3V1dMdXB3dy9ZRXNsZXpWcmRRREE9PSIsInZhbHVlIjoicjJKeTJCYVZLWmVaZmZSM3JScE5HOWNpSVd3RWdoZXFlQ2FKRWVKUWFMVGtQa0Z2NTB6NVNUSEh3eEgxMDYvMGJSeGNuN2pLMkM2MVBIZ2FES2FtOE1kK1JUV216MEZqUlhZZ01BYzNjaEVPSGN5TkRUdG1xV1c0TEZNczFrdEhvNGJxY1VGMzdjNlFvV0xIdzhTcjNpV3lOVms2VzMxSUJ0MzZMK09nY0pPblNaR3BKRnc0dlFOVTRkTlBNSXpKTVRrU2ljdGxXeDVTZGxOUGNGVm8vdXlPTFo2M1dKajVWNnlMam9FNDhhUT0iLCJtYWMiOiJhMjBkM2UyZWM2ZmRmZmI2OTczOTUyZThiODQxM2ZiY2ZkYjk5ZmEyZjE2YjhlNDliN2NmZDllNTQ1ZGVhMDNkIiwidGFnIjoiIn0%3D",
       "domain": "127.0.0.1",
       "path": "/",
-      "expires": 1824622300.201537,
+      "expires": 1824659326.82,
       "httpOnly": true,
       "secure": false,
-      "sameSite": "Lax"
+      "sameSite": "None"
     },
     {
       "name": "XSRF-TOKEN",
-      "value": "eyJpdiI6ImswMWd0Y3lTUGxtQm5qVUU5YkY4YXc9PSIsInZhbHVlIjoiVVlWNlhyclNaSC8yamlkcVJsSnpPalZLdkJyN0doSStXRE8vMUFhektrYlM1R0E0aXJmVFpkWXFuS2dPbUVtVFkxbWw4TkRLUmFIOUl6RjBZZEc5THA2SE43QjBORkYvY0NrWlA1cVM0cEx4bVpJVENQb3NVbCtCQkRjQktpdUciLCJtYWMiOiI3Y2M3ODMwMWEwNDEzNTNlNTk0YTJjNjQ1NGEzODFlZTdiMTExMzViYjJjNTg4YjA2NjEyYjYwZGYxODNjYTdkIiwidGFnIjoiIn0%3D",
+      "value": "eyJpdiI6Ikhwc3F2UzNyTGx2bVJzL2ZoM3dMYUE9PSIsInZhbHVlIjoidXZKdnlwQXc5VytwU1owRkQ2VUhiRnd0bzhlTmNqbUJjc0Q2bTZrbzg1b0JYTGVTc0RoTTE5REpBUWRzQTArWDNJWEJncGJKdkxEQUVwb0pJeE5kb0tNRVE1Q0dxbUJYZkhVNUZDQUN5OWJpZjBYdmxEdWRpckdHNlU0UnV1MG0iLCJtYWMiOiI2YTIxYTVmOGZkMDUwMTFjYTZkMjJiZGEzNDM5ZWE4YTk0OGMyZWRlZTNmZGJjMGI1MWZjM2U0ZjAwMDFhNmVmIiwidGFnIjoiIn0%3D",
       "domain": "127.0.0.1",
       "path": "/",
-      "expires": 1790069500.92767,
+      "expires": 1790106527.107,
       "httpOnly": false,
       "secure": false,
-      "sameSite": "Lax"
+      "sameSite": "None"
     },
     {
       "name": "multi-_warehouse_inventory_system_session",
-      "value": "eyJpdiI6InMwRW9kL3hoYkFxWnA3QkZhM0xLZHc9PSIsInZhbHVlIjoibzR4S083alA5THNUQktESnZnQmgyZWV4MUF6MU1sTUw0ckorVGl1ekJuU3V1eU5kL0JBWmJNTnRpYVRCV0psaTRmK0FMSUhabkUzbU9rRC90MjcwOVRMSWJmekpUREt5QVpneG1LT2NIZFR1L2NyN1RIZzI4czFWdVRlRDFzY2YiLCJtYWMiOiI1NWNkYjVhMzk2YmQ4ZjhhMTQxY2ZkYWNjN2Q4ODY1NzdjOTM5YWVmZDFmZDQzMzRmMTVlMmU1MGUyZjA0ZGJlIiwidGFnIjoiIn0%3D",
+      "value": "eyJpdiI6InhEL1NUWk1YRjVIZEZlZXgyc0kzN1E9PSIsInZhbHVlIjoiNW1TZnRJaS9HaTgvTHMzYzROR1BtUkF6R2dONGhhbHFMQko4ZzBvb1dMZXpZWnBLb2JSaXZybTVYaERHVkluSUdONHV2L0NCYjFXY2FLTHBNQmZnemNFQ2JvNlNUSzlhWGx1Tm5KV1BJZEFySjc4dVFiZ0tOYlRWcWVxMXJVWkUiLCJtYWMiOiIzNGQ2MjZiYzFhZmMxNWJhYTQ0NDBhYmJkODI1MzAxMDU3NDVjOTJmMTNmNmExNTk3ZjRkMmU2ZjA1MmY5NDNiIiwidGFnIjoiIn0%3D",
       "domain": "127.0.0.1",
       "path": "/",
-      "expires": 1790069500.927844,
+      "expires": 1790106527.107,
       "httpOnly": true,
       "secure": false,
-      "sameSite": "Lax"
+      "sameSite": "None"
     }
   ],
   "origins": [
     {
       "origin": "http://127.0.0.1:8000",
       "localStorage": [
+        {
+          "name": "phpdebugbar-visible",
+          "value": "0"
+        },
+        {
+          "name": "collapsedGroups",
+          "value": "[]"
+        },
+        {
+          "name": "phpdebugbar-height",
+          "value": "301"
+        },
         {
           "name": "theme",
           "value": "system"
@@ -54,20 +66,8 @@
           "value": "true"
         },
         {
-          "name": "phpdebugbar-height",
-          "value": "301"
-        },
-        {
-          "name": "phpdebugbar-visible",
-          "value": "0"
-        },
-        {
           "name": "isOpen",
           "value": "true"
-        },
-        {
-          "name": "collapsedGroups",
-          "value": "[]"
         }
       ]
     }

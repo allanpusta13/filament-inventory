@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -22,6 +23,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class SalesOrderItem extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'sales_order_id', 'product_variant_id', 'unit_name', 'unit_ratio',
         'qty', 'base_qty', 'unit_sale_price_snapshot', 'dispatched_base_qty', 'notes',

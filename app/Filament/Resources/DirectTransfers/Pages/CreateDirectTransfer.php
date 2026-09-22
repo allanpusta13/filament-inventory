@@ -10,18 +10,15 @@ use App\Models\ProductVariant;
 use App\Services\InventoryService;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
+use Filament\Resources\Pages\Concerns\HasWizard;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Schemas\Components\Wizard\Step;
-use Filament\Schemas\Schema;
 
 class CreateDirectTransfer extends CreateRecord
 {
-    protected static string $resource = DirectTransferResource::class;
+    use HasWizard;
 
-    protected function getFormSchema(): Schema
-    {
-        return DirectTransferForm::getLocationSchema();
-    }
+    protected static string $resource = DirectTransferResource::class;
 
     protected function getFormStatePath(): string
     {
@@ -53,13 +50,21 @@ class CreateDirectTransfer extends CreateRecord
         return 'EXECUTE TRANSFER';
     }
 
+    protected function getSubmitFormAction(): Action
+    {
+        return Action::make('create')
+            ->label('EXECUTE TRANSFER')
+            ->color('primary')
+            ->action('create');
+    }
+
     protected function handleRecordCreation(array $data): \Illuminate\Database\Eloquent\Model
     {
         $wizardData = $data['wizardData'] ?? $data;
-        $fromId = $wizardData['from_warehouse_id'];
-        $toId = $wizardData['to_warehouse_id'];
-        $variantId = $wizardData['product_variant_id'];
-        $qty = $wizardData['quantity'];
+        $fromId = (int) $wizardData['from_warehouse_id'];
+        $toId = (int) $wizardData['to_warehouse_id'];
+        $variantId = (int) $wizardData['product_variant_id'];
+        $qty = (int) $wizardData['quantity'];
         $notes = $wizardData['notes'];
 
         $referenceCode = 'DTR-'.date('Ymd').'-'.mb_strtoupper(uniqid());
@@ -87,7 +92,7 @@ class CreateDirectTransfer extends CreateRecord
         return $this->record;
     }
 
-    protected function getWizardSteps(): array
+    protected function getSteps(): array
     {
         return [
             Step::make('Location Mapping')
