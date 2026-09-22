@@ -29,9 +29,23 @@
 
 **A7. Purchases Have No "Loss" Concept at Intake (Deliberately Deferred).** The parent blueprint's `scanToReceive()` loss/damage machinery exists because *transfers* have a shipping leg that can lose cargo in transit between two of your own warehouses. A purchase from a supplier is modeled as a single point-in-time receipt at the destination warehouse — there is no transit leg in this addendum's v1 scope. If you later want supplier shipment tracking with its own loss ledger, that is a **v2 addition**, explicitly deferred (see Section "Deferred" at the end of this addendum) — do not conflate it with `loss_ledgers`, which is FK-scoped to `transfer_requisitions`.
 
----
+**A8. Policies Are the ONLY Home for Permission/Role Logic — System-Wide, Not Just This Addendum, and Permanent Once Correct.** This principle governs every Policy class in the entire system, not only the six new ones this addendum introduces (`PurchaseOrderPolicy`, `SalesOrderPolicy`, `SupplierPolicy`, `CustomerPolicy`) — it applies equally and retroactively to every existing parent v11.0 policy (`ProductPolicy`, `ProductVariantPolicy`, `TransferRequisitionPolicy`, `TransferRequisitionItemRevisionPolicy`, `StockMovementPolicy`, `InTransitPolicy`, `LossLedgerPolicy`, `WarehousePolicy`, `UserPolicy`). The rule:
 
-## 🗄️ New Database Schema
+- **All permission/role logic — every check of who is allowed to do what — must live inside the relevant Policy class's method body, and nowhere else.** Not in a Filament `->visible()` closure (those control DOM rendering only, per Principle #12, and must call the policy rather than duplicate its logic — e.g. `->visible(fn ($record) => $record->status === X && auth()->user()->can('someAbility', $record))` is acceptable *status-display* logic composed with a policy call, but the actual "is this role/user allowed" decision is never re-derived inline). Not inside a Service class method (services enforce data-integrity invariants — stock sufficiency, state-machine legality, decimal precision — not "is this user allowed to call me"; that check belongs to the Policy, invoked before the service is ever reached). Not scattered across Blade views, Livewire component methods, or ad-hoc `auth()->user()->role === 'admin'` checks anywhere else in the codebase. If a permission decision needs to be made, there is exactly one place that decision is made: the Policy method for that ability.
+- **This is a consolidation requirement, not merely a "add policies too" requirement.** Wherever role/permission logic currently exists outside a Policy class anywhere in the system — including in the parent v11.0 codebase, if Phase 0's audit finds any — it must be moved into the appropriate Policy method as part of closing this gap, not left in place alongside a newly-added, redundant Policy check. Two sources of truth for the same permission decision is the exact failure mode this principle exists to prevent, even if both currently happen to agree.
+- **Once a Policy method correctly and completely encodes the permission/role logic for its ability, it is treated as a closed, frozen contract — exactly like `reservedQuantity()` under Principle #13.** After this consolidation is done and verified (see the test checkpoint below), that Policy method is not touched again except to add a genuinely new ability or to fix a demonstrated bug in its logic. Every other part of the system — Actions' `->authorize()` calls, Service-layer callers, Livewire components, future features — **only ever calls the existing Policy method** (`$user->can('ability', $model)` / `->authorize('ability')`) and never re-implements, duplicates, special-cases, or bypasses what that method decides. A future feature needing a *new* permission decision gets a *new* Policy method (or a new Policy class for a new model) — it never gets an inline check bolted on somewhere else because "it's just this one case."
+- **Practical effect for this addendum specifically:** `PurchaseOrderPolicy::cancelPurchase()` and `SalesOrderPolicy::cancelSalesOrder()` (Integration Point #7 / Authorization Mapping below) are where the "no stock has moved yet" guard actually lives — not duplicated as a second inline check inside `PurchaseService::cancelPurchaseOrder()`/`SalesService::cancelSalesOrder()`. The Service methods still defensively re-check their own preconditions (per Principle #14's philosophy — a service should not trust that authorization was checked upstream, since services can be called from contexts other than a Filament Action), but that Service-level check is a **data-integrity guard** ("is this transition legal given the record's current state"), not a **permission check** ("is this user allowed to attempt it"). The two can look similar in code but answer different questions — do not collapse them into one, and do not let the Service's data-integrity guard become a place where role-specific logic (e.g. "unless the user is an admin") creeps in. If a role-based exception to a state-machine rule is ever needed, that exception is expressed in the Policy method, and the Service still enforces the state machine unconditionally.
+
+**Test checkpoint (required before this principle is considered satisfied, for both new and existing policies):**
+```
+PolicyAuditTest::no_permission_or_role_check_exists_outside_a_policy_class_in_app_filament()
+PolicyAuditTest::no_permission_or_role_check_exists_outside_a_policy_class_in_app_services()
+PurchaseOrderPolicyTest::cancelPurchase_is_the_sole_source_of_truth_for_the_five_state_pre_dispatch_style_guard()
+SalesOrderPolicyTest::cancelSalesOrder_is_the_sole_source_of_truth_for_the_pre_dispatch_guard()
+```
+The first two are intentionally broad and somewhat unusual as automated tests — they may need to be implemented as a static-analysis grep/AST check (e.g. flagging `auth()->user()->role` or `auth()->user()->isAdmin()` literal occurrences outside `app/Policies/`) rather than a conventional Pest assertion, since "prove a negative exists nowhere in the codebase" doesn't fit neatly into a single unit test. Implement it as whatever mechanism actually catches the violation — a custom Pest architecture test (`arch()->expect(...)`, if the project's Pest version supports architecture testing) is the cleanest fit if available; otherwise a CI-time grep check is an acceptable substitute. Either way, this check must exist and must be run, not just aspired to in a comment.
+
+
 
 ### 14. suppliers
 
@@ -161,7 +175,7 @@ Indexes: `sales_order_id`
 
 ### 20. `stock_movements` — new `type` values only (no column changes)
 
-Add two new cases to the existing `StockMovementType` enum (no migration needed — `type` is already a plain string column):
+Add four new cases to the existing `StockMovementType` enum (no migration needed — `type` is already a plain string column):
 
 - `Purchase` — positive quantity, fired on PO receipt
 - `Sale` — negative quantity, fired on sales order dispatch
@@ -378,6 +392,116 @@ public function availableQuantity(int $warehouseId): int
         - $this->reservedForSalesQuantity($warehouseId);
 }
 ```
+
+### `[Added v11.1 — query optimization]` Batched `availableQuantity()` for N-item contexts — avoids the per-item N+1 that a naive `dispatchSale` modal would otherwise cause
+
+**Why this exists:** `availableQuantity()` runs three separate aggregate queries (`onHandQuantity`, `reservedQuantity`, `reservedForSalesQuantity`) per call. Calling it once per line item inside `dispatchSale`'s modal `->schema()` closure (Filament Resources section below) means an order with 10 items issues **30 queries** just to render one modal — every time it's opened, not once per cache window. This is the same class of problem the parent blueprint already named and accepted for `LowStockAlertsWidget` (Section 7's `[ACCEPTED RISK]` note), but worse here because it sits on an interactive, uncached path rather than a 300-second-cached dashboard read. Per your direction to optimize proactively rather than defer, this addendum closes it at the addendum layer rather than inheriting the parent's accepted-risk posture for a case where deferring isn't warranted.
+
+**The fix — one grouped-aggregate static method, computing all three components for a whole item collection in three queries total, not `3 × N`:**
+
+```php
+namespace App\Models;
+
+use App\Enums\TransferRequisitionStatus;
+use App\Enums\SalesOrderStatus;
+use Illuminate\Support\Collection;
+
+// Add to ProductVariant, alongside reservedForSalesQuantity() above.
+
+/**
+ * [Added v11.1] Batched sibling of availableQuantity(), for any context
+ * that needs the figure for MULTIPLE variants against ONE warehouse at
+ * once (e.g. every line item on a single sales order's dispatch modal).
+ * Issues exactly 3 queries total regardless of how many variant IDs are
+ * passed, instead of 3 queries PER variant via the instance method.
+ *
+ * This mirrors the exact upgrade path the parent blueprint's own
+ * LowStockAlertsWidget accepted-risk note already prescribes ("a single
+ * grouped aggregate query... grouped by (product_variant_id,
+ * warehouse_id)") — applied here at addendum-authoring time instead of
+ * being deferred as an accepted risk, since this call site is
+ * uncached and on the interactive path, not a 300s-cached dashboard read.
+ *
+ * Returns [product_variant_id => availableQuantity] for the given
+ * warehouse. Variant IDs with no movements/reservations at all correctly
+ * return 0, not an array-key-missing gap — every requested ID is present
+ * in the result.
+ */
+public static function batchAvailableQuantity(array $variantIds, int $warehouseId): array
+{
+    if (empty($variantIds)) {
+        return [];
+    }
+
+    $onHand = StockMovement::whereIn('product_variant_id', $variantIds)
+        ->where('warehouse_id', $warehouseId)
+        ->selectRaw('product_variant_id, SUM(quantity) as total')
+        ->groupBy('product_variant_id')
+        ->pluck('total', 'product_variant_id');
+
+    $reservedTransfers = TransferRequisitionItem::whereIn('product_variant_id', $variantIds)
+        ->whereHas('transferRequisition', function ($query) use ($warehouseId) {
+            $query->where('from_warehouse_id', $warehouseId)
+                ->where('status', TransferRequisitionStatus::Confirmed);
+        })
+        ->selectRaw('product_variant_id, SUM(approved_base_qty) as total')
+        ->groupBy('product_variant_id')
+        ->pluck('total', 'product_variant_id');
+
+    $reservedSales = SalesOrderItem::whereIn('product_variant_id', $variantIds)
+        ->whereHas('salesOrder', function ($query) use ($warehouseId) {
+            $query->where('warehouse_id', $warehouseId)
+                ->where('status', SalesOrderStatus::Confirmed);
+        })
+        ->selectRaw('product_variant_id, SUM(base_qty) as total')
+        ->groupBy('product_variant_id')
+        ->pluck('total', 'product_variant_id');
+
+    return collect($variantIds)->mapWithKeys(function ($id) use ($onHand, $reservedTransfers, $reservedSales) {
+        $available = (int) ($onHand[$id] ?? 0)
+            - (int) ($reservedTransfers[$id] ?? 0)
+            - (int) ($reservedSales[$id] ?? 0);
+
+        return [$id => $available];
+    })->all();
+}
+```
+
+**Usage in `dispatchSale`'s modal (replaces the naive per-item `$item->productVariant->availableQuantity(...)` call shown in an earlier draft of this addendum):**
+
+```php
+->schema(function (SalesOrder $record) {
+    $variantIds = $record->items->pluck('product_variant_id')->all();
+    $availableByVariant = \App\Models\ProductVariant::batchAvailableQuantity($variantIds, $record->warehouse_id);
+
+    return collect($record->items)
+        ->map(function ($item) use ($availableByVariant) {
+            $available = $availableByVariant[$item->product_variant_id] ?? 0;
+            $safeMax = min($item->outstandingBaseQty(), max(0, $available));
+
+            return TextInput::make("dispatch.{$item->id}")
+                ->label("{$item->productVariant->sku} — outstanding {$item->outstandingBaseQty()} {$item->unit_name} (available: {$available})")
+                ->numeric()
+                ->minValue(0)
+                ->maxValue($safeMax)
+                ->default($safeMax)
+                ->helperText($available < $item->outstandingBaseQty()
+                    ? 'Insufficient stock for full dispatch — partial dispatch only.'
+                    : null);
+        })
+        ->all();
+})
+```
+
+Now one modal open costs **3 queries total**, regardless of line-item count, instead of `3 × N`. (The `Filament Resources` section further below still shows the original per-item form for narrative clarity where the optimization isn't yet threaded through — the version here is the one to actually implement.)
+
+**Test checkpoint:**
+```
+ProductVariantTest::batchAvailableQuantity_matches_instance_method_for_each_variant_individually()
+ProductVariantTest::batchAvailableQuantity_returns_zero_for_variant_with_no_movements_or_reservations()
+ProductVariantTest::batchAvailableQuantity_issues_exactly_three_queries_regardless_of_variant_count()
+```
+The third test is the one that actually matters here — assert query count directly (e.g. via `DB::enableQueryLog()` / `assertQueryCountLessThan` if the project has that assertion helper, or a raw `DB::getQueryLog()` count) with both 1 and 20 variant IDs, and confirm the count doesn't grow with N. This is the regression guard against someone "simplifying" the batched method back into a loop later.
 
 ---
 
@@ -791,6 +915,44 @@ Add `Purchase`, `Sale`, `SaleReturn`, `PurchaseReturn` cases to the existing `St
 
 Both new services follow the exact locking/transaction/guard discipline of `InventoryService::dispatchTransfer()` / `scanToReceive()` — pessimistic row locks, atomic transactions, unit-ratio validation, bcmath for money.
 
+### `[DRY v11.1]` Shared over-fulfillment guard trait
+
+`PurchaseService::receivePurchase()` and `SalesService::dispatchSale()` both need the identical shape of check — "does this incoming quantity exceed what's still outstanding on this line item?" — and both throw an identically-worded exception. Extracted here so the wording and the comparison logic exist in exactly one place, rather than as two copies that could silently drift (e.g. one gets an off-by-one fix the other doesn't).
+
+```php
+namespace App\Services\Concerns;
+
+use Exception;
+
+/**
+ * [Added v11.1] Shared by PurchaseService and SalesService. Both need to
+ * reject an incoming quantity that exceeds a line item's outstandingBaseQty()
+ * — PurchaseOrderItem and SalesOrderItem both expose that method with
+ * identical semantics (see Model Additions section), so the guard itself
+ * doesn't need to know which kind of item it's validating.
+ */
+trait GuardsOutstandingQuantity
+{
+    /**
+     * @param  object{outstandingBaseQty: callable}  $item  Any model exposing outstandingBaseQty(): int
+     * @throws Exception if $incomingQty exceeds the item's outstanding quantity
+     */
+    protected function assertWithinOutstanding(object $item, int $incomingQty, string $verb, int $itemId): void
+    {
+        $remaining = $item->outstandingBaseQty();
+
+        if ($incomingQty > $remaining) {
+            throw new Exception(
+                "Cannot {$verb} {$incomingQty} units for item #{$itemId}: only ".
+                "{$remaining} units remain outstanding on this order."
+            );
+        }
+    }
+}
+```
+
+Both services below `use GuardsOutstandingQuantity;` and call `$this->assertWithinOutstanding($item, $incomingQty, 'receive', $item->id)` / `$this->assertWithinOutstanding($item, $qty, 'dispatch', $item->id)` in place of their own inline `if ($incomingQty > $remaining) { throw ... }` blocks.
+
 ```php
 namespace App\Services;
 
@@ -806,6 +968,8 @@ use Illuminate\Support\Facades\DB;
 
 class PurchaseService
 {
+    use \App\Services\Concerns\GuardsOutstandingQuantity;
+
     public function orderPurchase(PurchaseOrder $po): void
     {
         if ($po->status !== PurchaseOrderStatus::Draft) {
@@ -853,19 +1017,12 @@ class PurchaseService
                     continue;
                 }
 
-                $remaining = $item->outstandingBaseQty();
-
                 // [EDGE CASE] Over-receipt guard: never allow receiving more
                 // than was ordered. Supplier over-shipments must be handled
                 // as a separate line item / PO amendment, not silently
                 // absorbed here — this keeps ordered_base_qty a reliable
                 // upper bound for reporting.
-                if ($incomingQty > $remaining) {
-                    throw new Exception(
-                        "Cannot receive {$incomingQty} units for item #{$item->id}: only ".
-                        "{$remaining} units remain outstanding on this purchase order."
-                    );
-                }
+                $this->assertWithinOutstanding($item, $incomingQty, 'receive', $item->id);
 
                 $variant = ProductVariant::with('currentPrice')->lockForUpdate()->findOrFail($item->product_variant_id);
 
@@ -952,6 +1109,8 @@ use Illuminate\Support\Facades\DB;
 
 class SalesService
 {
+    use \App\Services\Concerns\GuardsOutstandingQuantity;
+
     public function confirmSalesOrder(SalesOrder $order): void
     {
         if ($order->status !== SalesOrderStatus::Draft) {
@@ -1004,14 +1163,7 @@ class SalesService
                     continue;
                 }
 
-                $remaining = $item->outstandingBaseQty();
-
-                if ($qty > $remaining) {
-                    throw new Exception(
-                        "Cannot dispatch {$qty} units for item #{$item->id}: only ".
-                        "{$remaining} units remain outstanding on this sales order."
-                    );
-                }
+                $this->assertWithinOutstanding($item, $qty, 'dispatch', $item->id);
 
                 $variant = ProductVariant::lockForUpdate()->findOrFail($item->product_variant_id);
                 $onHand  = $variant->onHandQuantity($order->warehouse_id);
@@ -1172,7 +1324,17 @@ Simple CRUD resources, System Admin-style (like `WarehouseResource`) — drawer 
 
 The following is a working sketch, not final production code — it follows the parent blueprint's thin-Resource / `Schemas/` / `Tables/` directory split (Section 1) exactly, so an implementer can drop these files into the same directory shape as `TransferRequisitionResource`. Names, field lists, and modal widths match the abstract description above; adjust only where Phase 0 of the implementation prompt's codebase audit finds real divergence.
 
-> **`[Verified v11.1]`** Cross-checked against Filament v5's own documentation (`filamentphp.com/docs/5.x`) on 2026-09-21: the official resource generator places **Form, Table, and Infolist** classes all under the same `Schemas/` subdirectory (e.g. `App\Filament\Resources\Customers\Schemas\CustomerForm`, `.../CustomerInfolist`) — there is no separate `Infolists/` directory in v5, and table classes alone get their own `Tables/` subdirectory. The directory tree below and the parent blueprint's own `TransferRequisitionInfolist` placement already follow this correctly. Also confirmed against the docs: table actions accept a `->schema([...])` closure that can be a function of the acted-upon `$record` (injected as a typed parameter, the same as the `->action(function (array $data, Post $record) {...})` closure signature), which is exactly the mechanism `receivePurchase`'s and `dispatchSale`'s per-line-item dynamic modals below rely on — this is standard, documented v5 behavior, not a novel technique.
+> **`[Verified v11.1]`** Cross-checked against Filament v5's own documentation (`filamentphp.com/docs/5.x`) across two passes (2026-09-21 and a follow-up full pass afterward), covering every distinct Filament construct used in this sketch:
+> - **Directory structure:** Form, Table, and Infolist classes all live under one `Schemas/` subdirectory (no separate `Infolists/` folder); Table classes get their own `Tables/` subdirectory. Matches the parent blueprint's own `TransferRequisitionInfolist` placement and this addendum's directory tree below. ✅
+> - **`Grid` / `Section`:** `Filament\Schemas\Components\Grid` and `Filament\Schemas\Components\Section`, both taking `->schema([...])` and `->columnSpan()`, are exactly as documented. ✅
+> - **`Wizard` / `Step`:** `Filament\Schemas\Components\Wizard` and `Filament\Schemas\Components\Wizard\Step` match the documented pattern exactly, including a `Step::make('Order')->schema([...])` per step. Note: Filament v5 also ships an alternative, more modern `CreateRecord\Concerns\HasWizard` trait + `getSteps()` approach for wizard-based create pages, which this addendum does not use, because the parent blueprint's own `TransferRequisitionForm` builds its wizard directly inside the Resource's `form()` schema instead — this addendum follows the parent's existing pattern for consistency rather than introducing a second, different official pattern into the same codebase. Both are valid Filament v5 patterns; this is a consistency choice, not a correctness one. ✅
+> - **`Repeater` + `->relationship()` on create pages — corrected during this verification pass.** An earlier revision of this addendum removed `->relationship()` from the `items` Repeaters, based on an unverified assumption that a create-page wizard couldn't reliably bind a Repeater to a `hasMany` relationship before the parent record exists. Direct doc verification shows this was likely wrong: Filament's standard `CreateRecord` page automatically calls `saveRelationships()` after the parent is created, which is the documented, built-in mechanism for exactly this case. `->relationship()` has been restored on both `PurchaseOrderForm` and `SalesOrderForm`'s `items` Repeaters, and the now-unnecessary custom `CreatesRecordWithLineItems` trait has been removed — see the corrected `CreatePurchaseOrder.php` / `CreateSalesOrder.php` section for the full explanation, including an open question (not resolved here) about whether the parent blueprint's own `TransferRequisitionForm` has the same unverified omission or a deliberate reason for it not visible in the source document. ⚠️ Corrected — see inline note.
+> - **Table actions with dynamic `->schema()` closures:** confirmed a `->schema([...])` closure can be a function of the acted-upon `$record` (injected as a typed parameter, same as `->action(function (array $data, Post $record) {...})`), which is exactly what `receivePurchase`'s and `dispatchSale`'s per-line-item dynamic modals rely on. ✅
+> - **`Select::make(...)->options(EnumClass::class)`:** confirmed as the official pattern for backed enums implementing `HasLabel`, matching every `SelectFilter`/`Select` usage against `PurchaseOrderStatus`/`SalesOrderStatus` throughout this addendum. ✅
+> - **`Select::make(...)->native(false)`:** confirmed as the documented way to switch to the JS-based dropdown, used correctly in `AdminReviewFilters::period()`'s preset selector. ✅
+> - **`DatePicker` inside a custom `Filter::make(...)->schema([...])`:** confirmed as the exact officially-documented pattern for building custom date-based table filters — `AdminReviewFilters::period()` matches this closely. ✅
+> - **`->indicateUsing()` — improved during this verification pass.** Confirmed the method's documented signature and behavior, and found the docs show a cleaner idiom than this addendum's original single-string return for a multi-field case like `custom_range`: returning an array of `Indicator::make(...)->removeField(...)` objects lets each date be cleared independently from the active-filters bar. `AdminReviewFilters::period()` has been updated to use this pattern for its `custom_range` case. ⚠️ Improved — see the method's inline comment.
+> - **`RepeatableEntry::make(...)->schema([...])`:** confirmed this is Filament's documented way to render both plain-array and Eloquent-relationship-backed repeating infolist data automatically — matches every infolist sketch in this addendum (and the parent blueprint's own `TransferRequisitionInfolist`). ✅
 
 ```
 app/Filament/Resources/
@@ -1324,8 +1486,26 @@ class PurchaseOrderForm
                     ]),
                 Step::make('Line Items')
                     ->schema([
+                        // [Corrected v11.1 — see "Re-verified against
+                        // Filament v5 docs via Context7" note further below
+                        // in this document] An earlier revision of this
+                        // addendum removed ->relationship('items') here,
+                        // reasoning that a create-page wizard has no
+                        // persisted parent record for a Repeater to bind
+                        // against mid-wizard. That reasoning was NOT
+                        // verified against Filament's actual documentation
+                        // at the time, and a direct doc check now shows it
+                        // was likely wrong: Filament's own CreateRecord page
+                        // class automatically calls saveRelationships()
+                        // after the parent record is created, which is
+                        // exactly the documented, supported mechanism for a
+                        // ->relationship()-bound Repeater on a create page —
+                        // this is standard behavior, not something that
+                        // needs a hand-rolled trait to work around. Kept
+                        // here per the addendum's later correction — see the
+                        // note for the full explanation and what changed.
                         Repeater::make('items')
-                            ->relationship('items')
+                            ->relationship()
                             ->schema([
                                 Select::make('product_variant_id')
                                     ->label('Variant (SKU)')
@@ -1387,6 +1567,68 @@ class PurchaseOrderForm
         ]);
     }
 }
+```
+
+### CreatePurchaseOrder.php & CreateSalesOrder.php (Pages/ classes)
+
+**`[Corrected v11.1 — re-verified against Filament v5 docs via Context7]`** An earlier revision of this addendum specified a hand-rolled `CreatesRecordWithLineItems` trait here, reasoning that a create-page wizard's `Repeater` couldn't reliably bind to a `hasMany` relationship before the parent record exists. That reasoning was not checked against Filament's actual documentation at the time it was written. A direct doc check now shows it was very likely wrong: **Filament's standard `CreateRecord` page class automatically calls `saveRelationships()` after the parent record is created**, which is exactly the documented, built-in mechanism for a `->relationship()`-bound `Repeater` (or any relationship-bound component) on a create page — the framework already handles "create parent, then create children against it," and does so specifically *because* the children can't exist until the parent has an ID. This is standard behavior for any resource using the default `CreateRecord` page, wizard or not; the docs draw no distinction for wizards.
+
+**What this means for `PurchaseOrderForm`/`SalesOrderForm` above:** `->relationship()` has been restored on both `items` Repeaters (see the corrected comments there). With that restored, `CreatePurchaseOrder`/`CreateSalesOrder` need **no special `afterCreate()`/`mutateFormDataBeforeCreate()` logic for the items themselves at all** — Filament handles it. The `CreatesRecordWithLineItems` trait from the earlier revision is no longer needed for that purpose and has been removed from this addendum.
+
+**What each page class still legitimately needs** — parent-record fields that aren't part of the wizard's own visible inputs (a generated `reference_code`, stamping `ordered_by` with the acting user) — via the standard, documented `mutateFormDataBeforeCreate()` hook, same as any ordinary Filament create page:
+
+```php
+namespace App\Filament\Resources\PurchaseOrders\Pages;
+
+use App\Filament\Resources\PurchaseOrders\PurchaseOrderResource;
+use Filament\Resources\Pages\CreateRecord;
+
+class CreatePurchaseOrder extends CreateRecord
+{
+    protected static string $resource = PurchaseOrderResource::class;
+
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        $data['reference_code'] = $data['reference_code'] ?? 'PO-'.now()->format('YmdHis').'-'.random_int(100, 999);
+        $data['ordered_by'] = auth()->id();
+
+        return $data;
+    }
+}
+```
+
+```php
+namespace App\Filament\Resources\SalesOrders\Pages;
+
+use App\Filament\Resources\SalesOrders\SalesOrderResource;
+use Filament\Resources\Pages\CreateRecord;
+
+class CreateSalesOrder extends CreateRecord
+{
+    protected static string $resource = SalesOrderResource::class;
+
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        $data['reference_code'] = $data['reference_code'] ?? 'SO-'.now()->format('YmdHis').'-'.random_int(100, 999);
+        $data['ordered_by'] = auth()->id();
+
+        return $data;
+    }
+}
+```
+
+Note `unit_sale_price_snapshot` needs no special handling here either — it's simply absent from the `SalesOrderForm`'s line-item schema (the form only collects `product_variant_id`, `unit_name`, `unit_ratio`, `qty`, `base_qty`), so `Repeater::make('items')->relationship()` creates each `SalesOrderItem` without that column, and it falls through to the model's `'0.0000'` default automatically — no code needs to actively "leave it unset."
+
+**`[Open verification item — flagged for Phase 0 of the implementation prompt, not resolved here]`** The parent v11.0 blueprint's own `TransferRequisitionForm` (shown in the source blueprint document) omits `->relationship('items')` on its Repeater, which was this addendum's original justification for the now-reverted trait. Given what Filament's docs actually show, one of two things is true, and this addendum cannot determine which from the document alone: **(a)** the parent blueprint's own document has a similar unverified simplification worth double-checking against the real codebase, or **(b)** `CreateTransferRequisition.php` in the real codebase does something the document doesn't show (e.g. a custom, non-standard create flow that bypasses `CreateRecord`'s automatic relationship-saving, for a reason not stated in the blueprint text) that makes omitting `->relationship()` there deliberate and correct. Phase 0 of the implementation prompt should check the real `CreateTransferRequisition.php` and `TransferRequisitionForm.php` directly, and treat whichever pattern the *real, working* code uses as authoritative for both the parent's own resource and this addendum's two new ones — consistency between the three wizard-based create flows matters more than which one this document guessed correctly.
+
+**`ListPurchaseOrders.php`, `EditPurchaseOrder.php`, `ViewPurchaseOrder.php`, `ListSalesOrders.php`, `EditSalesOrder.php`, `ViewSalesOrder.php`** all follow the parent blueprint's standard `ListRecords`/`EditRecord`/`ViewRecord` boilerplate (Section 1's directory structure) — no addendum-specific logic needed for any of the six, since editing is restricted to `Draft` status only (table action visibility) where a straightforward relationship-bound repeater re-save is safe and, per the correction above, requires no special handling either.
+
+**Test checkpoint:**
+```
+CreatePurchaseOrderTest::creates_purchase_order_and_all_line_items_via_standard_relationship_repeater()
+CreatePurchaseOrderTest::generates_reference_code_when_not_supplied()
+CreateSalesOrderTest::creates_sales_order_and_all_line_items_via_standard_relationship_repeater()
+CreateSalesOrderTest::leaves_unit_sale_price_snapshot_at_default_until_confirmed()
 ```
 
 ### PurchaseOrdersTable.php
@@ -1544,6 +1786,84 @@ class PurchaseOrdersTable
 
 **Note on the `receivePurchase` action's `->schema()` closure:** building per-item dynamic form fields keyed by `received.{itemId}` is the same technique the parent blueprint uses conceptually for `recordLoss` (Section 6, TransferRequisitionResource) but generalized to N items instead of one. `maxValue($item->outstandingBaseQty())` gives client-side over-receipt prevention; the server-side guard inside `PurchaseService::receivePurchase()` is what's actually authoritative (never trust the client-side max alone — this mirrors the addendum's own edge-case note that `dispatchSale`'s client-side block on insufficient stock does not replace the server re-validation).
 
+### SalesOrderResource.php (thin resource class — previously missing from the sketch; mirrors `PurchaseOrderResource.php` exactly, DRY by direct symmetry)
+
+```php
+namespace App\Filament\Resources\SalesOrders;
+
+use App\Filament\Resources\SalesOrders\Pages\CreateSalesOrder;
+use App\Filament\Resources\SalesOrders\Pages\EditSalesOrder;
+use App\Filament\Resources\SalesOrders\Pages\ListSalesOrders;
+use App\Filament\Resources\SalesOrders\Pages\ViewSalesOrder;
+use App\Filament\Resources\SalesOrders\Schemas\SalesOrderForm;
+use App\Filament\Resources\SalesOrders\Schemas\SalesOrderInfolist;
+use App\Filament\Resources\SalesOrders\Tables\SalesOrdersTable;
+use App\Models\SalesOrder;
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+
+class SalesOrderResource extends Resource
+{
+    protected static ?string $model = SalesOrder::class;
+
+    protected static string | \UnitEnum | null $navigationGroup = 'SALES';
+
+    protected static ?int $navigationSort = 1;
+
+    protected static ?string $recordTitleAttribute = 'reference_code';
+
+    protected static string | \BackedEnum | null $navigationIcon = Heroicon::OutlinedBanknotes;
+
+    public static function form(Schema $schema): Schema
+    {
+        return SalesOrderForm::configure($schema);
+    }
+
+    public static function table(Table $table): Table
+    {
+        return SalesOrdersTable::configure($table);
+    }
+
+    public static function infolist(Schema $schema): Schema
+    {
+        return SalesOrderInfolist::configure($schema);
+    }
+
+    // [Query optimization — same reasoning as PurchaseOrderResource] Eager-load
+    // items.productVariant so every table row's line-item-count column and
+    // every action's ->visible()/->schema() closure below reads relations
+    // already in memory, never triggering a lazy-load per row. This is what
+    // makes the dispatchSale modal's per-item ->productVariant->sku label
+    // (Filament Resources section) free — the relation is already hydrated
+    // by the time the modal opens.
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with(['customer', 'warehouse', 'items.productVariant']);
+    }
+
+    public static function getRecordRouteBindingEloquentQuery(): Builder
+    {
+        return parent::getRecordRouteBindingEloquentQuery()
+            ->withoutGlobalScopes([SoftDeletingScope::class]);
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index'  => ListSalesOrders::route('/'),
+            'create' => CreateSalesOrder::route('/create'),
+            'view'   => ViewSalesOrder::route('/{record}'),
+            'edit'   => EditSalesOrder::route('/{record}/edit'),
+        ];
+    }
+}
+```
+
 ### SalesOrderForm.php (create wizard — abbreviated, mirrors PurchaseOrderForm's shape)
 
 ```php
@@ -1583,8 +1903,13 @@ class SalesOrderForm
                     ]),
                 Step::make('Line Items')
                     ->schema([
+                        // [Corrected v11.1 — same correction as
+                        // PurchaseOrderForm above] ->relationship() restored
+                        // after re-verifying against Filament v5's actual
+                        // documentation — see the note further below in
+                        // this document for the full explanation.
                         Repeater::make('items')
-                            ->relationship('items')
+                            ->relationship()
                             ->schema([
                                 Select::make('product_variant_id')
                                     ->label('Variant (SKU)')
@@ -1708,22 +2033,31 @@ class SalesOrdersTable
                         SalesOrderStatus::PartiallyDispatched,
                     ]))
                     ->modalWidth(Width::FourExtraLarge)
-                    ->schema(fn (SalesOrder $record) => collect($record->items)
-                        ->map(function ($item) use ($record) {
-                            $available = $item->productVariant->availableQuantity($record->warehouse_id);
-                            $safeMax = min($item->outstandingBaseQty(), max(0, $available));
+                    // [Optimized v11.1] Uses ProductVariant::batchAvailableQuantity()
+                    // (see the Model Additions section) instead of calling
+                    // ->availableQuantity() once per item — 3 queries total for
+                    // this modal regardless of line-item count, not 3 × N.
+                    ->schema(function (SalesOrder $record) {
+                        $variantIds = $record->items->pluck('product_variant_id')->all();
+                        $availableByVariant = \App\Models\ProductVariant::batchAvailableQuantity($variantIds, $record->warehouse_id);
 
-                            return TextInput::make("dispatch.{$item->id}")
-                                ->label("{$item->productVariant->sku} — outstanding {$item->outstandingBaseQty()} {$item->unit_name} (available: {$available})")
-                                ->numeric()
-                                ->minValue(0)
-                                ->maxValue($safeMax)
-                                ->default($safeMax)
-                                ->helperText($available < $item->outstandingBaseQty()
-                                    ? 'Insufficient stock for full dispatch — partial dispatch only.'
-                                    : null);
-                        })
-                        ->all())
+                        return collect($record->items)
+                            ->map(function ($item) use ($availableByVariant) {
+                                $available = $availableByVariant[$item->product_variant_id] ?? 0;
+                                $safeMax = min($item->outstandingBaseQty(), max(0, $available));
+
+                                return TextInput::make("dispatch.{$item->id}")
+                                    ->label("{$item->productVariant->sku} — outstanding {$item->outstandingBaseQty()} {$item->unit_name} (available: {$available})")
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->maxValue($safeMax)
+                                    ->default($safeMax)
+                                    ->helperText($available < $item->outstandingBaseQty()
+                                        ? 'Insufficient stock for full dispatch — partial dispatch only.'
+                                        : null);
+                            })
+                            ->all();
+                    })
                     ->action(function (array $data, SalesOrder $record) {
                         $dispatch = collect($data['dispatch'] ?? [])
                             ->filter(fn ($qty) => (int) $qty > 0)
@@ -1816,6 +2150,897 @@ class SupplierForm
 `CustomerForm` is field-for-field identical (same shape as `Supplier` — kept as two separate classes rather than a shared trait/base, matching the parent blueprint's preference for explicit, un-abstracted resource code per the thin-class pattern in Section 1).
 
 `SupplierResource` / `CustomerResource` themselves follow `WarehouseResource`'s exact thin pattern (Section 6, "System Admin" of the parent blueprint) — drawer-style `EditAction`/`CreateAction` at `Width::Large`, no infolist needed for such simple master data, standard `DeleteAction`/`RestoreAction` pair guarded by `restrictOnDelete` at the DB layer.
+
+### `[Added v11.1]` PurchaseOrderPolicy.php, SalesOrderPolicy.php, SupplierPolicy.php, CustomerPolicy.php
+
+**These four classes are where Principle A8 is actually satisfied, not just declared.** Every permission/role decision for purchase orders, sales orders, suppliers, and customers lives here — nowhere else. Each custom-ability method below is the single source of truth the addendum's earlier Authorization Mapping table's `->authorize()` column refers to; the `->visible()` closures on the table actions (already shown in `PurchaseOrdersTable.php`/`SalesOrdersTable.php` above) never re-derive these decisions — they only decide which UI state a button shows in, composed with a `->authorize()` call for the actual permission gate.
+
+Per A8, once these are implemented and their test checkpoint passes, they are treated as closed: the doc-block on each class states this explicitly, mirroring `reservedQuantity()`'s own permanence language in the parent blueprint.
+
+```php
+namespace App\Policies;
+
+use App\Enums\PurchaseOrderStatus;
+use App\Models\PurchaseOrder;
+use App\Models\User;
+
+/**
+ * [FIX v11.1 / Principle A8] This class is the SOLE source of truth for
+ * every permission/role decision involving PurchaseOrder. No ->visible()
+ * closure on PurchaseOrdersTable, no method on PurchaseService, and no
+ * check anywhere else in the codebase may re-derive what is decided here.
+ *
+ * Per Principle A8, once each method below is implemented and its test
+ * checkpoint (PurchaseOrderPolicyTest) passes, this class is FROZEN except
+ * for two cases: adding a genuinely new ability, or fixing a demonstrated
+ * bug in an existing method's logic. Do not reopen a method here to "just
+ * tweak" behavior that belongs to PurchaseService instead (e.g. whether an
+ * item has already been received — that is a data-integrity question the
+ * Service re-checks independently; this class only answers "is this user
+ * allowed to attempt it").
+ */
+class PurchaseOrderPolicy
+{
+    public function viewAny(User $user): bool
+    {
+        return true;
+    }
+
+    public function view(User $user, PurchaseOrder $purchaseOrder): bool
+    {
+        return true;
+    }
+
+    public function create(User $user): bool
+    {
+        return true;
+    }
+
+    public function update(User $user, PurchaseOrder $purchaseOrder): bool
+    {
+        return $purchaseOrder->status === PurchaseOrderStatus::Draft;
+    }
+
+    public function delete(User $user, PurchaseOrder $purchaseOrder): bool
+    {
+        return in_array($purchaseOrder->status, [
+            PurchaseOrderStatus::Draft,
+            PurchaseOrderStatus::Cancelled,
+        ], true);
+    }
+
+    public function restore(User $user): bool
+    {
+        return true;
+    }
+
+    public function forceDelete(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function deleteAny(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function restoreAny(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function forceDeleteAny(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+
+    /**
+     * Custom ability. Mirrors TransferRequisitionPolicy's convention of
+     * naming the ability after the action it gates, not a generic CRUD verb.
+     */
+    public function orderPurchase(User $user, PurchaseOrder $purchaseOrder): bool
+    {
+        return $purchaseOrder->status === PurchaseOrderStatus::Draft;
+    }
+
+    /**
+     * [Open decision — do not resolve unilaterally] Per the addendum's
+     * Integration Point #7 policy-composition question: should this also
+     * require $user->can('setPrice', ProductVariant::class) when the PO's
+     * update_cost_price flag is true? As specified, it does NOT — receiving
+     * stock and updating catalog cost price are treated as one combined
+     * grant here. If Alvin decides they should be separate grants, this is
+     * the one specific line to change, and per A8 that change is a
+     * legitimate "new ability" edit, not a violation of the freeze.
+     */
+    public function receivePurchase(User $user, PurchaseOrder $purchaseOrder): bool
+    {
+        return in_array($purchaseOrder->status, [
+            PurchaseOrderStatus::Ordered,
+            PurchaseOrderStatus::PartiallyReceived,
+        ], true);
+    }
+
+    /**
+     * [FIX v11.1] This is the actual, sole enforcement point for the
+     * "no stock has moved yet" cancellation boundary — not a duplicate
+     * inline check inside PurchaseService::cancelPurchaseOrder(). The
+     * Service's own guard (Exception thrown if any item has
+     * received_base_qty > 0) is a data-integrity re-check, independent of
+     * this permission check, per the addendum's explicit Service-vs-Policy
+     * distinction (Principle A8's "Practical effect" paragraph) — the two
+     * happen to enforce the same boundary condition but answer different
+     * questions, and both exist because a Service must not assume
+     * authorization was already checked by whatever called it.
+     */
+    public function cancelPurchase(User $user, PurchaseOrder $purchaseOrder): bool
+    {
+        if (! in_array($purchaseOrder->status, [PurchaseOrderStatus::Draft, PurchaseOrderStatus::Ordered], true)) {
+            return false;
+        }
+
+        return $purchaseOrder->items->every(fn ($item) => $item->received_base_qty === 0);
+    }
+}
+```
+
+```php
+namespace App\Policies;
+
+use App\Enums\SalesOrderStatus;
+use App\Models\SalesOrder;
+use App\Models\User;
+
+/**
+ * [FIX v11.1 / Principle A8] Sole source of truth for every permission/role
+ * decision involving SalesOrder. Frozen once verified, per the same terms
+ * as PurchaseOrderPolicy's doc-block above — read that one first, since
+ * this class mirrors its reasoning rather than repeating it in full.
+ */
+class SalesOrderPolicy
+{
+    public function viewAny(User $user): bool
+    {
+        return true;
+    }
+
+    public function view(User $user, SalesOrder $salesOrder): bool
+    {
+        return true;
+    }
+
+    public function create(User $user): bool
+    {
+        return true;
+    }
+
+    public function update(User $user, SalesOrder $salesOrder): bool
+    {
+        return $salesOrder->status === SalesOrderStatus::Draft;
+    }
+
+    public function delete(User $user, SalesOrder $salesOrder): bool
+    {
+        return in_array($salesOrder->status, [
+            SalesOrderStatus::Draft,
+            SalesOrderStatus::Cancelled,
+        ], true);
+    }
+
+    public function restore(User $user): bool
+    {
+        return true;
+    }
+
+    public function forceDelete(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function deleteAny(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function restoreAny(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function forceDeleteAny(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function confirmSalesOrder(User $user, SalesOrder $salesOrder): bool
+    {
+        return $salesOrder->status === SalesOrderStatus::Draft;
+    }
+
+    public function dispatchSale(User $user, SalesOrder $salesOrder): bool
+    {
+        return in_array($salesOrder->status, [
+            SalesOrderStatus::Confirmed,
+            SalesOrderStatus::PartiallyDispatched,
+        ], true);
+    }
+
+    public function recordSalesReturn(User $user, SalesOrder $salesOrder): bool
+    {
+        return $salesOrder->items->contains(fn ($item) => $item->dispatched_base_qty > 0);
+    }
+
+    /**
+     * [FIX v11.1] Sole enforcement point for "illegal once dispatch has
+     * begun" — same Service-vs-Policy split as PurchaseOrderPolicy::
+     * cancelPurchase() above. SalesService::cancelSalesOrder()'s own
+     * exception is a data-integrity re-check, not a duplicate of this
+     * permission decision.
+     */
+    public function cancelSalesOrder(User $user, SalesOrder $salesOrder): bool
+    {
+        return in_array($salesOrder->status, [
+            SalesOrderStatus::Draft,
+            SalesOrderStatus::Confirmed,
+        ], true);
+    }
+}
+```
+
+```php
+namespace App\Policies;
+
+use App\Models\Supplier;
+use App\Models\User;
+
+/**
+ * [FIX v11.1 / Principle A8] Sole source of truth for Supplier permissions.
+ * Deliberately thin — Supplier is simple master data (Addendum Principle
+ * A3) with no custom abilities, so this policy is standard CRUD only.
+ * Frozen once verified, same terms as PurchaseOrderPolicy above.
+ */
+class SupplierPolicy
+{
+    public function viewAny(User $user): bool
+    {
+        return true;
+    }
+
+    public function view(User $user, Supplier $supplier): bool
+    {
+        return true;
+    }
+
+    public function create(User $user): bool
+    {
+        return true;
+    }
+
+    public function update(User $user, Supplier $supplier): bool
+    {
+        return true;
+    }
+
+    /**
+     * restrictOnDelete on purchase_orders.supplier_id means the DB layer
+     * already blocks deleting a referenced supplier (LedgerIntegrityTest
+     * covers this per Integration Point #6) — this policy method still
+     * exists to control who may ATTEMPT the delete, which is a distinct
+     * question from whether the delete would succeed.
+     */
+    public function delete(User $user, Supplier $supplier): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function restore(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function forceDelete(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function deleteAny(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function restoreAny(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function forceDeleteAny(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+}
+```
+
+`CustomerPolicy` is field-for-field identical to `SupplierPolicy` with `Supplier` replaced by `Customer` throughout — kept as a separate class rather than a shared base, for the same explicit-over-abstracted reasoning already given for `SupplierForm`/`CustomerForm` above, and because collapsing two Policy classes into one shared base is exactly the kind of premature abstraction Principle A8's "frozen, single-purpose" intent argues against: a future change to supplier permissions that doesn't apply to customers should never risk touching customer authorization by accident because they shared a base class.
+
+**Test checkpoint (in addition to what's already listed in the Integration Points and Full Edge-Case Test Matrix sections):**
+```
+PurchaseOrderPolicyTest::orderPurchase_allowed_only_when_draft()
+PurchaseOrderPolicyTest::receivePurchase_allowed_only_when_ordered_or_partially_received()
+PurchaseOrderPolicyTest::cancelPurchase_denied_once_any_item_received_even_when_status_allows_it()
+PurchaseOrderPolicyTest::forceDelete_admin_only()
+SalesOrderPolicyTest::confirmSalesOrder_allowed_only_when_draft()
+SalesOrderPolicyTest::dispatchSale_allowed_only_when_confirmed_or_partially_dispatched()
+SalesOrderPolicyTest::recordSalesReturn_denied_when_nothing_dispatched_yet()
+SalesOrderPolicyTest::cancelSalesOrder_denied_once_dispatch_has_begun()
+SupplierPolicyTest::delete_admin_only()
+CustomerPolicyTest::delete_admin_only()
+```
+
+### `[Added v11.1 — Principle A8 / Integration Point 9A]` Sketches of all nine EXISTING parent v11.0 policies, consolidated
+
+**Why these are here, in an addendum document, for files that belong to the parent blueprint:** the parent v11.0 blueprint document — as shown in the source material this addendum was built against — states each of these nine policies' *method list* (the table reproduced below) and a set of one-line "implementation extensions beyond blueprint" notes, but never actually printed any of the nine class *bodies*. That gap is exactly what let Principle A8 become necessary in the first place: without seeing the actual code, there's no way to confirm the permission logic these notes describe is fully consolidated inside the policy methods rather than partly re-implemented somewhere else (a `->visible()` closure, a model observer doing double duty as an authorization gate, etc.). Per Integration Point 9A, closing that gap is explicitly in scope for this addendum's implementation work. The sketches below are what "consolidated per A8" looks like for each of the nine — Phase 4 of the implementation prompt uses these as the target shape, then reconciles them against whatever the real codebase's current policy files actually contain (per Phase 0's audit), since these are reconstructed from the blueprint document's table and notes, not copied from real source.
+
+Parent blueprint's own method-list table, reproduced here as the checklist these nine sketches implement:
+
+| Policy | Methods |
+|---|---|
+| ProductPolicy | viewAny, view, create, update, delete (blocks while active children exist), restore, forceDelete |
+| ProductVariantPolicy | viewAny, view, create, update, delete, restore, forceDelete (always false), setPrice, adjustStock |
+| TransferRequisitionPolicy | viewAny, view, create, update, delete, restore, forceDelete (admin only), confirm, dispatch, receive, cancel (five-state pre-dispatch allowlist, enforced server-side) |
+| TransferRequisitionItemRevisionPolicy | viewAny, view, create, update, delete, restore, forceDelete (admin only), deleteAny, restoreAny, forceDeleteAny |
+| StockMovementPolicy | viewAny, view, create/update/delete/restore/forceDelete/deleteAny/restoreAny/forceDeleteAny all false — immutable audit trail |
+| InTransitPolicy | viewAny, view, create/update/delete/restore/forceDelete/deleteAny/restoreAny/forceDeleteAny all false, receive |
+| LossLedgerPolicy | viewAny, view, create/update/delete/restore/forceDelete/deleteAny/restoreAny/forceDeleteAny all false, recordLoss |
+| WarehousePolicy | viewAny, view, create (admin), update, delete/restore/forceDelete/deleteAny/restoreAny/forceDeleteAny all false, adjustStock (all users), recordLoss (all users) |
+| UserPolicy | viewAny, view, create (admin), update (admin or self), delete (admin, not self), restore/forceDelete/deleteAny/restoreAny/forceDeleteAny all admin |
+
+```php
+namespace App\Policies;
+
+use App\Models\Product;
+use App\Models\User;
+
+/**
+ * [Principle A8] Sole source of truth for Product permissions.
+ * Frozen once verified against the real codebase (Phase 4 of the
+ * implementation prompt) — same terms as every other policy in this file.
+ */
+class ProductPolicy
+{
+    public function viewAny(User $user): bool
+    {
+        return true;
+    }
+
+    public function view(User $user, Product $product): bool
+    {
+        return true;
+    }
+
+    public function create(User $user): bool
+    {
+        return true;
+    }
+
+    public function update(User $user, Product $product): bool
+    {
+        return true;
+    }
+
+    /**
+     * Mirrors ProductObserver::deleting()'s own guard (parent blueprint,
+     * Section 4) so the delete action doesn't even authorize for a user
+     * who would immediately hit the observer's Exception anyway. This is
+     * intentional duplication of a CONDITION, not of an AUTHORIZATION
+     * DECISION — the observer enforces referential integrity at the model
+     * layer regardless of who's asking (it fires even for direct Tinker/
+     * Artisan calls with no authenticated user in context), while this
+     * policy method answers "should a user acting through the panel be
+     * offered this action at all." Per Principle A8 this distinction is
+     * why both are allowed to exist without one being a redundant copy of
+     * the other — the observer isn't a permission check, so this method
+     * doesn't collapse into it.
+     */
+    public function delete(User $user, Product $product): bool
+    {
+        return $product->variants()->whereNull('deleted_at')->count() === 0;
+    }
+
+    public function restore(User $user): bool
+    {
+        return true;
+    }
+
+    public function forceDelete(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+}
+```
+
+```php
+namespace App\Policies;
+
+use App\Models\ProductVariant;
+use App\Models\User;
+
+class ProductVariantPolicy
+{
+    public function viewAny(User $user): bool
+    {
+        return true;
+    }
+
+    public function view(User $user, ProductVariant $productVariant): bool
+    {
+        return true;
+    }
+
+    public function create(User $user): bool
+    {
+        return true;
+    }
+
+    public function update(User $user, ProductVariant $productVariant): bool
+    {
+        return true;
+    }
+
+    public function delete(User $user, ProductVariant $productVariant): bool
+    {
+        return true;
+    }
+
+    public function restore(User $user): bool
+    {
+        return true;
+    }
+
+    /**
+     * "always false" per the parent blueprint's method table — a variant
+     * referenced by any ledger table (restrictOnDelete throughout Section 2)
+     * should never be force-deletable through the panel at all, regardless
+     * of role. This is a blanket, role-independent false rather than an
+     * admin gate, which is itself a meaningful permission decision worth
+     * stating explicitly rather than leaving as an accidental omission.
+     */
+    public function forceDelete(User $user): bool
+    {
+        return false;
+    }
+
+    public function setPrice(User $user): bool
+    {
+        return true;
+    }
+
+    public function adjustStock(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+}
+```
+
+```php
+namespace App\Policies;
+
+use App\Enums\TransferRequisitionStatus;
+use App\Models\TransferRequisition;
+use App\Models\User;
+
+/**
+ * [FIX v11 in the parent blueprint, reaffirmed under Principle A8 here]
+ * cancel() below is the parent blueprint's own flagship example of exactly
+ * what A8 requires everywhere: the five-state pre-dispatch allowlist is
+ * enforced HERE, in PHP, independently of TransferRequisitionResource's
+ * ->visible() closure — this is the method the parent blueprint's own
+ * Playwright E2E Scenario 6 (Section 9) exists to verify hasn't regressed.
+ */
+class TransferRequisitionPolicy
+{
+    public function viewAny(User $user): bool
+    {
+        return true;
+    }
+
+    public function view(User $user, TransferRequisition $transferRequisition): bool
+    {
+        return true;
+    }
+
+    public function create(User $user): bool
+    {
+        return true;
+    }
+
+    public function update(User $user, TransferRequisition $transferRequisition): bool
+    {
+        return $transferRequisition->status === TransferRequisitionStatus::Draft;
+    }
+
+    public function delete(User $user, TransferRequisition $transferRequisition): bool
+    {
+        return in_array($transferRequisition->status, [
+            TransferRequisitionStatus::Draft,
+            TransferRequisitionStatus::Cancelled,
+        ], true);
+    }
+
+    public function restore(User $user): bool
+    {
+        return true;
+    }
+
+    public function forceDelete(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function confirm(User $user, TransferRequisition $transferRequisition): bool
+    {
+        return in_array($transferRequisition->status, [
+            TransferRequisitionStatus::Requested,
+            TransferRequisitionStatus::UnderReviewFulfiller,
+            TransferRequisitionStatus::UnderReviewRequestor,
+        ], true);
+    }
+
+    public function dispatch(User $user, TransferRequisition $transferRequisition): bool
+    {
+        return $transferRequisition->status === TransferRequisitionStatus::Confirmed;
+    }
+
+    public function receive(User $user, TransferRequisition $transferRequisition): bool
+    {
+        return in_array($transferRequisition->status, [
+            TransferRequisitionStatus::Dispatched,
+            TransferRequisitionStatus::PartiallyReceived,
+        ], true);
+    }
+
+    /**
+     * `[FIX v11]` THE method this whole principle is named after in the
+     * parent blueprint. Permanently five-state, pre-dispatch only — see
+     * Principle #14. Do not widen this to include Dispatched or
+     * PartiallyReceived; there is no compensating stock-reversal pathway.
+     */
+    public function cancel(User $user, TransferRequisition $transferRequisition): bool
+    {
+        return in_array($transferRequisition->status, [
+            TransferRequisitionStatus::Draft,
+            TransferRequisitionStatus::Requested,
+            TransferRequisitionStatus::UnderReviewFulfiller,
+            TransferRequisitionStatus::UnderReviewRequestor,
+            TransferRequisitionStatus::Confirmed,
+        ], true);
+    }
+}
+```
+
+```php
+namespace App\Policies;
+
+use App\Models\TransferRequisitionItemRevision;
+use App\Models\User;
+
+class TransferRequisitionItemRevisionPolicy
+{
+    public function viewAny(User $user): bool
+    {
+        return true;
+    }
+
+    public function view(User $user, TransferRequisitionItemRevision $revision): bool
+    {
+        return true;
+    }
+
+    public function create(User $user): bool
+    {
+        return true;
+    }
+
+    public function update(User $user, TransferRequisitionItemRevision $revision): bool
+    {
+        return true;
+    }
+
+    public function delete(User $user, TransferRequisitionItemRevision $revision): bool
+    {
+        return true;
+    }
+
+    public function restore(User $user): bool
+    {
+        return true;
+    }
+
+    public function forceDelete(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function deleteAny(User $user): bool
+    {
+        return true;
+    }
+
+    public function restoreAny(User $user): bool
+    {
+        return true;
+    }
+
+    public function forceDeleteAny(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+}
+```
+
+```php
+namespace App\Policies;
+
+use App\Models\StockMovement;
+use App\Models\User;
+
+/**
+ * Immutable audit trail by design (parent blueprint, Section 12's
+ * "Implementation extensions" note). Every mutating method is a blanket
+ * false, independent of role — there is no role, including admin, for
+ * which a stock_movements row should ever be editable or deletable
+ * through the panel. This is the strictest possible expression of
+ * Principle A8: the permission decision here is "never," full stop, and
+ * that decision lives in exactly these nine methods.
+ */
+class StockMovementPolicy
+{
+    public function viewAny(User $user): bool
+    {
+        return true;
+    }
+
+    public function view(User $user, StockMovement $stockMovement): bool
+    {
+        return true;
+    }
+
+    public function create(User $user): bool { return false; }
+    public function update(User $user, StockMovement $stockMovement): bool { return false; }
+    public function delete(User $user, StockMovement $stockMovement): bool { return false; }
+    public function restore(User $user): bool { return false; }
+    public function forceDelete(User $user): bool { return false; }
+    public function deleteAny(User $user): bool { return false; }
+    public function restoreAny(User $user): bool { return false; }
+    public function forceDeleteAny(User $user): bool { return false; }
+}
+```
+
+```php
+namespace App\Policies;
+
+use App\Models\InTransit;
+use App\Models\TransferRequisition;
+use App\Models\User;
+
+class InTransitPolicy
+{
+    public function viewAny(User $user): bool
+    {
+        return true;
+    }
+
+    public function view(User $user, InTransit $inTransit): bool
+    {
+        return true;
+    }
+
+    public function create(User $user): bool { return false; }
+    public function update(User $user, InTransit $inTransit): bool { return false; }
+    public function delete(User $user, InTransit $inTransit): bool { return false; }
+    public function restore(User $user): bool { return false; }
+    public function forceDelete(User $user): bool { return false; }
+    public function deleteAny(User $user): bool { return false; }
+    public function restoreAny(User $user): bool { return false; }
+    public function forceDeleteAny(User $user): bool { return false; }
+
+    /**
+     * Note this takes the InTransit's PARENT TransferRequisition's status,
+     * not any status field on InTransit itself — InTransitResource's
+     * ReceiveIntakeAction (parent blueprint, Section 6.4.1) routes to the
+     * STN scan flow keyed on transfer_requisition_id, so the permission
+     * question is really "is the parent requisition receivable," which
+     * TransferRequisitionPolicy::receive() already answers. Delegating to
+     * it here (rather than re-deriving the same status check inline) is
+     * itself an application of Principle A8 — one status-allowlist, one
+     * place it's decided, called from wherever it's needed.
+     */
+    public function receive(User $user, InTransit $inTransit): bool
+    {
+        return $user->can('receive', $inTransit->transferRequisition);
+    }
+}
+```
+
+```php
+namespace App\Policies;
+
+use App\Models\LossLedger;
+use App\Models\User;
+
+class LossLedgerPolicy
+{
+    public function viewAny(User $user): bool
+    {
+        return true;
+    }
+
+    public function view(User $user, LossLedger $lossLedger): bool
+    {
+        return true;
+    }
+
+    public function create(User $user): bool { return false; }
+    public function update(User $user, LossLedger $lossLedger): bool { return false; }
+    public function delete(User $user, LossLedger $lossLedger): bool { return false; }
+    public function restore(User $user): bool { return false; }
+    public function forceDelete(User $user): bool { return false; }
+    public function deleteAny(User $user): bool { return false; }
+    public function restoreAny(User $user): bool { return false; }
+    public function forceDeleteAny(User $user): bool { return false; }
+
+    /**
+     * "all users" per the parent blueprint's extension note — recordLoss
+     * is operationally available to anyone, not admin-gated. Stated
+     * explicitly as `true` rather than omitted, so a future reviewer sees
+     * a deliberate decision, not a method someone forgot to write.
+     */
+    public function recordLoss(User $user): bool
+    {
+        return true;
+    }
+}
+```
+
+```php
+namespace App\Policies;
+
+use App\Models\User;
+use App\Models\Warehouse;
+
+class WarehousePolicy
+{
+    public function viewAny(User $user): bool
+    {
+        return true;
+    }
+
+    public function view(User $user, Warehouse $warehouse): bool
+    {
+        return true;
+    }
+
+    public function create(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function update(User $user, Warehouse $warehouse): bool
+    {
+        return true;
+    }
+
+    public function delete(User $user, Warehouse $warehouse): bool { return false; }
+    public function restore(User $user): bool { return false; }
+    public function forceDelete(User $user): bool { return false; }
+    public function deleteAny(User $user): bool { return false; }
+    public function restoreAny(User $user): bool { return false; }
+    public function forceDeleteAny(User $user): bool { return false; }
+
+    /**
+     * "all authenticated users" per the parent blueprint's extension note
+     * (operational flexibility) — deliberately NOT admin-gated, unlike
+     * create() above. The asymmetry (create is admin-only, but
+     * adjustStock/recordLoss are open to everyone) is itself the kind of
+     * decision Principle A8 wants living in exactly one visible place —
+     * without this doc-block a future maintainer might "fix" the
+     * asymmetry by admin-gating these two, which would be a behavior
+     * change the parent blueprint's own notes explicitly did not intend.
+     */
+    public function adjustStock(User $user): bool
+    {
+        return true;
+    }
+
+    public function recordLoss(User $user): bool
+    {
+        return true;
+    }
+}
+```
+
+```php
+namespace App\Policies;
+
+use App\Models\User;
+
+class UserPolicy
+{
+    public function viewAny(User $user): bool
+    {
+        return true;
+    }
+
+    public function view(User $user, User $model): bool
+    {
+        return true;
+    }
+
+    public function create(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function update(User $user, User $model): bool
+    {
+        return $user->isAdmin() || $user->id === $model->id;
+    }
+
+    /**
+     * Self-protection guard per the parent blueprint's extension note —
+     * an admin cannot delete their own account through this policy. This
+     * is a role-independent safety rail layered on top of the role check,
+     * not a separate permission concern, so it stays in this one method
+     * rather than becoming, say, a Livewire component-level check that
+     * happens to agree with this one today and silently diverges later.
+     */
+    public function delete(User $user, User $model): bool
+    {
+        return $user->isAdmin() && $user->id !== $model->id;
+    }
+
+    public function restore(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function forceDelete(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function deleteAny(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function restoreAny(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function forceDeleteAny(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+}
+```
+
+**These nine sketches are reconstructions against the parent blueprint document's table and notes, not a read of the real codebase — Phase 0 of the implementation prompt must diff them against whatever the actual `app/Policies/*.php` files currently contain before treating any of them as correct.** Where the real code already matches, nothing changes and the file is simply confirmed-frozen per A8. Where the real code has permission logic these sketches don't capture (or has drifted to something different — e.g. a role name that isn't `isAdmin()`), the real code wins and the discrepancy gets noted in the Phase 4 completion report, per the addendum's Permanence Checklist.
+
+**Test checkpoint (parent-policy consolidation, per Integration Point 9A):**
+```
+ProductPolicyTest::delete_denied_while_active_variants_exist()
+ProductPolicyTest::delete_allowed_once_all_variants_trashed()
+ProductVariantPolicyTest::forceDelete_always_false_regardless_of_role()
+ProductVariantPolicyTest::adjustStock_admin_only()
+TransferRequisitionPolicyTest::cancel_matches_the_exact_five_state_allowlist_no_more_no_less()
+StockMovementPolicyTest::every_mutating_method_returns_false_regardless_of_admin_status()
+InTransitPolicyTest::receive_delegates_to_parent_transfer_requisition_policy_not_a_separate_check()
+LossLedgerPolicyTest::recordLoss_allowed_for_non_admin_users()
+WarehousePolicyTest::create_admin_only_but_adjustStock_and_recordLoss_are_not()
+UserPolicyTest::delete_denied_when_target_is_self_even_for_admin()
+UserPolicyTest::update_allowed_for_self_even_when_not_admin()
+```
 
 ### PurchaseOrderInfolist.php
 
@@ -1927,7 +3152,7 @@ class PurchaseOrderInfolist
 
                                                 TextEntry::make('unit_cost_price')
                                                     ->label('UNIT COST')
-                                                    ->money('PHP', locale: 'en_PH', decimals: 4)
+                                                    ->money(config('app.currency'), decimals: 4)
                                                     ->columnSpan(1),
                                             ]),
                                     ]),
@@ -2043,7 +3268,7 @@ class SalesOrderInfolist
 
                                                 TextEntry::make('unit_sale_price_snapshot')
                                                     ->label('SNAPSHOT PRICE')
-                                                    ->money('PHP', locale: 'en_PH', decimals: 4)
+                                                    ->money(config('app.currency'), decimals: 4)
                                                     ->columnSpan(1),
                                             ]),
                                     ]),
@@ -2056,6 +3281,239 @@ class SalesOrderInfolist
 ```
 
 **Note on `unit_sale_price_snapshot` display:** shown here read-only in the infolist as-is — never recomputed from the current catalog price at render time, since that would defeat the entire point of A4's call-time snapshot. If the infolist ever appears to show a "stale" price compared to the catalog, that's correct behavior, not a bug — it's the historical price the sale actually confirmed at.
+
+---
+
+## 🔍 System-Admin-Only Warehouse & Period Filters
+
+**Scope, per your direction:** these two filters — filter by warehouse, and filter by date period (specific date, weekly, monthly, yearly, or a custom range) — are added **only for System Admin / Auditor-role users**, on the resources where cross-warehouse, cross-period review is actually the point: `PurchaseOrdersTable`, `SalesOrdersTable`, and the parent blueprint's own `StockMovementResource` / `LossLedgerResource` (both already have partial date filtering — this section upgrades and unifies it). Regular warehouse-scoped staff continue to see only their assigned warehouse(s) via the existing `auth()->user()->warehouses()` scoping already used throughout the parent blueprint (e.g. `TransferRequisitionForm`'s `from_warehouse_id`/`to_warehouse_id` selects) — the filter below is additive visibility for admins reviewing across warehouses, not a way for a scoped user to see warehouses they don't have access to.
+
+### `[DRY v11.1]` One reusable filter set, not four near-duplicate ones
+
+Rather than writing a separate warehouse filter and a separate period filter for each of the four resources it applies to, both are built once as static factory methods on a shared class, and each resource's `->filters([...])` array just calls them.
+
+```php
+namespace App\Filament\Support\Filters;
+
+use Carbon\Carbon;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Select;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\Indicator;
+use Filament\Tables\Filters\SelectFilter;
+use Illuminate\Database\Eloquent\Builder;
+
+/**
+ * [Added v11.1] Shared, System-Admin-only filters — warehouse and period —
+ * reused across PurchaseOrdersTable, SalesOrdersTable, StockMovementsTable,
+ * and LossLedgersTable. Built once here instead of four times, per your
+ * direction to keep this DRY. Both factory methods return the exact filter
+ * definitions to splice into a resource's ->filters([...]) array; they do
+ * not include the ->visible(fn () => auth()->user()->isAdmin()) gate
+ * themselves — apply that at the call site (see usage examples below),
+ * since Filament v5's ->filters() array-level visibility gating differs
+ * slightly by context and each resource should make its own admin-only
+ * intent explicit rather than trusting a shared class to have done it.
+ */
+class AdminReviewFilters
+{
+    /**
+     * Warehouse filter — a plain SelectFilter listing ALL warehouses
+     * (not auth()->user()->warehouses(), which is the staff-scoped list
+     * used elsewhere in the parent blueprint's wizards). This is
+     * deliberate: an admin reviewing cross-warehouse activity needs to
+     * see and filter by warehouses they may not be personally assigned
+     * to, which is exactly why this filter is admin-gated at the call
+     * site rather than using the staff-scoped relationship.
+     */
+    public static function warehouse(string $relationshipName = 'warehouse'): SelectFilter
+    {
+        return SelectFilter::make('warehouse_id')
+            ->label('Warehouse')
+            ->relationship($relationshipName, 'name')
+            ->searchable()
+            ->preload();
+    }
+
+    /**
+     * Period filter — a single dropdown of common presets (Today, This
+     * Week, This Month, This Year, Specific Date, Custom Range), with
+     * conditional fields that only appear for the presets that need them
+     * (a DatePicker for "Specific Date", two DatePickers for "Custom
+     * Range"). "This Week" and "This Month" and "This Year" need no
+     * extra input at all — they resolve relative to now() at query time.
+     *
+     * $dateColumn: the column to filter on — differs per resource
+     * (created_at for stock_movements, recorded_at for loss_ledgers,
+     * ordered_at for purchase_orders, confirmed_at or ordered_at for
+     * sales_orders — pass whichever is the resource's primary date of
+     * record).
+     */
+    public static function period(string $dateColumn): Filter
+    {
+        return Filter::make('period')
+            ->label('Period')
+            ->schema([
+                Select::make('preset')
+                    ->label('Period')
+                    ->options([
+                        'today'         => 'Today',
+                        'this_week'     => 'This Week',
+                        'this_month'    => 'This Month',
+                        'this_year'     => 'This Year',
+                        'specific_date' => 'Specific Date',
+                        'custom_range'  => 'Custom Range',
+                    ])
+                    ->default(null)
+                    ->native(false)
+                    ->live(),
+
+                DatePicker::make('specific_date')
+                    ->label('Date')
+                    ->visible(fn (Get $get) => $get('preset') === 'specific_date'),
+
+                DatePicker::make('range_from')
+                    ->label('From')
+                    ->visible(fn (Get $get) => $get('preset') === 'custom_range'),
+
+                DatePicker::make('range_until')
+                    ->label('Until')
+                    ->visible(fn (Get $get) => $get('preset') === 'custom_range'),
+            ])
+            ->query(function (Builder $query, array $data) use ($dateColumn): Builder {
+                return match ($data['preset'] ?? null) {
+                    'today'         => $query->whereDate($dateColumn, now()->toDateString()),
+                    'this_week'     => $query->whereBetween($dateColumn, [now()->startOfWeek(), now()->endOfWeek()]),
+                    'this_month'    => $query->whereBetween($dateColumn, [now()->startOfMonth(), now()->endOfMonth()]),
+                    'this_year'     => $query->whereBetween($dateColumn, [now()->startOfYear(), now()->endOfYear()]),
+                    'specific_date' => $query->when(
+                        $data['specific_date'] ?? null,
+                        fn (Builder $q, $date) => $q->whereDate($dateColumn, $date),
+                    ),
+                    'custom_range' => $query
+                        ->when($data['range_from'] ?? null, fn (Builder $q, $date) => $q->whereDate($dateColumn, '>=', $date))
+                        ->when($data['range_until'] ?? null, fn (Builder $q, $date) => $q->whereDate($dateColumn, '<=', $date)),
+                    default => $query,
+                };
+            })
+            // [Verified v11.1 against Filament v5 docs] indicateUsing() may
+            // return either a single string (used for the single-value
+            // presets below) or an array of Indicator::make(...) objects
+            // when a filter has more than one independently-clearable
+            // field — the documented pattern for exactly this custom_range
+            // case, since it lets each date be removed on its own from the
+            // active-filters bar via ->removeField() rather than clearing
+            // the whole filter at once.
+            ->indicateUsing(function (array $data): string|array|null {
+                return match ($data['preset'] ?? null) {
+                    'today'         => 'Today',
+                    'this_week'     => 'This week',
+                    'this_month'    => 'This month',
+                    'this_year'     => 'This year',
+                    'specific_date' => isset($data['specific_date'])
+                        ? 'On '.Carbon::parse($data['specific_date'])->toFormattedDateString()
+                        : null,
+                    'custom_range'  => array_filter([
+                        isset($data['range_from'])
+                            ? Indicator::make('From '.Carbon::parse($data['range_from'])->toFormattedDateString())
+                                ->removeField('range_from')
+                            : null,
+                        isset($data['range_until'])
+                            ? Indicator::make('Until '.Carbon::parse($data['range_until'])->toFormattedDateString())
+                                ->removeField('range_until')
+                            : null,
+                    ]),
+                    default => null,
+                };
+            });
+    }
+}
+```
+
+### Usage in `PurchaseOrdersTable.php` (add to the existing `->filters([...])` array)
+
+```php
+->filters([
+    SelectFilter::make('status')->options(PurchaseOrderStatus::class),
+    SelectFilter::make('supplier_id')->relationship('supplier', 'name')->label('Supplier'),
+    SelectFilter::make('warehouse_id')->relationship('warehouse', 'name')->label('Warehouse'),
+    TrashedFilter::make(),
+
+    // [Added v11.1] Admin/Auditor-only cross-warehouse review filters.
+    // Note the existing warehouse_id SelectFilter above already covers
+    // basic warehouse filtering for all users — AdminReviewFilters::warehouse()
+    // is intentionally NOT duplicated here for this resource, since a plain
+    // SelectFilter on the same column already exists. Only the period
+    // filter is added here; see StockMovementsTable / LossLedgersTable
+    // below for a resource that needs both because it previously had
+    // neither.
+    \App\Filament\Support\Filters\AdminReviewFilters::period('ordered_at')
+        ->visible(fn () => auth()->user()->isAdmin() || auth()->user()->isAuditor()),
+])
+```
+
+### Usage in `SalesOrdersTable.php` (add a `->filters([...])` array — the earlier sketch omitted one entirely, matching its "key actions only" scope note; this closes that)
+
+```php
+use App\Enums\SalesOrderStatus;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
+
+// Inside SalesOrdersTable::configure(), after ->columns([...]):
+->filters([
+    SelectFilter::make('status')->options(SalesOrderStatus::class),
+    SelectFilter::make('customer_id')->relationship('customer', 'name')->label('Customer'),
+    SelectFilter::make('warehouse_id')->relationship('warehouse', 'name')->label('Warehouse'),
+    TrashedFilter::make(),
+
+    \App\Filament\Support\Filters\AdminReviewFilters::period('confirmed_at')
+        ->visible(fn () => auth()->user()->isAdmin() || auth()->user()->isAuditor()),
+])
+```
+
+### Usage in the parent blueprint's `StockMovementsTable.php` and `LossLedgersTable.php`
+
+**`[Improves on parent v11.0]`** `StockMovementResource` currently has **no date filter at all** in the parent blueprint (only `type` and `warehouse_id` `SelectFilter`s). `LossLedgerResource` already has an ad-hoc inline `date_range` filter (parent blueprint, Section 6.4.3) with only two fields (`from`/`until`) and no presets — this replaces that narrower filter with the shared, preset-aware one, purely as an *option* for Alvin to take, not a mandatory change to a file outside this addendum's normal scope (see the note at the end of this section).
+
+```php
+// StockMovementsTable.php — add to ->filters([...]):
+\App\Filament\Support\Filters\AdminReviewFilters::warehouse()
+    ->visible(fn () => auth()->user()->isAdmin() || auth()->user()->isAuditor()),
+\App\Filament\Support\Filters\AdminReviewFilters::period('created_at')
+    ->visible(fn () => auth()->user()->isAdmin() || auth()->user()->isAuditor()),
+```
+
+```php
+// LossLedgersTable.php — REPLACES the parent blueprint's existing inline
+// date_range Filter::make(...) block (Section 6.4.3) with:
+\App\Filament\Support\Filters\AdminReviewFilters::period('recorded_at')
+    ->visible(fn () => auth()->user()->isAdmin() || auth()->user()->isAuditor()),
+// warehouse_id SelectFilter already exists on this resource — unchanged.
+```
+
+**Scope note — read before implementing:** `StockMovementsTable.php` and `LossLedgersTable.php` belong to the **parent v11.0 blueprint**, not this addendum. Per this addendum's opening scope boundary (additive-only, no modification of parent blueprint files beyond what's explicitly named — the `StockMovementType` enum cases and `availableQuantity()`), touching these two files is **optional, presented to Alvin as a convenience, not a required part of this addendum's implementation**. If he wants the shared filter applied to the parent's audit ledgers too, that's a small, low-risk, easily-reviewed follow-up — but it should be a decision he makes, not something silently bundled into "implementing the addendum." The `AdminReviewFilters` class itself lives under `App\Filament\Support\Filters`, a new namespace, so creating it does not touch any existing parent file — only its *optional* application to `StockMovementsTable`/`LossLedgersTable` does.
+
+**Test checkpoint:**
+```
+AdminReviewFiltersTest::warehouse_filter_lists_all_warehouses_not_just_staff_assigned_ones()
+AdminReviewFiltersTest::period_filter_today_matches_only_todays_records()
+AdminReviewFiltersTest::period_filter_this_week_matches_records_within_current_week_boundaries()
+AdminReviewFiltersTest::period_filter_this_month_matches_records_within_current_month_boundaries()
+AdminReviewFiltersTest::period_filter_this_year_matches_records_within_current_year_boundaries()
+AdminReviewFiltersTest::period_filter_specific_date_matches_only_that_date()
+AdminReviewFiltersTest::period_filter_custom_range_is_inclusive_of_both_boundary_dates()
+AdminReviewFiltersTest::period_filter_custom_range_with_only_from_set_is_open_ended()
+AdminReviewFiltersTest::period_filter_custom_range_with_only_until_set_is_open_ended()
+AdminReviewFiltersTest::period_filter_with_no_preset_selected_returns_unfiltered_query()
+PurchaseOrdersTableTest::period_filter_hidden_from_non_admin_non_auditor_users()
+SalesOrdersTableTest::period_filter_hidden_from_non_admin_non_auditor_users()
+```
+
+**Edge cases folded into the matrix above, called out explicitly:**
+- **Boundary values:** "This Week"/"This Month"/"This Year" boundaries must use `startOfWeek()`/`endOfWeek()` etc. (Carbon's locale-aware week start, e.g. Monday vs Sunday depending on app locale) consistently with whatever the rest of the parent blueprint's i18n config assumes — verify against actual `config('app.locale')` behavior in Phase 0 of the implementation prompt, don't assume Sunday-start.
+- **Null relation paths:** a `custom_range` with only one of `range_from`/`range_until` set must produce an open-ended filter (`>=` only, or `<=` only), never silently do nothing or throw — covered by the two "open_ended" tests above.
+- **Authorization bypass:** a non-admin user must not be able to force the period/warehouse filter's query logic to run by crafting the request directly (e.g. a manipulated query-string filter payload) — the `->visible()` gate controls DOM rendering only, so if this matters for your threat model, the underlying `SelectFilter`/`Filter` class needs its own `->query()` closure to no-op when `! auth()->user()->isAdmin()`, not just rely on the field being hidden. **Flagged as a decision point, not resolved here**, since the parent blueprint's own posture on filter-level (as opposed to action-level) authorization bypass isn't established elsewhere in either document — Alvin should decide whether table filters warrant the same `->authorize()`-independent-of-`->visible()` rigor the parent blueprint applies to Actions (Principle #12), or whether filters are considered lower-stakes (read-only, non-destructive) and the DOM-hiding is accepted as sufficient here.
 
 ---
 
@@ -2145,15 +3603,25 @@ New policy abilities required, following the existing table's exact format:
 | RecordSalesReturnAction | recordSalesReturn | any item has dispatched_base_qty > 0 |
 | CancelSalesOrderAction | cancelSalesOrder | status ∈ {Draft, Confirmed} |
 
-New policies needed: `PurchaseOrderPolicy`, `SalesOrderPolicy`, `SupplierPolicy`, `CustomerPolicy` — same shape as `TransferRequisitionPolicy` (viewAny, view, create, update, delete, restore, forceDelete, plus the custom abilities above).
+New policies needed: `PurchaseOrderPolicy`, `SalesOrderPolicy`, `SupplierPolicy`, `CustomerPolicy` — same shape as `TransferRequisitionPolicy` (viewAny, view, create, update, delete, restore, forceDelete, plus the custom abilities above). Full concrete sketches of all four are in the "📐 Concrete Resource Sketch" section above, immediately following `SupplierResource.php`/`CustomerResource.php`.
 
 > **Critical implementation note (mirrors the parent blueprint's own critical note verbatim in spirit):** `CancelPurchaseAction` and `CancelSalesOrderAction` must independently re-verify their guard conditions in the Policy class, not merely rely on `->visible()`. Add the equivalent Playwright E2E scenario: *attempt to invoke `cancelSalesOrder` via direct Livewire method call on a `Dispatched` order → verify the policy still rejects it server-side.*
+
+> **`[A8]` This table's "→visible()" column is display logic ONLY, composed with a Policy call where a permission check is involved — it is never itself the place a permission/role decision is decided.** Per Principle A8 above, the actual "is this user allowed" logic for every row in this table lives exclusively inside the named Policy method (`orderPurchase`, `receivePurchase`, `cancelPurchase`, `confirmSalesOrder`, `dispatchSale`, `recordSalesReturn`, `cancelSalesOrder`) — the `->visible()` column's status-allowlist is purely about which UI state the button appears in, not about who is allowed to press it. Once each of these seven Policy methods is implemented and verified correct, per A8 it is not modified again except for a genuinely new ability or a demonstrated bug — everything else in the system that needs to know "can this user do X" calls the existing method rather than re-deriving the answer.
 
 ### 8. i18n (Section 15 of parent blueprint)
 All new enum `getLabel()` calls route through `__()`; all new resource labels get entries in `lang/en/`, `lang/es/`, `lang/tl/` — same mandate, no exceptions.
 
 ### 9. `->strictAuthorization()` (Phase 00, Principle #8)
 Every new custom ability listed in #7 above must be enumerated and covered by a policy method **before** this addendum's resources are registered, or the panel will fail closed on first use — same gotcha the parent blueprint calls out for `dispatch`/`receive`/`cancel`/`setPrice`/`recordLoss`/`adjustStock`.
+
+### 9A. `[A8]` Parent v11.0 Policy Consolidation Audit — applies to every existing policy, not just this addendum's four new ones
+Per Principle A8, this addendum's implementation is also the trigger for an audit of the **nine existing parent v11.0 policies** (`ProductPolicy`, `ProductVariantPolicy`, `TransferRequisitionPolicy`, `TransferRequisitionItemRevisionPolicy`, `StockMovementPolicy`, `InTransitPolicy`, `LossLedgerPolicy`, `WarehousePolicy`, `UserPolicy`) for any permission/role logic that currently lives outside those policy classes — most likely candidates, based on what the parent blueprint document itself shows: the `->visible(fn () => auth()->user()->isAdmin())` double-guard on `ForceDeleteAction` (Section 6, TransferRequisitionResource table actions, and Section 12's own Authorization Mapping table entry for it), and the parent blueprint's noted "**Implementation extensions beyond blueprint**" callouts (Section 12) describing role checks like "`adjustStock` and `recordLoss` return `true` for all authenticated users" and "`delete` includes self-protection guard" — confirm these live inside the actual `WarehousePolicy`/`UserPolicy` method bodies in the real codebase (not just described in the blueprint's prose) and are not *also* duplicated as an inline check anywhere else. Where an inline check is found outside a Policy class, consolidate it into the appropriate Policy method as part of this audit, per A8 — this is explicitly in scope for this addendum's implementation work precisely because A8 is a system-wide principle, not an addendum-scoped one, even though the nine files themselves belong to the parent blueprint. **Full concrete sketches of all nine existing policies, reconstructed from the parent blueprint's own method table and extension notes, are in the "📐 Concrete Resource Sketch" section above** (immediately following the four new addendum policies) — these are the target shape Phase 4 of the implementation prompt reconciles against the real codebase, not a description to re-derive from scratch.
+
+### 10. `[Audit finding v11.1]` `->money()` currency hardcoding — a pre-existing parent v11.0 inconsistency, not something this addendum introduces, but this addendum's resources should not copy it.
+- **What was found:** the parent blueprint's own Principle #10 states *"All `->money()` calls pass `config('app.currency')`"*, and Section 13's Cross-Cutting Verification Checklist marks this ✅. However, `LossLedgerResource`'s actual code (both its Table and Infolist) hardcodes `->money('PHP', locale: 'en_PH', decimals: 4)` in four separate places — this contradicts the parent's own stated principle and its own checklist claim. This is a genuine drift in the *parent* v11.0 blueprint document, discovered while auditing this addendum, not a defect this addendum introduces.
+- **What this addendum does about it:** `PurchaseOrderInfolist` and `SalesOrderInfolist` above use `->money(config('app.currency'), decimals: 4)` — correctly following Principle #10 — rather than copying `LossLedgerResource`'s hardcoded `'PHP'` pattern, even though visual consistency with the existing `LossLedgerResource` might otherwise argue for matching it verbatim. Compliance with the parent's own explicitly-stated principle takes precedence over matching a component that already violates that principle.
+- **What Alvin should decide, separately from this addendum's implementation:** whether to fix `LossLedgerResource`'s four hardcoded `'PHP'` calls in the parent v11.0 codebase to match Principle #10, since as written, any deployment targeting a currency other than PHP will show inconsistent currency formatting between `LossLedgerResource` (hardcoded PHP) and every other money column in the system (config-driven). This is a **parent blueprint fix**, out of this addendum's additive-only scope — flagged here only because auditing the addendum's own dashboard/infolist work is what surfaced it.
 
 ---
 
@@ -2195,6 +3663,26 @@ Per the project's standing practice — *"boundary values, concurrency/lock orde
 5. **Backorder auto-fulfillment** — when a `PartiallyDispatched` sales order's remaining qty becomes available (e.g., via a subsequent purchase receipt), no automatic notification or fulfillment trigger is specified. Manual re-check only, for now — same posture as the parent blueprint's deferred event/notification layer (its own Section 10, item #2).
 6. **Reporting-view decision from Integration Point #3** (separate Purchases/Sales tab on `StockMovementResource` vs. one mixed ledger) — left as an open decision for Alvin, not resolved here.
 7. **Hardening transfer dispatch to check `availableQuantity()` instead of `onHandQuantity()`** (Integration Point #4A) — this would be a breaking change to the *parent v11.0* `InventoryService`, out of this addendum's additive-only scope by design. Left as an explicit open decision for Alvin, with a pre-existing-behavior regression test in place as the marker if he later chooses to pursue it as its own reviewed change to the parent blueprint.
+8. **Applying `AdminReviewFilters` to the parent blueprint's `StockMovementsTable`/`LossLedgersTable`** — presented as an optional convenience in the "System-Admin-Only Warehouse & Period Filters" section, since it touches parent-blueprint files outside this addendum's additive-only scope. Alvin's call on whether to take it.
+9. **Filter-level authorization bypass hardening** (same section, "Edge cases" callout) — whether `AdminReviewFilters::warehouse()`/`period()` need their `->query()` closures to independently no-op for non-admin users, rather than relying solely on `->visible()` to hide the field from the DOM. The parent blueprint applies this rigor to Actions (Principle #12: `->authorize()` vs `->visible()`) but never establishes a position on read-only table Filters specifically. Left open rather than assumed.
+
+---
+
+## ✅ Permanence Checklist for Principle A8 (Policy Consolidation)
+
+This is not a checklist for the whole addendum — the rest of this document's edge-case matrix and integration points cover that. This one exists specifically to make A8's "verified correct, then frozen" claim checkable rather than aspirational, the same way the parent blueprint's Section 13 makes Principle #13's `reservedQuantity()` boundary checkable rather than just asserted in prose. Do not check an item off until it is actually true in the codebase, not merely intended.
+
+| Check | Status |
+|---|---|
+| `PurchaseOrderPolicy`, `SalesOrderPolicy`, `SupplierPolicy`, `CustomerPolicy` exist and contain 100% of this addendum's permission/role logic | ☐ |
+| No `->visible()` closure anywhere in this addendum's resources re-derives a permission decision instead of composing a policy call | ☐ |
+| No Service method in `PurchaseService`/`SalesService` contains a role check (`isAdmin()`, `role === ...`, etc.) — only data-integrity/state-machine guards | ☐ |
+| `PolicyAuditTest` (or equivalent architecture/static check) exists and passes against the current codebase, covering `app/Filament` and `app/Services` | ☐ |
+| Parent v11.0's nine existing policies audited per Integration Point 9A; any found inline role logic consolidated into the relevant Policy method | ☐ |
+| Alvin has been shown the audit results from the row above and has confirmed the consolidation (or explicitly declined it) — not silently assumed | ☐ |
+| Every Policy method above is documented (in-code doc-block, mirroring `reservedQuantity()`'s style) as closed/frozen per A8, so a future maintainer sees the same permanence signal the parent blueprint gives `reservedQuantity()` | ☐ |
+
+Once every row above is checked, Principle A8 is satisfied for this addendum's scope, and per A8 itself, these Policy methods are not to be reopened except for a genuinely new ability or a demonstrated bug.
 
 ---
 
