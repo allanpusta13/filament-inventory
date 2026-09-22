@@ -123,7 +123,7 @@ class DirectTransferForm
         ?Warehouse $fromWarehouse,
         ?Warehouse $toWarehouse,
         ?ProductVariant $productVariant,
-        ?int $quantity,
+        float|int|null $quantity,
         ?string $notes
     ): HtmlString {
         if (! $fromWarehouse || ! $toWarehouse || ! $productVariant || ! $quantity) {
@@ -131,6 +131,7 @@ class DirectTransferForm
         }
 
         $notesHtml = $notes ?? '&mdash;';
+        $qtyInt = $quantity ? (int) $quantity : 0;
 
         return new HtmlString("
             <div class='grid grid-cols-2 gap-4 mb-4 pb-4 border-b border-zinc-200 dark:border-zinc-800'>
@@ -156,7 +157,7 @@ class DirectTransferForm
                         <tr class='border-b border-zinc-200 dark:border-zinc-800'>
                             <td class='py-2 font-mono text-xs font-bold text-primary-600'>{$productVariant->sku}</td>
                             <td class='py-2 text-xs'>{$productVariant->name}</td>
-                            <td class='py-2 text-xs text-right font-semibold text-zinc-900 dark:text-zinc-100'>{$quantity} Pcs</td>
+                            <td class='py-2 text-xs text-right font-semibold text-zinc-900 dark:text-zinc-100'>{$qtyInt} Pcs</td>
                         </tr>
                     </tbody>
                 </table>

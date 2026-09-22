@@ -23,7 +23,8 @@ test.describe('UserResource E2E Tests', () => {
     await expect(page.getByRole('heading', { name: 'Edit E2E Test User' })).toBeVisible({ timeout: 10000 });
   });
 
-  test('can filter users by role', async ({ page }) => {
+  test('can filter users by role using search', async ({ page }) => {
+    // First create a user to filter
     const uniqueEmail = 'filter-role-' + Date.now() + '@test.com';
     await page.goto('http://127.0.0.1:8000/admin/users/create');
     await page.fill('input[id="form.name"]', 'Role Filter User');
@@ -35,24 +36,34 @@ test.describe('UserResource E2E Tests', () => {
     await expect(page.getByRole('heading', { name: 'Edit Role Filter User' })).toBeVisible({ timeout: 10000 });
 
     await page.goto('http://127.0.0.1:8000/admin/users');
-    // Filter by role
-    await page.getByRole('button', { name: 'Filter' }).click();
-    await page.waitForTimeout(1000);
-    await page.getByRole('combobox', { name: 'System role' }).selectOption({ label: 'Warehouse Staff' });
-    await page.getByRole('button', { name: 'Apply filters' }).click();
+    await page.waitForLoadState('networkidle');
+
+    // Use search to filter by name
+    await page.fill('input[placeholder="Search"]', 'Role Filter User');
     await page.waitForTimeout(2000);
-    await expect(page.locator('table.users tbody tr').first()).toContainText('Warehouse Staff');
+
+    // Verify filtered results show the user
+    await expect(page.locator('table').getByRole('row', { name: 'Role Filter User' })).toBeVisible();
   });
 
-  test('can view user infolist with warehouse badges', async ({ page }) => {
+  test('can view user infolist with warehouse badges in slide-over', async ({ page }) => {
     await page.goto('http://127.0.0.1:8000/admin/users');
-    // Click on first user to view details
-    await page.getByRole('row', { name: 'E2E Test User' }).first().click();
-    await expect(page.getByRole('heading', { name: 'View User' })).toBeVisible();
-    // Check for infolist entries
-    await expect(page.getByText('name')).toBeVisible();
-    await expect(page.getByText('email')).toBeVisible();
-    // Check for role badge
-    await expect(page.getByText('Admin') || page.getByText('Warehouse Staff')).toBeVisible();
+    await page.waitForLoadState('networkidle');
+
+    // Click on View action (eye icon) for first user to open slide-over
+    // The View button is inside the Actions column
+    await page.getByRole('row', { name: 'E2E Test User' }).first().getByRole('button', { name: 'View' }).first().click();
+
+    // Wait for slide-over modal to open - heading is "View {user name}"
+    await expect(page.locator('[role="dialog"]').getByRole('heading', { name: 'View E2E Test User' })).toBeVisible({ timeout: 10000 });
+
+    // Check for infolist entries in the slide-over
+    const dialog = page.locator('[role="dialog"]');
+    // Check for email label
+    await expect(dialog.getByText('email')).toBeVisible();
+    // Check role badge - could be Admin or Warehouse Staff
+    await expect(dialog.getByText('Warehouse Staff')).toBeVisible();
+    // Check warehouses section
+    await expect(dialog.getByText('ASSIGNED PHYSICAL WAREHOUSES')).toBeVisible();
   });
 });

@@ -68,6 +68,7 @@ it('can sort column', function (string $column) {
         $movements = $movements->map(function ($m, $i) {
             $m->created_at = now()->subMinutes($i + 1);
             $m->save();
+
             return $m;
         });
     }

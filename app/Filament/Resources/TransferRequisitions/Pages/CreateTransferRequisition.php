@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\TransferRequisitions\Pages;
 
+use App\Filament\Resources\TransferRequisitions\Schemas\TransferRequisitionForm;
 use App\Filament\Resources\TransferRequisitions\TransferRequisitionResource;
+use Exception;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Schemas\Components\Wizard\Step;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 class CreateTransferRequisition extends CreateRecord
 {
@@ -17,7 +20,7 @@ class CreateTransferRequisition extends CreateRecord
 
     protected function getFormSchema(): array
     {
-        return \App\Filament\Resources\TransferRequisitions\Schemas\TransferRequisitionForm::getRoutingSchema();
+        return TransferRequisitionForm::getRoutingSchema();
     }
 
     protected function getFormStatePath(): string
@@ -57,33 +60,42 @@ class CreateTransferRequisition extends CreateRecord
             ->color('primary')
             ->action(function (array $data) {
                 DB::transaction(function () use ($data) {
-                    $referenceCode = 'TRQ-'.date('Ymd').'-'.mb_strtoupper(uniqid());
-                    $requisition = \App\Models\TransferRequisition::create([
-                        'reference_code' => $referenceCode,
-                        'from_warehouse_id' => $data['from_warehouse_id'],
-                        'to_warehouse_id' => $data['to_warehouse_id'],
-                        'status' => 'draft',
-                        'requested_by' => auth()->id(),
-                        'requested_at' => now(),
-                    ]);
+                    try {
+                        $referenceCode = 'TRQ-'.date('Ymd').'-'.mb_strtoupper(uniqid());
+                        $requisition = \App\Models\TransferRequisition::create([
+                            'reference_code' => $referenceCode,
+                            'from_warehouse_id' => $data['from_warehouse_id'],
+                            'to_warehouse_id' => $data['to_warehouse_id'],
+                            'status' => 'draft',
+                            'requested_by' => auth()->id(),
+                            'requested_at' => now(),
+                        ]);
 
-                    if (! empty($data['items'])) {
-                        foreach ($data['items'] as $item) {
-                            $variant = \App\Models\ProductVariant::find($item['product_variant_id']);
-                            $ratio = $item['requested_unit_ratio'] ?? 1;
-                            $baseQty = ($item['requested_qty'] ?? 1) * $ratio;
+                        if (! empty($data['items'])) {
+                            foreach ($data['items'] as $item) {
+                                $variant = \App\Models\ProductVariant::find($item['product_variant_id']);
+                                $ratio = $item['requested_unit_ratio'] ?? 1;
+                                $baseQty = ($item['requested_qty'] ?? 1) * $ratio;
 
-                            $requisition->items()->create([
-                                'product_variant_id' => $item['product_variant_id'],
-                                'requested_unit_name' => $item['requested_unit_name'],
-                                'requested_unit_ratio' => $item['requested_unit_ratio'],
-                                'requested_qty' => $item['requested_qty'],
-                                'requested_base_qty' => $baseQty,
-                            ]);
+                                $requisition->items()->create([
+                                    'product_variant_id' => $item['product_variant_id'],
+                                    'requested_unit_name' => $item['requested_unit_name'],
+                                    'requested_unit_ratio' => $item['requested_unit_ratio'],
+                                    'requested_qty' => $item['requested_qty'],
+                                    'requested_base_qty' => $baseQty,
+                                ]);
+                            }
                         }
-                    }
 
-                    $this->record = $requisition;
+                        $this->record = $requisition;
+                    } catch (Exception $e) {
+                        Notification::make()
+                            ->title('Error')
+                            ->body('Failed to create requisition: '.$e->getMessage())
+                            ->danger()
+                            ->send();
+                        throw new RuntimeException('Failed to create requisition: '.$e->getMessage());
+                    }
                 });
 
                 Notification::make()
@@ -99,15 +111,15 @@ class CreateTransferRequisition extends CreateRecord
         return [
             Step::make('Routing Pathways')
                 ->description('Identify dispatching & receiving locations')
-                ->schema(\App\Filament\Resources\TransferRequisitions\Schemas\TransferRequisitionForm::getRoutingSchema()),
+                ->schema(TransferRequisitions\Schemas\TransferRequisitionForm::getRoutingSchema()),
 
             Step::make('Material Manifest')
                 ->description('Declare variant items, order volumes')
-                ->schema(\App\Filament\Resources\TransferRequisitions\Schemas\TransferRequisitionForm::getItemsSchema()),
+                ->schema(TransferRequisitions\Schemas\TransferRequisitionForm::getItemsSchema()),
 
             Step::make('Review & Verify')
                 ->description('Confirm accuracy before sending request')
-                ->schema(\App\Filament\Resources\TransferRequisitions\Schemas\TransferRequisitionForm::getReviewSchema()),
+                ->schema(TransferRequisitions\Schemas\TransferRequisitionForm::getReviewSchema()),
         ];
     }
 }

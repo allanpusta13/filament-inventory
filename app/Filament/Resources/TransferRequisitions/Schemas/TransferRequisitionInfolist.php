@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\TransferRequisitions\Schemas;
 
 use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\RepeatableEntry\TableColumn;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
@@ -19,6 +20,7 @@ class TransferRequisitionInfolist
         return $schema
             ->schema([
                 Grid::make(3)
+                    ->columnSpanFull()
                     ->schema([
                         // Section 1: Requisition Profile (Spans 2 Columns)
                         Section::make('REQUISITION PROFILE')
@@ -80,6 +82,18 @@ class TransferRequisitionInfolist
                             ->schema([
                                 RepeatableEntry::make('items')
                                     ->label('')
+                                    ->table([
+                                        TableColumn::make('ORIGINAL SKU'),
+                                        TableColumn::make('PROPOSED SUBSTITUTE'),
+                                        TableColumn::make('REQUESTED'),
+                                        TableColumn::make('APPROVED'),
+                                        TableColumn::make('APPROVED (BASE)'),
+                                        TableColumn::make('SHIPPED (BASE)'),
+                                        TableColumn::make('RECEIVED GOOD (BASE)'),
+                                        TableColumn::make('RECEIVED DAMAGED (BASE)'),
+                                        TableColumn::make('LOSS CATEGORY'),
+
+                                    ])
                                     ->schema([
                                         Grid::make(6)
                                             ->schema([
