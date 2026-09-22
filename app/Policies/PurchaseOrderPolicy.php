@@ -74,7 +74,7 @@ class PurchaseOrderPolicy
         return $user->isAdmin();
     }
 
-    public function orderPurchase(User $user, PurchaseOrder $purchaseOrder): bool
+    public function confirmPurchaseOrder(User $user, PurchaseOrder $purchaseOrder): bool
     {
         if ($user->isAdmin()) {
             return true;
@@ -116,8 +116,7 @@ class PurchaseOrderPolicy
                 && in_array($purchaseOrder->status, [
                     PurchaseOrderStatus::Draft,
                     PurchaseOrderStatus::Ordered,
-                ])
-                && $purchaseOrder->items->every(fn ($item) => $item->received_base_qty === 0);
+                ]);
         }
 
         return false;

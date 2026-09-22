@@ -11,12 +11,20 @@ class LossLedgerPolicy
 {
     public function viewAny(User $user): bool
     {
-        return true;
+        return $user->isAdmin() || $user->isAuditor() || $user->isBranchManager() || $user->isWarehouseStaff();
     }
 
     public function view(User $user, LossLedger $lossLedger): bool
     {
-        return true;
+        if ($user->isAdmin() || $user->isAuditor()) {
+            return true;
+        }
+
+        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
+            return $user->canAccessWarehouse($lossLedger->warehouse);
+        }
+
+        return false;
     }
 
     public function create(User $user): bool
@@ -61,6 +69,6 @@ class LossLedgerPolicy
 
     public function recordLoss(User $user): bool
     {
-        return true;
+        return $user->isAdmin() || $user->isBranchManager() || $user->isWarehouseStaff();
     }
 }

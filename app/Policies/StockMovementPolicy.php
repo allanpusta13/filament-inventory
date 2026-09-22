@@ -11,12 +11,20 @@ class StockMovementPolicy
 {
     public function viewAny(User $user): bool
     {
-        return true;
+        return $user->isAdmin() || $user->isAuditor() || $user->isBranchManager() || $user->isWarehouseStaff();
     }
 
     public function view(User $user, StockMovement $movement): bool
     {
-        return true;
+        if ($user->isAdmin() || $user->isAuditor()) {
+            return true;
+        }
+
+        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
+            return $user->canAccessWarehouse($movement->warehouse);
+        }
+
+        return false;
     }
 
     public function create(User $user): bool

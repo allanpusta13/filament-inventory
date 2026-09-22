@@ -19,6 +19,9 @@ beforeEach(function () {
 describe('TransferRequisitionPolicy - cancel', function () {
     it('cancel_is_permitted_while_confirmed', function () {
         $warehouse = Warehouse::factory()->create();
+        $this->branchManager->warehouses()->attach($warehouse);
+        $this->warehouseStaff->warehouses()->attach($warehouse);
+
         $requisition = TransferRequisition::factory()->create([
             'status' => TransferRequisitionStatus::Confirmed,
             'from_warehouse_id' => $warehouse->id,

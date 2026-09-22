@@ -16,7 +16,7 @@ class WarehousePolicy
 
     public function view(User $user, Warehouse $warehouse): bool
     {
-        return $user->isAdmin() || $user->canAccessWarehouse($warehouse);
+        return $user->isAdmin() || $user->isAuditor() || (($user->isBranchManager() || $user->isWarehouseStaff()) && $user->canAccessWarehouse($warehouse));
     }
 
     public function create(User $user): bool
@@ -26,7 +26,7 @@ class WarehousePolicy
 
     public function update(User $user, Warehouse $warehouse): bool
     {
-        return $user->isAdmin() || $user->canAccessWarehouse($warehouse);
+        return $user->isAdmin() || (($user->isBranchManager() || $user->isWarehouseStaff()) && $user->canAccessWarehouse($warehouse));
     }
 
     public function delete(User $user, Warehouse $warehouse): bool
@@ -59,13 +59,29 @@ class WarehousePolicy
         return false;
     }
 
-    public function adjustStock(User $user): bool
+    public function adjustStock(User $user, Warehouse $warehouse): bool
     {
-        return true;
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
+            return $user->canAccessWarehouse($warehouse);
+        }
+
+        return false;
     }
 
-    public function recordLoss(User $user): bool
+    public function recordLoss(User $user, Warehouse $warehouse): bool
     {
-        return true;
+        if ($user->isAdmin() || $user->isAuditor()) {
+            return true;
+        }
+
+        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
+            return $user->canAccessWarehouse($warehouse);
+        }
+
+        return false;
     }
 }

@@ -9,11 +9,13 @@ use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\SalesOrder;
 use App\Models\Supplier;
+use App\Models\Warehouse;
 use App\Observers\ProductObserver;
 use App\Policies\CustomerPolicy;
 use App\Policies\PurchaseOrderPolicy;
 use App\Policies\SalesOrderPolicy;
 use App\Policies\SupplierPolicy;
+use App\Policies\WarehousePolicy;
 use Filament\Forms\Components\Field;
 use Filament\Infolists\Components\Entry;
 use Filament\Support\Components\Component;
@@ -43,6 +45,7 @@ final class AppServiceProvider extends ServiceProvider
         Gate::policy(SalesOrder::class, SalesOrderPolicy::class);
         Gate::policy(Supplier::class, SupplierPolicy::class);
         Gate::policy(Customer::class, CustomerPolicy::class);
+        Gate::policy(Warehouse::class, WarehousePolicy::class);
 
         $this->configureTable();
         $this->translatableComponents();

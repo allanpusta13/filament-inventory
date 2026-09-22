@@ -16,15 +16,7 @@ class SupplierPolicy
 
     public function view(User $user, Supplier $supplier): bool
     {
-        if ($user->isAdmin() || $user->isAuditor()) {
-            return true;
-        }
-
-        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
-            return true;
-        }
-
-        return false;
+        return $user->isAdmin() || $user->isAuditor() || $user->isBranchManager() || $user->isWarehouseStaff();
     }
 
     public function create(User $user): bool
@@ -44,7 +36,7 @@ class SupplierPolicy
 
     public function restore(User $user, Supplier $supplier): bool
     {
-        return $user->isAdmin();
+        return $user->isAdmin() || $user->isAuditor();
     }
 
     public function forceDelete(User $user, Supplier $supplier): bool

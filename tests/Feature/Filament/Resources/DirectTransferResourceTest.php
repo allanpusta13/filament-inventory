@@ -40,28 +40,43 @@ it('column with', function (string $column) {
 })->with(['reference_code', 'productVariant.sku', 'productVariant.name', 'warehouse.name', 'type', 'quantity', 'created_at']);
 
 it('can sort column', function (string $column) {
-    $fromWarehouse = Warehouse::factory()->create();
-    $toWarehouse = Warehouse::factory()->create();
-    $variant = ProductVariant::factory()->create();
+    // Create records with different values for sortable columns
+    $variants = ProductVariant::factory()->count(5)->create();
+    $warehouses = Warehouse::factory()->count(5)->create();
+    $toWarehouses = Warehouse::factory()->count(5)->create();
 
-    // Create paired transfer movements with related_movement_id satisfy DirectTransferResource query scope
-    $movements = StockMovement::factory()->count(5)
-        ->for($variant, 'productVariant')
-        ->for($fromWarehouse, 'warehouse')
-        ->transferOut()
-        ->create()
-        ->each(function ($m) use ($toWarehouse, $variant) {
-            $related = StockMovement::factory()->for($variant, 'productVariant')
-                ->for($toWarehouse, 'warehouse')
-                ->transferIn()
-                ->create(['related_movement_id' => $m->id, 'quantity' => -$m->quantity]);
-            $m->update(['related_movement_id' => $related->id]);
+    $movements = collect();
+    $types = ['transfer_out', 'transfer_in', 'transfer_out', 'transfer_in', 'transfer_out'];
+
+    foreach ($variants->zip($warehouses, $toWarehouses, $types) as [$variant, $fromWarehouse, $toWarehouse, $type]) {
+        $movement = StockMovement::factory()
+            ->for($variant, 'productVariant')
+            ->for($fromWarehouse, 'warehouse')
+            ->state(['type' => $type])
+            ->create();
+        $related = StockMovement::factory()
+            ->for($variant, 'productVariant')
+            ->for($toWarehouse, 'warehouse')
+            ->state(['type' => $type === 'transfer_out' ? 'transfer_in' : 'transfer_out'])
+            ->create(['related_movement_id' => $movement->id, 'quantity' => -$movement->quantity]);
+        $movement->update(['related_movement_id' => $related->id]);
+        $movements->push($movement);
+    }
+
+    // For created_at sorting, ensure different timestamps
+    if ($column === 'created_at') {
+        $movements = $movements->map(function ($m, $i) {
+            $m->created_at = now()->subMinutes($i + 1);
+            $m->save();
+            return $m;
         });
+    }
 
     livewire(ListDirectTransfers::class)
         ->loadTable()
-        ->sortTable($column, 'desc');
-})->with(['reference_code', 'productVariant.sku', 'productVariant.name', 'warehouse.name', 'type', 'quantity', 'created_at']);
+        ->sortTable($column, 'desc')
+        ->assertCanSeeTableRecords($movements->sortByDesc($column)->values(), inOrder: true);
+})->with(['reference_code', 'productVariant.sku', 'productVariant.name', 'warehouse.name', 'quantity', 'created_at']);
 
 it('can search table', function () {
     $fromWarehouse = Warehouse::factory()->create();
