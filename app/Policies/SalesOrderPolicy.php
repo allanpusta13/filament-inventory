@@ -74,7 +74,7 @@ class SalesOrderPolicy
         return $user->isAdmin();
     }
 
-    public function confirmSalesOrder(User $user, SalesOrder $salesOrder): bool
+    public function confirm(User $user, SalesOrder $salesOrder): bool
     {
         if ($user->isAdmin()) {
             return true;
@@ -88,18 +88,23 @@ class SalesOrderPolicy
         return false;
     }
 
-    public function dispatchSale(User $user, SalesOrder $salesOrder): bool
+    public function dispatch(User $user, SalesOrder $salesOrder): bool
     {
-        if ($user->isAdmin()) {
+        $allowedStatuses = [
+            SalesOrderStatus::Confirmed,
+            SalesOrderStatus::PartiallyDispatched,
+        ];
+
+        if (! in_array($salesOrder->status, $allowedStatuses, true)) {
+            return false;
+        }
+
+        if ($user->isAdmin() || $user->isAuditor()) {
             return true;
         }
 
         if ($user->isBranchManager() || $user->isWarehouseStaff()) {
-            return $user->canAccessWarehouse($salesOrder->warehouse)
-                && in_array($salesOrder->status, [
-                    SalesOrderStatus::Confirmed,
-                    SalesOrderStatus::PartiallyDispatched,
-                ]);
+            return $user->canAccessWarehouse($salesOrder->warehouse);
         }
 
         return false;
@@ -107,14 +112,37 @@ class SalesOrderPolicy
 
     public function recordSalesReturn(User $user, SalesOrder $salesOrder): bool
     {
-        return $user->isAdmin() || ($user->isWarehouseStaff() && $salesOrder->items->contains(fn ($item) => $item->dispatched_base_qty > 0));
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        if ($user->isWarehouseStaff()) {
+            return $salesOrder->items->contains(fn ($item) => $item->dispatched_base_qty > 0);
+        }
+
+        return false;
     }
 
-    public function cancelSalesOrder(User $user, SalesOrder $salesOrder): bool
+    public function cancel(User $user, SalesOrder $salesOrder): bool
     {
-        return $user->isAdmin() || ($user->isWarehouseStaff() && in_array($salesOrder->status, [
+        $allowedStatuses = [
             SalesOrderStatus::Draft,
             SalesOrderStatus::Confirmed,
-        ]));
+            SalesOrderStatus::PartiallyDispatched,
+        ];
+
+        if (! in_array($salesOrder->status, $allowedStatuses, true)) {
+            return false;
+        }
+
+        if ($user->isAdmin() || $user->isAuditor()) {
+            return true;
+        }
+
+        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
+            return $user->canAccessWarehouse($salesOrder->warehouse);
+        }
+
+        return false;
     }
 }

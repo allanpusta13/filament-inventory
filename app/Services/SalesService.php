@@ -92,10 +92,12 @@ class SalesService
                 }
 
                 // Check available stock before dispatch
-                $available = $item->productVariant->availableQuantity($salesOrder->warehouse_id);
-                if ($available < $dispatchedBaseQty) {
+                // Use onHandQuantity because sales reservations were already accounted for at confirm time
+                // We only need to ensure physical stock exists to ship
+                $onHand = $item->productVariant->onHandQuantity($salesOrder->warehouse_id);
+                if ($onHand < $dispatchedBaseQty) {
                     throw ValidationException::withMessages([
-                        "items.{$item->id}.dispatched_base_qty" => "Insufficient available stock for {$item->productVariant->sku}. Available: {$available}, Requested: {$dispatchedBaseQty}",
+                        "items.{$item->id}.dispatched_base_qty" => "Insufficient on-hand stock for {$item->productVariant->sku}. On-hand: {$onHand}, Requested: {$dispatchedBaseQty}",
                     ]);
                 }
 

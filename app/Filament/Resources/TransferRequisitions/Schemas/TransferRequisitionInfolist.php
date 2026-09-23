@@ -83,78 +83,76 @@ class TransferRequisitionInfolist
                                 RepeatableEntry::make('items')
                                     ->label('')
                                     ->table([
-                                        TableColumn::make('ORIGINAL SKU'),
-                                        TableColumn::make('PROPOSED SUBSTITUTE'),
-                                        TableColumn::make('REQUESTED'),
-                                        TableColumn::make('APPROVED'),
-                                        TableColumn::make('APPROVED (BASE)'),
-                                        TableColumn::make('SHIPPED (BASE)'),
-                                        TableColumn::make('RECEIVED GOOD (BASE)'),
-                                        TableColumn::make('RECEIVED DAMAGED (BASE)'),
-                                        TableColumn::make('LOSS CATEGORY'),
-
+                                        TableColumn::make('ORIGINAL SKU')->alignLeft(),
+                                        TableColumn::make('PROPOSED SUBSTITUTE')->alignCenter(),
+                                        TableColumn::make('REQUESTED')->alignRight(),
+                                        TableColumn::make('APPROVED')->alignRight(),
+                                        TableColumn::make('APPROVED (BASE)')->alignRight(),
+                                        TableColumn::make('SHIPPED (BASE)')->alignRight(),
+                                        TableColumn::make('RECEIVED GOOD (BASE)')->alignRight(),
+                                        TableColumn::make('RECEIVED DAMAGED (BASE)')->alignRight(),
+                                        TableColumn::make('LOSS CATEGORY')->alignCenter(),
                                     ])
                                     ->schema([
-                                        Grid::make(6)
-                                            ->schema([
-                                                TextEntry::make('productVariant.sku')
-                                                    ->label('ORIGINAL SKU')
-                                                    ->weight(FontWeight::Bold)
-                                                    ->columnSpan(1),
 
-                                                TextEntry::make('substituteProductVariant.sku')
-                                                    ->label('PROPOSED SUBSTITUTE')
-                                                    ->badge()
-                                                    ->color('warning')
-                                                    ->placeholder('No Substitute')
-                                                    ->columnSpan(1),
+                                        TextEntry::make('productVariant.sku')
+                                            ->label('ORIGINAL SKU')
+                                            ->weight(FontWeight::Bold)
+                                            ->columnSpan(1),
 
-                                                TextEntry::make('requested_qty')
-                                                    ->label('REQUESTED')
-                                                    ->state(fn ($record) => "{$record->requested_qty} {$record->requested_unit_name}")
-                                                    ->columnSpan(1),
+                                        TextEntry::make('substituteProductVariant.sku')
+                                            ->label('PROPOSED SUBSTITUTE')
+                                            ->badge()
+                                            ->color('warning')
+                                            ->placeholder('No Substitute')
+                                            ->columnSpan(1),
 
-                                                TextEntry::make('approved_qty')
-                                                    ->label('APPROVED')
-                                                    ->state(fn ($record) => $record->approved_qty
-                                                        ? "{$record->approved_qty} {$record->approved_unit_name}"
-                                                        : 'Pending Verification')
-                                                    ->color(fn ($record) => $record->approved_qty !== $record->requested_qty ? 'warning' : 'gray')
-                                                    ->columnSpan(1),
+                                        TextEntry::make('requested_qty')
+                                            ->label('REQUESTED')
+                                            ->getStateUsing(fn ($record) => "{$record->requested_qty} {$record->requested_unit_name}")
+                                            ->columnSpan(1),
 
-                                                TextEntry::make('approved_base_qty')
-                                                    ->label('APPROVED (BASE)')
-                                                    ->numeric()
-                                                    ->columnSpan(1),
+                                        TextEntry::make('approved_qty')
+                                            ->label('APPROVED')
+                                            ->getStateUsing(fn ($record) => $record->approved_qty
+                                                ? "{$record->approved_qty} {$record->approved_unit_name}"
+                                                : 'Pending Verification')
+                                            ->color(fn ($record) => $record->approved_qty !== $record->requested_qty ? 'warning' : 'gray')
+                                            ->columnSpan(1),
 
-                                                TextEntry::make('shipped_base_qty')
-                                                    ->label('SHIPPED (BASE)')
-                                                    ->numeric()
-                                                    ->columnSpan(1),
+                                        TextEntry::make('approved_base_qty')
+                                            ->label('APPROVED (BASE)')
+                                            ->numeric()
+                                            ->columnSpan(1),
 
-                                                TextEntry::make('received_good_base_qty')
-                                                    ->label('RECEIVED GOOD (BASE)')
-                                                    ->numeric()
-                                                    ->columnSpan(1),
+                                        TextEntry::make('shipped_base_qty')
+                                            ->label('SHIPPED (BASE)')
+                                            ->numeric()
+                                            ->columnSpan(1),
 
-                                                TextEntry::make('received_damaged_base_qty')
-                                                    ->label('RECEIVED DAMAGED (BASE)')
-                                                    ->numeric()
-                                                    ->color('danger')
-                                                    ->columnSpan(1),
+                                        TextEntry::make('received_good_base_qty')
+                                            ->label('RECEIVED GOOD (BASE)')
+                                            ->numeric()
+                                            ->columnSpan(1),
 
-                                                TextEntry::make('lossCategory')
-                                                    ->label('LOSS CATEGORY')
-                                                    ->badge()
-                                                    ->color(fn (?string $state): string => match ($state) {
-                                                        'shortfall' => 'warning',
-                                                        'damage' => 'danger',
-                                                        'spoilage' => 'danger',
-                                                        'theft' => 'danger',
-                                                        default => 'gray',
-                                                    })
-                                                    ->columnSpan(1),
-                                            ]),
+                                        TextEntry::make('received_damaged_base_qty')
+                                            ->label('RECEIVED DAMAGED (BASE)')
+                                            ->numeric()
+                                            ->color('danger')
+                                            ->columnSpan(1),
+
+                                        TextEntry::make('lossCategory')
+                                            ->label('LOSS CATEGORY')
+                                            ->badge()
+                                            ->color(fn (?string $state): string => match ($state) {
+                                                'shortfall' => 'warning',
+                                                'damage' => 'danger',
+                                                'spoilage' => 'danger',
+                                                'theft' => 'danger',
+                                                default => 'gray',
+                                            })
+                                            ->columnSpan(1),
+
                                     ]),
                             ])
                             ->columnSpanFull(),

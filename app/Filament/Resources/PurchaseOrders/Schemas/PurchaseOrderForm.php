@@ -7,6 +7,7 @@ namespace App\Filament\Resources\PurchaseOrders\Schemas;
 use App\Models\ProductVariant;
 use App\Models\Supplier;
 use App\Models\Warehouse;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -17,126 +18,149 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Width;
 
 class PurchaseOrderForm
 {
     public static function configure(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                Section::make('STEP 1: SUPPLIER & WAREHOUSE')
-                    ->schema([
-                        Grid::make(2)->schema([
-                            Select::make('supplier_id')
-                                ->label('SUPPLIER')
-                                ->options(fn () => Supplier::query()->where('is_active', true)->pluck('name', 'id'))
-                                ->required()
-                                ->searchable()
-                                ->preload()
-                                ->createOptionForm([
-                                    TextInput::make('name')->required(),
-                                    TextInput::make('contact_person'),
-                                    TextInput::make('phone')->tel(),
-                                    TextInput::make('email')->email(),
-                                    Textarea::make('address')->columnSpanFull(),
-                                    Toggle::make('is_active')->required()->default(true),
-                                ])
-                                ->prefixIcon(\Filament\Support\Icons\Heroicon::BuildingOffice),
+        return $schema->components([
+            Section::make()
+                ->schema([
+                    // Steps are handled by CreatePurchaseOrder page using HasWizard trait
+                    // just provides schemas step
+                ]),
+        ]);
+    }
 
-                            Select::make('warehouse_id')
-                                ->label('RECEIVING WAREHOUSE')
-                                ->options(fn () => Warehouse::query()->where('is_active', true)->pluck('name', 'id'))
-                                ->required()
-                                ->searchable()
-                                ->preload()
-                                ->default(fn () => auth()->user()->warehouses()->count() === 1
-                                    ? auth()->user()->warehouses()->first()->id
-                                    : null)
-                                ->prefixIcon(\Filament\Support\Icons\Heroicon::BuildingOffice2),
-                        ]),
-                    ])->collapsible(),
+    /**
+     * Step 1: Supplier & Warehouse
+     */
+    public static function getRoutingSchema(): array
+    {
+        return [
+            Select::make('supplier_id')
+                ->label('SUPPLIER')
+                ->options(fn () => Supplier::query()->where('is_active', true)->pluck('name', 'id'))
+                ->required()
+                ->searchable()
+                ->preload()
+                ->createOptionForm([
+                    TextInput::make('name')->required(),
+                    TextInput::make('contact_person'),
+                    TextInput::make('phone')->tel(),
+                    TextInput::make('email')->email(),
+                    Textarea::make('address')->columnSpanFull(),
+                    Toggle::make('is_active')->required()->default(true),
+                ])
+                ->prefixIcon(\Filament\Support\Icons\Heroicon::BuildingOffice),
 
-                Section::make('STEP 2: LINE ITEMS')
-                    ->schema([
-                        Repeater::make('items')
-                            ->label('PURCHASE ORDER LINES')
-                            ->relationship()
-                            ->schema([
-                                Grid::make(6)->schema([
-                                    Select::make('product_variant_id')
-                                        ->label('PRODUCT VARIANT (SKU)')
-                                        ->relationship('productVariant', 'sku')
-                                        ->getOptionLabelFromRecordUsing(fn (ProductVariant $v) => "{$v->sku} — {$v->name}")
-                                        ->required()
-                                        ->searchable()
-                                        ->preload()
-                                        ->columnSpan(3)
-                                        ->live(onBlur: true)
-                                        ->afterStateUpdated(fn (Set $set, Get $get, ?string $state) => $set('ordered_unit_name', ProductVariant::find($state)?->base_unit_name ?? '')),
+            Select::make('warehouse_id')
+                ->label('RECEIVING WAREHOUSE')
+                ->options(fn () => Warehouse::query()->where('is_active', true)->pluck('name', 'id'))
+                ->required()
+                ->searchable()
+                ->preload()
+                ->default(fn () => auth()->user()->warehouses()->count() === 1
+                    ? auth()->user()->warehouses()->first()->id
+                    : null)
+                ->prefixIcon(\Filament\Support\Icons\Heroicon::BuildingOffice2),
+        ];
+    }
 
-                                    TextInput::make('ordered_unit_name')
-                                        ->label('ORDER UNIT')
-                                        ->required()
-                                        ->columnSpan(2),
+    /**
+     * Step 2: Line Items
+     */
+    public static function getItemsSchema(): array
+    {
+        return [
+            Repeater::make('items')
+                ->label('PURCHASE ORDER LINES')
+                ->relationship()
+                ->schema([
+                    Grid::make(6)->schema([
+                        Select::make('product_variant_id')
+                            ->label('PRODUCT VARIANT (SKU)')
+                            ->relationship('productVariant', 'sku')
+                            ->getOptionLabelFromRecordUsing(fn (ProductVariant $v) => "{$v->sku} — {$v->name}")
+                            ->required()
+                            ->searchable()
+                            ->preload()
+                            ->disableOptionsWhenSelectedInSiblingRepeaterItems()
+                            ->columnSpan(3),
 
-                                    TextInput::make('ordered_unit_ratio')
-                                        ->label('UNIT RATIO')
-                                        ->required()
-                                        ->numeric()
-                                        ->minValue(1)
-                                        ->default(1)
-                                        ->columnSpan(1),
+                        TextInput::make('ordered_unit_name')
+                            ->label('ORDER UNIT')
+                            ->required()
+                            ->columnSpan(2),
 
-                                    TextInput::make('ordered_qty')
-                                        ->label('ORDER QTY')
-                                        ->required()
-                                        ->numeric()
-                                        ->minValue(1)
-                                        ->default(1)
-                                        ->live(onBlur: true)
-                                        ->afterStateUpdated(fn (Set $set, Get $get) => $set('ordered_base_qty', (int) ($get('ordered_qty') ?? 1) * (int) ($get('ordered_unit_ratio') ?? 1)))
-                                        ->columnSpan(2),
+                        TextInput::make('ordered_unit_ratio')
+                            ->label('UNIT RATIO (TO BASE)')
+                            ->numeric()
+                            ->minValue(1)
+                            ->default(1)
+                            ->columnSpan(1),
 
-                                    TextInput::make('ordered_base_qty')
-                                        ->label('BASE UNITS')
-                                        ->required()
-                                        ->numeric()
-                                        ->minValue(1)
-                                        ->disabled()
-                                        ->dehydrated()
-                                        ->columnSpan(1),
+                        TextInput::make('ordered_qty')
+                            ->label('ORDER QTY')
+                            ->numeric()
+                            ->minValue(1)
+                            ->default(1)
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(fn (Get $get, Set $set) => $set(
+                                'ordered_base_qty',
+                                (int) $get('ordered_qty') * (int) $get('ordered_unit_ratio')
+                            ))
+                            ->columnSpan(2),
 
-                                    TextInput::make('unit_cost_price')
-                                        ->label('UNIT COST PRICE')
-                                        ->required()
-                                        ->numeric()
-                                        ->minValue(0)
-                                        ->step(0.0001)
-                                        ->prefix('₱')
-                                        ->columnSpan(2),
+                        TextInput::make('ordered_base_qty')
+                            ->label('BASE UNITS (COMPUTED)')
+                            ->numeric()
+                            ->minValue(1)
+                            ->disabled()
+                            ->dehydrated()
+                            ->columnSpan(1),
 
-                                    Textarea::make('notes')
-                                        ->label('LINE NOTES')
-                                        ->columnSpanFull(),
-                                ]),
-                            ])
-                            ->columns(6)
-                            ->defaultItems(1)
-                            ->addActionLabel('ADD LINE'),
-                    ])->collapsible(),
-
-                Section::make('STEP 3: REVIEW & UPDATE COST PRICE')
-                    ->schema([
-                        Toggle::make('update_cost_price')
-                            ->label('UPDATE PRODUCT VARIANT COST PRICES ON RECEIPT')
-                            ->helperText('When enabled, the cost prices from this purchase order will become the new current cost prices for the variants upon full receipt.')
-                            ->default(false)
-                            ->required(),
+                        TextInput::make('unit_cost_price')
+                            ->label('UNIT COST PRICE')
+                            ->numeric()
+                            ->step(0.0001)
+                            ->minValue(0)
+                            ->required()
+                            ->columnSpan(2),
 
                         Textarea::make('notes')
-                            ->label('ORDER NOTES')
-                            ->columnSpanFull(),
-                    ])->collapsible(),
-            ]);
+                            ->label('LINE NOTES')
+                            ->columnSpan(6),
+                    ])
+                    ->columns(6)
+                    ->defaultItems(1)
+                    ->addActionLabel('ADD LINE'),
+                ]),
+        ];
+    }
+
+    /**
+     * Step 3: Review & Confirm
+     */
+    public static function getReviewSchema(): array
+    {
+        return [
+            Toggle::make('update_cost_price')
+                ->label('UPDATE PRODUCT VARIANT COST PRICES ON RECEIPT')
+                ->helperText('If enabled, receiving this PO will set each variant\'s current cost price to this order\'s unit cost, if different.')
+                ->default(false)
+                ->required(),
+
+            Placeholder::make('review_summary')
+                ->content(fn (Get $get) => view(
+                    'filament.wizards.purchase-order-review',
+                    ['state' => $get()],
+                )),
+
+            Textarea::make('notes')
+                ->label('ORDER NOTES')
+                ->columnSpanFull(),
+        ];
     }
 }

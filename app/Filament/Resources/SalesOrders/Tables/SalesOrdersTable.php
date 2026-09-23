@@ -161,53 +161,36 @@ class SalesOrdersTable
                         SalesOrderStatus::Confirmed,
                         SalesOrderStatus::PartiallyDispatched,
                     ]))
-                    ->modalWidth(\Filament\Support\Enums\Width::SevenExtraLarge)
-                    ->schema([
-                        \Filament\Forms\Components\Repeater::make('items')
-                            ->label('DISPATCH LINES')
-                            ->schema([
-                                \Filament\Forms\Components\Grid::make(5)->schema([
-                                    \Filament\Forms\Components\Select::make('item_id')
-                                        ->label('LINE')
-                                        ->options(fn (SalesOrder $record) => $record->items->pluck('productVariant.sku', 'id')->toArray())
-                                        ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->productVariant->sku} — {$record->productVariant->name}")
-                                        ->required()
-                                        ->searchable()
-                                        ->preload()
-                                        ->columnSpan(2),
+                    ->modalWidth(\Filament\Support\Enums\Width::FourExtraLarge)
+                    ->schema(function (SalesOrder $record) {
+                        $variantIds = $record->items->pluck('product_variant_id')->all();
+                        $availableByVariant = \App\Models\ProductVariant::batchAvailableQuantity($variantIds, $record->warehouse_id);
 
-                                    \Filament\Forms\Components\TextInput::make('dispatched_base_qty')
-                                        ->label('DISPATCHED BASE QTY')
-                                        ->required()
-                                        ->numeric()
-                                        ->minValue(1)
-                                        ->columnSpan(1),
+                        return collect($record->items)
+                            ->map(function ($item) use ($availableByVariant) {
+                                $available = $availableByVariant[$item->product_variant_id] ?? 0;
+                                $safeMax = min($item->outstandingBaseQty(), max(0, $available));
 
-                                    \Filament\Forms\Components\Select::make('unit_name')
-                                        ->label('UNIT')
-                                        ->options(fn (SalesOrder $record) => $record->items->pluck('unit_name', 'id')->toArray())
-                                        ->required()
-                                        ->columnSpan(1),
-
-                                    \Filament\Forms\Components\TextInput::make('unit_ratio')
-                                        ->label('RATIO')
-                                        ->required()
-                                        ->numeric()
-                                        ->minValue(1)
-                                        ->default(1)
-                                        ->columnSpan(1),
-
-                                    \Filament\Forms\Components\Textarea::make('notes')
-                                        ->label('NOTES')
-                                        ->columnSpanFull(),
-                                ]),
-                            ])
-                            ->columns(5)
-                            ->defaultItems(0)
-                            ->addActionLabel('ADD DISPATCH LINE'),
-                    ])
+                                return \Filament\Forms\Components\TextInput::make("dispatch.{$item->id}")
+                                    ->label("{$item->productVariant->sku} — outstanding {$item->outstandingBaseQty()} {$item->unit_name} (available: {$available})")
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->maxValue($safeMax)
+                                    ->default($safeMax)
+                                    ->helperText($available < $item->outstandingBaseQty()
+                                        ? 'Insufficient stock for full dispatch — partial dispatch only.'
+                                        : null);
+                            })
+                            ->all();
+                    })
                     ->action(function (array $data, SalesOrder $record) {
-                        app(\App\Services\SalesService::class)->dispatchSale($record, $data['items']);
+                        $dispatch = collect($data['dispatch'] ?? [])
+                            ->filter(fn ($qty) => (int) $qty > 0)
+                            ->mapWithKeys(fn ($qty, $itemId) => [(int) $itemId => (int) $qty])
+                            ->all();
+
+                        app(\App\Services\SalesService::class)->dispatchSale($record->id, $dispatch);
+
                         Notification::make()
                             ->title('Sales order dispatched')
                             ->success()

@@ -7,7 +7,9 @@ namespace App\Filament\Resources\PurchaseOrders;
 use App\Filament\Resources\PurchaseOrders\Pages\CreatePurchaseOrder;
 use App\Filament\Resources\PurchaseOrders\Pages\EditPurchaseOrder;
 use App\Filament\Resources\PurchaseOrders\Pages\ListPurchaseOrders;
+use App\Filament\Resources\PurchaseOrders\Pages\ViewPurchaseOrder;
 use App\Filament\Resources\PurchaseOrders\Schemas\PurchaseOrderForm;
+use App\Filament\Resources\PurchaseOrders\Schemas\PurchaseOrderInfolist;
 use App\Filament\Resources\PurchaseOrders\Tables\PurchaseOrdersTable;
 use App\Models\PurchaseOrder;
 use BackedEnum;
@@ -37,6 +39,11 @@ class PurchaseOrderResource extends Resource
         return PurchaseOrdersTable::configure($table);
     }
 
+    public static function infolist(Schema $schema): Schema
+    {
+        return PurchaseOrderInfolist::configure($schema);
+    }
+
     public static function getRelations(): array
     {
         return [
@@ -49,6 +56,7 @@ class PurchaseOrderResource extends Resource
         return [
             'index' => ListPurchaseOrders::route('/'),
             'create' => CreatePurchaseOrder::route('/create'),
+            'view' => ViewPurchaseOrder::route('/{record}'),
             'edit' => EditPurchaseOrder::route('/{record}/edit'),
         ];
     }

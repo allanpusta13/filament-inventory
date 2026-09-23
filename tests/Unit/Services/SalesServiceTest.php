@@ -213,7 +213,7 @@ describe('SalesService', function () {
                 'unit_name' => $item->unit_name,
                 'unit_ratio' => $item->unit_ratio,
             ],
-        ]))->toThrow(ValidationException::class, 'Insufficient available stock');
+        ]))->toThrow(ValidationException::class, 'Insufficient on-hand stock');
     });
 
     it('dispatch_does_not_touch_reservedQuantity_transfers_scope', function () {

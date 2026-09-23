@@ -7,7 +7,9 @@ namespace App\Filament\Resources\SalesOrders;
 use App\Filament\Resources\SalesOrders\Pages\CreateSalesOrder;
 use App\Filament\Resources\SalesOrders\Pages\EditSalesOrder;
 use App\Filament\Resources\SalesOrders\Pages\ListSalesOrders;
+use App\Filament\Resources\SalesOrders\Pages\ViewSalesOrder;
 use App\Filament\Resources\SalesOrders\Schemas\SalesOrderForm;
+use App\Filament\Resources\SalesOrders\Schemas\SalesOrderInfolist;
 use App\Filament\Resources\SalesOrders\Tables\SalesOrdersTable;
 use App\Models\SalesOrder;
 use BackedEnum;
@@ -37,6 +39,11 @@ class SalesOrderResource extends Resource
         return SalesOrdersTable::configure($table);
     }
 
+    public static function infolist(Schema $schema): Schema
+    {
+        return SalesOrderInfolist::configure($schema);
+    }
+
     public static function getRelations(): array
     {
         return [
@@ -49,6 +56,7 @@ class SalesOrderResource extends Resource
         return [
             'index' => ListSalesOrders::route('/'),
             'create' => CreateSalesOrder::route('/create'),
+            'view' => ViewSalesOrder::route('/{record}'),
             'edit' => EditSalesOrder::route('/{record}/edit'),
         ];
     }

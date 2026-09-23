@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\TransferRequisitions;
 
+use App\Filament\Resources\TransferRequisitions\Pages\CreateTransferRequisition;
 use App\Filament\Resources\TransferRequisitions\Pages\ListTransferRequisitions;
 use App\Filament\Resources\TransferRequisitions\Pages\ViewTransferRequisition;
 use App\Filament\Resources\TransferRequisitions\Schemas\TransferRequisitionInfolist;
@@ -56,6 +57,7 @@ class TransferRequisitionResource extends Resource
     {
         return [
             'index' => ListTransferRequisitions::route('/'),
+            'create' => CreateTransferRequisition::route('/create'),
             'view' => ViewTransferRequisition::route('/{record}'),
         ];
     }

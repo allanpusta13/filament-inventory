@@ -56,7 +56,7 @@ class ViewTransferRequisition extends ViewRecord
                 ->visible(fn ($record) => $record->status?->value === TransferRequisitionStatus::Confirmed->value)
                 ->action(function ($record) {
                     app(InventoryService::class)
-                        ->dispatchTransfer($record);
+                        ->dispatchTransfer($record->id);
                     $record->update([
                         'status' => TransferRequisitionStatus::Dispatched->value,
                         'dispatched_at' => now(),

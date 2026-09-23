@@ -74,7 +74,7 @@ class PurchaseOrderPolicy
         return $user->isAdmin();
     }
 
-    public function confirmPurchaseOrder(User $user, PurchaseOrder $purchaseOrder): bool
+    public function order(User $user, PurchaseOrder $purchaseOrder): bool
     {
         if ($user->isAdmin()) {
             return true;
@@ -88,7 +88,7 @@ class PurchaseOrderPolicy
         return false;
     }
 
-    public function receivePurchase(User $user, PurchaseOrder $purchaseOrder): bool
+    public function receive(User $user, PurchaseOrder $purchaseOrder): bool
     {
         if ($user->isAdmin()) {
             return true;
@@ -105,7 +105,7 @@ class PurchaseOrderPolicy
         return false;
     }
 
-    public function cancelPurchase(User $user, PurchaseOrder $purchaseOrder): bool
+    public function cancel(User $user, PurchaseOrder $purchaseOrder): bool
     {
         if ($user->isAdmin()) {
             return true;

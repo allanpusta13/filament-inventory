@@ -21,7 +21,14 @@ class TransferRequisitionForm
 {
     public static function configure(Schema $schema): Schema
     {
-        return $schema;
+        return $schema
+            ->components([
+                Section::make()
+                    ->schema([
+                        // Steps are handled by the CreateTransferRequisition page using HasWizard trait
+                        // This form just provides the schemas for each step
+                    ]),
+            ]);
     }
 
     /**
@@ -44,7 +51,7 @@ class TransferRequisitionForm
                 ->required()
                 ->searchable()
                 ->preload()
-                ->different('from_warehouse_id') // Prevents self-transfer routing
+                ->different('from_warehouse_id')
                 ->validationMessages([
                     'different' => 'Destination warehouse cannot match the origin warehouse.',
                 ])
@@ -63,7 +70,7 @@ class TransferRequisitionForm
                 ->description('Select SKU variants, packaging formats, conversion ratios, and quantities.')
                 ->schema([
                     Repeater::make('items')
-                        ->relationship()
+                        ->relationship('items')
                         ->table([
                             TableColumn::make('PRODUCT VARIANT (SKU)'),
                             TableColumn::make('PACKAGING FORMAT'),
@@ -100,7 +107,15 @@ class TransferRequisitionForm
                                 ->columnSpan(2),
                         ])
                         ->columns(8)
-                        ->defaultItems(1),
+                        ->defaultItems(1)
+                        ->mutateRelationshipDataBeforeCreateUsing(function (array $data): array {
+                            $ratio = (int) ($data['requested_unit_ratio'] ?? 1);
+                            $qty = (int) ($data['requested_qty'] ?? 1);
+
+                            $data['requested_base_qty'] = $qty * $ratio;
+
+                            return $data;
+                        }),
                 ]),
         ];
     }
