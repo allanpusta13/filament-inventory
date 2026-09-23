@@ -29,6 +29,11 @@ class SupplierResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
+    public static function getNavigationGroup(): string|UnitEnum|null
+    {
+        return __('PURCHASING');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return SupplierForm::configure($schema);

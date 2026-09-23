@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\LossLedgers\Tables;
 
+use App\Models\LossLedger;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -97,7 +98,7 @@ class LossLedgersTable
                 SelectFilter::make('warehouse_id')
                     ->label('WAREHOUSE')
                     ->relationship('warehouse', 'name')
-                    ->visible(fn (): bool => auth()->user()?->isAdmin() ?? false || auth()->user()?->isAuditor() ?? false),
+                    ->visible(fn (): bool => auth()->user()?->can('viewAdminReview', LossLedger::class) ?? false),
             ])
             ->actions([
                 ViewAction::make(),
@@ -141,10 +142,10 @@ class LossLedgersTable
                     ])
                     ->action(function (array $data) {
                         $variant = \App\Models\ProductVariant::find($data['product_variant_id']);
-                        $unitCost = \App\Models\LossLedger::snapshotUnitCostFrom($variant);
+                        $unitCost = LossLedger::snapshotUnitCostFrom($variant);
                         $totalQty = (int) $data['lost_base_qty'] + (int) $data['damaged_base_qty'];
-                        $totalFinancialLoss = \App\Models\LossLedger::calculateTotalFinancialLoss($unitCost, $totalQty);
-                        \App\Models\LossLedger::create([
+                        $totalFinancialLoss = LossLedger::calculateTotalFinancialLoss($unitCost, $totalQty);
+                        LossLedger::create([
                             'product_variant_id' => $data['product_variant_id'],
                             'loss_category' => $data['loss_category'],
                             'lost_base_qty' => $data['lost_base_qty'],

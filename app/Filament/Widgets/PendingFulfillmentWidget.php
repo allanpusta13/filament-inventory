@@ -18,7 +18,7 @@ class PendingFulfillmentWidget extends TableWidget
     {
         $user = auth()->user();
 
-        if (! ($user?->isAdmin() ?? false) && ! ($user?->isAuditor() ?? false) && ! ($user?->isBranchManager() ?? false) && ! ($user?->isWarehouseStaff() ?? false)) {
+        if (! ($user?->can('viewAny', SalesOrder::class) ?? false)) {
             return SalesOrder::query()->whereRaw('1 = 0');
         }
 

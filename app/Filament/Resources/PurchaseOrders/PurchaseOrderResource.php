@@ -29,6 +29,11 @@ class PurchaseOrderResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::ShoppingCart;
 
+    public static function getNavigationGroup(): string|UnitEnum|null
+    {
+        return __('PURCHASING');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return PurchaseOrderForm::configure($schema);

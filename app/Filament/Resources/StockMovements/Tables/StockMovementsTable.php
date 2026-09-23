@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\StockMovements\Tables;
 
+use App\Models\StockMovement;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
@@ -79,7 +80,7 @@ class StockMovementsTable
                 SelectFilter::make('warehouse_id')
                     ->relationship('warehouse', 'name')
                     ->label('Warehouse')
-                    ->visible(fn (): bool => auth()->user()?->isAdmin() ?? false || auth()->user()?->isAuditor() ?? false),
+                    ->visible(fn (): bool => auth()->user()?->can('viewAdminReview', StockMovement::class) ?? false),
 
                 TrashedFilter::make(),
             ])

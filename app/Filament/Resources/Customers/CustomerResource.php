@@ -29,6 +29,11 @@ class CustomerResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
+    public static function getNavigationGroup(): string|UnitEnum|null
+    {
+        return __('SALES');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return CustomerForm::configure($schema);

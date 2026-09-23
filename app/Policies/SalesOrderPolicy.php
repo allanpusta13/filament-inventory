@@ -145,4 +145,15 @@ class SalesOrderPolicy
 
         return false;
     }
+
+    /**
+     * [Phase 4 / Principle A8] Sole source of truth for admin/auditor-only
+     * review-surface visibility (period filter). Relocated verbatim from
+     * Filament visible() closures. FROZEN except for a genuinely new
+     * ability or a demonstrated bug.
+     */
+    public function viewAdminReview(User $user): bool
+    {
+        return $user->isAdmin() || $user->isAuditor();
+    }
 }

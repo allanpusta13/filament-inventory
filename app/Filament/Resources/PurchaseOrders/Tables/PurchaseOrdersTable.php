@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\PurchaseOrders\Tables;
 
 use App\Enums\PurchaseOrderStatus;
+use App\Filament\Support\Filters\AdminReviewFilters;
 use App\Models\PurchaseOrder;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -30,7 +31,7 @@ class PurchaseOrdersTable
         return $table
             ->columns([
                 TextColumn::make('reference_code')
-                    ->label('REFERENCE')
+                    ->label(__('REFERENCE'))
                     ->searchable()
                     ->sortable()
                     ->copyable()
@@ -38,17 +39,17 @@ class PurchaseOrdersTable
                     ->color('primary'),
 
                 TextColumn::make('supplier.name')
-                    ->label('SUPPLIER')
+                    ->label(__('SUPPLIER'))
                     ->searchable()
                     ->sortable(),
 
                 TextColumn::make('warehouse.name')
-                    ->label('WAREHOUSE')
+                    ->label(__('WAREHOUSE'))
                     ->searchable()
                     ->sortable(),
 
                 TextColumn::make('status')
-                    ->label('STATUS')
+                    ->label(__('STATUS'))
                     ->badge()
                     ->color(fn (PurchaseOrderStatus $state): string => match ($state) {
                         PurchaseOrderStatus::Draft => 'gray',
@@ -60,32 +61,32 @@ class PurchaseOrdersTable
                     ->searchable(),
 
                 IconColumn::make('update_cost_price')
-                    ->label('UPDATE COST')
+                    ->label(__('UPDATE COST'))
                     ->boolean()
                     ->sortable(),
 
                 TextColumn::make('ordered_by')
-                    ->label('ORDERED BY')
+                    ->label(__('ORDERED BY'))
                     ->numeric()
                     ->sortable(),
 
                 TextColumn::make('received_by')
-                    ->label('RECEIVED BY')
+                    ->label(__('RECEIVED BY'))
                     ->numeric()
                     ->sortable(),
 
                 TextColumn::make('ordered_at')
-                    ->label('ORDERED AT')
+                    ->label(__('ORDERED AT'))
                     ->dateTime()
                     ->sortable(),
 
                 TextColumn::make('received_at')
-                    ->label('RECEIVED AT')
+                    ->label(__('RECEIVED AT'))
                     ->dateTime()
                     ->sortable(),
 
                 TextColumn::make('cancelled_at')
-                    ->label('CANCELLED AT')
+                    ->label(__('CANCELLED AT'))
                     ->dateTime()
                     ->sortable(),
 
@@ -108,21 +109,32 @@ class PurchaseOrdersTable
             ->filters([
                 SelectFilter::make('status')
                     ->options(PurchaseOrderStatus::class)
-                    ->label('STATUS'),
+                    ->label(__('STATUS')),
 
                 SelectFilter::make('supplier_id')
                     ->relationship('supplier', 'name')
                     ->searchable()
                     ->preload()
-                    ->label('SUPPLIER'),
+                    ->label(__('SUPPLIER')),
 
                 SelectFilter::make('warehouse_id')
                     ->relationship('warehouse', 'name')
                     ->searchable()
                     ->preload()
-                    ->label('WAREHOUSE'),
+                    ->label(__('WAREHOUSE')),
 
                 TrashedFilter::make(),
+
+                // [Added v11.1] Admin/Auditor-only cross-warehouse review filters.
+                // Note the existing warehouse_id SelectFilter above already covers
+                // basic warehouse filtering for all users — AdminReviewFilters::warehouse()
+                // is intentionally NOT duplicated here for this resource, since a plain
+                // SelectFilter on the same column already exists. Only the period
+                // filter is added here; see StockMovementsTable / LossLedgersTable
+                // below for a resource that needs both because it previously had
+                // neither.
+                AdminReviewFilters::period('ordered_at')
+                    ->visible(fn (): bool => auth()->user()?->can('viewAdminReview', PurchaseOrder::class) ?? false),
             ])
             ->recordActions([
                 ViewAction::make()
@@ -133,7 +145,7 @@ class PurchaseOrdersTable
                     ->modalWidth(\Filament\Support\Enums\Width::SevenExtraLarge),
 
                 Action::make('orderPurchase')
-                    ->label('ORDER')
+                    ->label(__('ORDER'))
                     ->icon(\Filament\Support\Icons\Heroicon::PaperAirplane)
                     ->color('primary')
                     ->authorize('orderPurchase')
@@ -142,13 +154,13 @@ class PurchaseOrdersTable
                     ->action(function (PurchaseOrder $record) {
                         app(\App\Services\PurchaseService::class)->orderPurchase($record);
                         Notification::make()
-                            ->title('Purchase order placed')
+                            ->title(__('Purchase order placed'))
                             ->success()
                             ->send();
                     }),
 
                 Action::make('receivePurchase')
-                    ->label('RECEIVE')
+                    ->label(__('RECEIVE'))
                     ->icon(\Filament\Support\Icons\Heroicon::ArrowDownTray)
                     ->color('success')
                     ->authorize('receivePurchase')
@@ -156,11 +168,11 @@ class PurchaseOrdersTable
                     ->modalWidth(\Filament\Support\Enums\Width::SevenExtraLarge)
                     ->schema([
                         \Filament\Forms\Components\Repeater::make('items')
-                            ->label('RECEIPT LINES')
+                            ->label(__('RECEIPT LINES'))
                             ->schema([
-                                \Filament\Forms\Components\Grid::make(5)->schema([
+                                \Filament\Schemas\Components\Grid::make(5)->schema([
                                     \Filament\Forms\Components\Select::make('item_id')
-                                        ->label('LINE')
+                                        ->label(__('LINE'))
                                         ->options(fn (PurchaseOrder $record) => $record->items->pluck('productVariant.sku', 'id')->toArray())
                                         ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->productVariant->sku} — {$record->productVariant->name}")
                                         ->required()
@@ -169,20 +181,20 @@ class PurchaseOrdersTable
                                         ->columnSpan(2),
 
                                     \Filament\Forms\Components\TextInput::make('received_base_qty')
-                                        ->label('RECEIVED BASE QTY')
+                                        ->label(__('RECEIVED BASE QTY'))
                                         ->required()
                                         ->numeric()
                                         ->minValue(1)
                                         ->columnSpan(1),
 
                                     \Filament\Forms\Components\Select::make('unit_name')
-                                        ->label('UNIT')
+                                        ->label(__('UNIT'))
                                         ->options(fn (PurchaseOrder $record) => $record->items->pluck('ordered_unit_name', 'id')->toArray())
                                         ->required()
                                         ->columnSpan(1),
 
                                     \Filament\Forms\Components\TextInput::make('unit_ratio')
-                                        ->label('RATIO')
+                                        ->label(__('RATIO'))
                                         ->required()
                                         ->numeric()
                                         ->minValue(1)
@@ -190,24 +202,24 @@ class PurchaseOrdersTable
                                         ->columnSpan(1),
 
                                     \Filament\Forms\Components\Textarea::make('notes')
-                                        ->label('NOTES')
+                                        ->label(__('NOTES'))
                                         ->columnSpanFull(),
                                 ]),
                             ])
                             ->columns(5)
                             ->defaultItems(0)
-                            ->addActionLabel('ADD RECEIPT LINE'),
+                            ->addActionLabel(__('ADD RECEIPT LINE')),
                     ])
                     ->action(function (array $data, PurchaseOrder $record) {
                         app(\App\Services\PurchaseService::class)->receivePurchase($record, $data['items']);
                         Notification::make()
-                            ->title('Purchase received')
+                            ->title(__('Purchase received'))
                             ->success()
                             ->send();
                     }),
 
                 Action::make('cancelPurchase')
-                    ->label('CANCEL')
+                    ->label(__('CANCEL'))
                     ->icon(\Filament\Support\Icons\Heroicon::XCircle)
                     ->color('danger')
                     ->authorize('cancelPurchase')
@@ -220,7 +232,7 @@ class PurchaseOrdersTable
                     ->action(function (PurchaseOrder $record) {
                         app(\App\Services\PurchaseService::class)->cancelPurchaseOrder($record);
                         Notification::make()
-                            ->title('Purchase order cancelled')
+                            ->title(__('Purchase order cancelled'))
                             ->success()
                             ->send();
                     }),
@@ -236,8 +248,7 @@ class PurchaseOrdersTable
                     ->authorize('restore'),
 
                 ForceDeleteAction::make()
-                    ->authorize('forceDelete')
-                    ->visible(fn () => auth()->user()->isAdmin()),
+                    ->authorize('forceDelete'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

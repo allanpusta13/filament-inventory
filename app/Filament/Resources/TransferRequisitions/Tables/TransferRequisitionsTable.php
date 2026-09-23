@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\TransferRequisitions\Tables;
 
 use App\Enums\TransferRequisitionStatus;
+use App\Models\TransferRequisition;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -74,14 +75,14 @@ class TransferRequisitionsTable
                     ->relationship('fromWarehouse', 'name')
                     ->searchable()
                     ->preload()
-                    ->visible(fn (): bool => auth()->user()?->isAdmin() ?? false || auth()->user()?->isAuditor() ?? false),
+                    ->visible(fn (): bool => auth()->user()?->can('viewAdminReview', TransferRequisition::class) ?? false),
 
                 SelectFilter::make('to_warehouse_id')
                     ->label('RECEIVING WAREHOUSE')
                     ->relationship('toWarehouse', 'name')
                     ->searchable()
                     ->preload()
-                    ->visible(fn (): bool => auth()->user()?->isAdmin() ?? false || auth()->user()?->isAuditor() ?? false),
+                    ->visible(fn (): bool => auth()->user()?->can('viewAdminReview', TransferRequisition::class) ?? false),
 
                 TrashedFilter::make(),
             ])
@@ -261,8 +262,7 @@ class TransferRequisitionsTable
                     ->authorize('restore'),
 
                 ForceDeleteAction::make()
-                    ->authorize('forceDelete')
-                    ->visible(fn () => auth()->user()->isAdmin()),
+                    ->authorize('forceDelete'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

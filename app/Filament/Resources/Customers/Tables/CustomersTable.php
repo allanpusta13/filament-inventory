@@ -26,7 +26,7 @@ class CustomersTable
         return $table
             ->columns([
                 TextColumn::make('name')
-                    ->label('NAME')
+                    ->label(__('NAME'))
                     ->searchable()
                     ->sortable()
                     ->copyable()
@@ -34,27 +34,27 @@ class CustomersTable
                     ->color('primary'),
 
                 TextColumn::make('contact_person')
-                    ->label('CONTACT PERSON')
+                    ->label(__('CONTACT PERSON'))
                     ->searchable()
                     ->sortable(),
 
                 TextColumn::make('phone')
-                    ->label('PHONE')
+                    ->label(__('PHONE'))
                     ->searchable()
                     ->sortable(),
 
                 TextColumn::make('email')
-                    ->label('EMAIL')
+                    ->label(__('EMAIL'))
                     ->searchable()
                     ->sortable(),
 
                 TextColumn::make('address')
-                    ->label('ADDRESS')
+                    ->label(__('ADDRESS'))
                     ->limit(50)
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 IconColumn::make('is_active')
-                    ->label('ACTIVE')
+                    ->label(__('ACTIVE'))
                     ->boolean()
                     ->sortable(),
 
@@ -92,8 +92,7 @@ class CustomersTable
                     ->authorize('restore'),
 
                 ForceDeleteAction::make()
-                    ->authorize('forceDelete')
-                    ->visible(fn () => auth()->user()->isAdmin()),
+                    ->authorize('forceDelete'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

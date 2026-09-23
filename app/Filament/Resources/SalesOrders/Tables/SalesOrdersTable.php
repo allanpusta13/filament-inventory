@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\SalesOrders\Tables;
 
 use App\Enums\SalesOrderStatus;
+use App\Filament\Support\Filters\AdminReviewFilters;
 use App\Models\SalesOrder;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -29,7 +30,7 @@ class SalesOrdersTable
         return $table
             ->columns([
                 TextColumn::make('reference_code')
-                    ->label('REFERENCE')
+                    ->label(__('REFERENCE'))
                     ->searchable()
                     ->sortable()
                     ->copyable()
@@ -37,17 +38,17 @@ class SalesOrdersTable
                     ->color('primary'),
 
                 TextColumn::make('customer.name')
-                    ->label('CUSTOMER')
+                    ->label(__('CUSTOMER'))
                     ->searchable()
                     ->sortable(),
 
                 TextColumn::make('warehouse.name')
-                    ->label('WAREHOUSE')
+                    ->label(__('WAREHOUSE'))
                     ->searchable()
                     ->sortable(),
 
                 TextColumn::make('status')
-                    ->label('STATUS')
+                    ->label(__('STATUS'))
                     ->badge()
                     ->color(fn (SalesOrderStatus $state): string => match ($state) {
                         SalesOrderStatus::Draft => 'gray',
@@ -60,37 +61,37 @@ class SalesOrdersTable
                     ->searchable(),
 
                 TextColumn::make('ordered_by')
-                    ->label('ORDERED BY')
+                    ->label(__('ORDERED BY'))
                     ->numeric()
                     ->sortable(),
 
                 TextColumn::make('confirmed_by')
-                    ->label('CONFIRMED BY')
+                    ->label(__('CONFIRMED BY'))
                     ->numeric()
                     ->sortable(),
 
                 TextColumn::make('dispatched_by')
-                    ->label('DISPATCHED BY')
+                    ->label(__('DISPATCHED BY'))
                     ->numeric()
                     ->sortable(),
 
                 TextColumn::make('ordered_at')
-                    ->label('ORDERED AT')
+                    ->label(__('ORDERED AT'))
                     ->dateTime()
                     ->sortable(),
 
                 TextColumn::make('confirmed_at')
-                    ->label('CONFIRMED AT')
+                    ->label(__('CONFIRMED AT'))
                     ->dateTime()
                     ->sortable(),
 
                 TextColumn::make('dispatched_at')
-                    ->label('DISPATCHED AT')
+                    ->label(__('DISPATCHED AT'))
                     ->dateTime()
                     ->sortable(),
 
                 TextColumn::make('cancelled_at')
-                    ->label('CANCELLED AT')
+                    ->label(__('CANCELLED AT'))
                     ->dateTime()
                     ->sortable(),
 
@@ -113,21 +114,25 @@ class SalesOrdersTable
             ->filters([
                 SelectFilter::make('status')
                     ->options(SalesOrderStatus::class)
-                    ->label('STATUS'),
+                    ->label(__('STATUS')),
 
                 SelectFilter::make('customer_id')
                     ->relationship('customer', 'name')
                     ->searchable()
                     ->preload()
-                    ->label('CUSTOMER'),
+                    ->label(__('CUSTOMER')),
 
                 SelectFilter::make('warehouse_id')
                     ->relationship('warehouse', 'name')
                     ->searchable()
                     ->preload()
-                    ->label('WAREHOUSE'),
+                    ->label(__('WAREHOUSE')),
 
                 TrashedFilter::make(),
+
+                // [Added v11.1] Admin/Auditor-only cross-warehouse review period filter.
+                AdminReviewFilters::period('confirmed_at')
+                    ->visible(fn (): bool => auth()->user()?->can('viewAdminReview', SalesOrder::class) ?? false),
             ])
             ->recordActions([
                 ViewAction::make()
@@ -138,7 +143,7 @@ class SalesOrdersTable
                     ->modalWidth(\Filament\Support\Enums\Width::SevenExtraLarge),
 
                 Action::make('confirmSalesOrder')
-                    ->label('CONFIRM')
+                    ->label(__('CONFIRM'))
                     ->icon(\Filament\Support\Icons\Heroicon::CheckCircle)
                     ->color('primary')
                     ->authorize('confirmSalesOrder')
@@ -147,13 +152,13 @@ class SalesOrdersTable
                     ->action(function (SalesOrder $record) {
                         app(\App\Services\SalesService::class)->confirmSalesOrder($record);
                         Notification::make()
-                            ->title('Sales order confirmed')
+                            ->title(__('Sales order confirmed'))
                             ->success()
                             ->send();
                     }),
 
                 Action::make('dispatchSale')
-                    ->label('DISPATCH')
+                    ->label(__('DISPATCH'))
                     ->icon(\Filament\Support\Icons\Heroicon::Truck)
                     ->color('success')
                     ->authorize('dispatchSale')
@@ -172,13 +177,18 @@ class SalesOrdersTable
                                 $safeMax = min($item->outstandingBaseQty(), max(0, $available));
 
                                 return \Filament\Forms\Components\TextInput::make("dispatch.{$item->id}")
-                                    ->label("{$item->productVariant->sku} — outstanding {$item->outstandingBaseQty()} {$item->unit_name} (available: {$available})")
+                                    ->label(__(':sku — outstanding :outstanding :unit (available: :available)', [
+                                        'sku' => $item->productVariant->sku,
+                                        'outstanding' => $item->outstandingBaseQty(),
+                                        'unit' => $item->unit_name,
+                                        'available' => $available,
+                                    ]))
                                     ->numeric()
                                     ->minValue(0)
                                     ->maxValue($safeMax)
                                     ->default($safeMax)
                                     ->helperText($available < $item->outstandingBaseQty()
-                                        ? 'Insufficient stock for full dispatch — partial dispatch only.'
+                                        ? __('Insufficient stock for full dispatch — partial dispatch only.')
                                         : null);
                             })
                             ->all();
@@ -192,13 +202,13 @@ class SalesOrdersTable
                         app(\App\Services\SalesService::class)->dispatchSale($record->id, $dispatch);
 
                         Notification::make()
-                            ->title('Sales order dispatched')
+                            ->title(__('Sales order dispatched'))
                             ->success()
                             ->send();
                     }),
 
                 Action::make('recordReturn')
-                    ->label('RECORD RETURN')
+                    ->label(__('RECORD RETURN'))
                     ->icon(\Filament\Support\Icons\Heroicon::ArrowUturnLeft)
                     ->color('warning')
                     ->authorize('recordReturn')
@@ -209,11 +219,11 @@ class SalesOrdersTable
                     ->modalWidth(\Filament\Support\Enums\Width::SevenExtraLarge)
                     ->schema([
                         \Filament\Forms\Components\Repeater::make('items')
-                            ->label('RETURN LINES')
+                            ->label(__('RETURN LINES'))
                             ->schema([
-                                \Filament\Forms\Components\Grid::make(5)->schema([
+                                \Filament\Schemas\Components\Grid::make(5)->schema([
                                     \Filament\Forms\Components\Select::make('item_id')
-                                        ->label('LINE')
+                                        ->label(__('LINE'))
                                         ->options(fn (SalesOrder $record) => $record->items->pluck('productVariant.sku', 'id')->toArray())
                                         ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->productVariant->sku} — {$record->productVariant->name}")
                                         ->required()
@@ -222,20 +232,20 @@ class SalesOrdersTable
                                         ->columnSpan(2),
 
                                     \Filament\Forms\Components\TextInput::make('return_base_qty')
-                                        ->label('RETURN BASE QTY')
+                                        ->label(__('RETURN BASE QTY'))
                                         ->required()
                                         ->numeric()
                                         ->minValue(1)
                                         ->columnSpan(1),
 
                                     \Filament\Forms\Components\Select::make('unit_name')
-                                        ->label('UNIT')
+                                        ->label(__('UNIT'))
                                         ->options(fn (SalesOrder $record) => $record->items->pluck('unit_name', 'id')->toArray())
                                         ->required()
                                         ->columnSpan(1),
 
                                     \Filament\Forms\Components\TextInput::make('unit_ratio')
-                                        ->label('RATIO')
+                                        ->label(__('RATIO'))
                                         ->required()
                                         ->numeric()
                                         ->minValue(1)
@@ -243,24 +253,24 @@ class SalesOrdersTable
                                         ->columnSpan(1),
 
                                     \Filament\Forms\Components\Textarea::make('notes')
-                                        ->label('NOTES')
+                                        ->label(__('NOTES'))
                                         ->columnSpanFull(),
                                 ]),
                             ])
                             ->columns(5)
                             ->defaultItems(0)
-                            ->addActionLabel('ADD RETURN LINE'),
+                            ->addActionLabel(__('ADD RETURN LINE')),
                     ])
                     ->action(function (array $data, SalesOrder $record) {
                         app(\App\Services\SalesService::class)->recordReturn($record, $data['items']);
                         Notification::make()
-                            ->title('Sales return recorded')
+                            ->title(__('Sales return recorded'))
                             ->success()
                             ->send();
                     }),
 
                 Action::make('cancelSalesOrder')
-                    ->label('CANCEL')
+                    ->label(__('CANCEL'))
                     ->icon(\Filament\Support\Icons\Heroicon::XCircle)
                     ->color('danger')
                     ->authorize('cancelSalesOrder')
@@ -273,7 +283,7 @@ class SalesOrdersTable
                     ->action(function (SalesOrder $record) {
                         app(\App\Services\SalesService::class)->cancelSalesOrder($record);
                         Notification::make()
-                            ->title('Sales order cancelled')
+                            ->title(__('Sales order cancelled'))
                             ->success()
                             ->send();
                     }),
@@ -289,8 +299,7 @@ class SalesOrdersTable
                     ->authorize('restore'),
 
                 ForceDeleteAction::make()
-                    ->authorize('forceDelete')
-                    ->visible(fn () => auth()->user()->isAdmin()),
+                    ->authorize('forceDelete'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

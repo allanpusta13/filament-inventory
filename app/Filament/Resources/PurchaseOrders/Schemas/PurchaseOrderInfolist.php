@@ -23,100 +23,100 @@ class PurchaseOrderInfolist
                     ->columnSpanFull()
                     ->schema([
                         // Section 1: Order Profile (Spans 2 Columns)
-                        Section::make('PURCHASE ORDER PROFILE')
+                        Section::make(__('PURCHASE ORDER PROFILE'))
                             ->icon(Heroicon::ShoppingCart)
                             ->schema([
                                 Grid::make(2)
                                     ->schema([
                                         TextEntry::make('reference_code')
-                                            ->label('REFERENCE CODE')
+                                            ->label(__('REFERENCE CODE'))
                                             ->weight(FontWeight::Bold)
                                             ->size('lg')
                                             ->copyable()
                                             ->color('primary'),
 
                                         TextEntry::make('status')
-                                            ->label('OPERATIONAL STATUS')
+                                            ->label(__('OPERATIONAL STATUS'))
                                             ->badge(),
 
                                         TextEntry::make('supplier.name')
-                                            ->label('SUPPLIER')
+                                            ->label(__('SUPPLIER'))
                                             ->icon(Heroicon::BuildingOffice),
 
                                         TextEntry::make('warehouse.name')
-                                            ->label('RECEIVING WAREHOUSE')
+                                            ->label(__('RECEIVING WAREHOUSE'))
                                             ->icon(Heroicon::BuildingOffice2),
                                     ]),
                             ])
                             ->columnSpan(2),
 
                         // Section 2: Authorization Sign-Offs (Spans 1 Column)
-                        Section::make('AUTHORIZATION SIGN-OFFS')
+                        Section::make(__('AUTHORIZATION SIGN-OFFS'))
                             ->icon(Heroicon::ShieldCheck)
                             ->schema([
                                 TextEntry::make('orderedBy.name')
-                                    ->label('ORDERED BY')
+                                    ->label(__('ORDERED BY'))
                                     ->icon(Heroicon::User)
-                                    ->placeholder('System Initialized'),
+                                    ->placeholder(__('System Initialized')),
 
                                 TextEntry::make('receivedBy.name')
-                                    ->label('RECEIVED BY')
+                                    ->label(__('RECEIVED BY'))
                                     ->icon(Heroicon::QrCode)
-                                    ->placeholder('Pending Receipt'),
+                                    ->placeholder(__('Pending Receipt')),
                             ])
                             ->columnSpan(1),
 
                         // Section 3: Line Items (Full Width)
-                        Section::make('ORDER LINE ITEMS')
+                        Section::make(__('ORDER LINE ITEMS'))
                             ->icon(Heroicon::ClipboardDocumentList)
                             ->schema([
                                 RepeatableEntry::make('items')
                                     ->label('')
                                     ->table([
-                                        TableColumn::make('PRODUCT VARIANT (SKU)'),
-                                        TableColumn::make('ORDER UNIT'),
-                                        TableColumn::make('UNIT RATIO'),
-                                        TableColumn::make('ORDER QTY'),
-                                        TableColumn::make('BASE UNITS'),
-                                        TableColumn::make('UNIT COST PRICE'),
-                                        TableColumn::make('LINE TOTAL'),
-                                        TableColumn::make('LINE NOTES'),
+                                        TableColumn::make(__('PRODUCT VARIANT (SKU)')),
+                                        TableColumn::make(__('ORDER UNIT')),
+                                        TableColumn::make(__('UNIT RATIO')),
+                                        TableColumn::make(__('ORDER QTY')),
+                                        TableColumn::make(__('BASE UNITS')),
+                                        TableColumn::make(__('UNIT COST PRICE')),
+                                        TableColumn::make(__('LINE TOTAL')),
+                                        TableColumn::make(__('LINE NOTES')),
                                     ])
                                     ->schema([
                                         Grid::make(8)
                                             ->schema([
                                                 TextEntry::make('productVariant.sku')
-                                                    ->label('PRODUCT VARIANT (SKU)')
+                                                    ->label(__('PRODUCT VARIANT (SKU)'))
                                                     ->weight(FontWeight::Bold)
                                                     ->columnSpan(2),
 
                                                 TextEntry::make('ordered_unit_name')
-                                                    ->label('ORDER UNIT')
+                                                    ->label(__('ORDER UNIT'))
                                                     ->columnSpan(1),
 
                                                 TextEntry::make('ordered_unit_ratio')
-                                                    ->label('UNIT RATIO')
+                                                    ->label(__('UNIT RATIO'))
                                                     ->numeric()
                                                     ->columnSpan(1),
 
                                                 TextEntry::make('ordered_qty')
-                                                    ->label('ORDER QTY')
+                                                    ->label(__('ORDER QTY'))
                                                     ->numeric()
                                                     ->columnSpan(1),
 
                                                 TextEntry::make('ordered_base_qty')
-                                                    ->label('BASE UNITS')
+                                                    ->label(__('BASE UNITS'))
                                                     ->numeric()
                                                     ->columnSpan(1),
 
                                                 TextEntry::make('unit_cost_price')
-                                                    ->label('UNIT COST PRICE')
+                                                    ->label(__('UNIT COST PRICE'))
                                                     ->numeric(decimalPlaces: 4)
                                                     ->prefix('₱')
                                                     ->columnSpan(1),
 
                                                 TextEntry::make('line_total')
-                                                    ->label('LINE TOTAL')
+                                                    ->label(__('LINE TOTAL'))
                                                     ->state(fn ($record) => $record->ordered_base_qty * $record->unit_cost_price)
                                                     ->numeric(decimalPlaces: 4)
                                                     ->prefix('₱')
@@ -124,7 +124,7 @@ class PurchaseOrderInfolist
                                                     ->columnSpan(1),
 
                                                 TextEntry::make('notes')
-                                                    ->label('LINE NOTES')
+                                                    ->label(__('LINE NOTES'))
                                                     ->columnSpan(2),
                                             ]),
                                     ]),
