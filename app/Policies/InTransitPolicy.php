@@ -11,12 +11,21 @@ class InTransitPolicy
 {
     public function viewAny(User $user): bool
     {
-        return true;
+        return $user->isAdmin() || $user->isAuditor() || $user->isBranchManager() || $user->isWarehouseStaff();
     }
 
     public function view(User $user, InTransit $inTransit): bool
     {
-        return true;
+        if ($user->isAdmin() || $user->isAuditor()) {
+            return true;
+        }
+
+        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
+            return $user->canAccessWarehouse($inTransit->transferRequisition->fromWarehouse)
+                || $user->canAccessWarehouse($inTransit->transferRequisition->toWarehouse);
+        }
+
+        return false;
     }
 
     public function create(User $user): bool
@@ -61,6 +70,15 @@ class InTransitPolicy
 
     public function receive(User $user, InTransit $inTransit): bool
     {
-        return true;
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
+            return $user->canAccessWarehouse($inTransit->transferRequisition->fromWarehouse)
+                || $user->canAccessWarehouse($inTransit->transferRequisition->toWarehouse);
+        }
+
+        return false;
     }
 }

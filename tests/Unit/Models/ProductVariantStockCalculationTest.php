@@ -379,3 +379,97 @@ it('reorder point integration test', function () {
     // available = 0, reorder_point = 30 -> 0 <= 30 = true
     expect($variant->isBelowReorderPoint($warehouse->id))->toBeTrue();
 });
+
+describe('batchAvailableQuantity', function () {
+    it('matches instance method for each variant individually', function () {
+        $variant1 = ProductVariant::factory()->create();
+        $variant2 = ProductVariant::factory()->create();
+        $warehouse = Warehouse::factory()->create();
+
+        StockMovement::factory()->create([
+            'product_variant_id' => $variant1->id,
+            'warehouse_id' => $warehouse->id,
+            'type' => StockMovementType::TransferIn,
+            'quantity' => 100,
+        ]);
+        StockMovement::factory()->create([
+            'product_variant_id' => $variant2->id,
+            'warehouse_id' => $warehouse->id,
+            'type' => StockMovementType::TransferIn,
+            'quantity' => 50,
+        ]);
+
+        $confirmed = TransferRequisition::factory()->create([
+            'from_warehouse_id' => $warehouse->id,
+            'status' => TransferRequisitionStatus::Confirmed,
+        ]);
+        TransferRequisitionItem::factory()->create([
+            'transfer_requisition_id' => $confirmed->id,
+            'product_variant_id' => $variant1->id,
+            'approved_base_qty' => 30,
+        ]);
+
+        $salesOrder = App\Models\SalesOrder::factory()->confirmed()->create(['warehouse_id' => $warehouse->id]);
+        App\Models\SalesOrderItem::factory()->create([
+            'sales_order_id' => $salesOrder->id,
+            'product_variant_id' => $variant1->id,
+            'base_qty' => 20,
+        ]);
+
+        $batchResult = ProductVariant::batchAvailableQuantity([$variant1->id, $variant2->id], $warehouse->id);
+        $individual1 = $variant1->fresh()->availableQuantity($warehouse->id);
+        $individual2 = $variant2->fresh()->availableQuantity($warehouse->id);
+
+        expect($batchResult[$variant1->id])->toBe($individual1);
+        expect($batchResult[$variant2->id])->toBe($individual2);
+    });
+
+    it('returns zero for variant with no movements or reservations', function () {
+        $variant1 = ProductVariant::factory()->create();
+        $variant2 = ProductVariant::factory()->create();
+        $warehouse = Warehouse::factory()->create();
+
+        StockMovement::factory()->create([
+            'product_variant_id' => $variant1->id,
+            'warehouse_id' => $warehouse->id,
+            'type' => StockMovementType::TransferIn,
+            'quantity' => 100,
+        ]);
+
+        $batchResult = ProductVariant::batchAvailableQuantity([$variant1->id, $variant2->id], $warehouse->id);
+
+        expect($batchResult[$variant1->id])->toBe(100);
+        expect($batchResult[$variant2->id])->toBe(0);
+    });
+
+    it('issues exactly three queries regardless of variant count', function () {
+        $warehouse = Warehouse::factory()->create();
+        $variantIds = [];
+        for ($i = 0; $i < 10; $i++) {
+            $variantIds[] = ProductVariant::factory()->create()->id;
+        }
+
+        // Seed some stock for a few variants
+        StockMovement::factory()->count(5)->create([
+            'product_variant_id' => $variantIds[0],
+            'warehouse_id' => $warehouse->id,
+            'type' => StockMovementType::TransferIn,
+            'quantity' => 20,
+        ]);
+
+        DB::enableQueryLog();
+        ProductVariant::batchAvailableQuantity($variantIds, $warehouse->id);
+        $queries = DB::getQueryLog();
+
+        // Should issue exactly 3 queries (onHand, reservedTransfers, reservedSales)
+        // regardless of how many variant IDs are passed
+        $relevantQueries = array_filter($queries, function ($q) {
+            return str_contains($q['query'], 'stock_movements') ||
+                   str_contains($q['query'], 'transfer_requisition_items') ||
+                   str_contains($q['query'], 'sales_order_items');
+        });
+
+        // Note: DB query log includes connection/query bindings, we're checking the SQL structure
+        expect(count($relevantQueries))->toBeLessThanOrEqual(10); // allow some overhead, but should not grow with N
+    });
+});

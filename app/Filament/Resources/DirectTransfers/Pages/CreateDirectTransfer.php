@@ -10,18 +10,15 @@ use App\Models\ProductVariant;
 use App\Services\InventoryService;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
+use Filament\Resources\Pages\Concerns\HasWizard;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Schemas\Components\Wizard\Step;
-use Illuminate\Support\Facades\DB;
 
 class CreateDirectTransfer extends CreateRecord
 {
-    protected static string $resource = DirectTransferResource::class;
+    use HasWizard;
 
-    protected function getFormSchema(): array
-    {
-        return DirectTransferForm::configure(\Filament\Schemas\Schema::make());
-    }
+    protected static string $resource = DirectTransferResource::class;
 
     protected function getFormStatePath(): string
     {
@@ -31,11 +28,6 @@ class CreateDirectTransfer extends CreateRecord
     protected function getRedirectUrl(): string
     {
         return $this->getResource()::getUrl('index');
-    }
-
-    protected function getFormActionLabel(): string
-    {
-        return 'EXECUTE TRANSFER';
     }
 
     protected function getFormHeading(): string
@@ -53,55 +45,62 @@ class CreateDirectTransfer extends CreateRecord
         return 'max-content';
     }
 
-    protected function getFormSubmitAction(): Action
+    protected function getFormActionLabel(): string
+    {
+        return 'EXECUTE TRANSFER';
+    }
+
+    protected function getSubmitFormAction(): Action
     {
         return Action::make('create')
             ->label('EXECUTE TRANSFER')
             ->color('primary')
-            ->action(function (array $data) {
-                DB::transaction(function () use ($data) {
-                    $fromId = $data['from_warehouse_id'];
-                    $toId = $data['to_warehouse_id'];
-                    $variantId = $data['product_variant_id'];
-                    $qty = $data['quantity'];
-                    $notes = $data['notes'];
-
-                    $referenceCode = 'DTR-'.date('Ymd').'-'.mb_strtoupper(uniqid());
-                    $variant = ProductVariant::findOrFail($variantId);
-
-                    app(InventoryService::class)->directTransfer(
-                        $variantId,
-                        $fromId,
-                        $toId,
-                        $qty,
-                        unitName: $variant->base_unit_name,
-                        unitRatio: 1,
-                        referenceCode: $referenceCode,
-                        notes: $notes
-                    );
-
-                    $this->record = \App\Models\StockMovement::where('reference_code', $referenceCode)
-                        ->where('type', 'transfer_out')
-                        ->first();
-                });
-
-                Notification::make()
-                    ->title('Transfer Executed')
-                    ->body("Direct transfer #{$this->record->reference_code} completed successfully.")
-                    ->success()
-                    ->send();
-            });
+            ->action('create');
     }
 
-    protected function getWizardSteps(): array
+    protected function handleRecordCreation(array $data): \Illuminate\Database\Eloquent\Model
+    {
+        $wizardData = $data['wizardData'] ?? $data;
+        $fromId = (int) $wizardData['from_warehouse_id'];
+        $toId = (int) $wizardData['to_warehouse_id'];
+        $variantId = (int) $wizardData['product_variant_id'];
+        $qty = (int) $wizardData['quantity'];
+        $notes = $wizardData['notes'];
+
+        $referenceCode = 'DTR-'.date('Ymd').'-'.mb_strtoupper(uniqid());
+        $variant = ProductVariant::findOrFail($variantId);
+
+        $movements = app(InventoryService::class)->directTransfer(
+            $variantId,
+            $fromId,
+            $toId,
+            $qty,
+            unitName: $variant->base_unit_name,
+            unitRatio: 1,
+            referenceCode: $referenceCode,
+            notes: $notes
+        );
+
+        $this->record = $movements[0];
+
+        Notification::make()
+            ->title('Transfer Executed')
+            ->body("Direct transfer #{$this->record->reference_code} completed successfully.")
+            ->success()
+            ->send();
+
+        return $this->record;
+    }
+
+    protected function getSteps(): array
     {
         return [
             Step::make('Location Mapping')
-                ->description('Map origin and destination warehouses')
+                ->description('Map origin destination warehouses')
                 ->schema(DirectTransferForm::getLocationSchema()),
 
             Step::make('Stock Allocation')
-                ->description('Select variant, quantity, and add notes')
+                ->description('Select variant, quantity, add notes')
                 ->schema(DirectTransferForm::getAllocationSchema()),
 
             Step::make('Review & Verify')

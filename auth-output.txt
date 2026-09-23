@@ -1,0 +1,8 @@
+
+Running 1 test using 1 worker
+
+[1/1] [chromium] › tests\playwright\auth-setup.spec.ts:3:1 › generate admin auth state
+[chromium] › tests\playwright\auth-setup.spec.ts:3:1 › generate admin auth state
+Auth state saved
+
+  1 passed (5.6s)

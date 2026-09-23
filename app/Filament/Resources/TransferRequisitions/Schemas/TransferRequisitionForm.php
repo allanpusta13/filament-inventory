@@ -8,6 +8,7 @@ use App\Filament\Components\WizardReviewStep;
 use App\Models\ProductVariant;
 use App\Models\Warehouse;
 use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
@@ -20,7 +21,14 @@ class TransferRequisitionForm
 {
     public static function configure(Schema $schema): Schema
     {
-        return $schema;
+        return $schema
+            ->components([
+                Section::make()
+                    ->schema([
+                        // Steps are handled by the CreateTransferRequisition page using HasWizard trait
+                        // This form just provides the schemas for each step
+                    ]),
+            ]);
     }
 
     /**
@@ -43,7 +51,7 @@ class TransferRequisitionForm
                 ->required()
                 ->searchable()
                 ->preload()
-                ->different('from_warehouse_id') // Prevents self-transfer routing
+                ->different('from_warehouse_id')
                 ->validationMessages([
                     'different' => 'Destination warehouse cannot match the origin warehouse.',
                 ])
@@ -62,10 +70,15 @@ class TransferRequisitionForm
                 ->description('Select SKU variants, packaging formats, conversion ratios, and quantities.')
                 ->schema([
                     Repeater::make('items')
-                        ->relationship()
+                        ->relationship('items')
+                        ->table([
+                            TableColumn::make('PRODUCT VARIANT (SKU)'),
+                            TableColumn::make('PACKAGING FORMAT'),
+                            TableColumn::make('UNIT RATIO'),
+                            TableColumn::make('ORDER QUANTITY'),
+                        ])
                         ->schema([
                             Select::make('product_variant_id')
-                                ->label('PRODUCT VARIANT (SKU)')
                                 ->relationship('productVariant', 'sku')
                                 ->required()
                                 ->searchable()
@@ -74,13 +87,11 @@ class TransferRequisitionForm
                                 ->columnSpan(3),
 
                             TextInput::make('requested_unit_name')
-                                ->label('PACKAGING FORMAT')
                                 ->required()
                                 ->placeholder('Box')
                                 ->columnSpan(2),
 
                             TextInput::make('requested_unit_ratio')
-                                ->label('UNIT RATIO')
                                 ->numeric()
                                 ->required()
                                 ->minValue(1)
@@ -89,7 +100,6 @@ class TransferRequisitionForm
                                 ->helperText('Base units per package.'),
 
                             TextInput::make('requested_qty')
-                                ->label('ORDER QUANTITY')
                                 ->numeric()
                                 ->required()
                                 ->minValue(1)
@@ -97,7 +107,15 @@ class TransferRequisitionForm
                                 ->columnSpan(2),
                         ])
                         ->columns(8)
-                        ->defaultItems(1),
+                        ->defaultItems(1)
+                        ->mutateRelationshipDataBeforeCreateUsing(function (array $data): array {
+                            $ratio = (int) ($data['requested_unit_ratio'] ?? 1);
+                            $qty = (int) ($data['requested_qty'] ?? 1);
+
+                            $data['requested_base_qty'] = $qty * $ratio;
+
+                            return $data;
+                        }),
                 ]),
         ];
     }

@@ -11,32 +11,76 @@ class TransferRequisitionItemRevisionPolicy
 {
     public function viewAny(User $user): bool
     {
-        return true;
+        return $user->isAdmin() || $user->isAuditor() || $user->isBranchManager() || $user->isWarehouseStaff();
     }
 
     public function view(User $user, TransferRequisitionItemRevision $revision): bool
     {
-        return true;
+        if ($user->isAdmin() || $user->isAuditor()) {
+            return true;
+        }
+
+        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
+            $requisition = $revision->transferRequisitionItem->transferRequisition;
+
+            return $user->canAccessWarehouse($requisition->fromWarehouse)
+                || $user->canAccessWarehouse($requisition->toWarehouse);
+        }
+
+        return false;
     }
 
     public function create(User $user): bool
     {
-        return true;
+        return $user->isAdmin() || $user->isBranchManager() || $user->isWarehouseStaff();
     }
 
     public function update(User $user, TransferRequisitionItemRevision $revision): bool
     {
-        return true;
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
+            $requisition = $revision->transferRequisitionItem->transferRequisition;
+
+            return $user->canAccessWarehouse($requisition->fromWarehouse)
+                || $user->canAccessWarehouse($requisition->toWarehouse);
+        }
+
+        return false;
     }
 
     public function delete(User $user, TransferRequisitionItemRevision $revision): bool
     {
-        return true;
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
+            $requisition = $revision->transferRequisitionItem->transferRequisition;
+
+            return $user->canAccessWarehouse($requisition->fromWarehouse)
+                || $user->canAccessWarehouse($requisition->toWarehouse);
+        }
+
+        return false;
     }
 
     public function restore(User $user, TransferRequisitionItemRevision $revision): bool
     {
-        return true;
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
+            $requisition = $revision->transferRequisitionItem->transferRequisition;
+
+            return $user->canAccessWarehouse($requisition->fromWarehouse)
+                || $user->canAccessWarehouse($requisition->toWarehouse);
+        }
+
+        return false;
     }
 
     public function forceDelete(User $user, TransferRequisitionItemRevision $revision): bool
@@ -46,12 +90,12 @@ class TransferRequisitionItemRevisionPolicy
 
     public function deleteAny(User $user): bool
     {
-        return true;
+        return $user->isAdmin();
     }
 
     public function restoreAny(User $user): bool
     {
-        return true;
+        return $user->isAdmin();
     }
 
     public function forceDeleteAny(User $user): bool

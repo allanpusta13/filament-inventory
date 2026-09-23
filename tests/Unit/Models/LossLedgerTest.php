@@ -102,14 +102,14 @@ function makeConfirmedRequisitionForLossLedger(
     Warehouse $destination,
     ProductVariant $variant,
     int $approvedBaseQty = 240
-): \App\Models\TransferRequisition {
-    $requisition = \App\Models\TransferRequisition::factory()->create([
+): App\Models\TransferRequisition {
+    $requisition = App\Models\TransferRequisition::factory()->create([
         'from_warehouse_id' => $origin->id,
         'to_warehouse_id' => $destination->id,
-        'status' => \App\Enums\TransferRequisitionStatus::Confirmed,
+        'status' => App\Enums\TransferRequisitionStatus::Confirmed,
     ]);
 
-    \App\Models\TransferRequisitionItem::factory()->create([
+    App\Models\TransferRequisitionItem::factory()->create([
         'transfer_requisition_id' => $requisition->id,
         'product_variant_id' => $variant->id,
         'requested_unit_name' => 'Box',

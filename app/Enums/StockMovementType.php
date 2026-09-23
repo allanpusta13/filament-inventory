@@ -20,6 +20,10 @@ enum StockMovementType: string implements HasColor, HasIcon, HasLabel
     case TransitIn = 'transit_in';
     case Adjustment = 'adjustment';
     case Loss = 'loss';
+    case Purchase = 'purchase';
+    case Sale = 'sale';
+    case SaleReturn = 'sale_return';
+    case PurchaseReturn = 'purchase_return';
 
     public function getLabel(): string
     {
@@ -32,16 +36,21 @@ enum StockMovementType: string implements HasColor, HasIcon, HasLabel
             self::TransitIn => __('Transit in'),
             self::Adjustment => __('Adjustment'),
             self::Loss => __('Loss'),
+            self::Purchase => __('Purchase'),
+            self::Sale => __('Sale'),
+            self::SaleReturn => __('Sale return'),
+            self::PurchaseReturn => __('Purchase return'),
         };
     }
 
     public function getColor(): string|array|null
     {
         return match ($this) {
-            self::Receive, self::TransferIn, self::TransitIn => 'success',
-            self::Ship, self::TransferOut, self::TransitOut => 'info',
+            self::Receive, self::TransferIn, self::TransitIn, self::Purchase, self::SaleReturn => 'success',
+            self::Ship, self::TransferOut, self::TransitOut, self::Sale => 'danger',
             self::Adjustment => 'warning',
             self::Loss => 'danger',
+            self::PurchaseReturn => 'warning',
         };
     }
 
@@ -56,16 +65,32 @@ enum StockMovementType: string implements HasColor, HasIcon, HasLabel
             self::TransitIn => Heroicon::Truck,
             self::Adjustment => Heroicon::AdjustmentsHorizontal,
             self::Loss => Heroicon::ExclamationTriangle,
+            self::Purchase => Heroicon::ShoppingCart,
+            self::Sale => Heroicon::Truck,
+            self::SaleReturn => Heroicon::ArrowUturnLeft,
+            self::PurchaseReturn => Heroicon::ArrowUturnLeft,
         };
     }
 
     public function isInbound(): bool
     {
-        return in_array($this, [self::Receive, self::TransferIn, self::TransitIn], true);
+        return in_array($this, [
+            self::Receive,
+            self::TransferIn,
+            self::TransitIn,
+            self::Purchase,
+            self::SaleReturn,
+        ], true);
     }
 
     public function isOutbound(): bool
     {
-        return in_array($this, [self::Ship, self::TransferOut, self::TransitOut, self::Loss], true);
+        return in_array($this, [
+            self::Ship,
+            self::TransferOut,
+            self::TransitOut,
+            self::Sale,
+            self::Loss,
+        ], true);
     }
 }

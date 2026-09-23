@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\SalesOrderStatus;
 use App\Enums\TransferRequisitionStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 class ProductVariant extends Model
 {
@@ -28,6 +30,53 @@ class ProductVariant extends Model
         'images',
         'is_active',
     ];
+
+    /**
+     * [FIX v11.1] Batch version of availableQuantity for N-variant queries.
+     * Mirrors instance method logic exactly: on_hand - transfer_reserved - sales_reserved.
+     * Returns [product_variant_id => availableQuantity] for all requested IDs.
+     * Variant IDs with no movements/reservations correctly return 0.
+     *
+     * Issues exactly 3 queries regardless of variant count (1 for on_hand, 1 for transfer reservations, 1 for sales reservations).
+     */
+    public static function batchAvailableQuantity(array $variantIds, int $warehouseId): array
+    {
+        if (empty($variantIds)) {
+            return [];
+        }
+
+        $onHand = StockMovement::whereIn('product_variant_id', $variantIds)
+            ->where('warehouse_id', $warehouseId)
+            ->selectRaw('product_variant_id, SUM(quantity) total')
+            ->groupBy('product_variant_id')
+            ->pluck('total', 'product_variant_id');
+
+        $reservedTransfers = TransferRequisitionItem::whereIn('product_variant_id', $variantIds)
+            ->whereHas('transferRequisition', function ($query) use ($warehouseId) {
+                $query->where('from_warehouse_id', $warehouseId)
+                    ->where('status', TransferRequisitionStatus::Confirmed);
+            })
+            ->selectRaw('product_variant_id, SUM(approved_base_qty) total')
+            ->groupBy('product_variant_id')
+            ->pluck('total', 'product_variant_id');
+
+        $reservedSales = SalesOrderItem::whereIn('product_variant_id', $variantIds)
+            ->whereHas('salesOrder', function ($query) use ($warehouseId) {
+                $query->where('warehouse_id', $warehouseId)
+                    ->where('status', SalesOrderStatus::Confirmed);
+            })
+            ->selectRaw('product_variant_id, SUM(base_qty - dispatched_base_qty) total')
+            ->groupBy('product_variant_id')
+            ->pluck('total', 'product_variant_id');
+
+        return collect($variantIds)->mapWithKeys(function ($id) use ($onHand, $reservedTransfers, $reservedSales) {
+            $available = (int) ($onHand[$id] ?? 0)
+                - (int) ($reservedTransfers[$id] ?? 0)
+                - (int) ($reservedSales[$id] ?? 0);
+
+            return [$id => max(0, $available)];
+        })->all();
+    }
 
     public function product(): BelongsTo
     {
@@ -102,9 +151,33 @@ class ProductVariant extends Model
             ->sum('approved_base_qty');
     }
 
+    /**
+     * New in this addendum. Deliberately SEPARATE from reservedQuantity(),
+     * which per [FIX v11] Principle #13 is permanently scoped to Confirmed
+     * transfer_requisitions only and must not be widened. Sales reservations
+     * are a distinct concern with a distinct lifecycle and are summed here
+     * instead, then combined in availableQuantity() below.
+     */
+    public function reservedForSalesQuantity(int $warehouseId): int
+    {
+        return (int) SalesOrderItem::where('product_variant_id', $this->id)
+            ->whereHas('salesOrder', function ($query) use ($warehouseId) {
+                $query->where('warehouse_id', $warehouseId)
+                    ->where('status', SalesOrderStatus::Confirmed);
+            })
+            ->sum(DB::raw('base_qty - dispatched_base_qty'));
+    }
+
+    /**
+     * [FIX v11.1] availableQuantity() now nets out BOTH transfer reservations
+     * and sales reservations. This REPLACES the parent blueprint's
+     * availableQuantity() body — reservedQuantity() itself is untouched.
+     */
     public function availableQuantity(int $warehouseId): int
     {
-        return $this->onHandQuantity($warehouseId) - $this->reservedQuantity($warehouseId);
+        return $this->onHandQuantity($warehouseId)
+            - $this->reservedQuantity($warehouseId)
+            - $this->reservedForSalesQuantity($warehouseId);
     }
 
     protected function casts(): array

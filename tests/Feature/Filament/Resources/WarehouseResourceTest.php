@@ -230,11 +230,32 @@ it('renders infolist entries on view page', function () {
         ->assertSchemaComponentExists('users');
 });
 
+it('allows access to admin only', function () {
+    Warehouse::truncate();
+    User::truncate();
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    livewire(ListWarehouses::class)
+        ->assertOk();
+});
+
 it('denies access to non-admin users', function () {
     Warehouse::truncate();
     User::truncate();
-    $staff = User::factory()->create(['role' => 'warehouse_staff']);
+    $staff = User::factory()->warehouseStaff()->create();
     $this->actingAs($staff);
+
+    livewire(ListWarehouses::class)
+        ->assertForbidden();
+});
+
+it('denies access to unauthenticated users', function () {
+    Warehouse::truncate();
+    User::truncate();
+
+    // Ensure no authenticated user
+    $this->app['auth']->logout();
 
     livewire(ListWarehouses::class)
         ->assertForbidden();

@@ -4,18 +4,15 @@ declare(strict_types=1);
 
 namespace App\Filament\Widgets;
 
+use App\Enums\InTransitStatus;
+use App\Enums\TransferRequisitionStatus;
 use App\Models\InTransit;
 use App\Models\LossLedger;
 use App\Models\ProductVariant;
-use App\Models\StockMovement;
 use App\Models\TransferRequisition;
-use App\Models\TransferRequisitionItem;
-use App\Enums\InTransitStatus;
-use App\Enums\TransferRequisitionStatus;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Collection;
 
 class StatsOverview extends BaseWidget
 {
@@ -40,7 +37,7 @@ class StatsOverview extends BaseWidget
         }
 
         $firstWarehouseId = optional($user->warehouses->first())?->id;
-        $cacheKey = 'stats_overview_' . $user->id . '_' . $firstWarehouseId;
+        $cacheKey = 'stats_overview_'.$user->id.'_'.$firstWarehouseId;
 
         $stats = Cache::remember($cacheKey, 300, function () use ($user) {
             return $this->computeStats($user);
@@ -70,6 +67,7 @@ class StatsOverview extends BaseWidget
             foreach ($warehouseIds as $warehouseId) {
                 $sum += $variant->onHandQuantity($warehouseId);
             }
+
             return $sum;
         });
 

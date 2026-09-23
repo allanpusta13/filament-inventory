@@ -13,9 +13,10 @@ class WizardReviewStep extends Component
 {
     protected string $view = 'filament.components.wizard-review-step';
 
+    protected ?Closure $reviewContentClosure = null;
+
     public function __construct(
         protected string $label = 'REVIEW & VERIFY',
-        protected ?Closure $content = null,
     ) {}
 
     public static function make(string $name): static
@@ -32,7 +33,7 @@ class WizardReviewStep extends Component
 
     public function content(Closure $content): static
     {
-        $this->content = $content;
+        $this->reviewContentClosure = $content;
 
         return $this;
     }
@@ -44,18 +45,10 @@ class WizardReviewStep extends Component
 
     public function getContent(Get $get): HtmlString
     {
-        if ($this->content) {
-            return new HtmlString(($this->content)($get));
+        if ($this->reviewContentClosure) {
+            return new HtmlString(($this->reviewContentClosure)($get));
         }
 
         return new HtmlString('');
-    }
-
-    public function getViewData(): array
-    {
-        return [
-            'label' => $this->label,
-            'content' => $this->content ?? fn () => '',
-        ];
     }
 }
