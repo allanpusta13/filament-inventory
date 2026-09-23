@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Filament\Resources\SalesOrders\Pages;
 
 use App\Enums\SalesOrderStatus;
-use App\Filament\Resources\SalesOrders\Schemas\SalesOrderForm;
 use App\Filament\Resources\SalesOrders\SalesOrderResource;
+use App\Filament\Resources\SalesOrders\Schemas\SalesOrderForm;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Schemas\Components\Wizard\Step;
 use Override;

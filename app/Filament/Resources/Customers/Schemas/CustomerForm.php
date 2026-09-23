@@ -21,7 +21,7 @@ class CustomerForm
                 TextInput::make('phone')
                     ->tel(),
                 TextInput::make('email')
-                    ->label('Email address')
+                    ->label(__('Email address'))
                     ->email(),
                 Textarea::make('address')
                     ->columnSpanFull(),

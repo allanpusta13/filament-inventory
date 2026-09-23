@@ -155,3 +155,46 @@ it('simultaneous_sales_dispatch_against_same_variant_does_not_oversell', functio
         ->sum('dispatched_base_qty');
     expect($totalDispatched)->toBe(60);
 });
+
+it('transfer_dispatch_can_deplete_stock_reserved_by_a_confirmed_sales_order_pre_existing_behavior', function () {
+    $variant = ProductVariant::factory()->create();
+    $warehouse = Warehouse::factory()->create();
+    $otherWarehouse = Warehouse::factory()->create();
+
+    // Seed 100 units on-hand at the sales warehouse
+    StockMovement::factory()->create([
+        'product_variant_id' => $variant->id,
+        'warehouse_id' => $warehouse->id,
+        'type' => StockMovementType::Purchase,
+        'quantity' => 100,
+    ]);
+
+    // Confirm a sales order reserving 60 units (available drops to 40)
+    $order = SalesOrder::factory()->confirmed()->create(['warehouse_id' => $warehouse->id]);
+    $item = SalesOrderItem::factory()->state([
+        'product_variant_id' => $variant->id,
+        'qty' => 6,
+        'unit_ratio' => 10,
+        'base_qty' => 60,
+        'dispatched_base_qty' => 0,
+    ])->create(['sales_order_id' => $order->id]);
+
+    expect($variant->availableQuantity($warehouse->id))->toBe(40);
+
+    // directTransfer guards on onHandQuantity only, so moving 80 out
+    // succeeds even though 60 units are reserved by the confirmed order
+    $this->service->directTransfer($variant->id, $warehouse->id, $otherWarehouse->id, 80);
+
+    expect($variant->onHandQuantity($warehouse->id))->toBe(20);
+
+    // The confirmed order can no longer dispatch its 60 units
+    $sales = new SalesService();
+    expect(fn () => $sales->dispatchSale($order, [
+        [
+            'item_id' => $item->id,
+            'dispatched_base_qty' => 60,
+            'unit_name' => $item->unit_name,
+            'unit_ratio' => $item->unit_ratio,
+        ],
+    ]))->toThrow(Illuminate\Validation\ValidationException::class, 'Insufficient on-hand stock');
+});

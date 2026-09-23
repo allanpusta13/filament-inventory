@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\DirectTransfers\Tables;
 
+use App\Models\StockMovement;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
@@ -69,7 +70,7 @@ class DirectTransfersTable
                     ->relationship('warehouse', 'name')
                     ->searchable()
                     ->preload()
-                    ->visible(fn (): bool => auth()->user()?->isAdmin() ?? false || auth()->user()?->isAuditor() ?? false),
+                    ->visible(fn (): bool => auth()->user()?->can('viewAdminReview', StockMovement::class) ?? false),
             ])
             ->recordActions([
                 ViewAction::make(),

@@ -18,7 +18,6 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
-use Filament\Support\Enums\Width;
 
 class PurchaseOrderForm
 {
@@ -40,7 +39,7 @@ class PurchaseOrderForm
     {
         return [
             Select::make('supplier_id')
-                ->label('SUPPLIER')
+                ->label(__('SUPPLIER'))
                 ->options(fn () => Supplier::query()->where('is_active', true)->pluck('name', 'id'))
                 ->required()
                 ->searchable()
@@ -56,7 +55,7 @@ class PurchaseOrderForm
                 ->prefixIcon(\Filament\Support\Icons\Heroicon::BuildingOffice),
 
             Select::make('warehouse_id')
-                ->label('RECEIVING WAREHOUSE')
+                ->label(__('RECEIVING WAREHOUSE'))
                 ->options(fn () => Warehouse::query()->where('is_active', true)->pluck('name', 'id'))
                 ->required()
                 ->searchable()
@@ -75,12 +74,12 @@ class PurchaseOrderForm
     {
         return [
             Repeater::make('items')
-                ->label('PURCHASE ORDER LINES')
+                ->label(__('PURCHASE ORDER LINES'))
                 ->relationship()
                 ->schema([
                     Grid::make(6)->schema([
                         Select::make('product_variant_id')
-                            ->label('PRODUCT VARIANT (SKU)')
+                            ->label(__('PRODUCT VARIANT (SKU)'))
                             ->relationship('productVariant', 'sku')
                             ->getOptionLabelFromRecordUsing(fn (ProductVariant $v) => "{$v->sku} — {$v->name}")
                             ->required()
@@ -90,19 +89,19 @@ class PurchaseOrderForm
                             ->columnSpan(3),
 
                         TextInput::make('ordered_unit_name')
-                            ->label('ORDER UNIT')
+                            ->label(__('ORDER UNIT'))
                             ->required()
                             ->columnSpan(2),
 
                         TextInput::make('ordered_unit_ratio')
-                            ->label('UNIT RATIO (TO BASE)')
+                            ->label(__('UNIT RATIO (TO BASE)'))
                             ->numeric()
                             ->minValue(1)
                             ->default(1)
                             ->columnSpan(1),
 
                         TextInput::make('ordered_qty')
-                            ->label('ORDER QTY')
+                            ->label(__('ORDER QTY'))
                             ->numeric()
                             ->minValue(1)
                             ->default(1)
@@ -114,7 +113,7 @@ class PurchaseOrderForm
                             ->columnSpan(2),
 
                         TextInput::make('ordered_base_qty')
-                            ->label('BASE UNITS (COMPUTED)')
+                            ->label(__('BASE UNITS (COMPUTED)'))
                             ->numeric()
                             ->minValue(1)
                             ->disabled()
@@ -122,7 +121,7 @@ class PurchaseOrderForm
                             ->columnSpan(1),
 
                         TextInput::make('unit_cost_price')
-                            ->label('UNIT COST PRICE')
+                            ->label(__('UNIT COST PRICE'))
                             ->numeric()
                             ->step(0.0001)
                             ->minValue(0)
@@ -130,12 +129,12 @@ class PurchaseOrderForm
                             ->columnSpan(2),
 
                         Textarea::make('notes')
-                            ->label('LINE NOTES')
+                            ->label(__('LINE NOTES'))
                             ->columnSpan(6),
                     ])
-                    ->columns(6)
-                    ->defaultItems(1)
-                    ->addActionLabel('ADD LINE'),
+                        ->columns(6)
+                        ->defaultItems(1)
+                        ->addActionLabel(__('ADD LINE')),
                 ]),
         ];
     }
@@ -147,8 +146,8 @@ class PurchaseOrderForm
     {
         return [
             Toggle::make('update_cost_price')
-                ->label('UPDATE PRODUCT VARIANT COST PRICES ON RECEIPT')
-                ->helperText('If enabled, receiving this PO will set each variant\'s current cost price to this order\'s unit cost, if different.')
+                ->label(__('UPDATE PRODUCT VARIANT COST PRICES ON RECEIPT'))
+                ->helperText(__("If enabled, receiving this PO will set each variant's current cost price to this order's unit cost, if different."))
                 ->default(false)
                 ->required(),
 
@@ -159,7 +158,7 @@ class PurchaseOrderForm
                 )),
 
             Textarea::make('notes')
-                ->label('ORDER NOTES')
+                ->label(__('ORDER NOTES'))
                 ->columnSpanFull(),
         ];
     }

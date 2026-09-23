@@ -23,7 +23,7 @@ class LowStockAlertsWidget extends ChartWidget
     {
         $user = auth()->user();
 
-        if (! ($user?->isAdmin() ?? false) && ! ($user?->isAuditor() ?? false) && ! ($user?->isBranchManager() ?? false) && ! ($user?->isWarehouseStaff() ?? false)) {
+        if (! ($user?->can('viewAny', ProductVariant::class) ?? false)) {
             return [
                 'labels' => [],
                 'datasets' => [

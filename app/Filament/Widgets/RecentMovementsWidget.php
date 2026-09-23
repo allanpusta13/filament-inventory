@@ -24,7 +24,7 @@ class RecentMovementsWidget extends ChartWidget
     {
         $user = auth()->user();
 
-        if (! ($user?->isAdmin() ?? false) && ! ($user?->isAuditor() ?? false) && ! ($user?->isBranchManager() ?? false) && ! ($user?->isWarehouseStaff() ?? false)) {
+        if (! ($user?->can('viewAny', StockMovement::class) ?? false)) {
             return [
                 'labels' => [],
                 'datasets' => [

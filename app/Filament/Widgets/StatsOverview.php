@@ -27,7 +27,7 @@ class StatsOverview extends BaseWidget
         $user = auth()->user();
 
         // Hide sensitive stats from non-admin/auditor roles
-        if (! ($user?->isAdmin() ?? false) && ! ($user?->isAuditor() ?? false)) {
+        if (! ($user?->can('viewAdminReview', TransferRequisition::class) ?? false)) {
             return [
                 Stat::make('Total On-Hand Base Stock', '0.0000'),
                 Stat::make('Pending Requisitions', '0.0000'),

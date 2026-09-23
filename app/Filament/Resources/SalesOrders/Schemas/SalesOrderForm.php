@@ -24,11 +24,11 @@ class SalesOrderForm
     {
         return $schema
             ->components([
-                Section::make('STEP 1: CUSTOMER & WAREHOUSE')
+                Section::make(__('STEP 1: CUSTOMER & WAREHOUSE'))
                     ->schema([
                         Grid::make(2)->schema([
                             Select::make('customer_id')
-                                ->label('CUSTOMER')
+                                ->label(__('CUSTOMER'))
                                 ->options(fn () => Customer::query()->where('is_active', true)->pluck('name', 'id'))
                                 ->required()
                                 ->searchable()
@@ -44,7 +44,7 @@ class SalesOrderForm
                                 ->prefixIcon(\Filament\Support\Icons\Heroicon::Users),
 
                             Select::make('warehouse_id')
-                                ->label('DISPATCH WAREHOUSE')
+                                ->label(__('DISPATCH WAREHOUSE'))
                                 ->options(fn () => Warehouse::query()->where('is_active', true)->pluck('name', 'id'))
                                 ->required()
                                 ->searchable()
@@ -56,15 +56,15 @@ class SalesOrderForm
                         ]),
                     ])->collapsible(),
 
-                Section::make('STEP 2: LINE ITEMS (READ-ONLY SALE PRICE PREVIEW)')
+                Section::make(__('STEP 2: LINE ITEMS (READ-ONLY SALE PRICE PREVIEW)'))
                     ->schema([
                         Repeater::make('items')
-                            ->label('SALES ORDER LINES')
+                            ->label(__('SALES ORDER LINES'))
                             ->relationship()
                             ->schema([
                                 Grid::make(6)->schema([
                                     Select::make('product_variant_id')
-                                        ->label('PRODUCT VARIANT (SKU)')
+                                        ->label(__('PRODUCT VARIANT (SKU)'))
                                         ->relationship('productVariant', 'sku')
                                         ->getOptionLabelFromRecordUsing(fn (ProductVariant $v) => "{$v->sku} — {$v->name}")
                                         ->required()
@@ -79,12 +79,12 @@ class SalesOrderForm
                                         ]),
 
                                     TextInput::make('unit_name')
-                                        ->label('UNIT')
+                                        ->label(__('UNIT'))
                                         ->required()
                                         ->columnSpan(2),
 
                                     TextInput::make('unit_ratio')
-                                        ->label('RATIO')
+                                        ->label(__('RATIO'))
                                         ->required()
                                         ->numeric()
                                         ->minValue(1)
@@ -92,7 +92,7 @@ class SalesOrderForm
                                         ->columnSpan(1),
 
                                     TextInput::make('qty')
-                                        ->label('QTY')
+                                        ->label(__('QTY'))
                                         ->required()
                                         ->numeric()
                                         ->minValue(1)
@@ -102,7 +102,7 @@ class SalesOrderForm
                                         ->columnSpan(2),
 
                                     TextInput::make('base_qty')
-                                        ->label('BASE UNITS')
+                                        ->label(__('BASE UNITS'))
                                         ->required()
                                         ->numeric()
                                         ->minValue(1)
@@ -111,7 +111,7 @@ class SalesOrderForm
                                         ->columnSpan(1),
 
                                     TextInput::make('unit_sale_price_snapshot')
-                                        ->label('SALE PRICE (PREVIEW)')
+                                        ->label(__('SALE PRICE (PREVIEW)'))
                                         ->required()
                                         ->numeric()
                                         ->minValue(0)
@@ -119,23 +119,23 @@ class SalesOrderForm
                                         ->prefix('₱')
                                         ->disabled()
                                         ->dehydrated()
-                                        ->helperText('Price snapped from current variant price at confirm time')
+                                        ->helperText(__('Price snapped from current variant price at confirm time'))
                                         ->columnSpan(2),
 
                                     Textarea::make('notes')
-                                        ->label('LINE NOTES')
+                                        ->label(__('LINE NOTES'))
                                         ->columnSpanFull(),
                                 ]),
                             ])
                             ->columns(6)
                             ->defaultItems(1)
-                            ->addActionLabel('ADD LINE'),
+                            ->addActionLabel(__('ADD LINE')),
                     ])->collapsible(),
 
-                Section::make('STEP 3: REVIEW & NOTES')
+                Section::make(__('STEP 3: REVIEW & NOTES'))
                     ->schema([
                         Textarea::make('notes')
-                            ->label('ORDER NOTES')
+                            ->label(__('ORDER NOTES'))
                             ->columnSpanFull(),
                     ])->collapsible(),
             ]);
@@ -145,7 +145,7 @@ class SalesOrderForm
     {
         return [
             Select::make('customer_id')
-                ->label('CUSTOMER')
+                ->label(__('CUSTOMER'))
                 ->options(fn () => Customer::query()->where('is_active', true)->pluck('name', 'id'))
                 ->required()
                 ->searchable()
@@ -161,7 +161,7 @@ class SalesOrderForm
                 ->prefixIcon(\Filament\Support\Icons\Heroicon::Users),
 
             Select::make('warehouse_id')
-                ->label('DISPATCH WAREHOUSE')
+                ->label(__('DISPATCH WAREHOUSE'))
                 ->options(fn () => Warehouse::query()->where('is_active', true)->pluck('name', 'id'))
                 ->required()
                 ->searchable()
@@ -177,12 +177,12 @@ class SalesOrderForm
     {
         return [
             Repeater::make('items')
-                ->label('SALES ORDER LINES')
+                ->label(__('SALES ORDER LINES'))
                 ->relationship()
                 ->schema([
                     Grid::make(6)->schema([
                         Select::make('product_variant_id')
-                            ->label('PRODUCT VARIANT (SKU)')
+                            ->label(__('PRODUCT VARIANT (SKU)'))
                             ->relationship('productVariant', 'sku')
                             ->getOptionLabelFromRecordUsing(fn (ProductVariant $v) => "{$v->sku} — {$v->name}")
                             ->required()
@@ -197,12 +197,12 @@ class SalesOrderForm
                             ]),
 
                         TextInput::make('unit_name')
-                            ->label('UNIT')
+                            ->label(__('UNIT'))
                             ->required()
                             ->columnSpan(2),
 
                         TextInput::make('unit_ratio')
-                            ->label('RATIO')
+                            ->label(__('RATIO'))
                             ->required()
                             ->numeric()
                             ->minValue(1)
@@ -210,7 +210,7 @@ class SalesOrderForm
                             ->columnSpan(1),
 
                         TextInput::make('qty')
-                            ->label('QTY')
+                            ->label(__('QTY'))
                             ->required()
                             ->numeric()
                             ->minValue(1)
@@ -220,7 +220,7 @@ class SalesOrderForm
                             ->columnSpan(2),
 
                         TextInput::make('base_qty')
-                            ->label('BASE UNITS')
+                            ->label(__('BASE UNITS'))
                             ->required()
                             ->numeric()
                             ->minValue(1)
@@ -229,7 +229,7 @@ class SalesOrderForm
                             ->columnSpan(1),
 
                         TextInput::make('unit_sale_price_snapshot')
-                            ->label('SALE PRICE (PREVIEW)')
+                            ->label(__('SALE PRICE (PREVIEW)'))
                             ->required()
                             ->numeric()
                             ->minValue(0)
@@ -237,17 +237,17 @@ class SalesOrderForm
                             ->prefix('₱')
                             ->disabled()
                             ->dehydrated()
-                            ->helperText('Price snapped from current variant price at confirm time')
+                            ->helperText(__('Price snapped from current variant price at confirm time'))
                             ->columnSpan(2),
 
                         Textarea::make('notes')
-                            ->label('LINE NOTES')
+                            ->label(__('LINE NOTES'))
                             ->columnSpanFull(),
                     ]),
                 ])
                 ->columns(6)
                 ->defaultItems(1)
-                ->addActionLabel('ADD LINE'),
+                ->addActionLabel(__('ADD LINE')),
         ];
     }
 
@@ -255,7 +255,7 @@ class SalesOrderForm
     {
         return [
             Textarea::make('notes')
-                ->label('ORDER NOTES')
+                ->label(__('ORDER NOTES'))
                 ->columnSpanFull(),
         ];
     }

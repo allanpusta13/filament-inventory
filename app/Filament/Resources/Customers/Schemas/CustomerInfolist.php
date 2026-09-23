@@ -21,86 +21,86 @@ class CustomerInfolist
             ->components([
                 Grid::make(2)
                     ->schema([
-                        Section::make('CUSTOMER PROFILE')
+                        Section::make(__('CUSTOMER PROFILE'))
                             ->icon(Heroicon::Users)
                             ->schema([
                                 Grid::make(2)
                                     ->schema([
                                         TextEntry::make('name')
-                                            ->label('NAME')
+                                            ->label(__('NAME'))
                                             ->weight(FontWeight::Bold)
                                             ->size('lg')
                                             ->copyable()
                                             ->color('primary'),
 
                                         TextEntry::make('is_active')
-                                            ->label('STATUS')
+                                            ->label(__('STATUS'))
                                             ->badge()
                                             ->color(fn (bool $state): string => $state ? 'success' : 'danger')
-                                            ->formatStateUsing(fn (bool $state): string => $state ? 'Active' : 'Inactive'),
+                                            ->formatStateUsing(fn (bool $state): string => $state ? __('Active') : __('Inactive')),
 
                                         TextEntry::make('contact_person')
-                                            ->label('CONTACT PERSON')
+                                            ->label(__('CONTACT PERSON'))
                                             ->icon(Heroicon::User)
-                                            ->placeholder('Not provided'),
+                                            ->placeholder(__('Not provided')),
 
                                         TextEntry::make('phone')
-                                            ->label('PHONE')
+                                            ->label(__('PHONE'))
                                             ->icon(Heroicon::Phone)
-                                            ->placeholder('Not provided'),
+                                            ->placeholder(__('Not provided')),
 
                                         TextEntry::make('email')
-                                            ->label('EMAIL')
+                                            ->label(__('EMAIL'))
                                             ->icon(Heroicon::Envelope)
-                                            ->placeholder('Not provided'),
+                                            ->placeholder(__('Not provided')),
 
                                         TextEntry::make('address')
-                                            ->label('ADDRESS')
+                                            ->label(__('ADDRESS'))
                                             ->icon(Heroicon::MapPin)
-                                            ->placeholder('Not provided')
+                                            ->placeholder(__('Not provided'))
                                             ->columnSpanFull(),
                                     ]),
                             ])
                             ->columnSpan(2),
 
-                        Section::make('SALES ORDERS')
+                        Section::make(__('SALES ORDERS'))
                             ->icon(Heroicon::Banknotes)
                             ->schema([
                                 RepeatableEntry::make('salesOrders')
                                     ->label('')
                                     ->table([
-                                        TableColumn::make('REFERENCE CODE'),
-                                        TableColumn::make('STATUS'),
-                                        TableColumn::make('WAREHOUSE'),
-                                        TableColumn::make('ORDERED AT'),
-                                        TableColumn::make('TOTAL'),
+                                        TableColumn::make(__('REFERENCE CODE')),
+                                        TableColumn::make(__('STATUS')),
+                                        TableColumn::make(__('WAREHOUSE')),
+                                        TableColumn::make(__('ORDERED AT')),
+                                        TableColumn::make(__('TOTAL')),
                                     ])
                                     ->schema([
                                         Grid::make(6)
                                             ->schema([
                                                 TextEntry::make('reference_code')
-                                                    ->label('REFERENCE CODE')
+                                                    ->label(__('REFERENCE CODE'))
                                                     ->weight(FontWeight::Bold)
                                                     ->copyable()
                                                     ->columnSpan(2),
 
                                                 TextEntry::make('status')
-                                                    ->label('STATUS')
+                                                    ->label(__('STATUS'))
                                                     ->badge()
                                                     ->columnSpan(1),
 
                                                 TextEntry::make('warehouse.name')
-                                                    ->label('WAREHOUSE')
+                                                    ->label(__('WAREHOUSE'))
                                                     ->icon(Heroicon::BuildingOffice2)
                                                     ->columnSpan(1),
 
                                                 TextEntry::make('ordered_at')
-                                                    ->label('ORDERED AT')
+                                                    ->label(__('ORDERED AT'))
                                                     ->dateTime()
                                                     ->columnSpan(1),
 
                                                 TextEntry::make('items_sum_base_qty_price')
-                                                    ->label('TOTAL')
+                                                    ->label(__('TOTAL'))
                                                     ->state(fn ($record) => $record->items->sum(fn ($item) => $item->base_qty * $item->unit_sale_price_snapshot))
                                                     ->numeric(decimalPlaces: 2)
                                                     ->prefix('₹')
