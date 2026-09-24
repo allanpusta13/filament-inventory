@@ -1,4 +1,4 @@
-# Multi-Warehouse Inventory System — Complete System Blueprint (v13.5 + i18n)
+# Multi-Warehouse Inventory System — Complete System Blueprint (v13.6 + i18n)
 
 **Stack:** Laravel 13 + FilamentPHP v5 + Livewire v4 | **Database:** PostgreSQL / MySQL
 
@@ -6,7 +6,18 @@
 
 ---
 
-> **Changelog from v13.4:**
+> **Changelog from v13.5:**
+> 1. **Added** Principle **1B.1a** — Navigation badges are scoped by **role + warehouse assignment**, not by warehouse membership alone.
+> 2. **Added** `App\Filament\Support\Concerns\ScopesNavigationBadges` trait — single canonical resolver for badge warehouse scoping.
+> 3. **Rewrote** Section 1B badge principle to formalize four scope tiers: Admin/Auditor (unscoped), Warehouse Staff with N≥2 (union of assigned warehouses), Warehouse Staff with exactly 1 (that single warehouse only), Warehouse Staff with 0 (null badge).
+> 4. **Rewrote** `TransferRequisitionResource`, `PurchaseOrderResource`, `SalesOrderResource`, and `InTransitResource` badge implementations to delegate to the shared trait.
+> 5. **Extended** Section 12 test plan with `BadgeScopeTest::*` and `NavigationBadgeRoleScopeTest::*`.
+> 6. **Extended** Section 14 checklist with badge role-scope invariants.
+> 7. **Extended** Section 23 runtime completeness tests to include badge-scope resolution.
+> 8. **Extended** Section 26 acceptance criteria with explicit badge role-scoping items.
+> 9. **Extended** Section 27 with the v13.6 change table.
+
+> **Changelog from v13.4 (retained):**
 > 1. **Added** Principle **A11** — Direct Transfers are multi-line fire-and-forget operations.
 > 2. **Rebound** `DirectTransferResource` from `StockMovement` to new `DirectTransfer` header model.
 > 3. **Added** `direct_transfers` and `direct_transfer_items` tables (§2 grows from 20 to 22 tables).
@@ -460,6 +471,12 @@ The same applies to model/resource metadata: resources currently define navigati
 
 16. **Table Shape Determines Presentation.** Document-shaped records (requisitions, purchase orders, sales orders, direct transfers) render as cards via `->contentGrid()`. Ledger-shaped records (stock movements, loss ledgers) render as dense, sortable rows via the standard table with `->stackedOnMobile()`. Master-data tables (suppliers, customers, warehouses, products) may render either way depending on cardinality and use case.
 
+17. **Badge Scope Follows Role + Warehouse Assignment.** Every navigation badge resolves its warehouse ID set through `ScopesNavigationBadges::badgeScopedWarehouseIds()`. The resolver returns:
+    - **all warehouses** for `Admin` and `Auditor`;
+    - the **union of assigned warehouses** for `WarehouseStaff` with N ≥ 2 assignments;
+    - **exactly the single assigned warehouse** for `WarehouseStaff` with N = 1 assignment — no widening, no fallback, no implicit union with the counterpart warehouse of a document;
+    - an **empty set** (badge returns `null`) for `WarehouseStaff` with N = 0 assignments.
+
 ### Addendum Principles (Purchases & Sales)
 
 **A1.** Same Ledger, New Movement Types. Purchases and sales are new `StockMovementType` cases.
@@ -483,6 +500,8 @@ The same applies to model/resource metadata: resources currently define navigati
 **A10.** **Substitute Variants Are Transfer-Only.** `substitute_product_variant_id` is intentionally absent from `PurchaseOrderItem`, `SalesOrderItem`, and `DirectTransferItem`. Substitution is a first-class transfer/requisition feature only. Purchases and sales operate on the exact variant ordered/sold. Direct transfers operate on the exact variant moved — no substitution.
 
 **A11.** **Direct Transfers Are Multi-Line Fire-and-Forget Operations.** A direct transfer is a single atomic transaction that moves **one or more distinct variants** between two warehouses. It has no lifecycle states and no reversal pathway; correction is achieved by a reverse direct transfer. The header exists solely to group paired ledger movements and provide an audit surface. All line items share the same `from_warehouse_id` and `to_warehouse_id`.
+
+**A12.** **Badge Scope Is Role-Determined, Not Document-Determined.** A document's counterpart warehouse never widens a user's badge scope. A warehouse-staff user with exactly one assigned warehouse sees a badge count of documents that touch that one warehouse — never the union of both endpoints of a transfer, and never a count that includes a counterpart warehouse the user cannot act on.
 
 ### Filament v5 Patterns
 
@@ -826,35 +845,166 @@ SYSTEM ADMIN       → Warehouses, Users
 
 ---
 
-## 📛 Section 1B: Navigation Badges — Live Status Indicators
+## 📛 Section 1B: Navigation Badges — Live Status Indicators (Role & Warehouse Scoped)
 
 ### 1B.1 Badge Principle (F21)
 
-Badges are live status indicators. `getNavigationBadge()` returns `null` when count is zero. **Badges are warehouse-scoped** — a warehouse user sees only the count of documents in their warehouses.
+Badges are live status indicators. `getNavigationBadge()` returns `null` when count is zero.
+
+### 1B.1a Badge Scope is Role + Warehouse Determined
+
+Badge visibility is scoped by **the acting user's role combined with the set of warehouses assigned to that user through the `user_warehouse` pivot**. The scope is resolved once per request by the shared `ScopesNavigationBadges` trait and applied to every badge count.
+
+The four scope tiers are:
+
+| Role | Assigned Warehouses | Badge Scope | Result |
+|---|---|---|---|
+| `Admin` | any | Every warehouse in the system | Badge counts all matching documents |
+| `Auditor` | any | Every warehouse in the system | Badge counts all matching documents |
+| `WarehouseStaff` | N ≥ 2 | Union of assigned warehouses | Badge counts documents touching any assigned warehouse |
+| `WarehouseStaff` | N = 1 | **Exactly that one warehouse — no exceptions** | Badge counts only documents touching the single assigned warehouse; a counterpart warehouse the user is not assigned to does **not** widen the badge |
+| `WarehouseStaff` | N = 0 | Empty set | Badge returns `null`; resource remains reachable in read-only policy mode |
+
+**The scope rule is never negotiated at the call site.** Every badge implementation must resolve its warehouse ID set through `ScopesNavigationBadges::badgeScopedWarehouseIds()`. Ad hoc `auth()->user()->warehouses()->pluck('id')` inside a resource is prohibited — it silently produces the wrong result for admins and auditors, whose warehouse pivot may be empty while their badge authority is global.
+
+### 1B.1b Counterpart Warehouse Does Not Widen Scope
+
+For documents whose canonical meaning spans two warehouses (notably `TransferRequisition` and `DirectTransfer`), the badge scope is still bounded by the resolver:
+
+- A user assigned to Warehouse A but not Warehouse B sees a `TransferRequisition` badge that counts only requisitions where **`from_warehouse_id` OR `to_warehouse_id` is in the user's assigned set** — which, for the single-warehouse case, collapses to "only requisitions touching Warehouse A."
+- A user assigned to both A and B sees both ends.
+- The single-warehouse case **never** widens to include the counterpart warehouse.
+
+This is codified in Principle A12 and enforced by the badge scope trait.
 
 ### 1B.2 Badge Definitions Per Resource
 
-| Resource | Badge Logic (warehouse-scoped) | Color Logic |
+| Resource | Badge Logic (role + warehouse scoped) | Color Logic |
 |---|---|---|
-| `TransferRequisitionResource` | Count where `status = 'requested'` | `warning` > 10, else `primary` |
-| `PurchaseOrderResource` | Count where `status = 'ordered'` | `warning` > 10, else `primary` |
-| `SalesOrderResource` | Count where `status = 'confirmed'` | `warning` > 10, else `primary` |
-| `InTransitResource` | Count where `status = 'in_transit'` | `primary` |
+| `TransferRequisitionResource` | Count where `status = 'requested'` AND (`from_warehouse_id` OR `to_warehouse_id` in badge scope) | `warning` > 10, else `primary` |
+| `PurchaseOrderResource` | Count where `status = 'ordered'` AND `warehouse_id` in badge scope | `warning` > 10, else `primary` |
+| `SalesOrderResource` | Count where `status = 'confirmed'` AND `warehouse_id` in badge scope | `warning` > 10, else `primary` |
+| `InTransitResource` | Count where `status = 'in_transit'` AND related requisition touches badge scope | `primary` |
 | All others | `null` | — |
 
-### 1B.3 Badge Implementations
+### 1B.3 Shared Badge Scope Trait
+
+Create:
+
+```text
+app/Filament/Support/Concerns/ScopesNavigationBadges.php
+```
+
+```php
+<?php
+
+namespace App\Filament\Support\Concerns;
+
+use App\Models\User;
+use App\Models\Warehouse;
+use Illuminate\Support\Facades\Auth;
+
+/**
+ * Centralized navigation badge scoping.
+ *
+ * Badge scope is determined by the acting user's role and warehouse
+ * assignments — never by the warehouse endpoints of a specific document.
+ * See Principle A12.
+ */
+trait ScopesNavigationBadges
+{
+    /** @var array<int>|null */
+    private static ?array $badgeWarehouseIds = null;
+
+    /**
+     * Resolve the warehouse ID set used to scope every navigation badge
+     * on this resource.
+     *
+     * - Admin / Auditor: all warehouses.
+     * - WarehouseStaff with N >= 2: union of assigned warehouses.
+     * - WarehouseStaff with N == 1: exactly the single assigned warehouse.
+     * - WarehouseStaff with N == 0: empty array (badge resolves to null).
+     *
+     * @return array<int>
+     */
+    protected static function badgeScopedWarehouseIds(): array
+    {
+        if (self::$badgeWarehouseIds !== null) {
+            return self::$badgeWarehouseIds;
+        }
+
+        $user = Auth::user();
+
+        if (! $user instanceof User) {
+            return self::$badgeWarehouseIds = [];
+        }
+
+        if ($user->isAdmin() || $user->isAuditor()) {
+            return self::$badgeWarehouseIds = Warehouse::query()
+                ->pluck('id')
+                ->all();
+        }
+
+        return self::$badgeWarehouseIds = $user->warehouses()
+            ->pluck('warehouses.id')
+            ->all();
+    }
+
+    /**
+     * Whether the current user has any badge scope at all.
+     * Used by resources that must suppress their badge entirely when the
+     * user's role resolves to zero warehouses.
+     */
+    protected static function hasBadgeScope(): bool
+    {
+        return count(self::badgeScopedWarehouseIds()) > 0;
+    }
+
+    /**
+     * Badge scope for the current request is cached once and shared across
+     * getNavigationBadge(), getNavigationBadgeColor(), and
+     * getNavigationBadgeTooltip() calls.
+     */
+    protected static function flushBadgeScope(): void
+    {
+        self::$badgeWarehouseIds = null;
+    }
+}
+```
+
+**Note on cache flushing:** In long-lived workers (Octane, queue workers that boot Filament), `flushBadgeScope()` must be invoked on `Auth::logout` or on any policy reload. In standard PHP-FPM request lifecycles this is unnecessary.
+
+### 1B.3a Badge Implementations
 
 #### TransferRequisitionResource
 
 ```php
-private static ?int $badgeCount = null;
+namespace App\Filament\Resources\TransferRequisitions;
 
-private static function getScopedBadgeCount(): int
+use App\Enums\TransferRequisitionStatus;
+use App\Filament\Support\Concerns\ScopesNavigationBadges;
+use Filament\Resources\Resource;
+
+class TransferRequisitionResource extends Resource
 {
-    if (self::$badgeCount === null) {
-        $warehouseIds = auth()->user()->warehouses()->pluck('id');
+    use ScopesNavigationBadges;
 
-        self::$badgeCount = static::getModel()::where('status', TransferRequisitionStatus::Requested->value)
+    private static ?int $badgeCount = null;
+
+    private static function getScopedBadgeCount(): int
+    {
+        if (self::$badgeCount !== null) {
+            return self::$badgeCount;
+        }
+
+        if (! self::hasBadgeScope()) {
+            return self::$badgeCount = 0;
+        }
+
+        $warehouseIds = self::badgeScopedWarehouseIds();
+
+        return self::$badgeCount = static::getModel()::query()
+            ->where('status', TransferRequisitionStatus::Requested->value)
             ->where(function ($q) use ($warehouseIds) {
                 $q->whereIn('from_warehouse_id', $warehouseIds)
                   ->orWhereIn('to_warehouse_id', $warehouseIds);
@@ -862,115 +1012,194 @@ private static function getScopedBadgeCount(): int
             ->count();
     }
 
-    return self::$badgeCount;
-}
+    public static function getNavigationBadge(): ?string
+    {
+        $count = self::getScopedBadgeCount();
 
-public static function getNavigationBadge(): ?string
-{
-    $count = self::getScopedBadgeCount();
-    return $count > 0 ? (string) $count : null;
-}
+        return $count > 0 ? (string) $count : null;
+    }
 
-public static function getNavigationBadgeColor(): ?string
-{
-    return self::getScopedBadgeCount() > 10 ? 'warning' : 'primary';
-}
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return self::getScopedBadgeCount() > 10 ? 'warning' : 'primary';
+    }
 
-public static function getNavigationBadgeTooltip(): ?string
-{
-    return __('resources.transfer_requisitions.badge_tooltip');
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        return __('resources.transfer_requisitions.badge_tooltip');
+    }
 }
 ```
 
 #### PurchaseOrderResource
 
 ```php
-private static ?int $badgeCount = null;
+namespace App\Filament\Resources\PurchaseOrders;
 
-private static function getScopedBadgeCount(): int
+use App\Enums\PurchaseOrderStatus;
+use App\Filament\Support\Concerns\ScopesNavigationBadges;
+use Filament\Resources\Resource;
+
+class PurchaseOrderResource extends Resource
 {
-    if (self::$badgeCount === null) {
-        self::$badgeCount = static::getModel()::where('status', PurchaseOrderStatus::Ordered->value)
-            ->whereIn('warehouse_id', auth()->user()->warehouses()->pluck('id'))
+    use ScopesNavigationBadges;
+
+    private static ?int $badgeCount = null;
+
+    private static function getScopedBadgeCount(): int
+    {
+        if (self::$badgeCount !== null) {
+            return self::$badgeCount;
+        }
+
+        if (! self::hasBadgeScope()) {
+            return self::$badgeCount = 0;
+        }
+
+        return self::$badgeCount = static::getModel()::query()
+            ->where('status', PurchaseOrderStatus::Ordered->value)
+            ->whereIn('warehouse_id', self::badgeScopedWarehouseIds())
             ->count();
     }
 
-    return self::$badgeCount;
-}
+    public static function getNavigationBadge(): ?string
+    {
+        $count = self::getScopedBadgeCount();
 
-public static function getNavigationBadge(): ?string
-{
-    $count = self::getScopedBadgeCount();
-    return $count > 0 ? (string) $count : null;
-}
+        return $count > 0 ? (string) $count : null;
+    }
 
-public static function getNavigationBadgeColor(): ?string
-{
-    return self::getScopedBadgeCount() > 10 ? 'warning' : 'primary';
-}
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return self::getScopedBadgeCount() > 10 ? 'warning' : 'primary';
+    }
 
-public static function getNavigationBadgeTooltip(): ?string
-{
-    return __('resources.purchase_orders.badge_tooltip');
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        return __('resources.purchase_orders.badge_tooltip');
+    }
 }
 ```
 
 #### SalesOrderResource
 
 ```php
-private static ?int $badgeCount = null;
+namespace App\Filament\Resources\SalesOrders;
 
-private static function getScopedBadgeCount(): int
+use App\Enums\SalesOrderStatus;
+use App\Filament\Support\Concerns\ScopesNavigationBadges;
+use Filament\Resources\Resource;
+
+class SalesOrderResource extends Resource
 {
-    if (self::$badgeCount === null) {
-        self::$badgeCount = static::getModel()::where('status', SalesOrderStatus::Confirmed->value)
-            ->whereIn('warehouse_id', auth()->user()->warehouses()->pluck('id'))
+    use ScopesNavigationBadges;
+
+    private static ?int $badgeCount = null;
+
+    private static function getScopedBadgeCount(): int
+    {
+        if (self::$badgeCount !== null) {
+            return self::$badgeCount;
+        }
+
+        if (! self::hasBadgeScope()) {
+            return self::$badgeCount = 0;
+        }
+
+        return self::$badgeCount = static::getModel()::query()
+            ->where('status', SalesOrderStatus::Confirmed->value)
+            ->whereIn('warehouse_id', self::badgeScopedWarehouseIds())
             ->count();
     }
 
-    return self::$badgeCount;
-}
+    public static function getNavigationBadge(): ?string
+    {
+        $count = self::getScopedBadgeCount();
 
-public static function getNavigationBadge(): ?string
-{
-    $count = self::getScopedBadgeCount();
-    return $count > 0 ? (string) $count : null;
-}
+        return $count > 0 ? (string) $count : null;
+    }
 
-public static function getNavigationBadgeColor(): ?string
-{
-    return self::getScopedBadgeCount() > 10 ? 'warning' : 'primary';
-}
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return self::getScopedBadgeCount() > 10 ? 'warning' : 'primary';
+    }
 
-public static function getNavigationBadgeTooltip(): ?string
-{
-    return __('resources.sales_orders.badge_tooltip');
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        return __('resources.sales_orders.badge_tooltip');
+    }
 }
 ```
 
 #### InTransitResource
 
 ```php
-public static function getNavigationBadge(): ?string
-{
-    $count = static::getModel()::where('status', InTransitStatus::InTransit->value)->count();
-    return $count > 0 ? (string) $count : null;
-}
+namespace App\Filament\Resources\InTransits;
 
-public static function getNavigationBadgeColor(): ?string
-{
-    return 'primary';
-}
+use App\Enums\InTransitStatus;
+use App\Filament\Support\Concerns\ScopesNavigationBadges;
+use Filament\Resources\Resource;
 
-public static function getNavigationBadgeTooltip(): ?string
+class InTransitResource extends Resource
 {
-    return __('resources.in_transits.badge_tooltip');
+    use ScopesNavigationBadges;
+
+    private static ?int $badgeCount = null;
+
+    private static function getScopedBadgeCount(): int
+    {
+        if (self::$badgeCount !== null) {
+            return self::$badgeCount;
+        }
+
+        if (! self::hasBadgeScope()) {
+            return self::$badgeCount = 0;
+        }
+
+        // In-transit rows are scoped by the warehouses of their parent
+        // requisition. Both endpoints participate because the cargo is in
+        // motion between them.
+        $warehouseIds = self::badgeScopedWarehouseIds();
+
+        return self::$badgeCount = static::getModel()::query()
+            ->where('status', InTransitStatus::InTransit->value)
+            ->whereHas('transferRequisition', function ($q) use ($warehouseIds) {
+                $q->whereIn('from_warehouse_id', $warehouseIds)
+                  ->orWhereIn('to_warehouse_id', $warehouseIds);
+            })
+            ->count();
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+        $count = self::getScopedBadgeCount();
+
+        return $count > 0 ? (string) $count : null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'primary';
+    }
+
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        return __('resources.in_transits.badge_tooltip');
+    }
 }
 ```
 
 ### 1B.4 Badge Performance Note
 
-Badge queries run on every panel page load. All four status columns are indexed in Section 2. Badge closures are warehouse-scoped, use `pluck('id')` on the pivot relation, and are cached in a `private static ?int` per request, so `getNavigationBadge()` and `getNavigationBadgeColor()` share a single query.
+Badge queries run on every panel page load. All four status columns are indexed in Section 2. The badge scope is resolved exactly once per request via `ScopesNavigationBadges::$badgeWarehouseIds` and the count itself is cached in a `private static ?int` per resource, so `getNavigationBadge()` and `getNavigationBadgeColor()` share a single query and a single scope resolution.
+
+### 1B.5 Badge Scope — Invariants
+
+1. A `WarehouseStaff` user with exactly one assigned warehouse **cannot** see a badge count that includes any other warehouse, including the counterpart warehouse of a transfer.
+2. An `Admin` or `Auditor` user always sees the full system count, regardless of their `user_warehouse` pivot contents.
+3. A user with zero assigned warehouses and a non-admin/non-auditor role sees `null` badges.
+4. The scope resolver is the **only** sanctioned way to compute badge warehouse IDs. Direct `auth()->user()->warehouses()->pluck('id')` inside a `getNavigationBadge()` method is prohibited.
+5. The scope resolver caches within the request but is flushed on logout / re-authentication in long-lived workers.
 
 ---
 
@@ -9152,7 +9381,8 @@ class QuickActionsWidget extends Widget
 10. Enumerate every policy method before enabling strict mode.
 11. Verify `HasWizard` trait availability on all wizard-based `CreateRecord` page classes.
 12. Register `ProductObserver` and `ProductVariantObserver` before any seeder creates variants.
-13. Add a boot smoke test proving every required service, policy, resource, page, widget, route, and observer is registered.
+13. Register `ScopesNavigationBadges` trait in every resource that declares a navigation badge.
+14. Add a boot smoke test proving every required service, policy, resource, page, widget, route, and observer is registered.
 
 **Phase 01: Relational Schema Migrations.** 22 tables in dependency order, including `in_transits.cleared_at`, idempotency uniqueness, current-price uniqueness, `created_at` indexes on document tables, and the `direct_transfers` / `direct_transfer_items` tables created **after** `purchase_order_items`. Direct-transfer tables have `restrictOnDelete` FKs on `product_variants` and `warehouses`, `cascadeOnDelete` on the header→items FK, and `created_at` indexes.
 
@@ -9188,7 +9418,7 @@ class QuickActionsWidget extends Widget
 
 **Phase 17: Multi-Language Translation.** Labels, validation, notifications, exceptions, and UI messages use translation keys.
 
-**Phase 18: Runtime Wiring & Authorization Isolation.** Provider registration, policy registration (including `DirectTransferPolicy`), resource query scoping, route middleware, signed URL generation, event/listener registration, and container resolution tests. `StockMovementPolicy::createDirectTransfer()` removed. Direct Transfer list scoping enforced at query level.
+**Phase 18: Runtime Wiring & Authorization Isolation.** Provider registration, policy registration (including `DirectTransferPolicy`), resource query scoping, route middleware, signed URL generation, event/listener registration, and container resolution tests. `StockMovementPolicy::createDirectTransfer()` removed. Direct Transfer list scoping enforced at query level. Badge scope resolution centralized through `ScopesNavigationBadges`.
 
 **Phase 19: Automated CI/CD Testing & E2E Hardening.** Pest Unit/Feature, concurrency tests, Filament authorization tests, route tests, responsive Playwright scenarios, and CI fail-fast completeness checks.
 
@@ -9230,6 +9460,25 @@ class QuickActionsWidget extends Widget
 - All policies return expected booleans for each role.
 - `WarehousePolicy::delete()` blocks warehouses with stock movements, POs, SOs, TRs, or direct transfers.
 - QR lifetime = 7 days.
+
+### Badge Scope Pest Coverage (v13.6)
+
+```
+BadgeScopeTest::admin_sees_all_warehouses_regardless_of_pivot()
+BadgeScopeTest::auditor_sees_all_warehouses_regardless_of_pivot()
+BadgeScopeTest::warehouse_staff_with_single_warehouse_sees_only_that_warehouse()
+BadgeScopeTest::warehouse_staff_with_multiple_warehouses_sees_union()
+BadgeScopeTest::warehouse_staff_with_zero_warehouses_yields_null_badge()
+BadgeScopeTest::resolver_is_cached_within_request()
+BadgeScopeTest::resolver_flushes_on_logout()
+
+NavigationBadgeRoleScopeTest::transfer_requisition_badge_counts_from_and_to_for_multi_warehouse()
+NavigationBadgeRoleScopeTest::transfer_requisition_badge_ignores_counterpart_warehouse_for_single_warehouse_user()
+NavigationBadgeRoleScopeTest::purchase_order_badge_counts_only_assigned_single_warehouse()
+NavigationBadgeRoleScopeTest::sales_order_badge_counts_only_assigned_single_warehouse()
+NavigationBadgeRoleScopeTest::in_transit_badge_scopes_through_requisition_endpoints()
+NavigationBadgeRoleScopeTest::single_warehouse_user_never_sees_documents_touching_other_warehouse()
+```
 
 ### New Direct-Transfer Pest Coverage
 
@@ -9289,6 +9538,8 @@ TransferRequisitionResourceTest::navigation_badge_is_warehouse_scoped()
 PurchaseOrderResourceTest::navigation_badge_is_warehouse_scoped()
 SalesOrderResourceTest::navigation_badge_is_warehouse_scoped()
 NavigationBadgeTest::badge_count_is_computed_once_per_request()
+NavigationBadgeTest::badge_uses_scopes_navigation_badges_trait()
+NavigationBadgeTest::badge_scope_is_cached_per_request()
 AllResourcesTest::every_resource_declares_active_navigation_icon()
 AllResourcesTest::no_resource_uses_raw_string_icon()
 AllActionsTest::every_action_declares_heroicon_enum_icon()
@@ -9343,6 +9594,8 @@ TableArchitectureTest::card_tables_do_not_declare_bulk_actions_without_plugin()
 13. Unit Select Flow.
 14. Base-Unit Deletion Guard.
 15. Navigation Badge Visibility.
+15b. **Navigation Badge — Single-Warehouse Role Scope:** log in as a warehouse-staff user assigned exactly one warehouse; verify the badge count on Transfer Requisitions, Purchase Orders, Sales Orders, and In-Transit reflects only documents touching that single warehouse; verify counterpart warehouse of transfers does not inflate the count.
+15c. **Navigation Badge — Admin Scope:** log in as an Admin with an empty `user_warehouse` pivot; verify badges show the full system count.
 16. **Responsive Layout — Mobile:** resize to 375px → verify forms collapse to single column; card tables show 1 card per row; ledger tables use stacked layout.
 17. **Responsive Layout — Tablet:** resize to 768px → verify card tables show 2 cards per row; wide fields span 2 columns.
 18. **Responsive Layout — Desktop:** resize to 1440px → verify card tables show 3 cards per row; full bento dashboard; 4-column line-item repeaters.
@@ -9474,6 +9727,13 @@ The Council may implement technical integrity fixes without further product clar
 | Every resource declares `$activeNavigationIcon` distinct from `$navigationIcon` | ✅ |
 | All navigation badges warehouse-scoped | ✅ |
 | **Badge counts computed once per request** | ✅ |
+| **Badge scope is resolved via `ScopesNavigationBadges` trait** | ✅ |
+| **Admin/Auditor badge scope is all warehouses regardless of pivot contents** | ✅ |
+| **WarehouseStaff with exactly 1 assigned warehouse sees only that warehouse in badges** | ✅ |
+| **Counterpart warehouse of a transfer does not widen a single-warehouse user's badge** | ✅ |
+| **WarehouseStaff with 0 assigned warehouses yields `null` badge** | ✅ |
+| **Badge scope is cached per request and flushed on re-auth in long-lived workers** | ✅ |
+| **No resource uses ad hoc `auth()->user()->warehouses()->pluck('id')` in `getNavigationBadge()`** | ✅ |
 | `TransferRequisitionService` exists and resolves through the container | ✅ |
 | `StockMovementIdempotencyKey` model exists | ✅ |
 | STN scan route is named, authenticated, signed, and policy-authorized | ✅ |
@@ -9521,6 +9781,7 @@ The Council may implement technical integrity fixes without further product clar
 | `NegotiationService::submitRequest()` extracted from inline action | ✅ |
 | **Substitute variants documented as transfer-only (A10)** | ✅ |
 | **Direct Transfers are multi-line fire-and-forget (A11)** | ✅ |
+| **Badge scope is role + warehouse determined (A12)** | ✅ |
 | **Document tables index `created_at`** | ✅ |
 | **`user_warehouse` pivot edited from UserResource only** | ✅ |
 
@@ -9561,6 +9822,7 @@ This section is authoritative. Where an older section says that a surface exists
 | Purchase transition race | Order/cancel transitions were not locked | Parent row lock + status check |
 | Sales price race | Confirm read current price without locking variant | Lock variant before reading current price |
 | Event layer | Events were deferred | Add post-commit domain events/listeners as required infrastructure |
+| **Badge role scoping** | **Badges were described as "warehouse-scoped" but no formal rule distinguished Admin/Auditor from warehouse staff or handled the single-warehouse case** | **Add `ScopesNavigationBadges` trait, Principle A12, four scope tiers, and single-warehouse hard bound** |
 
 ### 16.3 P1 Gaps Closed
 
@@ -9572,6 +9834,7 @@ This section is authoritative. Where an older section says that a surface exists
 6. Runtime completeness tests must fail if a declared class, route, provider, policy, or widget is missing.
 7. Event dispatch must occur after successful transaction commit.
 8. Concurrency tests must cover double-click, duplicate scan, concurrent receive, concurrent dispatch, and concurrent lifecycle transitions.
+9. **Badge scope must be tested for every role × warehouse-cardinality combination and must never widen for single-warehouse users.**
 
 ---
 
@@ -9703,6 +9966,17 @@ Preferred action shape:
 
 Dependency injection may be used when the surrounding Filament lifecycle supports it. Either form must resolve through the registered container binding.
 
+### 17.7 Badge Scope Trait Registration
+
+The `ScopesNavigationBadges` trait lives at `app/Filament/Support/Concerns/ScopesNavigationBadges.php` and is consumed by every resource that declares a non-null navigation badge:
+
+- `TransferRequisitionResource`
+- `PurchaseOrderResource`
+- `SalesOrderResource`
+- `InTransitResource`
+
+A runtime test must assert that each of the four classes uses the trait and that the resolver returns the expected warehouse set for each role × cardinality combination.
+
 ---
 
 ## 🧱 Section 18: Missing Implementation Surfaces — Required File Contract
@@ -9738,6 +10012,12 @@ Each Resource must contain:
 7. `getPages()`;
 8. any soft-delete route-binding override;
 9. no duplicated business logic.
+
+Resources that declare a navigation badge must additionally:
+
+10. `use ScopesNavigationBadges;`
+11. resolve badge warehouse IDs via `self::badgeScopedWarehouseIds()`;
+12. short-circuit to `null` when `! self::hasBadgeScope()`.
 
 Canonical pattern:
 
@@ -9894,6 +10174,16 @@ class StockMovementIdempotencyKey extends Model
 ```
 
 The database unique constraint on `(transfer_requisition_id, payload_checksum)` remains mandatory.
+
+### 18.5 Badge Scope Trait
+
+Create:
+
+```text
+app/Filament/Support/Concerns/ScopesNavigationBadges.php
+```
+
+See §1B.3 for the full implementation. Every resource listed in §18.1 that declares a badge must consume this trait.
 
 ---
 
@@ -10083,6 +10373,17 @@ Technical requirements are therefore limited to:
 
 This remains an explicit product/accounting decision rather than an inferred fix.
 
+### 19.11 Badge Scope Resolver Integrity
+
+The `ScopesNavigationBadges::badgeScopedWarehouseIds()` resolver must be:
+
+1. **Deterministic** — same input state yields same output within a request.
+2. **Role-aware** — Admin/Auditor always resolve to all warehouses, independent of pivot contents.
+3. **Cardinality-aware** — WarehouseStaff with N=1 returns a single-element array, never the union of counterpart warehouses.
+4. **Empty-safe** — WarehouseStaff with N=0 returns `[]` and the badge short-circuits to `null`.
+5. **Request-scoped cached** — the resolver memoizes within the request and is flushed on logout or auth change in long-lived workers.
+6. **The only sanctioned resolver** — no resource may compute badge warehouse IDs ad hoc.
+
 ---
 
 ## 🧭 Section 20: Warehouse Data Scoping & Authorization Isolation
@@ -10136,6 +10437,15 @@ The Create page must explicitly authorize via the policy before accepting wizard
 The **service** independently re-verifies that **both** `from_warehouse_id` and `to_warehouse_id` are within the actor's assigned warehouses inside the transaction. UI visibility is never the security boundary.
 
 `StockMovementPolicy::createDirectTransfer()` is removed.
+
+### 20.4 Badge Scope vs. Query Scope
+
+Badge scope (Section 1B) and query scope (this section) are related but distinct:
+
+- **Query scope** restricts which records the user may fetch and page through.
+- **Badge scope** restricts which records contribute to the navigation badge count.
+
+They must be consistent: a user's badge count must never exceed the number of records they can list. Both must resolve through the same warehouse ID set — the badge scope resolver and the query scope resolver must agree for the same user.
 
 ---
 
@@ -10264,6 +10574,7 @@ tests/Feature/Architecture/PolicyRegistrationTest.php
 tests/Feature/Architecture/RouteWiringTest.php
 tests/Feature/Architecture/WarehouseScopeTest.php
 tests/Feature/Architecture/ServiceResolutionTest.php
+tests/Feature/Architecture/BadgeScopeTest.php
 ```
 
 ### 23.1 Service Resolution
@@ -10316,6 +10627,21 @@ For every operational resource:
 
 The test must verify query-level filtering, not merely action/button visibility.
 
+### 23.6 Badge Scope
+
+For each of the four badge-bearing resources:
+
+1. create warehouses A, B, C;
+2. create documents in each;
+3. log in as Admin → assert badge counts all;
+4. log in as Auditor → assert badge counts all;
+5. log in as WarehouseStaff assigned {A} → assert badge counts only A;
+6. log in as WarehouseStaff assigned {A, B} → assert badge counts A ∪ B;
+7. log in as WarehouseStaff assigned {} → assert badge is `null`;
+8. for Transfer Requisitions, create a document with `from_warehouse_id=A`, `to_warehouse_id=B`; assert WarehouseStaff assigned {A} sees the document in the badge count; assert the count is 1, not 2 — counterpart warehouse does not widen scope;
+9. assert every badge-bearing resource uses the `ScopesNavigationBadges` trait;
+10. assert no badge-bearing resource calls `auth()->user()->warehouses()` directly in `getNavigationBadge()`.
+
 ---
 
 ## 🧵 Section 24: Concurrency Test Matrix
@@ -10335,6 +10661,7 @@ The inventory engine is not considered production-ready until these cases are co
 | Transfer dispatch vs sale dispatch | Availability is serialized by variant/warehouse locks |
 | Concurrent current-price update | At most one current price row |
 | Delete warehouse during PO/SO/TR/DT mutation | Referential/policy integrity preserved |
+| Badge scope resolution under concurrent requests | Each request resolves its own scope; no cross-request cache bleed |
 
 ---
 
@@ -10372,6 +10699,9 @@ app/
 │   │   ├── SalesOrders/
 │   │   ├── Suppliers/
 │   │   └── Customers/
+│   ├── Support/
+│   │   └── Concerns/
+│   │       └── ScopesNavigationBadges.php
 │   └── Widgets/
 ├── Http/
 │   └── Controllers/
@@ -10434,7 +10764,7 @@ A file appearing in this map but missing from the repository is an implementatio
 
 ## 🧾 Section 26: Council Acceptance Criteria
 
-Everything from prior sections remains in force. The following are the consolidated acceptance criteria:
+All criteria below are binding. The following consolidated list supersedes any earlier checklist fragment.
 
 - [ ] Every Resource listed in Section 18 physically exists.
 - [ ] Every Page referenced by `getPages()` physically exists.
@@ -10481,9 +10811,52 @@ Everything from prior sections remains in force. The following are the consolida
 - [ ] Playwright Scenario 02 (single item), 02b (multi item), 02c (guards), and 02d (responsive) pass.
 - [ ] No `TODO`, placeholder class, missing route, or unresolved service reference remains in the declared runtime surface.
 
+### v13.6 Badge Role-Scope Acceptance Criteria
+
+- [ ] `ScopesNavigationBadges` trait exists at `app/Filament/Support/Concerns/ScopesNavigationBadges.php`.
+- [ ] `ScopesNavigationBadges::badgeScopedWarehouseIds()` returns all warehouses for Admin.
+- [ ] `ScopesNavigationBadges::badgeScopedWarehouseIds()` returns all warehouses for Auditor.
+- [ ] `ScopesNavigationBadges::badgeScopedWarehouseIds()` returns the union of assigned warehouses for WarehouseStaff with N ≥ 2.
+- [ ] `ScopesNavigationBadges::badgeScopedWarehouseIds()` returns exactly one ID for WarehouseStaff with N = 1.
+- [ ] `ScopesNavigationBadges::badgeScopedWarehouseIds()` returns `[]` for WarehouseStaff with N = 0.
+- [ ] `ScopesNavigationBadges::hasBadgeScope()` returns `false` when the resolver yields an empty set.
+- [ ] The resolver caches within the request.
+- [ ] `flushBadgeScope()` exists and is called on auth change in long-lived workers.
+- [ ] `TransferRequisitionResource`, `PurchaseOrderResource`, `SalesOrderResource`, and `InTransitResource` all consume `ScopesNavigationBadges`.
+- [ ] No badge-bearing resource computes warehouse IDs via `auth()->user()->warehouses()` directly.
+- [ ] A WarehouseStaff user assigned exactly one warehouse sees only that warehouse's documents in the badge count.
+- [ ] The counterpart warehouse of a transfer does not widen a single-warehouse user's badge.
+- [ ] `getNavigationBadge()` returns `null` when the scope is empty.
+- [ ] `getNavigationBadgeColor()` shares the same cached count as `getNavigationBadge()`.
+- [ ] Badge scope consistency test proves badge count never exceeds list query count for the same user.
+- [ ] Playwright Scenario 15b (single-warehouse role scope) passes.
+- [ ] Playwright Scenario 15c (Admin scope with empty pivot) passes.
+
 ---
 
 ## 📊 Section 27: Council Change Summary
+
+### v13.6 Change Table
+
+| # | Area | Resolution | Severity |
+|---|---|---|---|
+| 1 | Principle A12 | Added — badge scope is role + warehouse determined, counterpart warehouse never widens single-warehouse scope | Governance |
+| 2 | Badge resolver | Added `ScopesNavigationBadges` trait with cached, role-aware, cardinality-aware resolution | P0 |
+| 3 | Badge principle §1B.1a | Rewrote to formalize four scope tiers | Governance |
+| 4 | Badge tier: Admin | Unscoped — all warehouses regardless of `user_warehouse` pivot | Behavior |
+| 5 | Badge tier: Auditor | Unscoped — all warehouses regardless of `user_warehouse` pivot | Behavior |
+| 6 | Badge tier: WarehouseStaff N≥2 | Union of assigned warehouses | Behavior |
+| 7 | Badge tier: WarehouseStaff N=1 | Exactly one warehouse — no fallback, no counterpart widening | Behavior |
+| 8 | Badge tier: WarehouseStaff N=0 | `null` badge | Behavior |
+| 9 | Badge implementations | Rewrote all four resources to consume the trait | P0 |
+| 10 | Badge tests | Added `BadgeScopeTest` and `NavigationBadgeRoleScopeTest` suites | Test |
+| 11 | Badge acceptance | Extended §26 with v13.6 badge criteria | Governance |
+| 12 | Badge performance | Cached per request alongside the count; flushed on auth change in long-lived workers | Perf |
+| 13 | §20.4 Badge vs Query scope | Added consistency rule — badge count must never exceed list query count | Integrity |
+| 14 | File map | Added `ScopesNavigationBadges.php` to §25 | Governance |
+| 15 | E2E scenarios | Added Scenario 15b (single-warehouse) and 15c (admin) | Test |
+
+### v13.5 Change Table (Retained)
 
 | # | Area | Resolution | Severity |
 |---|---|---|---|
@@ -10519,7 +10892,7 @@ Everything from prior sections remains in force. The following are the consolida
 | 30 | Runtime completeness | Added architecture tests for services/resources/routes/policies/providers | P1 |
 | 31 | Concurrency coverage | Added explicit race-condition test matrix | P1 |
 
-### Historical v13.3 Summary
+### Historical v13.3 Summary (Retained)
 
 | # | Area | Resolution | Severity |
 |---|---|---|---|
@@ -10546,4 +10919,4 @@ Everything from prior sections remains in force. The following are the consolida
 
 ---
 
-*End of blueprint v13.5 + i18n — Direct Transfer multi-item support fully integrated, translation-complete, and runtime-wiring-complete.*
+*End of blueprint v13.6 + i18n — Direct Transfer multi-item support, translation coverage, runtime wiring, and role + warehouse scoped navigation badges fully integrated.*
