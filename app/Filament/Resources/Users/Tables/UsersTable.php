@@ -4,76 +4,77 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Users\Tables;
 
-use App\Enums\UserRole;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Actions\ViewAction;
-use Filament\Support\Enums\FontWeight;
+use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 
-final class UsersTable
+class UsersTable
 {
     public static function configure(Table $table): Table
     {
         return $table
             ->columns([
                 TextColumn::make('name')
-                    ->label('OPERATOR NAME')
-                    ->weight(FontWeight::Bold)
-                    ->searchable()
-                    ->sortable(),
+                    ->searchable()->sortable()->weight('bold'),
 
                 TextColumn::make('email')
-                    ->label('EMAIL ADDRESS')
-                    ->icon(Heroicon::Envelope)
-                    ->searchable()
-                    ->copyable(),
+                    ->searchable()->copyable()->visibleFrom('md'),
 
                 TextColumn::make('role')
-                    ->label('SYSTEM ROLE')
-                    ->badge(), // Automatically calls getLabel(), getColor(), and getIcon() on UserRole Enum
+                    ->badge()->sortable(),
 
-                TextColumn::make('warehouses.name')
-                    ->label('AUTHORIZED BRANCHES')
-                    ->badge()
-                    ->color('gray')
-                    ->placeholder('No Branch Assigned'),
+                TextColumn::make('warehouses_count')
+                    ->label(__('resources.users.table.warehouses'))
+                    ->counts('warehouses')
+                    ->numeric()->badge()->color('gray')->alignEnd(),
+
+                IconColumn::make('is_active')
+                    ->label(__('resources.users.table.active'))
+                    ->boolean()
+                    ->trueIcon(Heroicon::CheckCircle)
+                    ->falseIcon(Heroicon::XCircle)
+                    ->trueColor('success')
+                    ->falseColor('danger'),
 
                 TextColumn::make('created_at')
-                    ->label('REGISTERED DATE')
-                    ->dateTime('M d, Y')
+                    ->label(__('resources.users.table.created'))
+                    ->dateTime('M j, Y')
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->visibleFrom('lg'),
             ])
             ->filters([
-                SelectFilter::make('role')
-                    ->label('SYSTEM ROLE')
-                    ->options(UserRole::class),
+                SelectFilter::make('role')->options(\App\Enums\UserRole::class),
+                SelectFilter::make('warehouse_id')
+                    ->label(__('resources.users.filters.warehouse'))
+                    ->relationship('warehouses', 'name')
+                    ->searchable(),
+                TernaryFilter::make('is_active'),
             ])
-            ->actions([
-                ViewAction::make()
-                    ->slideOver()
-                    ->icon(Heroicon::Eye)
-                    ->closeModalByClickingAway(false),
-
+            ->defaultSort('name')
+            ->stackedOnMobile()
+            ->paginated([25, 50, 100])
+            ->defaultPaginationPageOption(50)
+            ->recordActions([
                 EditAction::make()
-                    ->slideOver()
                     ->icon(Heroicon::PencilSquare)
-                    ->closeModalByClickingAway(false),
+                    ->modalWidth(Width::Large)
+                    ->authorize('update'),
 
                 DeleteAction::make()
-                    ->slideOver()
                     ->icon(Heroicon::Trash)
-                    ->closeModalByClickingAway(false),
+                    ->authorize('delete'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()->icon(Heroicon::Trash)->authorize('deleteAny'),
                 ]),
             ]);
     }

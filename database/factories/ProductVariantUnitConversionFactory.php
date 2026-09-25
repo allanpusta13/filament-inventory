@@ -22,8 +22,8 @@ class ProductVariantUnitConversionFactory extends Factory
     {
         return [
             'product_variant_id' => ProductVariant::factory(),
-            'unit_name' => fake()->randomElement(['Box', 'Pallet', 'Case']),
-            'base_unit_ratio' => fake()->numberBetween(6, 48),
+            'unit_name' => 'Box',
+            'base_unit_ratio' => 24,
             'is_default_purchase' => false,
             'is_default_transfer' => false,
         ];

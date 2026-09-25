@@ -22,7 +22,9 @@ class LossLedgerResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'AUDIT LEDGERS';
 
-    protected static BackedEnum|string|null $navigationIcon = Heroicon::ExclamationTriangle;
+    protected static BackedEnum|string|null $navigationIcon = Heroicon::OutlinedExclamationTriangle;
+
+    protected static BackedEnum|string|null $activeNavigationIcon = Heroicon::ExclamationTriangle;
 
     protected static ?int $navigationSort = 3;
 

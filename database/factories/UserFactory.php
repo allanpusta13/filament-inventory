@@ -34,6 +34,7 @@ final class UserFactory extends Factory
             'password' => self::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
             'role' => UserRole::WAREHOUSE_STAFF->value,
+            'is_active' => true,
         ];
     }
 
@@ -66,7 +67,9 @@ final class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => [
             'role' => UserRole::ADMIN->value,
-        ]);
+        ])->afterCreating(function (\App\Models\User $user) {
+            $user->warehouses()->attach(Warehouse::factory()->create());
+        });
     }
 
     /**

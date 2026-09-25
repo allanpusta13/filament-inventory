@@ -6,13 +6,13 @@ namespace App\Filament\Resources\DirectTransfers\Pages;
 
 use App\Filament\Resources\DirectTransfers\DirectTransferResource;
 use App\Filament\Resources\DirectTransfers\Schemas\DirectTransferForm;
-use App\Models\ProductVariant;
-use App\Services\InventoryService;
-use Filament\Actions\Action;
-use Filament\Notifications\Notification;
-use Filament\Resources\Pages\Concerns\HasWizard;
+use Filament\Forms\Components\Placeholder;
 use Filament\Resources\Pages\CreateRecord;
+use Filament\Resources\Pages\CreateRecord\Concerns\HasWizard;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
+use Filament\Support\Enums\Width;
+use Filament\Support\Icons\Heroicon;
 
 class CreateDirectTransfer extends CreateRecord
 {
@@ -20,92 +20,51 @@ class CreateDirectTransfer extends CreateRecord
 
     protected static string $resource = DirectTransferResource::class;
 
-    protected function getFormStatePath(): string
+    public function getMaxContentWidth(): ?string
     {
-        return 'wizardData';
+        return Width::SevenExtraLarge->value;
     }
 
-    protected function getRedirectUrl(): string
+    /**
+     * @return array<Step>
+     */
+    protected function getSteps(): array
     {
-        return $this->getResource()::getUrl('index');
-    }
+        return [
+            Step::make(__('resources.direct_transfers.steps.location_mapping'))
+                ->description(__('resources.direct_transfers.steps.location_mapping_description'))
+                ->icon(Heroicon::BuildingOffice)
+                ->schema(DirectTransferForm::getLocationMappingFields()),
 
-    protected function getFormHeading(): string
-    {
-        return 'INSTANT DIRECT TRANSFER';
-    }
+            Step::make(__('resources.direct_transfers.steps.stock_allocation'))
+                ->description(__('resources.direct_transfers.steps.stock_allocation_description'))
+                ->icon(Heroicon::Cube)
+                ->schema(DirectTransferForm::getStockAllocationFields()),
 
-    protected function getFormDescription(): string
-    {
-        return '3-step wizard: origin/destination, stock allocation, review';
-    }
-
-    protected function getFormWidth(): string
-    {
-        return 'max-content';
-    }
-
-    protected function getFormActionLabel(): string
-    {
-        return 'EXECUTE TRANSFER';
-    }
-
-    protected function getSubmitFormAction(): Action
-    {
-        return Action::make('create')
-            ->label('EXECUTE TRANSFER')
-            ->color('primary')
-            ->action('create');
+            Step::make(__('resources.direct_transfers.steps.review_verify'))
+                ->description(__('resources.direct_transfers.steps.review_verify_description'))
+                ->icon(Heroicon::CheckCircle)
+                ->schema([
+                    Placeholder::make('review_summary')
+                        ->columnSpanFull()
+                        ->content(fn (Get $get) => view(
+                            'filament.wizards.direct-transfer-review',
+                            ['state' => $get()],
+                        )),
+                ]),
+        ];
     }
 
     protected function handleRecordCreation(array $data): \Illuminate\Database\Eloquent\Model
     {
-        $wizardData = $data['wizardData'] ?? $data;
-        $fromId = (int) $wizardData['from_warehouse_id'];
-        $toId = (int) $wizardData['to_warehouse_id'];
-        $variantId = (int) $wizardData['product_variant_id'];
-        $qty = (int) $wizardData['quantity'];
-        $notes = $wizardData['notes'];
+        $referenceCode = 'DT-'.now()->format('YmdHis').'-'.random_int(100, 999);
 
-        $referenceCode = 'DTR-'.date('Ymd').'-'.mb_strtoupper(uniqid());
-        $variant = ProductVariant::findOrFail($variantId);
-
-        $movements = app(InventoryService::class)->directTransfer(
-            $variantId,
-            $fromId,
-            $toId,
-            $qty,
-            unitName: $variant->base_unit_name,
-            unitRatio: 1,
+        return app(\App\Services\InventoryService::class)->directTransfer(
+            fromWarehouseId: (int) $data['from_warehouse_id'],
+            toWarehouseId: (int) $data['to_warehouse_id'],
+            items: $data['items'] ?? [],
             referenceCode: $referenceCode,
-            notes: $notes
+            notes: $data['notes'],
         );
-
-        $this->record = $movements[0];
-
-        Notification::make()
-            ->title('Transfer Executed')
-            ->body("Direct transfer #{$this->record->reference_code} completed successfully.")
-            ->success()
-            ->send();
-
-        return $this->record;
-    }
-
-    protected function getSteps(): array
-    {
-        return [
-            Step::make('Location Mapping')
-                ->description('Map origin destination warehouses')
-                ->schema(DirectTransferForm::getLocationSchema()),
-
-            Step::make('Stock Allocation')
-                ->description('Select variant, quantity, add notes')
-                ->schema(DirectTransferForm::getAllocationSchema()),
-
-            Step::make('Review & Verify')
-                ->description('Confirm all details before executing')
-                ->schema(DirectTransferForm::getReviewSchema()),
-        ];
     }
 }

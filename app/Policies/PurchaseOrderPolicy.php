@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
-use App\Enums\PurchaseOrderStatus;
 use App\Models\PurchaseOrder;
 use App\Models\User;
 
@@ -12,123 +11,75 @@ class PurchaseOrderPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->isAdmin() || $user->isAuditor() || $user->isBranchManager() || $user->isWarehouseStaff();
+        return true;
     }
 
-    public function view(User $user, PurchaseOrder $purchaseOrder): bool
+    public function view(User $user, PurchaseOrder $o): bool
     {
-        if ($user->isAdmin() || $user->isAuditor()) {
-            return true;
-        }
-
-        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
-            return $user->canAccessWarehouse($purchaseOrder->warehouse);
-        }
-
-        return false;
+        return $user->isAdmin() || $user->warehouses->contains($o->warehouse_id);
     }
 
     public function create(User $user): bool
     {
-        return $user->isAdmin() || $user->isBranchManager() || $user->isWarehouseStaff();
+        return $user->warehouses()->exists();
     }
 
-    public function update(User $user, PurchaseOrder $purchaseOrder): bool
+    public function update(User $user, PurchaseOrder $o): bool
     {
-        if ($user->isAdmin()) {
-            return true;
-        }
-
-        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
-            return $user->canAccessWarehouse($purchaseOrder->warehouse)
-                && $purchaseOrder->status === PurchaseOrderStatus::Draft;
-        }
-
-        return false;
+        return $o->status === \App\Enums\PurchaseOrderStatus::Draft
+            && $user->warehouses->contains($o->warehouse_id);
     }
 
-    public function delete(User $user, PurchaseOrder $purchaseOrder): bool
+    public function delete(User $user, PurchaseOrder $o): bool
     {
-        if ($user->isAdmin()) {
-            return true;
-        }
-
-        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
-            return $user->canAccessWarehouse($purchaseOrder->warehouse)
-                && in_array($purchaseOrder->status, [
-                    PurchaseOrderStatus::Draft,
-                    PurchaseOrderStatus::Cancelled,
-                ]);
-        }
-
-        return false;
+        return in_array($o->status, [
+            \App\Enums\PurchaseOrderStatus::Draft,
+            \App\Enums\PurchaseOrderStatus::Cancelled,
+        ], true) && $user->warehouses->contains($o->warehouse_id);
     }
 
-    public function restore(User $user, PurchaseOrder $purchaseOrder): bool
+    public function deleteAny(User $user): bool
     {
         return $user->isAdmin();
     }
 
-    public function forceDelete(User $user, PurchaseOrder $purchaseOrder): bool
+    public function restore(User $user, PurchaseOrder $o): bool
     {
         return $user->isAdmin();
     }
 
-    public function order(User $user, PurchaseOrder $purchaseOrder): bool
+    public function restoreAny(User $user): bool
     {
-        if ($user->isAdmin()) {
-            return true;
-        }
-
-        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
-            return $user->canAccessWarehouse($purchaseOrder->warehouse)
-                && $purchaseOrder->status === PurchaseOrderStatus::Draft;
-        }
-
-        return false;
+        return $user->isAdmin();
     }
 
-    public function receive(User $user, PurchaseOrder $purchaseOrder): bool
+    public function forceDelete(User $user, PurchaseOrder $o): bool
     {
-        if ($user->isAdmin()) {
-            return true;
-        }
-
-        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
-            return $user->canAccessWarehouse($purchaseOrder->warehouse)
-                && in_array($purchaseOrder->status, [
-                    PurchaseOrderStatus::Ordered,
-                    PurchaseOrderStatus::PartiallyReceived,
-                ]);
-        }
-
-        return false;
+        return $user->isAdmin();
     }
 
-    public function cancel(User $user, PurchaseOrder $purchaseOrder): bool
+    public function forceDeleteAny(User $user): bool
     {
-        if ($user->isAdmin()) {
-            return true;
-        }
-
-        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
-            return $user->canAccessWarehouse($purchaseOrder->warehouse)
-                && in_array($purchaseOrder->status, [
-                    PurchaseOrderStatus::Draft,
-                    PurchaseOrderStatus::Ordered,
-                ]);
-        }
-
-        return false;
+        return $user->isAdmin();
     }
 
-    /**
-     * [Phase 4 / Principle A8] Sole source of truth for admin/auditor-only
-     * review-surface visibility (period filter). Relocated verbatim from
-     * Filament visible() closures. FROZEN except for a genuinely new
-     * ability or a demonstrated bug.
-     */
-    public function viewAdminReview(User $user): bool
+    public function orderPurchase(User $user, PurchaseOrder $o): bool
+    {
+        return $user->warehouses->contains($o->warehouse_id);
+    }
+
+    public function receivePurchase(User $user, PurchaseOrder $o): bool
+    {
+        return $user->warehouses->contains($o->warehouse_id);
+    }
+
+    public function cancelPurchase(User $user, PurchaseOrder $o): bool
+    {
+        return $o->canBeCancelled()
+            && ($user->isAdmin() || $user->warehouses->contains($o->warehouse_id));
+    }
+
+    public function viewAuditFilters(User $user): bool
     {
         return $user->isAdmin() || $user->isAuditor();
     }

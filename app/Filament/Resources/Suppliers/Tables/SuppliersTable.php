@@ -4,18 +4,17 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Suppliers\Tables;
 
-use App\Models\Supplier;
-use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteAction;
-use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreAction;
-use Filament\Actions\RestoreBulkAction;
-use Filament\Actions\ViewAction;
-use Filament\Tables\Columns\IconColumn;
+use Filament\Support\Enums\FontWeight;
+use Filament\Support\Enums\Width;
+use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Columns\Layout\Split;
+use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
@@ -25,86 +24,68 @@ class SuppliersTable
     {
         return $table
             ->columns([
-                TextColumn::make('name')
-                    ->label(__('NAME'))
-                    ->searchable()
-                    ->sortable()
-                    ->copyable()
-                    ->weight(\Filament\Support\Enums\FontWeight::Bold)
-                    ->color('primary'),
+                Stack::make([
+                    Split::make([
+                        TextColumn::make('name')
+                            ->weight(FontWeight::Bold)
+                            ->searchable()->sortable(),
 
-                TextColumn::make('contact_person')
-                    ->label(__('CONTACT PERSON'))
-                    ->searchable()
-                    ->sortable(),
+                        TextColumn::make('is_active')
+                            ->label(__('resources.suppliers.table.status'))
+                            ->badge()->alignEnd()
+                            ->formatStateUsing(fn (bool $state) => $state ? __('common.active') : __('common.inactive'))
+                            ->color(fn (bool $state) => $state ? 'success' : 'danger'),
+                    ])->from('md'),
 
-                TextColumn::make('phone')
-                    ->label(__('PHONE'))
-                    ->searchable()
-                    ->sortable(),
+                    TextColumn::make('contact_person')
+                        ->label(__('resources.suppliers.table.contact'))
+                        ->icon(Heroicon::User)->iconColor('gray')
+                        ->searchable()->placeholder('—'),
 
-                TextColumn::make('email')
-                    ->label(__('EMAIL'))
-                    ->searchable()
-                    ->sortable(),
+                    Split::make([
+                        TextColumn::make('phone')
+                            ->icon(Heroicon::Phone)->iconColor('gray')
+                            ->copyable()->placeholder('—'),
 
-                TextColumn::make('address')
-                    ->label(__('ADDRESS'))
-                    ->limit(50)
-                    ->toggleable(isToggledHiddenByDefault: true),
+                        TextColumn::make('email')
+                            ->icon(Heroicon::Envelope)->iconColor('gray')
+                            ->copyable()->placeholder('—'),
+                    ])->from('md'),
 
-                IconColumn::make('is_active')
-                    ->label(__('ACTIVE'))
-                    ->boolean()
-                    ->sortable(),
-
-                TextColumn::make('deleted_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    TextColumn::make('purchase_orders_count')
+                        ->label(__('resources.suppliers.table.purchase_orders'))
+                        ->counts('purchaseOrders')
+                        ->badge()->color('primary')->numeric(),
+                ])->space(3),
             ])
-            ->defaultSort('created_at', 'desc')
+            ->contentGrid([
+                'md' => 2,
+                'xl' => 3,
+            ])
             ->filters([
+                TernaryFilter::make('is_active'),
                 TrashedFilter::make(),
             ])
+            ->defaultSort('name')
+            ->defaultPaginationPageOption(12)
+            ->paginated([12, 24, 48])
             ->recordActions([
-                ViewAction::make()
-                    ->modalWidth(\Filament\Support\Enums\Width::SevenExtraLarge),
-
                 EditAction::make()
-                    ->modalWidth(\Filament\Support\Enums\Width::SevenExtraLarge),
+                    ->icon(Heroicon::PencilSquare)
+                    ->modalWidth(Width::Large),
 
                 DeleteAction::make()
-                    ->authorize('delete')
-                    ->visible(fn (Supplier $record): bool => $record->trashed()),
+                    ->icon(Heroicon::Trash)
+                    ->authorize('delete'),
 
                 RestoreAction::make()
+                    ->icon(Heroicon::ArrowUturnLeft)
                     ->authorize('restore'),
 
                 ForceDeleteAction::make()
-                    ->authorize('forceDelete'),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make()
-                        ->authorize('deleteAny'),
-
-                    RestoreBulkAction::make()
-                        ->authorize('restoreAny'),
-
-                    ForceDeleteBulkAction::make()
-                        ->authorize('forceDeleteAny'),
-                ]),
+                    ->icon(Heroicon::Trash)
+                    ->authorize('forceDelete')
+                    ->visible(fn () => auth()->user()->isAdmin()),
             ]);
     }
 }

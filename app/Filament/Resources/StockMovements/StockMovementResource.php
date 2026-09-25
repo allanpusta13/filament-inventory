@@ -23,7 +23,9 @@ class StockMovementResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'AUDIT LEDGERS';
 
-    protected static BackedEnum|string|null $navigationIcon = Heroicon::QueueList;
+    protected static BackedEnum|string|null $navigationIcon = Heroicon::OutlinedQueueList;
+
+    protected static BackedEnum|string|null $activeNavigationIcon = Heroicon::QueueList;
 
     protected static ?int $navigationSort = 2;
 

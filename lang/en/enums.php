@@ -10,20 +10,28 @@ return [
     */
 
     // TransferRequisitionStatus
-    'Draft' => 'Draft',
-    'Requested' => 'Requested',
-    'Under review (fulfiller)' => 'Under review (fulfiller)',
-    'Under review (requestor)' => 'Under review (requestor)',
-    'Confirmed' => 'Confirmed',
-    'Dispatched' => 'Dispatched',
-    'Partially received' => 'Partially received',
-    'Completed' => 'Completed',
-    'Closed with loss' => 'Closed with loss',
-    'Cancelled' => 'Cancelled',
+    'transfer_requisition_status.draft' => 'Draft',
+    'transfer_requisition_status.requested' => 'Requested',
+    'transfer_requisition_status.under_review_fulfiller' => 'Under review (fulfiller)',
+    'transfer_requisition_status.under_review_requestor' => 'Under review (requestor)',
+    'transfer_requisition_status.confirmed' => 'Confirmed',
+    'transfer_requisition_status.dispatched' => 'Dispatched',
+    'transfer_requisition_status.partially_received' => 'Partially received',
+    'transfer_requisition_status.completed' => 'Completed',
+    'transfer_requisition_status.closed_with_loss' => 'Closed with loss',
+    'transfer_requisition_status.cancelled' => 'Cancelled',
 
     // InTransitStatus
-    'In transit' => 'In transit',
-    'Cleared' => 'Cleared',
+    'in_transit_status.in_transit' => 'In transit',
+    'in_transit_status.partially_received' => 'Partially received',
+    'in_transit_status.cleared' => 'Cleared',
+
+    // LossLedger loss_category
+    'enums.loss_ledger.loss_category.shortfall' => 'Shortfall',
+    'enums.loss_ledger.loss_category.damage' => 'Damage',
+    'enums.loss_ledger.loss_category.theft' => 'Theft',
+    'enums.loss_ledger.loss_category.spoilage' => 'Spoilage',
+    'enums.loss_ledger.loss_category.omitted_from_intake' => 'Omitted from intake',
 
     // MovementType
     'Receive' => 'Receive',

@@ -31,6 +31,14 @@ class PurchaseOrderItem extends Model
         'unit_cost_price', 'received_base_qty', 'notes',
     ];
 
+    protected $casts = [
+        'ordered_unit_ratio' => 'integer',
+        'ordered_qty' => 'integer',
+        'ordered_base_qty' => 'integer',
+        'unit_cost_price' => 'decimal:4',
+        'received_base_qty' => 'integer',
+    ];
+
     public function purchaseOrder(): BelongsTo
     {
         return $this->belongsTo(PurchaseOrder::class);
@@ -43,11 +51,6 @@ class PurchaseOrderItem extends Model
 
     public function outstandingBaseQty(): int
     {
-        return max(0, $this->ordered_base_qty - $this->received_base_qty);
-    }
-
-    protected function casts(): array
-    {
-        return ['unit_cost_price' => 'decimal:4'];
+        return max(0, (int) $this->ordered_base_qty - (int) $this->received_base_qty);
     }
 }

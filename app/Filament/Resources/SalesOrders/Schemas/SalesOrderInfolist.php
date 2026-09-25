@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Filament\Resources\SalesOrders\Schemas;
 
 use Filament\Infolists\Components\RepeatableEntry;
-use Filament\Infolists\Components\RepeatableEntry\TableColumn;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
@@ -17,120 +16,56 @@ class SalesOrderInfolist
 {
     public static function configure(Schema $schema): Schema
     {
-        return $schema
-            ->schema([
-                Grid::make(3)
+        return $schema->components([
+            Grid::make(['default' => 1, 'md' => 3, 'xl' => 3])->schema([
+                Section::make('SALES ORDER PROFILE')
+                    ->icon(Heroicon::DocumentText)
+                    ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2])
+                    ->columns(['default' => 1, 'md' => 2, 'xl' => 2])
+                    ->schema([
+                        TextEntry::make('reference_code')->label(__('resources.sales_orders.fields.reference_code'))
+                            ->weight(FontWeight::Bold)->size('lg')->copyable()->color('primary')
+                            ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+                        TextEntry::make('status')->badge()
+                            ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+                        TextEntry::make('customer.name')->icon(Heroicon::UserGroup)
+                            ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+                        TextEntry::make('warehouse.name')->icon(Heroicon::BuildingOffice2)
+                            ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+                    ]),
+
+                Section::make('SIGN-OFFS')
+                    ->icon(Heroicon::ShieldCheck)
+                    ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
+                    ->schema([
+                        TextEntry::make('orderedBy.name')->label(__('resources.sales_orders.fields.ordered_by'))->icon(Heroicon::User)->placeholder('—'),
+                        TextEntry::make('dispatchedBy.name')->label(__('resources.sales_orders.fields.dispatched_by'))->icon(Heroicon::Truck)->placeholder('—'),
+                        TextEntry::make('confirmed_at')->label(__('resources.sales_orders.fields.confirmed_at'))->dateTime('M j, Y H:i')->placeholder('—'),
+                        TextEntry::make('dispatched_at')->label(__('resources.sales_orders.fields.dispatched_at'))->dateTime('M j, Y H:i')->placeholder('—'),
+                    ]),
+
+                Section::make('LINE ITEMS')
+                    ->icon(Heroicon::ClipboardDocumentList)
                     ->columnSpanFull()
                     ->schema([
-                        // Section 1: Order Profile (Spans 2 Columns)
-                        Section::make(__('SALES ORDER PROFILE'))
-                            ->icon(Heroicon::Truck)
+                        RepeatableEntry::make('items')
                             ->schema([
-                                Grid::make(2)
-                                    ->schema([
-                                        TextEntry::make('reference_code')
-                                            ->label(__('REFERENCE CODE'))
-                                            ->weight(FontWeight::Bold)
-                                            ->size('lg')
-                                            ->copyable()
-                                            ->color('primary'),
-
-                                        TextEntry::make('status')
-                                            ->label(__('OPERATIONAL STATUS'))
-                                            ->badge(),
-
-                                        TextEntry::make('customer.name')
-                                            ->label(__('CUSTOMER'))
-                                            ->icon(Heroicon::Users),
-
-                                        TextEntry::make('warehouse.name')
-                                            ->label(__('DISPATCH WAREHOUSE'))
-                                            ->icon(Heroicon::BuildingOffice2),
-                                    ]),
-                            ])
-                            ->columnSpan(2),
-
-                        // Section 2: Authorization Sign-Offs (Spans 1 Column)
-                        Section::make(__('AUTHORIZATION SIGN-OFFS'))
-                            ->icon(Heroicon::ShieldCheck)
-                            ->schema([
-                                TextEntry::make('orderedBy.name')
-                                    ->label(__('ORDERED BY'))
-                                    ->icon(Heroicon::User)
-                                    ->placeholder(__('System Initialized')),
-
-                                TextEntry::make('dispatchedBy.name')
-                                    ->label(__('DISPATCHED BY'))
-                                    ->icon(Heroicon::Truck)
-                                    ->placeholder(__('Pending Dispatch')),
-                            ])
-                            ->columnSpan(1),
-
-                        // Section 3: Line Items (Full Width)
-                        Section::make(__('ORDER LINE ITEMS'))
-                            ->icon(Heroicon::ClipboardDocumentList)
-                            ->schema([
-                                RepeatableEntry::make('items')
-                                    ->label('')
-                                    ->table([
-                                        TableColumn::make(__('PRODUCT VARIANT (SKU)')),
-                                        TableColumn::make(__('UNIT')),
-                                        TableColumn::make(__('RATIO')),
-                                        TableColumn::make(__('QTY')),
-                                        TableColumn::make(__('BASE UNITS')),
-                                        TableColumn::make(__('SALE PRICE')),
-                                        TableColumn::make(__('LINE TOTAL')),
-                                        TableColumn::make(__('LINE NOTES')),
-                                    ])
-                                    ->schema([
-                                        Grid::make(8)
-                                            ->schema([
-                                                TextEntry::make('productVariant.sku')
-                                                    ->label(__('PRODUCT VARIANT (SKU)'))
-                                                    ->weight(FontWeight::Bold)
-                                                    ->columnSpan(2),
-
-                                                TextEntry::make('unit_name')
-                                                    ->label(__('UNIT'))
-                                                    ->columnSpan(1),
-
-                                                TextEntry::make('unit_ratio')
-                                                    ->label(__('RATIO'))
-                                                    ->numeric()
-                                                    ->columnSpan(1),
-
-                                                TextEntry::make('qty')
-                                                    ->label(__('QTY'))
-                                                    ->numeric()
-                                                    ->columnSpan(1),
-
-                                                TextEntry::make('base_qty')
-                                                    ->label(__('BASE UNITS'))
-                                                    ->numeric()
-                                                    ->columnSpan(1),
-
-                                                TextEntry::make('unit_sale_price_snapshot')
-                                                    ->label(__('SALE PRICE'))
-                                                    ->numeric(decimalPlaces: 4)
-                                                    ->prefix('₱')
-                                                    ->columnSpan(1),
-
-                                                TextEntry::make('line_total')
-                                                    ->label(__('LINE TOTAL'))
-                                                    ->state(fn ($record) => $record->base_qty * $record->unit_sale_price_snapshot)
-                                                    ->numeric(decimalPlaces: 4)
-                                                    ->prefix('₱')
-                                                    ->weight(FontWeight::Bold)
-                                                    ->columnSpan(1),
-
-                                                TextEntry::make('notes')
-                                                    ->label(__('LINE NOTES'))
-                                                    ->columnSpan(2),
-                                            ]),
-                                    ]),
-                            ])
-                            ->columnSpanFull(),
+                                Grid::make(['default' => 1, 'md' => 3, 'xl' => 6])->schema([
+                                    TextEntry::make('productVariant.sku')->label(__('resources.sales_orders.fields.sku'))->weight(FontWeight::Bold)
+                                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+                                    TextEntry::make('productVariant.name')->label(__('resources.sales_orders.fields.product'))
+                                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 2]),
+                                    TextEntry::make('base_qty')->label(__('resources.sales_orders.fields.ordered_base'))->numeric()
+                                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+                                    TextEntry::make('dispatched_base_qty')->label(__('resources.sales_orders.fields.dispatched_base'))->numeric()
+                                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+                                    TextEntry::make('unit_sale_price_snapshot')->label(__('resources.sales_orders.fields.snapshot_price'))
+                                        ->money(config('app.currency'), decimals: 4)
+                                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+                                ]),
+                            ]),
                     ]),
-            ]);
+            ]),
+        ]);
     }
 }

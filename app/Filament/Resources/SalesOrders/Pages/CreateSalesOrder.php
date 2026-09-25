@@ -4,53 +4,60 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\SalesOrders\Pages;
 
-use App\Enums\SalesOrderStatus;
 use App\Filament\Resources\SalesOrders\SalesOrderResource;
 use App\Filament\Resources\SalesOrders\Schemas\SalesOrderForm;
+use Filament\Forms\Components\Placeholder;
 use Filament\Resources\Pages\CreateRecord;
+use Filament\Resources\Pages\CreateRecord\Concerns\HasWizard;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
-use Override;
+use Filament\Support\Enums\Width;
+use Filament\Support\Icons\Heroicon;
 
 class CreateSalesOrder extends CreateRecord
 {
-    use CreateRecord\Concerns\HasWizard;
+    use HasWizard;
 
     protected static string $resource = SalesOrderResource::class;
 
-    protected ?string $heading = 'CREATE SALES ORDER';
+    public function getMaxContentWidth(): ?string
+    {
+        return Width::SevenExtraLarge->value;
+    }
 
-    protected ?string $subheading = '3-step wizard: customer & warehouse, line items, review';
-
-    public function getSteps(): array
+    protected function getSteps(): array
     {
         return [
-            Step::make('Customer & Warehouse')
-                ->description('Select customer and dispatch warehouse')
-                ->schema(SalesOrderForm::getRoutingSchema()),
+            Step::make(__('resources.sales_orders.steps.customer_warehouse'))
+                ->description(__('resources.sales_orders.steps.customer_warehouse_description'))
+                ->icon(Heroicon::UserGroup)
+                ->schema(SalesOrderForm::getCustomerWarehouseFields()),
 
-            Step::make('Line Items')
-                ->description('Add sales order lines with variants, quantities, and price preview')
-                ->schema(SalesOrderForm::getItemsSchema()),
+            Step::make(__('resources.sales_orders.steps.line_items'))
+                ->description(__('resources.sales_orders.steps.line_items_description'))
+                ->icon(Heroicon::ClipboardDocumentList)
+                ->schema(SalesOrderForm::getLineItemsFields()),
 
-            Step::make('Review & Confirm')
-                ->description('Verify all details before creating the sales order')
-                ->schema(SalesOrderForm::getReviewSchema()),
+            Step::make(__('resources.sales_orders.steps.review_verify'))
+                ->description(__('resources.sales_orders.steps.review_verify_description'))
+                ->icon(Heroicon::CheckCircle)
+                ->schema([
+                    Placeholder::make('review_summary')
+                        ->columnSpanFull()
+                        ->content(fn (Get $get) => view(
+                            'filament.wizards.sales-order-review',
+                            ['state' => $get()],
+                        )),
+                ]),
         ];
     }
 
-    #[Override]
-    public function mutateFormDataBeforeCreate(array $data): array
+    protected function mutateFormDataBeforeCreate(array $data): array
     {
-        $data['reference_code'] = 'SO-'.date('Ymd').'-'.mb_strtoupper(uniqid());
-        $data['status'] = SalesOrderStatus::Draft->value;
-        $data['ordered_by'] = auth()->user()->id;
-        $data['ordered_at'] = now();
+        $data['reference_code'] = $data['reference_code']
+            ?? 'SO-'.now()->format('YmdHis').'-'.random_int(100, 999);
+        $data['ordered_by'] = auth()->id();
 
-        return parent::mutateFormDataBeforeCreate($data);
-    }
-
-    protected function getRedirectUrl(): string
-    {
-        return $this->getResource()::getUrl('index');
+        return $data;
     }
 }

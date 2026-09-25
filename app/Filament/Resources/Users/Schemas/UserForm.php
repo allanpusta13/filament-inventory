@@ -4,59 +4,58 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Users\Schemas;
 
-use App\Enums\UserRole;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 
-final class UserForm
+class UserForm
 {
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('USER CREDENTIALS & RBAC SCOPE')
-                ->icon(Heroicon::User)
-                ->columns(2)
+            TextInput::make('name')
+                ->label(__('resources.users.fields.name'))
+                ->prefixIcon(Heroicon::User)
+                ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2])
+                ->required()->maxLength(255),
+
+            TextInput::make('email')
+                ->label(__('resources.users.fields.email'))
+                ->prefixIcon(Heroicon::Envelope)
+                ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2])
+                ->email()->required()->unique(ignoreRecord: true),
+
+            TextInput::make('password')
+                ->label(__('resources.users.fields.password'))
+                ->prefixIcon(Heroicon::Key)
+                ->password()->revealable()
+                ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
+                ->dehydrated(fn ($state) => filled($state))
+                ->required(fn (string $operation) => $operation === 'create'),
+
+            Select::make('role')
+                ->label(__('resources.users.fields.role'))
+                ->prefixIcon(Heroicon::ShieldCheck)
+                ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
+                ->options(\App\Enums\UserRole::class)
+                ->required(),
+
+            Select::make('warehouses')
+                ->label(__('resources.users.fields.warehouses'))
+                ->relationship('warehouses', 'name')
+                ->prefixIcon(Heroicon::BuildingOffice)
+                ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2])
+                ->multiple()->searchable()->preload()
+                ->helperText(__('resources.users.help.warehouses')),
+
+            Toggle::make('is_active')
+                ->label(__('resources.users.fields.is_active'))
+                ->onIcon(Heroicon::CheckCircle)
+                ->offIcon(Heroicon::XCircle)
                 ->columnSpanFull()
-                ->schema([
-                    TextInput::make('name')
-                        ->label('FULL NAME')
-                        ->required()
-                        ->maxLength(255)
-                        ->placeholder('Jane Doe'),
-
-                    TextInput::make('email')
-                        ->label('EMAIL ADDRESS')
-                        ->email()
-                        ->required()
-                        ->maxLength(255)
-                        ->unique(ignorable: fn ($record) => $record)
-                        ->placeholder('jane.doe@inventory.com'),
-
-                    TextInput::make('password')
-                        ->label('PASSWORD')
-                        ->password()
-                        ->required(fn ($operation) => $operation === 'create')
-                        ->dehydrated(fn ($state) => filled($state))
-                        ->maxLength(255),
-
-                    Select::make('role')
-                        ->label('SYSTEM ACCESS ROLE')
-                        ->options(UserRole::class)
-                        ->required()
-                        ->default(UserRole::WAREHOUSE_STAFF)
-                        ->searchable(),
-
-                    Select::make('warehouses')
-                        ->label('AUTHORIZED PHYSICAL WAREHOUSES')
-                        ->multiple()
-                        ->relationship('warehouses', 'name')
-                        ->preload()
-                        ->searchable()
-                        ->columnSpanFull(),
-                ]),
+                ->default(true),
         ]);
     }
 }

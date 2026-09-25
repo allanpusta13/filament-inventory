@@ -15,13 +15,10 @@ class Supplier extends Model
 
     protected $fillable = ['name', 'contact_person', 'phone', 'email', 'address', 'is_active'];
 
+    protected $casts = ['is_active' => 'boolean'];
+
     public function purchaseOrders(): HasMany
     {
         return $this->hasMany(PurchaseOrder::class);
-    }
-
-    protected function casts(): array
-    {
-        return ['is_active' => 'boolean'];
     }
 }

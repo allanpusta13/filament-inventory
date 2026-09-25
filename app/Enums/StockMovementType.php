@@ -12,14 +12,11 @@ use Filament\Support\Icons\Heroicon;
 
 enum StockMovementType: string implements HasColor, HasIcon, HasLabel
 {
-    case Receive = 'receive';
-    case Ship = 'ship';
+    case Adjustment = 'adjustment';
     case TransferOut = 'transfer_out';
     case TransferIn = 'transfer_in';
-    case TransitOut = 'transit_out';
-    case TransitIn = 'transit_in';
-    case Adjustment = 'adjustment';
     case Loss = 'loss';
+    case Damage = 'damage';
     case Purchase = 'purchase';
     case Sale = 'sale';
     case SaleReturn = 'sale_return';
@@ -28,18 +25,15 @@ enum StockMovementType: string implements HasColor, HasIcon, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Receive => __('Receive'),
-            self::Ship => __('Ship'),
-            self::TransferOut => __('Transfer out'),
-            self::TransferIn => __('Transfer in'),
-            self::TransitOut => __('Transit out'),
-            self::TransitIn => __('Transit in'),
-            self::Adjustment => __('Adjustment'),
-            self::Loss => __('Loss'),
-            self::Purchase => __('Purchase'),
-            self::Sale => __('Sale'),
-            self::SaleReturn => __('Sale return'),
-            self::PurchaseReturn => __('Purchase return'),
+            self::Adjustment => __('enums.stock_movement_type.adjustment'),
+            self::TransferOut => __('enums.stock_movement_type.transfer_out'),
+            self::TransferIn => __('enums.stock_movement_type.transfer_in'),
+            self::Loss => __('enums.stock_movement_type.loss'),
+            self::Damage => __('enums.stock_movement_type.damage'),
+            self::Purchase => __('enums.stock_movement_type.purchase'),
+            self::Sale => __('enums.stock_movement_type.sale'),
+            self::SaleReturn => __('enums.stock_movement_type.sale_return'),
+            self::PurchaseReturn => __('enums.stock_movement_type.purchase_return'),
         };
     }
 
@@ -54,43 +48,23 @@ enum StockMovementType: string implements HasColor, HasIcon, HasLabel
         };
     }
 
+    public function isPositive(): bool
+    {
+        return in_array($this, [self::TransferIn, self::Purchase, self::SaleReturn], true);
+    }
+
     public function getIcon(): string|BackedEnum|null
     {
         return match ($this) {
-            self::Receive => Heroicon::ArrowDownTray,
-            self::Ship => Heroicon::ArrowUpTray,
-            self::TransferOut => Heroicon::ArrowUpOnSquare,
-            self::TransferIn => Heroicon::ArrowDownOnSquare,
-            self::TransitOut => Heroicon::Truck,
-            self::TransitIn => Heroicon::Truck,
             self::Adjustment => Heroicon::AdjustmentsHorizontal,
+            self::TransferOut => Heroicon::ArrowRightOnRectangle,
+            self::TransferIn => Heroicon::ArrowLeftOnRectangle,
             self::Loss => Heroicon::ExclamationTriangle,
+            self::Damage => Heroicon::Fire,
             self::Purchase => Heroicon::ShoppingCart,
-            self::Sale => Heroicon::Truck,
+            self::Sale => Heroicon::CurrencyDollar,
             self::SaleReturn => Heroicon::ArrowUturnLeft,
-            self::PurchaseReturn => Heroicon::ArrowUturnLeft,
+            self::PurchaseReturn => Heroicon::ArrowUturnRight,
         };
-    }
-
-    public function isInbound(): bool
-    {
-        return in_array($this, [
-            self::Receive,
-            self::TransferIn,
-            self::TransitIn,
-            self::Purchase,
-            self::SaleReturn,
-        ], true);
-    }
-
-    public function isOutbound(): bool
-    {
-        return in_array($this, [
-            self::Ship,
-            self::TransferOut,
-            self::TransitOut,
-            self::Sale,
-            self::Loss,
-        ], true);
     }
 }

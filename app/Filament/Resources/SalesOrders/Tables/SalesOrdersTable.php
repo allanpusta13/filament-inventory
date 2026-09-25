@@ -5,22 +5,18 @@ declare(strict_types=1);
 namespace App\Filament\Resources\SalesOrders\Tables;
 
 use App\Enums\SalesOrderStatus;
-use App\Filament\Support\Filters\AdminReviewFilters;
 use App\Models\SalesOrder;
 use Filament\Actions\Action;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\ForceDeleteAction;
-use Filament\Actions\ForceDeleteBulkAction;
-use Filament\Actions\RestoreAction;
-use Filament\Actions\RestoreBulkAction;
-use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
+use Filament\Support\Enums\FontWeight;
+use Filament\Support\Enums\Width;
+use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Columns\Layout\Split;
+use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
 class SalesOrdersTable
@@ -29,167 +25,118 @@ class SalesOrdersTable
     {
         return $table
             ->columns([
-                TextColumn::make('reference_code')
-                    ->label(__('REFERENCE'))
-                    ->searchable()
-                    ->sortable()
-                    ->copyable()
-                    ->weight(\Filament\Support\Enums\FontWeight::Bold)
-                    ->color('primary'),
+                Stack::make([
+                    Split::make([
+                        TextColumn::make('reference_code')
+                            ->label(__('resources.sales_orders.table.reference'))
+                            ->fontFamily('mono')
+                            ->weight(FontWeight::Bold)
+                            ->searchable()->sortable()->copyable(),
 
-                TextColumn::make('customer.name')
-                    ->label(__('CUSTOMER'))
-                    ->searchable()
-                    ->sortable(),
+                        TextColumn::make('status')
+                            ->badge()->alignEnd()->sortable(),
+                    ])->from('md'),
 
-                TextColumn::make('warehouse.name')
-                    ->label(__('WAREHOUSE'))
-                    ->searchable()
-                    ->sortable(),
+                    Split::make([
+                        TextColumn::make('customer.name')
+                            ->label(__('resources.sales_orders.table.customer'))
+                            ->icon(Heroicon::UserGroup)->iconColor('gray')
+                            ->searchable()->sortable(),
 
-                TextColumn::make('status')
-                    ->label(__('STATUS'))
-                    ->badge()
-                    ->color(fn (SalesOrderStatus $state): string => match ($state) {
-                        SalesOrderStatus::Draft => 'gray',
-                        SalesOrderStatus::Confirmed => 'primary',
-                        SalesOrderStatus::PartiallyDispatched => 'warning',
-                        SalesOrderStatus::Dispatched => 'info',
-                        SalesOrderStatus::Completed => 'success',
-                        SalesOrderStatus::Cancelled => 'gray',
-                    })
-                    ->searchable(),
+                        TextColumn::make('warehouse.name')
+                            ->label(__('resources.sales_orders.table.warehouse'))
+                            ->icon(Heroicon::BuildingOffice2)->iconColor('gray')
+                            ->sortable(),
+                    ])->from('md'),
 
-                TextColumn::make('ordered_by')
-                    ->label(__('ORDERED BY'))
-                    ->numeric()
-                    ->sortable(),
+                    Split::make([
+                        TextColumn::make('items_count')
+                            ->label(__('resources.sales_orders.table.items'))->counts('items')->badge()->color('gray')->numeric(),
 
-                TextColumn::make('confirmed_by')
-                    ->label(__('CONFIRMED BY'))
-                    ->numeric()
-                    ->sortable(),
+                        TextColumn::make('confirmed_at')
+                            ->label(__('resources.sales_orders.table.confirmed'))->dateTime('M j, Y')->sortable()
+                            ->placeholder('—')->visibleFrom('md'),
 
-                TextColumn::make('dispatched_by')
-                    ->label(__('DISPATCHED BY'))
-                    ->numeric()
-                    ->sortable(),
-
-                TextColumn::make('ordered_at')
-                    ->label(__('ORDERED AT'))
-                    ->dateTime()
-                    ->sortable(),
-
-                TextColumn::make('confirmed_at')
-                    ->label(__('CONFIRMED AT'))
-                    ->dateTime()
-                    ->sortable(),
-
-                TextColumn::make('dispatched_at')
-                    ->label(__('DISPATCHED AT'))
-                    ->dateTime()
-                    ->sortable(),
-
-                TextColumn::make('cancelled_at')
-                    ->label(__('CANCELLED AT'))
-                    ->dateTime()
-                    ->sortable(),
-
-                TextColumn::make('deleted_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                        TextColumn::make('dispatched_at')
+                            ->label(__('resources.sales_orders.table.dispatched'))->dateTime('M j, Y')->sortable()
+                            ->placeholder('—')->alignEnd(),
+                    ])->from('lg'),
+                ])->space(3),
+            ])
+            ->contentGrid([
+                'md' => 2,
+                'xl' => 3,
+            ])
+            ->filters([
+                \Filament\Tables\Filters\SelectFilter::make('status')->options(SalesOrderStatus::class),
+                \Filament\Tables\Filters\SelectFilter::make('customer_id')->relationship('customer', 'name')->label(__('resources.sales_orders.filters.customer'))->searchable(),
+                \Filament\Tables\Filters\SelectFilter::make('warehouse_id')->relationship('warehouse', 'name')->label(__('resources.sales_orders.filters.warehouse'))->searchable(),
+                \Filament\Tables\Filters\TrashedFilter::make(),
+                \App\Filament\Support\Filters\AdminReviewFilters::period('confirmed_at')
+                    ->authorize('viewAuditFilters'),
             ])
             ->defaultSort('created_at', 'desc')
-            ->filters([
-                SelectFilter::make('status')
-                    ->options(SalesOrderStatus::class)
-                    ->label(__('STATUS')),
-
-                SelectFilter::make('customer_id')
-                    ->relationship('customer', 'name')
-                    ->searchable()
-                    ->preload()
-                    ->label(__('CUSTOMER')),
-
-                SelectFilter::make('warehouse_id')
-                    ->relationship('warehouse', 'name')
-                    ->searchable()
-                    ->preload()
-                    ->label(__('WAREHOUSE')),
-
-                TrashedFilter::make(),
-
-                // [Added v11.1] Admin/Auditor-only cross-warehouse review period filter.
-                AdminReviewFilters::period('confirmed_at')
-                    ->visible(fn (): bool => auth()->user()?->can('viewAdminReview', SalesOrder::class) ?? false),
-            ])
+            ->defaultPaginationPageOption(12)
+            ->paginated([12, 24, 48])
+            ->recordUrl(fn (SalesOrder $record) => $record->getUrl('view'))
             ->recordActions([
-                ViewAction::make()
-                    ->modalWidth(\Filament\Support\Enums\Width::SevenExtraLarge),
+                \Filament\Actions\ViewAction::make(),
 
-                EditAction::make()
-                    ->visible(fn (SalesOrder $record): bool => $record->status === SalesOrderStatus::Draft)
-                    ->modalWidth(\Filament\Support\Enums\Width::SevenExtraLarge),
+                \Filament\Actions\EditAction::make()
+                    ->icon(Heroicon::PencilSquare)
+                    ->visible(fn (SalesOrder $record) => $record->status === SalesOrderStatus::Draft)
+                    ->modalWidth(Width::Large),
 
                 Action::make('confirmSalesOrder')
-                    ->label(__('CONFIRM'))
-                    ->icon(\Filament\Support\Icons\Heroicon::CheckCircle)
+                    ->label(__('resources.sales_orders.actions.confirm'))
+                    ->icon(Heroicon::CheckCircle)
                     ->color('primary')
                     ->authorize('confirmSalesOrder')
-                    ->visible(fn (SalesOrder $record): bool => $record->status === SalesOrderStatus::Draft)
+                    ->visible(fn (SalesOrder $record) => $record->status === SalesOrderStatus::Draft)
                     ->requiresConfirmation()
-                    ->action(function (SalesOrder $record) {
-                        app(\App\Services\SalesService::class)->confirmSalesOrder($record);
-                        Notification::make()
-                            ->title(__('Sales order confirmed'))
-                            ->success()
-                            ->send();
-                    }),
+                    ->action(fn (SalesOrder $record) => app(\App\Services\SalesService::class)->confirmSalesOrder($record)),
 
                 Action::make('dispatchSale')
-                    ->label(__('DISPATCH'))
-                    ->icon(\Filament\Support\Icons\Heroicon::Truck)
+                    ->label(__('resources.sales_orders.actions.dispatch'))
+                    ->icon(Heroicon::Truck)
                     ->color('success')
                     ->authorize('dispatchSale')
-                    ->visible(fn (SalesOrder $record): bool => in_array($record->status, [
+                    ->visible(fn (SalesOrder $record) => in_array($record->status, [
                         SalesOrderStatus::Confirmed,
                         SalesOrderStatus::PartiallyDispatched,
-                    ]))
-                    ->modalWidth(\Filament\Support\Enums\Width::FourExtraLarge)
+                    ], true))
+                    ->modalWidth(Width::FourExtraLarge)
                     ->schema(function (SalesOrder $record) {
-                        $variantIds = $record->items->pluck('product_variant_id')->all();
-                        $availableByVariant = \App\Models\ProductVariant::batchAvailableQuantity($variantIds, $record->warehouse_id);
+                        $variantIds = $record->items->pluck('product_variant_id')->unique()->all();
+
+                        // Exclude this order's own reservation.
+                        $availableByVariant = \App\Models\ProductVariant::batchAvailableQuantity(
+                            $variantIds,
+                            $record->warehouse_id,
+                            $record->id,
+                        );
 
                         return collect($record->items)
                             ->map(function ($item) use ($availableByVariant) {
                                 $available = $availableByVariant[$item->product_variant_id] ?? 0;
                                 $safeMax = min($item->outstandingBaseQty(), max(0, $available));
 
-                                return \Filament\Forms\Components\TextInput::make("dispatch.{$item->id}")
-                                    ->label(__(':sku — outstanding :outstanding :unit (available: :available)', [
-                                        'sku' => $item->productVariant->sku,
-                                        'outstanding' => $item->outstandingBaseQty(),
-                                        'unit' => $item->unit_name,
-                                        'available' => $available,
-                                    ]))
+                                $helperText = null;
+                                if ($available === 0) {
+                                    $helperText = __('resources.sales_orders.help.no_stock');
+                                } elseif ($available < $item->outstandingBaseQty()) {
+                                    $helperText = __('resources.sales_orders.help.insufficient_stock');
+                                }
+
+                                return TextInput::make("dispatch.{$item->id}")
+                                    ->label("{$item->productVariant->sku} — outstanding {$item->outstandingBaseQty()} {$item->unit_name} (available: {$available})")
+                                    ->prefixIcon(Heroicon::Truck)
+                                    ->columnSpan(['default' => 1, 'md' => 1])
                                     ->numeric()
                                     ->minValue(0)
                                     ->maxValue($safeMax)
                                     ->default($safeMax)
-                                    ->helperText($available < $item->outstandingBaseQty()
-                                        ? __('Insufficient stock for full dispatch — partial dispatch only.')
-                                        : null);
+                                    ->helperText($helperText);
                             })
                             ->all();
                     })
@@ -200,118 +147,72 @@ class SalesOrdersTable
                             ->all();
 
                         app(\App\Services\SalesService::class)->dispatchSale($record->id, $dispatch);
-
-                        Notification::make()
-                            ->title(__('Sales order dispatched'))
-                            ->success()
-                            ->send();
-                    }),
+                        Notification::make()->title(__('resources.sales_orders.notifications.dispatched'))->success()->send();
+                    })
+                    ->requiresConfirmation(),
 
                 Action::make('recordReturn')
-                    ->label(__('RECORD RETURN'))
-                    ->icon(\Filament\Support\Icons\Heroicon::ArrowUturnLeft)
+                    ->label(__('resources.sales_orders.actions.return'))
+                    ->icon(Heroicon::ArrowUturnLeft)
                     ->color('warning')
-                    ->authorize('recordReturn')
-                    ->visible(fn (SalesOrder $record): bool => in_array($record->status, [
-                        SalesOrderStatus::Dispatched,
-                        SalesOrderStatus::Completed,
-                    ]))
-                    ->modalWidth(\Filament\Support\Enums\Width::SevenExtraLarge)
+                    ->authorize('recordSalesReturn')
+                    ->visible(fn (SalesOrder $record) => $record->items->contains(fn ($item) => $item->dispatched_base_qty > 0))
+                    ->modalWidth(Width::Large)
                     ->schema([
-                        \Filament\Forms\Components\Repeater::make('items')
-                            ->label(__('RETURN LINES'))
-                            ->schema([
-                                \Filament\Schemas\Components\Grid::make(5)->schema([
-                                    \Filament\Forms\Components\Select::make('item_id')
-                                        ->label(__('LINE'))
-                                        ->options(fn (SalesOrder $record) => $record->items->pluck('productVariant.sku', 'id')->toArray())
-                                        ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->productVariant->sku} — {$record->productVariant->name}")
-                                        ->required()
-                                        ->searchable()
-                                        ->preload()
-                                        ->columnSpan(2),
+                        Select::make('sales_order_item_id')
+                            ->label(__('resources.sales_orders.fields.line_item'))
+                            ->prefixIcon(Heroicon::ClipboardDocumentList)
+                            ->columnSpan(['default' => 1, 'md' => 1])
+                            ->options(fn (SalesOrder $record) => $record->items
+                                ->where('dispatched_base_qty', '>', 0)
+                                ->mapWithKeys(fn ($item) => [
+                                    $item->id => "{$item->productVariant->sku} (dispatched: {$item->dispatched_base_qty}, already returned: {$item->alreadyReturnedBaseQty()})",
+                                ]))
+                            ->required()
+                            ->live(),
 
-                                    \Filament\Forms\Components\TextInput::make('return_base_qty')
-                                        ->label(__('RETURN BASE QTY'))
-                                        ->required()
-                                        ->numeric()
-                                        ->minValue(1)
-                                        ->columnSpan(1),
+                        TextInput::make('returned_base_qty')
+                            ->label(__('resources.sales_orders.fields.returned_qty_base'))
+                            ->prefixIcon(Heroicon::Hashtag)
+                            ->columnSpan(['default' => 1, 'md' => 1])
+                            ->numeric()
+                            ->minValue(1)
+                            ->maxValue(function (\Filament\Schemas\Components\Utilities\Get $get, SalesOrder $record) {
+                                $itemId = $get('sales_order_item_id');
+                                if (! $itemId) {
+                                    return null;
+                                }
+                                $item = $record->items->firstWhere('id', (int) $itemId);
 
-                                    \Filament\Forms\Components\Select::make('unit_name')
-                                        ->label(__('UNIT'))
-                                        ->options(fn (SalesOrder $record) => $record->items->pluck('unit_name', 'id')->toArray())
-                                        ->required()
-                                        ->columnSpan(1),
+                                return $item ? ($item->dispatched_base_qty - $item->alreadyReturnedBaseQty()) : null;
+                            })
+                            ->required(),
 
-                                    \Filament\Forms\Components\TextInput::make('unit_ratio')
-                                        ->label(__('RATIO'))
-                                        ->required()
-                                        ->numeric()
-                                        ->minValue(1)
-                                        ->default(1)
-                                        ->columnSpan(1),
-
-                                    \Filament\Forms\Components\Textarea::make('notes')
-                                        ->label(__('NOTES'))
-                                        ->columnSpanFull(),
-                                ]),
-                            ])
-                            ->columns(5)
-                            ->defaultItems(0)
-                            ->addActionLabel(__('ADD RETURN LINE')),
+                        Textarea::make('notes')
+                            ->prefixIcon(Heroicon::ChatBubbleBottomCenterText)
+                            ->columnSpanFull(),
                     ])
-                    ->action(function (array $data, SalesOrder $record) {
-                        app(\App\Services\SalesService::class)->recordReturn($record, $data['items']);
-                        Notification::make()
-                            ->title(__('Sales return recorded'))
-                            ->success()
-                            ->send();
-                    }),
+                    ->action(function (array $data) {
+                        app(\App\Services\SalesService::class)->recordSalesReturn(
+                            (int) $data['sales_order_item_id'],
+                            (int) $data['returned_base_qty'],
+                            $data['notes'] ?? null,
+                        );
+                        Notification::make()->title(__('resources.sales_orders.notifications.return_recorded'))->success()->send();
+                    })
+                    ->requiresConfirmation(),
 
                 Action::make('cancelSalesOrder')
-                    ->label(__('CANCEL'))
-                    ->icon(\Filament\Support\Icons\Heroicon::XCircle)
+                    ->label(__('resources.sales_orders.actions.cancel'))
+                    ->icon(Heroicon::XMark)
                     ->color('danger')
                     ->authorize('cancelSalesOrder')
-                    ->visible(fn (SalesOrder $record): bool => in_array($record->status, [
+                    ->visible(fn (SalesOrder $record) => in_array($record->status, [
                         SalesOrderStatus::Draft,
                         SalesOrderStatus::Confirmed,
-                        SalesOrderStatus::PartiallyDispatched,
-                    ]))
+                    ], true))
                     ->requiresConfirmation()
-                    ->action(function (SalesOrder $record) {
-                        app(\App\Services\SalesService::class)->cancelSalesOrder($record);
-                        Notification::make()
-                            ->title(__('Sales order cancelled'))
-                            ->success()
-                            ->send();
-                    }),
-
-                DeleteAction::make()
-                    ->authorize('delete')
-                    ->visible(fn (SalesOrder $record): bool => in_array($record->status, [
-                        SalesOrderStatus::Draft,
-                        SalesOrderStatus::Cancelled,
-                    ])),
-
-                RestoreAction::make()
-                    ->authorize('restore'),
-
-                ForceDeleteAction::make()
-                    ->authorize('forceDelete'),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make()
-                        ->authorize('deleteAny'),
-
-                    RestoreBulkAction::make()
-                        ->authorize('restoreAny'),
-
-                    ForceDeleteBulkAction::make()
-                        ->authorize('forceDeleteAny'),
-                ]),
+                    ->action(fn (SalesOrder $record) => app(\App\Services\SalesService::class)->cancelSalesOrder($record)),
             ]);
     }
 }

@@ -40,7 +40,25 @@ class RecentMovementsWidget extends ChartWidget
             ];
         }
 
-        $firstWarehouseId = optional($user->warehouses->first())?->id;
+        $warehouseIds = $user->warehouses->pluck('id')->toArray();
+
+        if (empty($warehouseIds)) {
+            return [
+                'labels' => [],
+                'datasets' => [
+                    [
+                        'label' => 'Movement Count',
+                        'data' => [],
+                        'borderColor' => 'rgb(59, 130, 246)',
+                        'backgroundColor' => 'rgba(59, 130, 246, 0.1)',
+                        'fill' => true,
+                        'tension' => 0.3,
+                    ],
+                ],
+            ];
+        }
+
+        $firstWarehouseId = $user->warehouses->first()->id;
         $cacheKey = 'recent_movements_chart_'.$user->id.'_'.$firstWarehouseId;
 
         return Cache::remember($cacheKey, 60, function () use ($user) {

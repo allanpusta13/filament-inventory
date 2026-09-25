@@ -8,13 +8,11 @@ use App\Enums\StockMovementType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class StockMovement extends Model
 {
-    use HasFactory;
-    use SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'product_variant_id',
@@ -30,9 +28,15 @@ class StockMovement extends Model
         'created_by',
     ];
 
+    protected $casts = [
+        'type' => StockMovementType::class,
+        'quantity' => 'integer',
+        'unit_ratio_used' => 'integer',
+    ];
+
     public function productVariant(): BelongsTo
     {
-        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
+        return $this->belongsTo(ProductVariant::class);
     }
 
     public function warehouse(): BelongsTo
@@ -40,42 +44,13 @@ class StockMovement extends Model
         return $this->belongsTo(Warehouse::class);
     }
 
-    public function relatedMovement(): BelongsTo
-    {
-        return $this->belongsTo(self::class, 'related_movement_id');
-    }
-
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /**
-     * Polymorphic source. reference_id is a string column (not the default
-     * unsignedBigInteger) so it can hold both autoincrement and UUID/ULID keys —
-     * MorphTo still resolves correctly since Eloquent casts the key at query time.
-     */
-    public function reference(): MorphTo
+    public function relatedMovement(): BelongsTo
     {
-        return $this->morphTo();
-    }
-
-    protected static function booted(): void
-    {
-        static::deleting(function (self $model) {
-            if (! $model->isForceDeleting()) {
-                self::where('related_movement_id', $model->id)
-                    ->update(['related_movement_id' => null]);
-            }
-        });
-    }
-
-    protected function casts(): array
-    {
-        return [
-            'type' => StockMovementType::class,
-            'quantity' => 'integer',
-            'unit_ratio_used' => 'integer',
-        ];
+        return $this->belongsTo(self::class, 'related_movement_id');
     }
 }

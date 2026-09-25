@@ -22,19 +22,34 @@ class TransferRequisitionItemFactory extends Factory
     public function definition(): array
     {
         $qty = fake()->numberBetween(1, 20);
-        $ratio = 24;
 
         return [
             'transfer_requisition_id' => TransferRequisition::factory(),
             'product_variant_id' => ProductVariant::factory(),
             'requested_unit_name' => 'Box',
-            'requested_unit_ratio' => $ratio,
+            'requested_unit_ratio' => 24,
             'requested_qty' => $qty,
-            'requested_base_qty' => $qty * $ratio,
+            'requested_base_qty' => $qty * 24,
             'shipped_base_qty' => 0,
             'received_good_base_qty' => 0,
             'received_damaged_base_qty' => 0,
         ];
+    }
+
+    public function configure(): static
+    {
+        return $this->afterCreating(function (TransferRequisitionItem $item) {
+            $variant = $item->productVariant;
+            $unitConversion = $variant->unitConversions()->first();
+
+            if ($unitConversion && $unitConversion->unit_name !== 'Box') {
+                // Create Box unit conversion for the variant
+                \App\Models\ProductVariantUnitConversion::factory()
+                    ->forVariant($variant)
+                    ->box()
+                    ->create();
+            }
+        });
     }
 
     public function approved(): static

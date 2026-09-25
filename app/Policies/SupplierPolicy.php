@@ -11,35 +11,50 @@ class SupplierPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->isAdmin() || $user->isAuditor() || $user->isBranchManager() || $user->isWarehouseStaff();
+        return true;
     }
 
-    public function view(User $user, Supplier $supplier): bool
+    public function view(User $user, Supplier $s): bool
     {
-        return $user->isAdmin() || $user->isAuditor() || $user->isBranchManager() || $user->isWarehouseStaff();
+        return true;
     }
 
     public function create(User $user): bool
     {
-        return $user->isAdmin() || $user->isBranchManager() || $user->isWarehouseStaff();
+        return $user->isAdmin();
     }
 
-    public function update(User $user, Supplier $supplier): bool
-    {
-        return $user->isAdmin() || $user->isBranchManager() || $user->isWarehouseStaff();
-    }
-
-    public function delete(User $user, Supplier $supplier): bool
+    public function update(User $user, Supplier $s): bool
     {
         return $user->isAdmin();
     }
 
-    public function restore(User $user, Supplier $supplier): bool
+    public function delete(User $user, Supplier $s): bool
     {
-        return $user->isAdmin() || $user->isAuditor();
+        return $user->isAdmin();
     }
 
-    public function forceDelete(User $user, Supplier $supplier): bool
+    public function deleteAny(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function restore(User $user, Supplier $s): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function restoreAny(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function forceDelete(User $user, Supplier $s): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function forceDeleteAny(User $user): bool
     {
         return $user->isAdmin();
     }

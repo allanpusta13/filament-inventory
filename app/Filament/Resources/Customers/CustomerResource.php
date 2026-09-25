@@ -27,7 +27,9 @@ class CustomerResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'SALES';
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserGroup;
+
+    protected static string|BackedEnum|null $activeNavigationIcon = Heroicon::UserGroup;
 
     public static function getNavigationGroup(): string|UnitEnum|null
     {

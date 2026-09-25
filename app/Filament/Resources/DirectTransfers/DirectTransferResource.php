@@ -10,37 +10,28 @@ use App\Filament\Resources\DirectTransfers\Pages\ViewDirectTransfer;
 use App\Filament\Resources\DirectTransfers\Schemas\DirectTransferForm;
 use App\Filament\Resources\DirectTransfers\Schemas\DirectTransferInfolist;
 use App\Filament\Resources\DirectTransfers\Tables\DirectTransfersTable;
-use App\Models\StockMovement;
+use App\Models\DirectTransfer;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use UnitEnum;
 
 class DirectTransferResource extends Resource
 {
-    protected static ?string $model = StockMovement::class;
-
-    protected static ?string $navigationLabel = 'Direct Transfers';
+    protected static ?string $model = DirectTransfer::class;
 
     protected static string|UnitEnum|null $navigationGroup = 'OPERATIONS';
-
-    protected static BackedEnum|string|null $navigationIcon = Heroicon::ArrowPath;
 
     protected static ?int $navigationSort = 2;
 
     protected static ?string $recordTitleAttribute = 'reference_code';
 
-    public static function canViewAny(): bool
-    {
-        return auth()->user()?->isAdmin() ?? false;
-    }
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowPath;
 
-    public static function canCreate(): bool
-    {
-        return auth()->user()?->isAdmin() ?? false;
-    }
+    protected static string|BackedEnum|null $activeNavigationIcon = Heroicon::ArrowPath;
 
     public static function form(Schema $schema): Schema
     {
@@ -57,11 +48,18 @@ class DirectTransferResource extends Resource
         return DirectTransferInfolist::configure($schema);
     }
 
-    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->whereIn('type', [\App\Enums\StockMovementType::TransferOut, \App\Enums\StockMovementType::TransferIn])
-            ->with(['productVariant.product', 'warehouse', 'relatedMovement']);
+            ->with(['fromWarehouse', 'toWarehouse', 'transferredBy', 'items.productVariant'])
+            ->when(
+                ! auth()->user()->isAdmin() && ! auth()->user()->isAuditor(),
+                function (Builder $q) {
+                    $ids = auth()->user()->warehouses()->pluck('id')->all();
+                    $q->whereIn('from_warehouse_id', $ids)
+                        ->whereIn('to_warehouse_id', $ids);
+                }
+            );
     }
 
     public static function getPages(): array

@@ -4,84 +4,42 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\StockMovements\Schemas;
 
-use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 
 class StockMovementInfolist
 {
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            TextEntry::make('productVariant.sku')
-                ->label('SKU')
-                ->fontFamily('mono')
-                ->copyable(),
-
-            TextEntry::make('productVariant.name')
-                ->label('Variant Name'),
-
-            TextEntry::make('warehouse.name')
-                ->label('Warehouse'),
-
-            TextEntry::make('type')
-                ->label('Movement Type')
-                ->badge()
-                ->color(fn (string $state): string => match ($state) {
-                    'receive', 'transfer_in', 'transit_in' => 'success',
-                    'ship', 'transfer_out', 'transit_out' => 'info',
-                    'adjustment' => 'warning',
-                    'loss' => 'danger',
-                    default => 'gray',
-                }),
-
-            TextEntry::make('quantity')
-                ->label('Quantity (Base Units)')
-                ->numeric()
-                ->color(fn (int $state): string => $state < 0 ? 'danger' : 'success'),
-
-            TextEntry::make('unit_name_used')
-                ->label('Unit Name Used'),
-
-            TextEntry::make('unit_ratio_used')
-                ->label('Unit Ratio Used')
-                ->numeric(),
-
-            TextEntry::make('reference_code')
-                ->label('Reference Code')
-                ->copyable(),
-
-            TextEntry::make('reference_type')
-                ->label('Reference Type'),
-
-            TextEntry::make('reference_id')
-                ->label('Reference ID'),
-
-            TextEntry::make('relatedMovement.reference_code')
-                ->label('Related Movement')
-                ->placeholder('—'),
-
-            TextEntry::make('notes')
-                ->label('Notes')
-                ->columnSpanFull(),
-
-            TextEntry::make('createdBy.name')
-                ->label('Created By'),
-
-            TextEntry::make('created_at')
-                ->label('Created At')
-                ->dateTime('M d, Y H:i'),
-
-            TextEntry::make('updated_at')
-                ->label('Updated At')
-                ->dateTime('M d, Y H:i'),
-
-            IconEntry::make('createdBy.name')
-                ->label('Created By')
-                ->icon('heroicon-o-user-circle')
-                ->iconColor('primary')
-                ->size(IconEntry\IconEntrySize::Large)
-                ->extraAttributes(['aria-label' => 'Created by user']),
+            Grid::make(['default' => 1, 'md' => 2, 'xl' => 2])->schema([
+                Section::make('MOVEMENT')
+                    ->icon(Heroicon::QueueList)
+                    ->columnSpanFull()
+                    ->columns(['default' => 1, 'md' => 2, 'xl' => 2])
+                    ->schema([
+                        TextEntry::make('created_at')->label(__('resources.stock_movements.fields.timestamp'))->dateTime('M j, Y H:i')
+                            ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+                        TextEntry::make('type')->badge()
+                            ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+                        TextEntry::make('productVariant.sku')->label(__('resources.stock_movements.fields.sku'))
+                            ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+                        TextEntry::make('warehouse.name')->label(__('resources.stock_movements.fields.warehouse'))
+                            ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+                        TextEntry::make('quantity')->numeric()
+                            ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+                        TextEntry::make('unit_name_used')->label(__('resources.stock_movements.fields.unit'))
+                            ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+                        TextEntry::make('reference_code')->label(__('resources.stock_movements.fields.reference'))
+                            ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+                        TextEntry::make('createdBy.name')->label(__('resources.stock_movements.fields.by'))
+                            ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+                        TextEntry::make('notes')->columnSpanFull(),
+                    ]),
+            ]),
         ]);
     }
 }

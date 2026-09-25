@@ -21,30 +21,50 @@ class Warehouse extends Model
         'is_active',
     ];
 
-    public function stockMovements(): HasMany
-    {
-        return $this->hasMany(StockMovement::class);
-    }
-
-    public function outgoingTransfers(): HasMany
-    {
-        return $this->hasMany(TransferRequisition::class, 'from_warehouse_id');
-    }
-
-    public function incomingTransfers(): HasMany
-    {
-        return $this->hasMany(TransferRequisition::class, 'to_warehouse_id');
-    }
+    protected $casts = ['is_active' => 'boolean'];
 
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'user_warehouse');
     }
 
-    protected function casts(): array
+    public function stockMovements(): HasMany
     {
-        return [
-            'is_active' => 'boolean',
-        ];
+        return $this->hasMany(StockMovement::class);
+    }
+
+    public function transferRequisitionsFrom(): HasMany
+    {
+        return $this->hasMany(TransferRequisition::class, 'from_warehouse_id');
+    }
+
+    public function transferRequisitionsTo(): HasMany
+    {
+        return $this->hasMany(TransferRequisition::class, 'to_warehouse_id');
+    }
+
+    public function purchaseOrders(): HasMany
+    {
+        return $this->hasMany(PurchaseOrder::class);
+    }
+
+    public function salesOrders(): HasMany
+    {
+        return $this->hasMany(SalesOrder::class);
+    }
+
+    public function lossLedgers(): HasMany
+    {
+        return $this->hasMany(LossLedger::class);
+    }
+
+    public function directTransfersFrom(): HasMany
+    {
+        return $this->hasMany(DirectTransfer::class, 'from_warehouse_id');
+    }
+
+    public function directTransfersTo(): HasMany
+    {
+        return $this->hasMany(DirectTransfer::class, 'to_warehouse_id');
     }
 }

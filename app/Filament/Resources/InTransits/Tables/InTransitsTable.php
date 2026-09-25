@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace App\Filament\Resources\InTransits\Tables;
 
 use App\Enums\InTransitStatus;
-use Filament\Actions\Action;
-use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -18,68 +16,41 @@ class InTransitsTable
         return $table
             ->columns([
                 TextColumn::make('transferRequisition.reference_code')
-                    ->label('REQUISITION REF')
-                    ->weight(\Filament\Support\Enums\FontWeight::Bold)
-                    ->searchable(query: fn ($query, $search) => $query->whereHas('transferRequisition', fn ($q) => $q->where('reference_code', 'like', "%{$search}%")))
+                    ->label(__('resources.in_transits.table.requisition'))
+                    ->fontFamily('mono')
+                    ->weight('bold')
+                    ->searchable()
                     ->sortable()
-                    ->copyable()
-                    ->color('primary')
-                    ->getStateUsing(fn ($record) => $record->transferRequisition?->reference_code ?? '—'),
+                    ->copyable(),
 
                 TextColumn::make('productVariant.sku')
-                    ->label('SKU')
+                    ->label(__('resources.in_transits.table.sku'))
                     ->fontFamily('mono')
-                    ->copyable()
                     ->searchable()
                     ->sortable(),
-
-                TextColumn::make('productVariant.name')
-                    ->label('VARIANT NAME')
-                    ->searchable()
-                    ->sortable(),
-
-                TextColumn::make('status')
-                    ->label('TRANSIT STATUS')
-                    ->badge()
-                    ->color(fn ($state): string => match ($state) {
-                        'in_transit' => 'warning',
-                        'partially_received' => 'info',
-                        'cleared' => 'success',
-                        default => 'gray',
-                    }),
 
                 TextColumn::make('dispatched_base_qty')
-                    ->label('DISPATCHED (BASE)')
+                    ->label(__('resources.in_transits.table.dispatched'))
                     ->numeric()
+                    ->alignEnd()
                     ->sortable(),
 
                 TextColumn::make('dispatched_at')
-                    ->label('DISPATCHED AT')
-                    ->dateTime('M d, Y H:i')
-                    ->sortable(),
-
-                TextColumn::make('created_at')
-                    ->label('CREATED')
-                    ->dateTime('M d, Y')
+                    ->label(__('resources.in_transits.table.dispatched_at'))
+                    ->dateTime('M j, Y H:i')
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->visibleFrom('md'),
+
+                TextColumn::make('status')
+                    ->badge()
+                    ->sortable(),
+            ])
+            ->filters([
+                SelectFilter::make('status')->options(InTransitStatus::class),
             ])
             ->defaultSort('dispatched_at', 'desc')
-            ->filters([
-                SelectFilter::make('status')
-                    ->options(InTransitStatus::class)
-                    ->label('TRANSIT STATUS'),
-            ])
-            ->recordActions([
-                ViewAction::make(),
-
-                Action::make('scanToReceive')
-                    ->label('RECEIVE INTAKE')
-                    ->icon('heroicon-m-qr-code')
-                    ->color('success')
-                    ->authorize('receive')
-                    ->visible(fn ($record) => in_array($record->status, [InTransitStatus::InTransit, InTransitStatus::PartiallyReceived]))
-                    ->url(fn ($record) => route('stn.scan', ['transferRequisition' => $record->transfer_requisition_id])),
-            ]);
+            ->stackedOnMobile()
+            ->paginated([25, 50, 100])
+            ->defaultPaginationPageOption(50);
     }
 }

@@ -15,15 +15,13 @@ enum RevisionStatus: string implements HasColor, HasIcon, HasLabel
     case Pending = 'pending';
     case Accepted = 'accepted';
     case Rejected = 'rejected';
-    case Superseded = 'superseded'; // Countered by a later revision before a decision was made
 
     public function getLabel(): string
     {
         return match ($this) {
-            self::Pending => __('Pending'),
-            self::Accepted => __('Accepted'),
-            self::Rejected => __('Rejected'),
-            self::Superseded => __('Superseded'),
+            self::Pending => __('enums.revision_status.pending'),
+            self::Accepted => __('enums.revision_status.accepted'),
+            self::Rejected => __('enums.revision_status.rejected'),
         };
     }
 
@@ -33,7 +31,6 @@ enum RevisionStatus: string implements HasColor, HasIcon, HasLabel
             self::Pending => 'warning',
             self::Accepted => 'success',
             self::Rejected => 'danger',
-            self::Superseded => 'gray',
         };
     }
 
@@ -43,7 +40,6 @@ enum RevisionStatus: string implements HasColor, HasIcon, HasLabel
             self::Pending => Heroicon::Clock,
             self::Accepted => Heroicon::CheckCircle,
             self::Rejected => Heroicon::XCircle,
-            self::Superseded => Heroicon::ArrowPath,
         };
     }
 

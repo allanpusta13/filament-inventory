@@ -6,55 +6,49 @@ namespace App\Services;
 
 use App\Enums\SalesOrderStatus;
 use App\Enums\StockMovementType;
+use App\Models\ProductVariant;
 use App\Models\SalesOrder;
+use App\Models\SalesOrderItem;
 use App\Models\StockMovement;
+use App\Models\Warehouse;
+use DomainException;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class SalesService
 {
-    /**
-     * Confirm sales order - change status Draft to Confirmed
-     * This creates sales reservation (reservedForSalesQuantity)
-     */
-    public function confirmSalesOrder(SalesOrder $salesOrder): void
+    public function __construct(
+        private readonly GuardsOutstandingQuantity $guards,
+    ) {}
+
+    public function confirmSalesOrder(SalesOrder $order): void
     {
-        DB::transaction(function () use ($salesOrder) {
-            $salesOrder->loadMissing('items.productVariant');
+        DB::transaction(function () use ($order) {
+            $fresh = SalesOrder::lockForUpdate()->findOrFail($order->id);
 
-            if ($salesOrder->status !== SalesOrderStatus::Draft) {
-                throw ValidationException::withMessages([
-                    'status' => 'Only draft sales orders can be confirmed.',
-                ]);
+            if ($fresh->status !== SalesOrderStatus::Draft) {
+                throw new DomainException('Only draft sales orders can be confirmed.');
             }
 
-            if ($salesOrder->items->isEmpty()) {
-                throw ValidationException::withMessages([
-                    'items' => 'Cannot confirm sales order with no line items.',
-                ]);
+            $items = SalesOrderItem::where('sales_order_id', $fresh->id)
+                ->lockForUpdate()
+                ->get();
+
+            $variantIds = $items->pluck('product_variant_id')->unique()->values()->all();
+
+            $lockedVariants = ProductVariant::whereIn('id', $variantIds)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->with('currentPrice')
+                ->get()
+                ->keyBy('id');
+
+            foreach ($items as $item) {
+                $variant = $lockedVariants->get($item->product_variant_id);
+                $salePrice = (string) ($variant?->currentPrice?->sale_price ?? '0.0000');
+                $item->update(['unit_sale_price_snapshot' => $salePrice]);
             }
 
-            // Check available stock for each item
-            foreach ($salesOrder->items as $item) {
-                $available = $item->productVariant->availableQuantity($salesOrder->warehouse_id);
-                if ($available < $item->base_qty) {
-                    throw ValidationException::withMessages([
-                        "items.{$item->id}.qty" => "Insufficient available stock {$item->productVariant->sku}. Available: {$available}, Required: {$item->base_qty}",
-                    ]);
-                }
-            }
-
-            // Snapshot sale price at confirm time
-            foreach ($salesOrder->items as $item) {
-                $currentPrice = $item->productVariant->currentPrice;
-                if ($currentPrice) {
-                    $item->update([
-                        'unit_sale_price_snapshot' => $currentPrice->sale_price,
-                    ]);
-                }
-            }
-
-            $salesOrder->update([
+            $fresh->update([
                 'status' => SalesOrderStatus::Confirmed,
                 'confirmed_at' => now(),
             ]);
@@ -62,164 +56,138 @@ class SalesService
     }
 
     /**
-     * Dispatch sales order - process dispatch lines create stock movements
+     * @param  array<int, int>  $dispatchByItemId  item_id => base_qty_dispatched
      */
-    public function dispatchSale(SalesOrder $salesOrder, array $dispatchLines): void
+    public function dispatchSale(int $orderId, array $dispatchByItemId): void
     {
-        DB::transaction(function () use ($salesOrder, $dispatchLines) {
-            $salesOrder->loadMissing(['items.productVariant']);
+        DB::transaction(function () use ($orderId, $dispatchByItemId) {
+            $order = SalesOrder::lockForUpdate()->findOrFail($orderId);
 
-            if (! in_array($salesOrder->status, [
+            if (! in_array($order->status, [
                 SalesOrderStatus::Confirmed,
                 SalesOrderStatus::PartiallyDispatched,
-            ])) {
-                throw ValidationException::withMessages([
-                    'status' => 'Only confirmed or partially dispatched sales orders can be dispatched.',
-                ]);
+            ], true)) {
+                throw new DomainException('Sales order is not in a dispatchable state.');
             }
 
-            foreach ($dispatchLines as $line) {
-                $item = $salesOrder->items()->findOrFail($line['item_id']);
-                $dispatchedBaseQty = (int) $line['dispatched_base_qty'];
-                $unitName = $line['unit_name'];
-                $unitRatio = (int) $line['unit_ratio'];
+            $items = SalesOrderItem::where('sales_order_id', $order->id)
+                ->lockForUpdate()
+                ->get();
 
-                // Validate dispatch quantity does not exceed ordered quantity
-                if ($dispatchedBaseQty > $item->base_qty - $item->dispatched_base_qty) {
-                    throw ValidationException::withMessages([
-                        "items.{$item->id}.dispatched_base_qty" => "Dispatched quantity cannot exceed ordered quantity ({$item->base_qty} base units).",
-                    ]);
+            $variantIds = $items->pluck('product_variant_id')->unique()->values()->all();
+
+            if (! empty($variantIds)) {
+                ProductVariant::whereIn('id', $variantIds)
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get();
+            }
+
+            Warehouse::lockForUpdate()->findOrFail($order->warehouse_id);
+
+            // Exclude this order's own reservation so its outstanding qty
+            // does not count against its own availability.
+            $availableByVariant = ProductVariant::batchAvailableQuantity(
+                $variantIds,
+                $order->warehouse_id,
+                $order->id,
+            );
+
+            foreach ($items as $item) {
+                $dispatched = (int) ($dispatchByItemId[$item->id] ?? 0);
+                if ($dispatched <= 0) {
+                    continue;
                 }
 
-                // Check available stock before dispatch
-                // Use onHandQuantity because sales reservations were already accounted for at confirm time
-                // We only need to ensure physical stock exists to ship
-                $onHand = $item->productVariant->onHandQuantity($salesOrder->warehouse_id);
-                if ($onHand < $dispatchedBaseQty) {
-                    throw ValidationException::withMessages([
-                        "items.{$item->id}.dispatched_base_qty" => "Insufficient on-hand stock for {$item->productVariant->sku}. On-hand: {$onHand}, Requested: {$dispatchedBaseQty}",
-                    ]);
-                }
+                $this->guards->assertSaleNotOverDispatched($item, $dispatched);
 
-                $notes = $line['notes'] ?? null;
+                $available = $availableByVariant[$item->product_variant_id] ?? 0;
+                if ($dispatched > $available) {
+                    throw new DomainException(
+                        "Insufficient stock for variant {$item->product_variant_id}."
+                    );
+                }
 
                 StockMovement::create([
                     'product_variant_id' => $item->product_variant_id,
-                    'warehouse_id' => $salesOrder->warehouse_id,
+                    'warehouse_id' => $order->warehouse_id,
                     'type' => StockMovementType::Sale,
-                    'quantity' => -$dispatchedBaseQty, // Negative for outbound
-                    'unit_name_used' => $unitName,
-                    'unit_ratio_used' => $unitRatio,
+                    'quantity' => -abs($dispatched),
+                    'unit_name_used' => $item->unit_name,
+                    'unit_ratio_used' => $item->unit_ratio,
                     'reference_type' => SalesOrder::class,
-                    'reference_id' => $salesOrder->id,
-                    'notes' => $notes,
+                    'reference_id' => (string) $order->id,
+                    'reference_code' => $order->reference_code,
                     'created_by' => auth()->id(),
                 ]);
 
-                $newDispatchedBaseQty = $item->dispatched_base_qty + $dispatchedBaseQty;
-
-                $item->update([
-                    'dispatched_base_qty' => $newDispatchedBaseQty,
-                ]);
+                $item->update(['dispatched_base_qty' => $item->dispatched_base_qty + $dispatched]);
+                $availableByVariant[$item->product_variant_id] = $available - $dispatched;
             }
 
-            // Check if ALL items in order are fully dispatched (not just those in dispatch lines)
-            $allFullyDispatched = $salesOrder->items()
-                ->whereColumn('dispatched_base_qty', '<', 'base_qty')
-                ->doesntExist();
+            $allDispatched = $items->every(
+                fn ($item) => $item->fresh()->dispatched_base_qty >= $item->base_qty
+            );
 
-            $newStatus = $allFullyDispatched
-                ? SalesOrderStatus::Dispatched
-                : SalesOrderStatus::PartiallyDispatched;
-
-            $salesOrder->update([
-                'status' => $newStatus,
+            $order->update([
+                'status' => $allDispatched ? SalesOrderStatus::Dispatched : SalesOrderStatus::PartiallyDispatched,
+                'dispatched_at' => $allDispatched ? now() : null,
                 'dispatched_by' => auth()->id(),
-                'dispatched_at' => $newStatus === SalesOrderStatus::Dispatched ? now() : $salesOrder->dispatched_at,
             ]);
         });
     }
 
     /**
-     * Record a sales return - create inbound stock movement with SaleReturn type
+     * Record a sales return with server-side cumulative over-return guard.
+     * Locks variant and warehouse to preserve uniform locking discipline.
      */
-    public function recordReturn(SalesOrder $salesOrder, array $returnLines): void
+    public function recordSalesReturn(int $itemId, int $returnedBaseQty, ?string $notes = null): void
     {
-        DB::transaction(function () use ($salesOrder, $returnLines) {
-            $salesOrder->loadMissing(['items.productVariant']);
+        DB::transaction(function () use ($itemId, $returnedBaseQty, $notes) {
+            $item = SalesOrderItem::lockForUpdate()->findOrFail($itemId);
 
-            if (! in_array($salesOrder->status, [
-                SalesOrderStatus::Dispatched,
-                SalesOrderStatus::Completed,
-            ])) {
-                throw ValidationException::withMessages([
-                    'status' => 'Only dispatched or completed sales orders can be returned.',
-                ]);
+            $order = $item->salesOrder;
+
+            ProductVariant::lockForUpdate()->findOrFail($item->product_variant_id);
+            Warehouse::lockForUpdate()->findOrFail($order->warehouse_id);
+
+            $alreadyReturned = (int) StockMovement::where('type', StockMovementType::SaleReturn->value)
+                ->where('reference_type', SalesOrderItem::class)
+                ->where('reference_id', (string) $item->id)
+                ->sum('quantity');
+
+            if ($alreadyReturned + $returnedBaseQty > $item->dispatched_base_qty) {
+                throw new DomainException(
+                    "Return of {$returnedBaseQty} would exceed dispatched quantity. Already returned: {$alreadyReturned}."
+                );
             }
 
-            foreach ($returnLines as $line) {
-                $item = $salesOrder->items()->findOrFail($line['item_id']);
-                $returnBaseQty = (int) $line['return_base_qty'];
-                $unitName = $line['unit_name'];
-                $unitRatio = (int) $line['unit_ratio'];
-
-                if ($returnBaseQty > $item->dispatched_base_qty) {
-                    throw ValidationException::withMessages([
-                        "items.{$item->id}.return_base_qty" => "Return quantity cannot exceed dispatched quantity ({$item->dispatched_base_qty} base units).",
-                    ]);
-                }
-
-                $notes = $line['notes'] ?? null;
-
-                StockMovement::create([
-                    'product_variant_id' => $item->product_variant_id,
-                    'warehouse_id' => $salesOrder->warehouse_id,
-                    'type' => StockMovementType::SaleReturn,
-                    'quantity' => $returnBaseQty, // Positive for inbound return
-                    'unit_name_used' => $unitName,
-                    'unit_ratio_used' => $unitRatio,
-                    'reference_type' => SalesOrder::class,
-                    'reference_id' => $salesOrder->id,
-                    'notes' => $notes,
-                    'created_by' => auth()->id(),
-                ]);
-            }
-
-            if ($salesOrder->status === SalesOrderStatus::Dispatched) {
-                $salesOrder->update([
-                    'status' => SalesOrderStatus::Completed,
-                ]);
-            }
+            StockMovement::create([
+                'product_variant_id' => $item->product_variant_id,
+                'warehouse_id' => $order->warehouse_id,
+                'type' => StockMovementType::SaleReturn,
+                'quantity' => abs($returnedBaseQty),
+                'unit_name_used' => $item->unit_name,
+                'unit_ratio_used' => $item->unit_ratio,
+                'reference_type' => SalesOrderItem::class,
+                'reference_id' => (string) $item->id,
+                'reference_code' => $order->reference_code,
+                'notes' => $notes,
+                'created_by' => auth()->id(),
+            ]);
         });
     }
 
-    /**
-     * Cancel sales order - only allowed Draft, Confirmed, PartiallyDispatched
-     * No reversal stock movements - cancellation only pre-dispatch
-     */
-    public function cancelSalesOrder(SalesOrder $salesOrder): void
+    public function cancelSalesOrder(SalesOrder $order): void
     {
-        DB::transaction(function () use ($salesOrder) {
-            if (! in_array($salesOrder->status, [
-                SalesOrderStatus::Draft,
-                SalesOrderStatus::Confirmed,
-                SalesOrderStatus::PartiallyDispatched,
-            ])) {
-                throw ValidationException::withMessages([
-                    'status' => 'This sales order cannot cancelled.',
-                ]);
+        DB::transaction(function () use ($order) {
+            $fresh = SalesOrder::lockForUpdate()->findOrFail($order->id);
+
+            if (! in_array($fresh->status, [SalesOrderStatus::Draft, SalesOrderStatus::Confirmed], true)) {
+                throw new DomainException('Sales order cannot be cancelled.');
             }
 
-            if ($salesOrder->status !== SalesOrderStatus::Draft) {
-                $dispatchedItems = $salesOrder->items()->where('dispatched_base_qty', '>', 0)->exists();
-                if ($dispatchedItems) {
-                    throw ValidationException::withMessages([
-                        'status' => 'Cannot cancel sales order dispatched items. Use returns instead.',
-                    ]);
-                }
-            }
-
-            $salesOrder->update([
+            $fresh->update([
                 'status' => SalesOrderStatus::Cancelled,
                 'cancelled_at' => now(),
             ]);

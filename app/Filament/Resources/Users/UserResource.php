@@ -7,6 +7,7 @@ namespace App\Filament\Resources\Users;
 use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
+use App\Filament\Resources\Users\Pages\ViewUser;
 use App\Models\User;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -22,6 +23,8 @@ final class UserResource extends Resource
     protected static string|UnitEnum|null $navigationGroup = 'SYSTEM ADMIN';
 
     protected static BackedEnum|string|null $navigationIcon = Heroicon::OutlinedUsers;
+
+    protected static BackedEnum|string|null $activeNavigationIcon = Heroicon::Users;
 
     protected static ?string $recordTitleAttribute = 'name';
 
@@ -47,6 +50,7 @@ final class UserResource extends Resource
         return [
             'index' => ListUsers::route('/'),
             'create' => CreateUser::route('/create'),
+            'view' => ViewUser::route('/{record}'),
             'edit' => EditUser::route('/{record}/edit'),
         ];
     }

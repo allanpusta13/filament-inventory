@@ -51,13 +51,14 @@ final class AdminPanelProvider extends PanelProvider
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->navigationGroups([
-                NavigationGroup::make('CATALOG'),
-                NavigationGroup::make('OPERATIONS'),
-                NavigationGroup::make('PURCHASING'),
-                NavigationGroup::make('SALES'),
-                NavigationGroup::make('AUDIT LEDGERS'),
-                NavigationGroup::make('SYSTEM ADMIN'),
+                NavigationGroup::make('CATALOG')->label(__('navigation.groups.catalog')),
+                NavigationGroup::make('OPERATIONS')->label(__('navigation.groups.operations')),
+                NavigationGroup::make('PURCHASING')->label(__('navigation.groups.purchasing')),
+                NavigationGroup::make('SALES')->label(__('navigation.groups.sales')),
+                NavigationGroup::make('AUDIT LEDGERS')->label(__('navigation.groups.audit_ledgers')),
+                NavigationGroup::make('SYSTEM ADMIN')->label(__('navigation.groups.system_admin')),
             ])
+
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->strictAuthorization()
             ->pages([

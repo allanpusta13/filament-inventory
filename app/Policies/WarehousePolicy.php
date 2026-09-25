@@ -11,12 +11,14 @@ class WarehousePolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->isAdmin();
+        return $user->isAdmin() || $user->isAuditor();
     }
 
-    public function view(User $user, Warehouse $warehouse): bool
+    public function view(User $user, Warehouse $w): bool
     {
-        return $user->isAdmin() || $user->isAuditor() || (($user->isBranchManager() || $user->isWarehouseStaff()) && $user->canAccessWarehouse($warehouse));
+        return $user->isAdmin()
+            || $user->isAuditor()
+            || $user->warehouses->contains($w->id);
     }
 
     public function create(User $user): bool
@@ -24,64 +26,55 @@ class WarehousePolicy
         return $user->isAdmin();
     }
 
-    public function update(User $user, Warehouse $warehouse): bool
+    public function update(User $user, Warehouse $w): bool
     {
-        return $user->isAdmin() || (($user->isBranchManager() || $user->isWarehouseStaff()) && $user->canAccessWarehouse($warehouse));
+        return $user->isAdmin();
     }
 
-    public function delete(User $user, Warehouse $warehouse): bool
+    /**
+     * A warehouse may only be deleted when it has no ledger history and is
+     * not referenced by any document (PO, SO, TR, or direct transfer).
+     * This prevents raw FK violations from bubbling up as 500s.
+     */
+    public function delete(User $user, Warehouse $w): bool
     {
-        return false;
-    }
+        if (! $user->isAdmin()) {
+            return false;
+        }
 
-    public function restore(User $user, Warehouse $warehouse): bool
-    {
-        return false;
-    }
+        if ($w->stockMovements()->exists()) {
+            return false;
+        }
 
-    public function forceDelete(User $user, Warehouse $warehouse): bool
-    {
-        return false;
+        if ($w->purchaseOrders()->exists()) {
+            return false;
+        }
+
+        if ($w->salesOrders()->exists()) {
+            return false;
+        }
+
+        if ($w->transferRequisitionsFrom()->exists()) {
+            return false;
+        }
+
+        if ($w->transferRequisitionsTo()->exists()) {
+            return false;
+        }
+
+        if ($w->directTransfersFrom()->exists()) {
+            return false;
+        }
+
+        if ($w->directTransfersTo()->exists()) {
+            return false;
+        }
+
+        return true;
     }
 
     public function deleteAny(User $user): bool
     {
-        return false;
-    }
-
-    public function restoreAny(User $user): bool
-    {
-        return false;
-    }
-
-    public function forceDeleteAny(User $user): bool
-    {
-        return false;
-    }
-
-    public function adjustStock(User $user, Warehouse $warehouse): bool
-    {
-        if ($user->isAdmin()) {
-            return true;
-        }
-
-        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
-            return $user->canAccessWarehouse($warehouse);
-        }
-
-        return false;
-    }
-
-    public function recordLoss(User $user, Warehouse $warehouse): bool
-    {
-        if ($user->isAdmin() || $user->isAuditor()) {
-            return true;
-        }
-
-        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
-            return $user->canAccessWarehouse($warehouse);
-        }
-
-        return false;
+        return $user->isAdmin();
     }
 }

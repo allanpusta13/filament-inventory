@@ -32,6 +32,14 @@ class TransferRequisition extends Model
         'notes',
     ];
 
+    protected $casts = [
+        'status' => TransferRequisitionStatus::class,
+        'requested_at' => 'datetime',
+        'approved_at' => 'datetime',
+        'dispatched_at' => 'datetime',
+        'completed_at' => 'datetime',
+    ];
+
     public function fromWarehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class, 'from_warehouse_id');
@@ -77,19 +85,17 @@ class TransferRequisition extends Model
         return $this->hasMany(LossLedger::class);
     }
 
-    public function isTerminal(): bool
+    /**
+     * Pre-dispatch states only (Principle 14).
+     */
+    public function canBeCancelled(): bool
     {
-        return $this->status->isTerminal();
-    }
-
-    protected function casts(): array
-    {
-        return [
-            'status' => TransferRequisitionStatus::class,
-            'requested_at' => 'datetime',
-            'approved_at' => 'datetime',
-            'dispatched_at' => 'datetime',
-            'completed_at' => 'datetime',
-        ];
+        return in_array($this->status, [
+            TransferRequisitionStatus::Draft,
+            TransferRequisitionStatus::Requested,
+            TransferRequisitionStatus::UnderReviewFulfiller,
+            TransferRequisitionStatus::UnderReviewRequestor,
+            TransferRequisitionStatus::Confirmed,
+        ], true);
     }
 }

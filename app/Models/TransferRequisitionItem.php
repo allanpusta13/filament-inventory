@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Enums\RevisionStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -34,6 +33,19 @@ class TransferRequisitionItem extends Model
         'notes',
     ];
 
+    protected $casts = [
+        'requested_unit_ratio' => 'integer',
+        'requested_qty' => 'integer',
+        'requested_base_qty' => 'integer',
+        'approved_unit_ratio' => 'integer',
+        'approved_qty' => 'integer',
+        'approved_base_qty' => 'integer',
+        'shipped_base_qty' => 'integer',
+        'received_good_base_qty' => 'integer',
+        'received_damaged_base_qty' => 'integer',
+        'received_qty' => 'integer',
+    ];
+
     public function transferRequisition(): BelongsTo
     {
         return $this->belongsTo(TransferRequisition::class);
@@ -41,7 +53,7 @@ class TransferRequisitionItem extends Model
 
     public function productVariant(): BelongsTo
     {
-        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
+        return $this->belongsTo(ProductVariant::class);
     }
 
     public function substituteProductVariant(): BelongsTo
@@ -54,57 +66,13 @@ class TransferRequisitionItem extends Model
         return $this->hasMany(TransferRequisitionItemRevision::class);
     }
 
-    /**
-     * Full negotiation log for this item, oldest first — every proposal across
-     * every thread (there can be more than one root if fulfiller and requestor
-     * each open independent proposals before either responds).
-     */
-    public function negotiationHistory(): HasMany
+    public function actualVariantId(): int
     {
-        return $this->revisions()->orderBy('created_at')->orderBy('id');
+        return $this->substitute_product_variant_id ?? $this->product_variant_id;
     }
 
-    /**
-     * Revisions still awaiting a decision.
-     */
-    public function pendingRevisions(): HasMany
+    public function outstandingShippedBaseQty(): int
     {
-        return $this->revisions()->where('status', RevisionStatus::Pending);
-    }
-
-    public function inTransits(): HasMany
-    {
-        return $this->hasMany(InTransit::class);
-    }
-
-    public function lossLedgers(): HasMany
-    {
-        return $this->hasMany(LossLedger::class);
-    }
-
-    /**
-     * Shortfall between what was approved/shipped and what actually arrived in good condition.
-     */
-    public function outstandingBaseQty(): int
-    {
-        $expected = $this->approved_base_qty ?? $this->requested_base_qty;
-
-        return max(0, $expected - $this->received_good_base_qty);
-    }
-
-    protected function casts(): array
-    {
-        return [
-            'requested_unit_ratio' => 'integer',
-            'requested_qty' => 'integer',
-            'requested_base_qty' => 'integer',
-            'approved_unit_ratio' => 'integer',
-            'approved_qty' => 'integer',
-            'approved_base_qty' => 'integer',
-            'shipped_base_qty' => 'integer',
-            'received_good_base_qty' => 'integer',
-            'received_damaged_base_qty' => 'integer',
-            'received_qty' => 'integer',
-        ];
+        return max(0, (int) $this->approved_base_qty - (int) $this->shipped_base_qty);
     }
 }

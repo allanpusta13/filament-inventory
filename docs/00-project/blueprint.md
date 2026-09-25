@@ -112,7 +112,10 @@ lang/
 │   ├── validation.php
 │   ├── widgets.php
 │   ├── errors.php
-│   └── common.php
+│   ├── common.php
+│   ├── wizards.php       # __('wizards.*') — §18.3 review views
+│   ├── stn.php           # __('stn.*') — §21 print/scan views
+│   └── dashboard.php     # __('dashboard.*') — §10 widgets
 └── <locale>/
     └── same file set as en/
 ```
@@ -132,7 +135,7 @@ __('resources.products.model.singular')
 __('resources.products.model.plural')
 __('resources.products.fields.sku')
 __('resources.products.fields.base_unit')
-__('resources.products.table.reference')
+__('resources.products.table.sku')
 __('resources.products.table.status')
 __('resources.products.actions.manage_units')
 __('resources.products.notifications.created')
@@ -328,6 +331,7 @@ Translation coverage is not limited to PHP classes. All custom Blade templates, 
 Existing review views such as:
 
 ```text
+resources/views/filament/wizards/transfer-review.blade.php
 resources/views/filament/wizards/purchase-order-review.blade.php
 resources/views/filament/wizards/sales-order-review.blade.php
 resources/views/filament/wizards/direct-transfer-review.blade.php
@@ -447,7 +451,21 @@ The same applies to model/resource metadata: resources currently define navigati
          → confirmed → dispatched ⇌ partially_received
          → completed / closed_with_loss / cancelled
    ```
-   `partially_received` is a first-class live state.
+    `partially_received` is a first-class live state.
+
+    Purchases lifecycle (per Addendum A2 and §4.2 `PurchaseOrderStatus`):
+
+    ```
+    draft → ordered → partially_received → received / cancelled
+    ```
+
+    Sales lifecycle (per Addendum A2 and §4.3 `SalesOrderStatus`):
+
+    ```
+    draft → confirmed → partially_dispatched → dispatched / cancelled
+    ```
+
+    Direct transfers have no lifecycle states (per Addendum A11) — fire-and-forget.
 
 6. **Negotiated Substitute Variant Swapping.** Dispatch and receipt pipelines dynamically resolve `$actualVariantId = $item->substitute_product_variant_id ?? $item->product_variant_id`.
 
@@ -481,7 +499,7 @@ The same applies to model/resource metadata: resources currently define navigati
 
 **A1.** Same Ledger, New Movement Types. Purchases and sales are new `StockMovementType` cases.
 
-**A2.** Purchases and Sales Are Symmetric, Single-Entity Flows. Each gets a lightweight draft → confirmed → completed / cancelled lifecycle.
+**A2.** Purchases and Sales Are Symmetric, Single-Entity Flows. Each gets a lightweight lifecycle matching its status enum — purchases per §4.2 (`Draft` → `Ordered` → `PartiallyReceived` → `Received` / `Cancelled`), sales per §4.3 (`Draft` → `Confirmed` → `PartiallyDispatched` → `Dispatched` / `Cancelled`).
 
 **A3.** External Party Entities Are Minimal Master Data.
 
@@ -587,7 +605,8 @@ app/Filament/Resources/
 ├── InTransits/
 │   ├── InTransitResource.php
 │   ├── Pages/
-│   │   └── ListInTransits.php
+│   │   ├── ListInTransits.php
+│   │   └── ViewInTransit.php
 │   ├── Schemas/
 │   │   └── InTransitInfolist.php
 │   └── Tables/
@@ -596,7 +615,8 @@ app/Filament/Resources/
 ├── StockMovements/
 │   ├── StockMovementResource.php
 │   ├── Pages/
-│   │   └── ListStockMovements.php
+│   │   ├── ListStockMovements.php
+│   │   └── ViewStockMovement.php
 │   ├── Schemas/
 │   │   └── StockMovementInfolist.php
 │   └── Tables/
@@ -605,7 +625,8 @@ app/Filament/Resources/
 ├── LossLedgers/
 │   ├── LossLedgerResource.php
 │   ├── Pages/
-│   │   └── ListLossLedgers.php
+│   │   ├── ListLossLedgers.php
+│   │   └── ViewLossLedger.php
 │   ├── Schemas/
 │   │   └── LossLedgerInfolist.php
 │   └── Tables/
@@ -713,6 +734,21 @@ class ProductResource extends Resource
     protected static string | \BackedEnum | null $navigationIcon = Heroicon::OutlinedCube;
     protected static string | \BackedEnum | null $activeNavigationIcon = Heroicon::Cube;
 
+    public static function getModelLabel(): string
+    {
+        return __('resources.products.model.singular');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('resources.products.model.plural');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('resources.products.navigation.label');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return ProductForm::configure($schema);
@@ -756,12 +792,12 @@ class ProductResource extends Resource
 
 ```php
 ->navigationGroups([
-    NavigationGroup::make('CATALOG')->icon(Heroicon::CubeTransparent)->collapsible(),
-    NavigationGroup::make('OPERATIONS')->icon(Heroicon::OutlinedRectangleStack)->collapsible(),
-    NavigationGroup::make('PURCHASING')->icon(Heroicon::OutlinedShoppingCart)->collapsible(),
-    NavigationGroup::make('SALES')->icon(Heroicon::OutlinedBanknotes)->collapsible(),
-    NavigationGroup::make('AUDIT LEDGERS')->icon(Heroicon::QueueList)->collapsible(),
-    NavigationGroup::make('SYSTEM ADMIN')->icon(Heroicon::BuildingOffice)->collapsible(false),
+    NavigationGroup::make('CATALOG')->label(__('navigation.groups.catalog'))->icon(Heroicon::CubeTransparent)->collapsible(),
+    NavigationGroup::make('OPERATIONS')->label(__('navigation.groups.operations'))->icon(Heroicon::OutlinedRectangleStack)->collapsible(),
+    NavigationGroup::make('PURCHASING')->label(__('navigation.groups.purchasing'))->icon(Heroicon::OutlinedShoppingCart)->collapsible(),
+    NavigationGroup::make('SALES')->label(__('navigation.groups.sales'))->icon(Heroicon::OutlinedBanknotes)->collapsible(),
+    NavigationGroup::make('AUDIT LEDGERS')->label(__('navigation.groups.audit_ledgers'))->icon(Heroicon::QueueList)->collapsible(),
+    NavigationGroup::make('SYSTEM ADMIN')->label(__('navigation.groups.system_admin'))->icon(Heroicon::BuildingOffice)->collapsible(false),
 ])
 ```
 
@@ -784,6 +820,8 @@ class ProductForm
 ### 1A.1 Centralized Group Registration
 
 Navigation groups are registered once in `AdminPanelProvider::panel()` via `->navigationGroups()`. Array order is the sole determinant of group render order.
+
+The string passed to `NavigationGroup::make()` is a stable matching key (it must equal each resource's `$navigationGroup` value exactly). The human-readable label is set separately via `->label(__('navigation.groups.<key>'))` so the sidebar translates without breaking group matching. Never pass a translated string to `make()` — translations resolve per request and would stop matching the resource keys.
 
 ### 1A.2 Group Properties
 
@@ -819,9 +857,11 @@ Navigation groups are registered once in `AdminPanelProvider::panel()` via `->na
 
 ### 1A.5 Resulting Sidebar Layout
 
+Displayed group labels resolve through `navigation.groups.*` keys; the layout below shows the canonical-locale rendering:
+
 ```
 CATALOG            → Products
-OPERATIONS         → Transfer Requisitions, Direct Transfers, In-Transit Cargo
+OPERATIONS         → Transfer Requisitions, Direct Transfers, In-Transit Cargo (`InTransitResource`)
 PURCHASING         → Purchase Orders, Suppliers
 SALES              → Sales Orders, Customers
 AUDIT LEDGERS      → Stock Movements, Loss Ledgers
@@ -917,6 +957,17 @@ trait ScopesNavigationBadges
     private static ?array $badgeWarehouseIds = null;
 
     /**
+     * Cached badge count shared by `getNavigationBadge()` and
+     * `getNavigationBadgeColor()`. Trait-owned, so each using resource
+     * gets its own copy (trait semantics) while `flushBadgeScope()`
+     * resets both caches together — a resource-level copy would survive
+     * logout in long-lived workers.
+     *
+     * @var int|null
+     */
+    private static ?int $badgeCount = null;
+
+    /**
      * Resolve the warehouse ID set used to scope every navigation badge
      * on this resource.
      *
@@ -962,17 +1013,27 @@ trait ScopesNavigationBadges
 
     /**
      * Badge scope for the current request is cached once and shared across
-     * getNavigationBadge(), getNavigationBadgeColor(), and
-     * getNavigationBadgeTooltip() calls.
+     * `getNavigationBadge()`, `getNavigationBadgeColor()`, and
+     * `getNavigationBadgeTooltip()` calls.
+     *
+     * Public so `AppServiceProvider` can flush every badge-bearing resource
+     * on `Auth::logout` (§17.3) — required in long-lived workers (Octane,
+     * queue workers that boot Filament). Each resource carries its own copy
+     * of the static caches (trait semantics), so all four must be flushed.
+     *
+     * Resets BOTH the warehouse-ID scope and the cached count: resetting
+     * only the scope leaves the previous user's count visible to the next
+     * user in a long-lived worker.
      */
-    protected static function flushBadgeScope(): void
+    public static function flushBadgeScope(): void
     {
         self::$badgeWarehouseIds = null;
+        self::$badgeCount = null;
     }
 }
 ```
 
-**Note on cache flushing:** In long-lived workers (Octane, queue workers that boot Filament), `flushBadgeScope()` must be invoked on `Auth::logout` or on any policy reload. In standard PHP-FPM request lifecycles this is unnecessary.
+**Note on cache flushing:** In standard PHP-FPM request lifecycles the static caches die with the request and no action is needed. In long-lived workers (Octane, queue workers that boot Filament), `AppServiceProvider::boot()` listens for `Illuminate\Auth\Events\Logout` and calls `flushBadgeScope()` on all four badge-bearing resources (§17.3) — the single canonical call site. Each call resets both the warehouse-ID scope and the cached count, so the next user never sees the previous user's badge.
 
 ### 1B.3a Badge Implementations
 
@@ -988,8 +1049,6 @@ use Filament\Resources\Resource;
 class TransferRequisitionResource extends Resource
 {
     use ScopesNavigationBadges;
-
-    private static ?int $badgeCount = null;
 
     private static function getScopedBadgeCount(): int
     {
@@ -1044,8 +1103,6 @@ class PurchaseOrderResource extends Resource
 {
     use ScopesNavigationBadges;
 
-    private static ?int $badgeCount = null;
-
     private static function getScopedBadgeCount(): int
     {
         if (self::$badgeCount !== null) {
@@ -1093,8 +1150,6 @@ use Filament\Resources\Resource;
 class SalesOrderResource extends Resource
 {
     use ScopesNavigationBadges;
-
-    private static ?int $badgeCount = null;
 
     private static function getScopedBadgeCount(): int
     {
@@ -1144,8 +1199,6 @@ class InTransitResource extends Resource
 {
     use ScopesNavigationBadges;
 
-    private static ?int $badgeCount = null;
-
     private static function getScopedBadgeCount(): int
     {
         if (self::$badgeCount !== null) {
@@ -1191,7 +1244,7 @@ class InTransitResource extends Resource
 
 ### 1B.4 Badge Performance Note
 
-Badge queries run on every panel page load. All four status columns are indexed in Section 2. The badge scope is resolved exactly once per request via `ScopesNavigationBadges::$badgeWarehouseIds` and the count itself is cached in a `private static ?int` per resource, so `getNavigationBadge()` and `getNavigationBadgeColor()` share a single query and a single scope resolution.
+Badge queries run on every panel page load. All four status columns are indexed in Section 2. The badge scope is resolved exactly once per request via `ScopesNavigationBadges::$badgeWarehouseIds` and the count itself is cached in the trait-owned `ScopesNavigationBadges::$badgeCount` (one copy per resource), so `getNavigationBadge()` and `getNavigationBadgeColor()` share a single query and a single scope resolution.
 
 ### 1B.5 Badge Scope — Invariants
 
@@ -1199,7 +1252,7 @@ Badge queries run on every panel page load. All four status columns are indexed 
 2. An `Admin` or `Auditor` user always sees the full system count, regardless of their `user_warehouse` pivot contents.
 3. A user with zero assigned warehouses and a non-admin/non-auditor role sees `null` badges.
 4. The scope resolver is the **only** sanctioned way to compute badge warehouse IDs. Direct `auth()->user()->warehouses()->pluck('id')` inside a `getNavigationBadge()` method is prohibited.
-5. The scope resolver caches within the request but is flushed on logout / re-authentication in long-lived workers.
+5. The scope resolver caches within the request but is flushed on logout / re-authentication in long-lived workers — the flush covers both the warehouse-ID scope and the cached badge count.
 
 ---
 
@@ -1271,8 +1324,10 @@ Per Principle F23, every Action, form field, and interactive element carries a `
 
 | Action | Icon | Color |
 |---|---|---|
+| `ViewAction` | `Heroicon::Eye` | — |
 | `submitRequest` | `Heroicon::PaperAirplane` | `primary` |
 | `reviewNegotiate` | `Heroicon::ChatBubbleLeftRight` | `warning` |
+| `submitRevision` | `Heroicon::ChatBubbleLeftRight` | `warning` |
 | `acceptRevision` | `Heroicon::CheckCircle` | `success` |
 | `rejectRevision` | `Heroicon::XCircle` | `danger` |
 | `confirm` | `Heroicon::CheckBadge` | `primary` |
@@ -1295,6 +1350,7 @@ Per Principle F23, every Action, form field, and interactive element carries a `
 
 | Action | Icon | Color |
 |---|---|---|
+| `ViewAction` | `Heroicon::Eye` | — |
 | `orderPurchase` | `Heroicon::PaperAirplane` | `primary` |
 | `receivePurchase` | `Heroicon::ArchiveBoxArrowDown` | `success` |
 | `cancelPurchase` | `Heroicon::XMark` | `danger` |
@@ -1307,6 +1363,8 @@ Per Principle F23, every Action, form field, and interactive element carries a `
 
 | Action | Icon | Color |
 |---|---|---|
+| `ViewAction` | `Heroicon::Eye` | — |
+| `EditAction` | `Heroicon::PencilSquare` | — |
 | `confirmSalesOrder` | `Heroicon::CheckCircle` | `primary` |
 | `dispatchSale` | `Heroicon::Truck` | `success` |
 | `recordReturn` | `Heroicon::ArrowUturnLeft` | `warning` |
@@ -1345,30 +1403,57 @@ Per Principle F23, every Action, form field, and interactive element carries a `
 | `is_active` | `onIcon` / `offIcon` | `Heroicon::CheckCircle` / `Heroicon::XCircle` |
 | `update_cost_price` | `onIcon` | `Heroicon::CurrencyDollar` |
 
-### 1D.3 Section Header Icons
+### 1D.3 Section & Tab Header Icons
 
-| Section | Icon |
+Headings resolve through the translation catalogue (§0A.7) — the key below is the exact value passed to `Section::make()` / `Tab::make()` in the form and infolist contracts. Icons match the implementation.
+
+**Form sections**
+
+| Section (translation key) | Icon |
 |---|---|
-| `REQUISITION PROFILE` | `Heroicon::DocumentText` |
-| `AUTHORIZATION SIGN-OFFS` | `Heroicon::ShieldCheck` |
-| `MATERIAL MANIFEST ITEMS` | `Heroicon::ClipboardDocumentList` |
-| `DIRECT TRANSFER PROFILE` | `Heroicon::ArrowPath` |
-| `AUTHORIZATION` | `Heroicon::ShieldCheck` |
-| `MATERIAL MANIFEST` | `Heroicon::ClipboardDocumentList` |
-| `PURCHASE ORDER PROFILE` | `Heroicon::DocumentText` |
-| `SALES ORDER PROFILE` | `Heroicon::DocumentText` |
-| `SIGN-OFFS` | `Heroicon::ShieldCheck` |
-| `LINE ITEMS` | `Heroicon::ClipboardDocumentList` |
-| `WAREHOUSE ROUTING` | `Heroicon::BuildingOffice` |
-| `SUPPLIER & WAREHOUSE` | `Heroicon::BuildingStorefront` |
-| `CUSTOMER & WAREHOUSE` | `Heroicon::UserGroup` |
-| `STOCK ALLOCATION` | `Heroicon::Cube` |
-| `IDENTITY` (product tabs) | `Heroicon::Identification` |
-| `STOCK & PRICING` (product tabs) | `Heroicon::CurrencyDollar` |
-| `UNIT CONVERSIONS` | `Heroicon::Scale` |
-| `PRICING` | `Heroicon::CurrencyDollar` |
-| `LOSS RECORD` | `Heroicon::ExclamationTriangle` |
-| `FINANCIAL IMPACT` | `Heroicon::CurrencyDollar` |
+| `resources.transfer_requisitions.sections.routing` | `Heroicon::BuildingOffice` |
+| `resources.direct_transfers.sections.routing` | `Heroicon::BuildingOffice` |
+| `resources.direct_transfers.sections.stock_allocation` | `Heroicon::Cube` |
+| `resources.purchase_orders.form.supplier_warehouse` | `Heroicon::BuildingStorefront` |
+| `resources.sales_orders.form.customer_warehouse` | `Heroicon::UserGroup` |
+| `resources.warehouses.form.profile` | `Heroicon::BuildingOffice` |
+| `resources.warehouses.form.access_status` | `Heroicon::ShieldCheck` |
+
+**Infolist sections**
+
+| Section (translation key) | Icon |
+|---|---|
+| `resources.products.infolist.identity` | `Heroicon::Identification` |
+| `resources.products.infolist.pricing` | `Heroicon::CurrencyDollar` |
+| `resources.products.infolist.unit_conversions` | `Heroicon::Scale` |
+| `resources.transfer_requisitions.infolist.profile` | `Heroicon::DocumentText` |
+| `resources.transfer_requisitions.infolist.signoffs` | `Heroicon::ShieldCheck` |
+| `resources.transfer_requisitions.infolist.manifest` | `Heroicon::ClipboardDocumentList` |
+| `resources.transfer_requisitions.infolist.negotiation_history` | `Heroicon::ChatBubbleLeftRight` |
+| `resources.direct_transfers.infolist.profile` | `Heroicon::ArrowPath` |
+| `resources.direct_transfers.infolist.authorization` | `Heroicon::ShieldCheck` |
+| `resources.direct_transfers.infolist.manifest` | `Heroicon::ClipboardDocumentList` |
+| `resources.in_transits.infolist.cargo` | `Heroicon::Truck` |
+| `resources.stock_movements.infolist.movement` | `Heroicon::QueueList` |
+| `resources.loss_ledgers.infolist.record` | `Heroicon::ExclamationTriangle` |
+| `resources.loss_ledgers.infolist.financial_impact` | `Heroicon::CurrencyDollar` |
+| `resources.purchase_orders.infolist.profile` | `Heroicon::DocumentText` |
+| `resources.purchase_orders.infolist.signoffs` | `Heroicon::ShieldCheck` |
+| `resources.purchase_orders.infolist.line_items` | `Heroicon::ClipboardDocumentList` |
+| `resources.sales_orders.infolist.profile` | `Heroicon::DocumentText` |
+| `resources.sales_orders.infolist.signoffs` | `Heroicon::ShieldCheck` |
+| `resources.sales_orders.infolist.line_items` | `Heroicon::ClipboardDocumentList` |
+| `resources.warehouses.infolist.profile` | `Heroicon::BuildingOffice` |
+| `resources.warehouses.infolist.status` | `Heroicon::ShieldCheck` |
+| `resources.warehouses.infolist.assigned_staff` | `Heroicon::UserGroup` |
+
+**Product tabs** (`ProductForm`, §7A)
+
+| Tab (translation key) | Icon |
+|---|---|
+| `resources.products.tabs.identity` | `Heroicon::Identification` |
+| `resources.products.tabs.stock_pricing` | `Heroicon::CurrencyDollar` |
+| `resources.products.tabs.status` | `Heroicon::CheckCircle` |
 
 ### 1D.4 Icon Consistency Rules
 
@@ -1411,6 +1496,8 @@ Per Principle F23, every Action, form field, and interactive element carries a `
 | created_at / updated_at | timestamp | Yes | — |
 
 Indexes: `(product_id, sku)`
+
+**Code formats:** `sku` follows the `SKU-####-??` pattern (uppercase, matching `ProductVariantFactory`); `barcode` follows EAN-13 (matching `ProductVariantFactory::ean13()`), nullable, unique when present. Unique `NULL` values are treated as distinct under the project's PostgreSQL/MySQL semantics. **Owner decision (recorded):** blank barcode input is normalized to `null`, never stored as an empty string and never rejected — at the form boundary via `dehydrateStateUsing(fn ($state) => filled($state) ? $state : null)` with the `ProductVariant::barcode()` attribute mutator as backstop.
 
 ### 3. product_variant_prices
 
@@ -1456,6 +1543,8 @@ Indexes: unique on `(product_variant_id, unit_name)`
 | is_active | boolean | No | true |
 | created_at / updated_at | timestamp | Yes | — |
 
+**Code format:** `code` follows the `WH-####` pattern (uppercase), `maxLength(50)`, matching `WarehouseFactory` and `WarehouseForm`. `code` may be entered manually or left empty: when empty, the Create page derives it from `name` (uppercase, non-alphanumeric runs replaced with `-`, trimmed, truncated to 50 chars), appending `-NNN` on unique collision.
+
 ### 6. stock_movements
 
 | Column | Type | Nullable | Default |
@@ -1476,6 +1565,8 @@ Indexes: unique on `(product_variant_id, unit_name)`
 | created_at / updated_at | timestamp | Yes | — |
 
 Indexes: `(product_variant_id, warehouse_id)`, `(reference_type, reference_id)`, `type`, `created_at`
+
+**Reference-field contract:** `reference_code` is nullable here (unlike the non-nullable unique headers) because `InventoryService::recordMovement()` accepts `?string $referenceCode = null` for manual movements; header-created movements always copy the header code. `reference_id` stores the stringified header id (e.g. `(string) $header->id`). `reference_type` is one of `App\Models\TransferRequisition`, `App\Models\DirectTransfer`, `App\Models\PurchaseOrder`, `App\Models\SalesOrder`, `App\Models\SalesOrderItem` (the only values written by the services).
 
 ### 7. transfer_requisitions
 
@@ -1616,6 +1707,8 @@ Primary key: composite `(user_id, warehouse_id)`
 | deleted_at | timestamp | Yes | — |
 | created_at / updated_at | timestamp | Yes | — |
 
+Suppliers have no `code` by design; they are identified by `name` (owner decision).
+
 ### 15. customers
 
 | Column | Type | Nullable | Default |
@@ -1629,6 +1722,8 @@ Primary key: composite `(user_id, warehouse_id)`
 | is_active | boolean | No | true |
 | deleted_at | timestamp | Yes | — |
 | created_at / updated_at | timestamp | Yes | — |
+
+Customers have no `code` by design; they are identified by `name` (owner decision).
 
 ### 16. purchase_orders
 
@@ -1756,9 +1851,684 @@ Indexes: `direct_transfer_id`
 - `from_warehouse_id ≠ to_warehouse_id` (enforced at service layer).
 - One paired `TransferOut` + `TransferIn` movement per item, tagged `reference_type = App\Models\DirectTransfer::class` and `reference_id = header.id`.
 
+**Reference-code generation:** format comes from `App\Support\GeneratesReferenceCodes::generateReferenceCode($prefix)` (pure function: `PREFIX-YmdHis-random(100-999)`, hyphenated, no database access, no retry). Collision retry (regenerate, up to 5 attempts on unique-constraint violation) is implemented per call site at its correct transaction boundary — never caught inside `DB::transaction()`. Collision window ≈1/900 per same-second, same-type pair. Factories call the same helper with `$this->faker->unique()->numberBetween(100, 999)` as the random part so seeds fail loudly instead of duplicating.
+
+`app/Support/GeneratesReferenceCodes.php` — canonical implementation (pure function; no database access, no retry — retry lives at the call site):
+
+```php
+namespace App\Support;
+
+final class GeneratesReferenceCodes
+{
+    public static function generateReferenceCode(string $prefix, ?int $random = null): string
+    {
+        return $prefix . '-' . now()->format('YmdHis') . '-' . ($random ?? random_int(100, 999));
+    }
+}
+```
+
 ### New StockMovementType Cases
 
 Add `Purchase`, `Sale`, `SaleReturn`, `PurchaseReturn`.
+
+### Migration File Contract
+
+Each of the 22 `database/migrations/` files in the §25 file map implements its §2 table definition verbatim — columns, types, nullability, defaults, foreign-key actions, indexes, and constraints. File order follows the §25 listing, which is the FK-dependency order required by Phase 01:
+
+| Migration file | Implements |
+|---|---|
+| `xxxx_xx_xx_create_products_table.php` | §2.1 `products` |
+| `xxxx_xx_xx_create_product_variants_table.php` | §2.2 `product_variants` |
+| `xxxx_xx_xx_create_product_variant_prices_table.php` | §2.3 `product_variant_prices` |
+| `xxxx_xx_xx_create_product_variant_unit_conversions_table.php` | §2.4 `product_variant_unit_conversions` |
+| `xxxx_xx_xx_create_warehouses_table.php` | §2.5 `warehouses` |
+| `xxxx_xx_xx_create_stock_movements_table.php` | §2.6 `stock_movements` |
+| `xxxx_xx_xx_create_transfer_requisitions_table.php` | §2.7 `transfer_requisitions` |
+| `xxxx_xx_xx_create_transfer_requisition_items_table.php` | §2.8 `transfer_requisition_items` |
+| `xxxx_xx_xx_create_transfer_requisition_item_revisions_table.php` | §2.9 `transfer_requisition_item_revisions` |
+| `xxxx_xx_xx_create_in_transits_table.php` | §2.10 `in_transits` |
+| `xxxx_xx_xx_create_loss_ledgers_table.php` | §2.11 `loss_ledgers` |
+| `xxxx_xx_xx_add_role_columns_to_users_table.php` | §2.12 `users` (altered) |
+| `xxxx_xx_xx_create_user_warehouse_table.php` | §2.13 `user_warehouse` (pivot) |
+| `xxxx_xx_xx_create_suppliers_table.php` | §2.14 `suppliers` |
+| `xxxx_xx_xx_create_customers_table.php` | §2.15 `customers` |
+| `xxxx_xx_xx_create_purchase_orders_table.php` | §2.16 `purchase_orders` |
+| `xxxx_xx_xx_create_purchase_order_items_table.php` | §2.17 `purchase_order_items` |
+| `xxxx_xx_xx_create_sales_orders_table.php` | §2.18 `sales_orders` |
+| `xxxx_xx_xx_create_sales_order_items_table.php` | §2.19 `sales_order_items` |
+| `xxxx_xx_xx_create_stock_movement_idempotency_keys_table.php` | §2.20 `stock_movement_idempotency_keys` |
+| `xxxx_xx_xx_create_direct_transfers_table.php` | §2.21 `direct_transfers` |
+| `xxxx_xx_xx_create_direct_transfer_items_table.php` | §2.22 `direct_transfer_items` |
+
+Conventions (all 22 files): anonymous migration class (`return new class extends Migration`), `Schema::create` / `Schema::table` only, FK actions exactly as stated in §2 (`cascadeOnDelete`, `restrictOnDelete`, `nullOnDelete`), unique/index declarations exactly as stated in §2, `down()` dropping in reverse. No business logic, no seeding, no data backfill inside migrations.
+
+Canonical exemplar (`xxxx_xx_xx_create_products_table.php`, derived verbatim from §2.1):
+
+```php
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('products', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('category')->nullable();
+            $table->softDeletes();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('products');
+    }
+};
+```
+
+Canonical exemplar (`xxxx_xx_xx_create_product_variants_table.php`, derived verbatim from §2.2):
+
+```php
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('product_variants', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('product_id')->constrained()->cascadeOnDelete();
+            $table->string('sku', 64)->unique();
+            $table->string('barcode', 32)->nullable()->unique();
+            $table->string('name');
+            $table->string('base_unit_name');
+            $table->integer('reorder_point')->default(0);
+            $table->json('attributes')->nullable();
+            $table->json('images')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->softDeletes();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('product_variants');
+    }
+};
+```
+
+Canonical exemplar (`xxxx_xx_xx_create_product_variant_prices_table.php`, derived verbatim from §2.3):
+
+```php
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('product_variant_prices', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('product_variant_id')->constrained()->cascadeOnDelete();
+            $table->decimal('cost_price', 15, 4)->default(0.0000);
+            $table->decimal('sale_price', 15, 4)->default(0.0000);
+            $table->timestamp('effective_from')->useCurrent();
+            $table->boolean('is_current')->default(true);
+            $table->foreignId('set_by')->nullOnDelete()->constrained('users');
+            $table->text('notes')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('product_variant_prices');
+    }
+};
+```
+
+Canonical exemplar (`xxxx_xx_xx_create_product_variant_unit_conversions_table.php`, derived verbatim from §2.4):
+
+```php
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('product_variant_unit_conversions', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('product_variant_id')->constrained()->cascadeOnDelete();
+            $table->string('unit_name');
+            $table->integer('base_unit_ratio');
+            $table->boolean('is_default_purchase')->default(false);
+            $table->boolean('is_default_transfer')->default(false);
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('product_variant_unit_conversions');
+    }
+};
+```
+
+Canonical exemplar (`xxxx_xx_xx_create_warehouses_table.php`, derived verbatim from §2.5):
+
+```php
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('warehouses', function (Blueprint $table) {
+            $table->id();
+            $table->string('code', 50)->unique();
+            $table->string('name');
+            $table->string('location')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('warehouses');
+    }
+};
+```
+
+Canonical exemplar (`xxxx_xx_xx_create_stock_movements_table.php`, derived verbatim from §2.6):
+
+```php
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('stock_movements', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('product_variant_id')->constrained()->restrictOnDelete();
+            $table->foreignId('warehouse_id')->constrained()->restrictOnDelete();
+            $table->string('type');
+            $table->integer('quantity');
+            $table->string('unit_name_used');
+            $table->integer('unit_ratio_used')->default(1);
+            $table->foreignId('related_movement_id')->nullOnDelete()->constrained('stock_movements');
+            $table->string('reference_type')->nullable();
+            $table->string('reference_id')->nullable();
+            $table->string('reference_code')->nullable();
+            $table->text('notes')->nullable();
+            $table->foreignId('created_by')->nullOnDelete()->constrained('users');
+            $table->softDeletes();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('stock_movements');
+    }
+};
+```
+
+Canonical exemplar (`xxxx_xx_xx_create_transfer_requisitions_table.php`, derived verbatim from §2.7):
+
+```php
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('transfer_requisitions', function (Blueprint $table) {
+            $table->id();
+            $table->string('reference_code', 32)->unique();
+            $table->foreignId('from_warehouse_id')->constrained()->restrictOnDelete();
+            $table->foreignId('to_warehouse_id')->constrained()->restrictOnDelete();
+            $table->string('status');
+            $table->foreignId('requested_by')->constrained()->cascadeOnDelete();
+            $table->foreignId('approved_by')->nullOnDelete()->constrained('users');
+            $table->foreignId('dispatched_by')->nullOnDelete()->constrained('users');
+            $table->foreignId('received_by')->nullOnDelete()->constrained('users');
+            $table->timestamp('requested_at')->nullable();
+            $table->timestamp('approved_at')->nullable();
+            $table->timestamp('dispatched_at')->nullable();
+            $table->timestamp('completed_at')->nullable();
+            $table->text('notes')->nullable();
+            $table->softDeletes();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('transfer_requisitions');
+    }
+};
+```
+
+Canonical exemplar (`xxxx_xx_xx_create_transfer_requisition_items_table.php`, derived verbatim from §2.8):
+
+```php
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('transfer_requisition_items', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('transfer_requisition_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('product_variant_id')->constrained()->restrictOnDelete();
+            $table->foreignId('substitute_product_variant_id')->nullOnDelete()->constrained('product_variants');
+            $table->string('requested_unit_name');
+            $table->integer('requested_unit_ratio');
+            $table->integer('requested_qty');
+            $table->integer('requested_base_qty');
+            $table->string('approved_unit_name')->nullable();
+            $table->integer('approved_unit_ratio')->nullable();
+            $table->integer('approved_qty')->nullable();
+            $table->integer('approved_base_qty')->nullable();
+            $table->integer('shipped_base_qty')->default(0);
+            $table->integer('received_good_base_qty')->default(0);
+            $table->integer('received_damaged_base_qty')->default(0);
+            $table->integer('received_qty')->default(0);
+            $table->text('notes')->nullable();
+            $table->softDeletes();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('transfer_requisition_items');
+    }
+};
+```
+
+Canonical exemplar (`xxxx_xx_xx_create_transfer_requisition_item_revisions_table.php`, derived verbatim from §2.9):
+
+```php
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('transfer_requisition_item_revisions', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('transfer_requisition_item_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('product_variant_id')->constrained()->restrictOnDelete();
+            $table->foreignId('substitute_product_variant_id')->nullOnDelete()->constrained('product_variants');
+            $table->string('proposed_unit_name');
+            $table->integer('proposed_unit_ratio');
+            $table->integer('proposed_qty');
+            $table->integer('proposed_base_qty');
+            $table->text('negotiation_reason')->nullable();
+            $table->string('side');
+            $table->string('status')->default('pending');
+            $table->foreignId('responds_to_revision_id')->nullOnDelete()->constrained('transfer_requisition_item_revisions');
+            $table->timestamp('responded_at')->nullable();
+            $table->softDeletes();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('transfer_requisition_item_revisions');
+    }
+};
+```
+
+Canonical exemplar (`xxxx_xx_xx_create_in_transits_table.php`, derived verbatim from §2.10):
+
+```php
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('in_transits', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('transfer_requisition_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('transfer_requisition_item_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('product_variant_id')->constrained()->restrictOnDelete();
+            $table->integer('dispatched_base_qty');
+            $table->timestamp('dispatched_at')->useCurrent();
+            $table->string('status')->default('in_transit');
+            $table->timestamp('cleared_at')->nullable();
+            $table->softDeletes();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('in_transits');
+    }
+};
+```
+
+Canonical exemplar (`xxxx_xx_xx_create_loss_ledgers_table.php`, derived verbatim from §2.11):
+
+```php
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('loss_ledgers', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('transfer_requisition_id')->nullOnDelete()->constrained('transfer_requisitions');
+            $table->foreignId('transfer_requisition_item_id')->nullOnDelete()->constrained('transfer_requisition_items');
+            $table->foreignId('product_variant_id')->constrained()->restrictOnDelete();
+            $table->foreignId('warehouse_id')->constrained()->restrictOnDelete();
+            $table->integer('lost_base_qty')->default(0);
+            $table->integer('damaged_base_qty')->default(0);
+            $table->decimal('unit_cost_price', 15, 4);
+            $table->decimal('total_financial_loss', 15, 4);
+            $table->string('loss_category')->default('shortfall');
+            $table->text('notes')->nullable();
+            $table->foreignId('recorded_by')->nullOnDelete()->constrained('users');
+            $table->timestamp('recorded_at')->useCurrent();
+            $table->softDeletes();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('loss_ledgers');
+    }
+};
+```
+
+Canonical exemplar (`xxxx_xx_xx_add_role_columns_to_users_table.php`, derived verbatim from §2.12):
+
+```php
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            $table->string('role')->default('warehouse_staff');
+            $table->boolean('is_active')->default(true);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropColumn('role');
+            $table->dropColumn('is_active');
+        });
+    }
+};
+```
+
+Canonical exemplar (`xxxx_xx_xx_create_user_warehouse_table.php`, derived verbatim from §2.13):
+
+```php
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('user_warehouse', function (Blueprint $table) {
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete(),
+                foreignId('warehouse_id')->constrained()->cascadeOnDelete(),
+            $table->primary(['user_id', 'warehouse_id']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('user_warehouse');
+    }
+};
+```
+
+Canonical exemplar (`xxxx_xx_xx_create_suppliers_table.php`, derived verbatim from §2.14):
+
+```php
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('suppliers', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('contact_person')->nullable();
+            $table->string('phone')->nullable();
+            $table->string('email', 120)->nullable();
+            $table->text('address')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->softDeletes();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('suppliers');
+    }
+};
+```
+
+Canonical exemplar (`xxxx_xx_xx_create_customers_table.php`, derived verbatim from §2.15):
+
+```php
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('customers', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('contact_person')->nullable();
+            $table->string('phone')->nullable();
+            $table->string('email', 120)->nullable();
+            $table->text('address')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->softDeletes();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('customers');
+    }
+};
+```
+
+Canonical exemplar (`xxxx_xx_xx_create_purchase_orders_table.php`, derived verbatim from §2.16):
+
+```php
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('purchase_orders', function (Blueprint $table) {
+            $table->id();
+            $table->string('reference_code', 32)->unique();
+            $table->foreignId('supplier_id')->constrained()->restrictOnDelete();
+            $table->foreignId('warehouse_id')->constrained()->restrictOnDelete();
+            $table->string('status');
+            $table->boolean('update_cost_price')->default(false);
+            $table->foreignId('ordered_by')->constrained()->cascadeOnDelete();
+            $table->foreignId('received_by')->nullOnDelete()->constrained('users');
+            $table->timestamp('ordered_at')->nullable();
+            $table->timestamp('received_at')->nullable();
+            $table->timestamp('cancelled_at')->nullable();
+            $table->text('notes')->nullable();
+            $table->softDeletes();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('purchase_orders');
+    }
+};
+```
+
+Canonical exemplar (`xxxx_xx_xx_create_purchase_order_items_table.php`, derived verbatim from §2.17):
+
+```php
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('purchase_order_items', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('purchase_order_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('product_variant_id')->constrained()->restrictOnDelete();
+            $table->string('ordered_unit_name');
+            $table->integer('ordered_unit_ratio');
+            $table->integer('ordered_qty');
+            $table->integer('ordered_base_qty');
+            $table->decimal('unit_cost_price', 15, 4)->default(0.0000);
+            $table->integer('received_base_qty')->default(0);
+            $table->text('notes')->nullable();
+            $table->softDeletes();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('purchase_order_items');
+    }
+};
+```
+
+Canonical exemplar (`xxxx_xx_xx_create_sales_orders_table.php`, derived verbatim from §2.18):
+
+```php
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('sales_orders', function (Blueprint $table) {
+            $table->id();
+            $table->string('reference_code', 32)->unique();
+            $table->foreignId('customer_id')->constrained()->restrictOnDelete();
+            $table->foreignId('warehouse_id')->constrained()->restrictOnDelete();
+            $table->string('status');
+            $table->foreignId('ordered_by')->constrained()->cascadeOnDelete();
+            $table->foreignId('dispatched_by')->nullOnDelete()->constrained('users');
+            $table->timestamp('ordered_at')->nullable();
+            $table->timestamp('confirmed_at')->nullable();
+            $table->timestamp('dispatched_at')->nullable();
+            $table->timestamp('cancelled_at')->nullable();
+            $table->text('notes')->nullable();
+            $table->softDeletes();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('sales_orders');
+    }
+};
+```
+
+Canonical exemplar (`xxxx_xx_xx_create_sales_order_items_table.php`, derived verbatim from §2.19):
+
+```php
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('sales_order_items', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('sales_order_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('product_variant_id')->constrained()->restrictOnDelete();
+            $table->string('unit_name');
+            $table->integer('unit_ratio');
+            $table->integer('qty');
+            $table->integer('base_qty');
+            $table->decimal('unit_sale_price_snapshot', 15, 4)->default(0.0000);
+            $table->integer('dispatched_base_qty')->default(0);
+            $table->text('notes')->nullable();
+            $table->softDeletes();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('sales_order_items');
+    }
+};
+```
+
+Canonical exemplar (`xxxx_xx_xx_create_stock_movement_idempotency_keys_table.php`, derived verbatim from §2.20):
+
+```php
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('stock_movement_idempotency_keys', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('transfer_requisition_id')->constrained()->cascadeOnDelete();
+            $table->string('payload_checksum', 64)->unique();
+            $table->json('resulting_item_states')->default('[]');
+            $table->timestamp('created_at')->useCurrent();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('stock_movement_idempotency_keys');
+    }
+};
+```
+
+Canonical exemplar (`xxxx_xx_xx_create_direct_transfers_table.php`, derived verbatim from §2.21):
+
+```php
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('direct_transfers', function (Blueprint $table) {
+            $table->id();
+            $table->string('reference_code', 32)->unique();
+            $table->foreignId('from_warehouse_id')->constrained()->restrictOnDelete();
+            $table->foreignId('to_warehouse_id')->constrained()->restrictOnDelete();
+            $table->text('notes')->nullable();
+            $table->foreignId('transferred_by')->nullOnDelete()->constrained('users');
+            $table->timestamp('transferred_at')->useCurrent();
+            $table->softDeletes();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('direct_transfers');
+    }
+};
+```
+
+Canonical exemplar (`xxxx_xx_xx_create_direct_transfer_items_table.php`, derived verbatim from §2.22):
+
+```php
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('direct_transfer_items', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('direct_transfer_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('product_variant_id')->constrained()->restrictOnDelete();
+            $table->string('unit_name');
+            $table->integer('unit_ratio');
+            $table->integer('qty');
+            $table->integer('base_qty');
+            $table->text('notes')->nullable();
+            $table->softDeletes();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('direct_transfer_items');
+    }
+};
+```
 
 ---
 
@@ -1782,17 +2552,10 @@ class Product extends Model
     {
         return $this->hasMany(ProductVariant::class);
     }
-
-    protected static function booted(): void
-    {
-        static::deleting(function (Product $product) {
-            if (! $product->isForceDeleting() && $product->variants()->exists()) {
-                throw new \DomainException('Cannot soft-delete a product family that still has variants.');
-            }
-        });
-    }
 }
 ```
+
+Soft-delete guard lives solely in `App\Observers\ProductObserver` (§3.19, registered in `AppServiceProvider::boot()` per §17.3) — no `booted()` override here; a duplicated closure would throw twice for the same violation and drift from the canonical observer.
 
 ### 3.2 ProductVariant
 
@@ -1800,6 +2563,7 @@ class Product extends Model
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -1820,6 +2584,16 @@ class ProductVariant extends Model
         'images'     => 'array',
         'is_active'  => 'boolean',
     ];
+
+    /**
+     * Blank barcodes normalize to null (owner decision, §2).
+     */
+    protected function barcode(): Attribute
+    {
+        return Attribute::make(
+            set: fn ($value) => filled($value) ? $value : null,
+        );
+    }
 
     public function product(): BelongsTo
     {
@@ -1881,6 +2655,12 @@ class ProductVariant extends Model
     /**
      * Sales reservation — separate from procurement reservation (A5).
      *
+     * `Confirmed` orders reserve their full `base_qty`. `PartiallyDispatched`
+     * orders reserve only the outstanding remainder
+     * (`base_qty - dispatched_base_qty`, floored at 0 via
+     * `SalesOrderItem::outstandingBaseQty()` semantics) — summing the full
+     * `base_qty` would over-reserve stock already shipped.
+     *
      * $excludeSalesOrderId excludes the sales order currently being dispatched
      * so its own outstanding qty is not counted against itself.
      */
@@ -1888,17 +2668,26 @@ class ProductVariant extends Model
         ?int $warehouseId = null,
         ?int $excludeSalesOrderId = null,
     ): int {
-        return (int) SalesOrderItem::query()
+        $confirmed = (int) SalesOrderItem::query()
             ->where('product_variant_id', $this->id)
             ->whereHas('salesOrder', function (Builder $q) use ($warehouseId, $excludeSalesOrderId) {
-                $q->whereIn('status', [
-                    \App\Enums\SalesOrderStatus::Confirmed->value,
-                    \App\Enums\SalesOrderStatus::PartiallyDispatched->value,
-                ])
+                $q->where('status', \App\Enums\SalesOrderStatus::Confirmed->value)
                   ->when($warehouseId, fn (Builder $qq) => $qq->where('warehouse_id', $warehouseId))
                   ->when($excludeSalesOrderId, fn (Builder $qq) => $qq->where('id', '!=', $excludeSalesOrderId));
             })
             ->sum('base_qty');
+
+        $partiallyDispatched = (int) SalesOrderItem::query()
+            ->where('product_variant_id', $this->id)
+            ->whereHas('salesOrder', function (Builder $q) use ($warehouseId, $excludeSalesOrderId) {
+                $q->where('status', \App\Enums\SalesOrderStatus::PartiallyDispatched->value)
+                  ->when($warehouseId, fn (Builder $qq) => $qq->where('warehouse_id', $warehouseId))
+                  ->when($excludeSalesOrderId, fn (Builder $qq) => $qq->where('id', '!=', $excludeSalesOrderId));
+            })
+            ->selectRaw('SUM(GREATEST(base_qty - dispatched_base_qty, 0)) as total')
+            ->value('total');
+
+        return $confirmed + $partiallyDispatched;
     }
 
     /**
@@ -1915,7 +2704,15 @@ class ProductVariant extends Model
     }
 
     /**
-     * Batched available lookup — exactly 3 queries regardless of variant count.
+     * Batched available lookup — exactly 3 top-level aggregate queries
+     * regardless of variant count (one per reservation class: on-hand,
+     * transfer-reserved, sales-reserved). The `whereHas`/`CASE` subqueries
+     * execute inside those 3 queries; they do not add top-level queries.
+     *
+     * Sales reservation mirrors `reservedForSalesQuantity()`: `Confirmed`
+     * orders contribute full `base_qty`, `PartiallyDispatched` orders
+     * contribute only `GREATEST(base_qty - dispatched_base_qty, 0)` via a
+     * single joined aggregate (supported by both MySQL and PostgreSQL).
      *
      * @param  array<int>  $variantIds
      * @return array<int, int>  variant_id => available_qty
@@ -1953,16 +2750,19 @@ class ProductVariant extends Model
             ->all();
 
         $salesReserved = SalesOrderItem::query()
-            ->selectRaw('product_variant_id, SUM(base_qty) as total')
-            ->whereIn('product_variant_id', $variantIds)
-            ->whereHas('salesOrder', fn (Builder $q) =>
-                $q->whereIn('status', [
-                    \App\Enums\SalesOrderStatus::Confirmed->value,
-                    \App\Enums\SalesOrderStatus::PartiallyDispatched->value,
-                ])
-                  ->where('warehouse_id', $warehouseId)
-                  ->when($excludeSalesOrderId, fn (Builder $qq) => $qq->where('id', '!=', $excludeSalesOrderId)))
-            ->groupBy('product_variant_id')
+            ->join('sales_orders', 'sales_orders.id', '=', 'sales_order_items.sales_order_id')
+            ->whereIn('sales_order_items.product_variant_id', $variantIds)
+            ->whereIn('sales_orders.status', [
+                \App\Enums\SalesOrderStatus::Confirmed->value,
+                \App\Enums\SalesOrderStatus::PartiallyDispatched->value,
+            ])
+            ->where('sales_orders.warehouse_id', $warehouseId)
+            ->when($excludeSalesOrderId, fn (Builder $qq) => $qq->where('sales_orders.id', '!=', $excludeSalesOrderId))
+            ->selectRaw('sales_order_items.product_variant_id')
+            ->selectRaw("SUM(CASE WHEN sales_orders.status = ? THEN sales_order_items.base_qty ELSE GREATEST(sales_order_items.base_qty - sales_order_items.dispatched_base_qty, 0) END) as total", [
+                \App\Enums\SalesOrderStatus::Confirmed->value,
+            ])
+            ->groupBy('sales_order_items.product_variant_id')
             ->pluck('total', 'product_variant_id')
             ->map(fn ($v) => (int) $v)
             ->all();
@@ -2334,6 +3134,7 @@ namespace App\Models;
 
 use App\Enums\NegotiationSide;
 use App\Enums\RevisionStatus;
+use App\Exceptions\InvalidRevisionTransitionException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -2378,10 +3179,10 @@ class TransferRequisitionItemRevision extends Model
     public function ensureCanTransitionTo(RevisionStatus $target): void
     {
         if ($this->status !== RevisionStatus::Pending) {
-            throw new \DomainException('Revision is already resolved.');
+            throw new InvalidRevisionTransitionException($this->status->value, $target->value);
         }
         if ($target === RevisionStatus::Pending) {
-            throw new \DomainException('Cannot transition a revision back to pending.');
+            throw new InvalidRevisionTransitionException($this->status->value, $target->value);
         }
     }
 }
@@ -2778,9 +3579,12 @@ namespace App\Models;
 use App\Enums\UserRole;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
+    use Notifiable;
+
     protected $fillable = ['name', 'email', 'password', 'role', 'is_active'];
 
     protected $casts = [
@@ -2817,6 +3621,7 @@ class User extends Authenticatable
 ```php
 namespace App\Observers;
 
+use App\Exceptions\ProductFamilyHasVariantsException;
 use App\Models\Product;
 
 class ProductObserver
@@ -2827,7 +3632,7 @@ class ProductObserver
             return;
         }
         if ($product->variants()->exists()) {
-            throw new \DomainException('Cannot soft-delete a product family with variants.');
+            throw new ProductFamilyHasVariantsException((int) $product->id);
         }
     }
 }
@@ -2946,6 +3751,37 @@ class DirectTransferItem extends Model
     public function productVariant(): BelongsTo
     {
         return $this->belongsTo(ProductVariant::class);
+    }
+}
+```
+
+### 3.22 StockMovementIdempotencyKey
+
+```php
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class StockMovementIdempotencyKey extends Model
+{
+    public $timestamps = false;
+
+    protected $fillable = [
+        'transfer_requisition_id',
+        'payload_checksum',
+        'resulting_item_states',
+        'created_at',
+    ];
+
+    protected $casts = [
+        'resulting_item_states' => 'array',
+        'created_at' => 'datetime',
+    ];
+
+    public function transferRequisition(): BelongsTo
+    {
+        return $this->belongsTo(TransferRequisition::class);
     }
 }
 ```
@@ -3462,6 +4298,7 @@ use App\Enums\TransferRequisitionStatus;
 use App\Models\TransferRequisition;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Support\GeneratesReferenceCodes;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class TransferRequisitionFactory extends Factory
@@ -3471,7 +4308,7 @@ class TransferRequisitionFactory extends Factory
     public function definition(): array
     {
         return [
-            'reference_code'    => 'TR-' . now()->format('YmdHis') . '-' . $this->faker->numberBetween(100, 999),
+            'reference_code'    => GeneratesReferenceCodes::generateReferenceCode('TR', $this->faker->unique()->numberBetween(100, 999)),
             'from_warehouse_id' => Warehouse::factory(),
             'to_warehouse_id'   => Warehouse::factory(),
             'status'            => TransferRequisitionStatus::Draft,
@@ -3613,6 +4450,7 @@ use App\Models\PurchaseOrder;
 use App\Models\Supplier;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Support\GeneratesReferenceCodes;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class PurchaseOrderFactory extends Factory
@@ -3622,7 +4460,7 @@ class PurchaseOrderFactory extends Factory
     public function definition(): array
     {
         return [
-            'reference_code' => 'PO-' . now()->format('YmdHis') . '-' . $this->faker->numberBetween(100, 999),
+            'reference_code' => GeneratesReferenceCodes::generateReferenceCode('PO', $this->faker->unique()->numberBetween(100, 999)),
             'supplier_id'    => Supplier::factory(),
             'warehouse_id'   => Warehouse::factory(),
             'status'         => PurchaseOrderStatus::Draft,
@@ -3681,6 +4519,7 @@ use App\Models\Customer;
 use App\Models\SalesOrder;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Support\GeneratesReferenceCodes;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class SalesOrderFactory extends Factory
@@ -3690,7 +4529,7 @@ class SalesOrderFactory extends Factory
     public function definition(): array
     {
         return [
-            'reference_code' => 'SO-' . now()->format('YmdHis') . '-' . $this->faker->numberBetween(100, 999),
+            'reference_code' => GeneratesReferenceCodes::generateReferenceCode('SO', $this->faker->unique()->numberBetween(100, 999)),
             'customer_id'    => Customer::factory(),
             'warehouse_id'   => Warehouse::factory(),
             'status'         => SalesOrderStatus::Draft,
@@ -3747,6 +4586,7 @@ namespace Database\Factories;
 use App\Models\DirectTransfer;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Support\GeneratesReferenceCodes;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class DirectTransferFactory extends Factory
@@ -3756,7 +4596,7 @@ class DirectTransferFactory extends Factory
     public function definition(): array
     {
         return [
-            'reference_code'    => 'DT-' . now()->format('YmdHis') . '-' . $this->faker->numberBetween(100, 999),
+            'reference_code'    => GeneratesReferenceCodes::generateReferenceCode('DT', $this->faker->unique()->numberBetween(100, 999)),
             'from_warehouse_id' => Warehouse::factory(),
             'to_warehouse_id'   => Warehouse::factory(),
             'transferred_by'    => User::factory(),
@@ -3797,6 +4637,98 @@ class DirectTransferItemFactory extends Factory
 }
 ```
 
+### 5.19 StockMovementFactory
+
+```php
+namespace Database\Factories;
+
+use App\Enums\StockMovementType;
+use App\Models\ProductVariant;
+use App\Models\StockMovement;
+use App\Models\User;
+use App\Models\Warehouse;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+class StockMovementFactory extends Factory
+{
+    protected $model = StockMovement::class;
+
+    public function definition(): array
+    {
+        return [
+            'product_variant_id' => ProductVariant::factory(),
+            'warehouse_id'       => Warehouse::factory(),
+            'type'               => StockMovementType::Adjustment,
+            'quantity'           => $this->faker->numberBetween(1, 50),
+            'unit_name_used'     => 'pc',
+            'unit_ratio_used'    => 1,
+            'created_by'         => User::factory(),
+        ];
+    }
+}
+```
+
+### 5.20 TransferRequisitionItemRevisionFactory
+
+```php
+namespace Database\Factories;
+
+use App\Enums\NegotiationSide;
+use App\Enums\RevisionStatus;
+use App\Models\ProductVariant;
+use App\Models\TransferRequisitionItem;
+use App\Models\TransferRequisitionItemRevision;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+class TransferRequisitionItemRevisionFactory extends Factory
+{
+    protected $model = TransferRequisitionItemRevision::class;
+
+    public function definition(): array
+    {
+        $qty = $this->faker->numberBetween(1, 20);
+
+        return [
+            'transfer_requisition_item_id' => TransferRequisitionItem::factory(),
+            'user_id'                      => User::factory(),
+            'product_variant_id'           => ProductVariant::factory(),
+            'proposed_unit_name'           => 'pc',
+            'proposed_unit_ratio'          => 1,
+            'proposed_qty'                 => $qty,
+            'proposed_base_qty'            => $qty,
+            'side'                         => NegotiationSide::Fulfiller,
+            'status'                       => RevisionStatus::Pending,
+        ];
+    }
+}
+```
+
+### 5.21 StockMovementIdempotencyKeyFactory
+
+```php
+namespace Database\Factories;
+
+use App\Models\StockMovementIdempotencyKey;
+use App\Models\TransferRequisition;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+class StockMovementIdempotencyKeyFactory extends Factory
+{
+    protected $model = StockMovementIdempotencyKey::class;
+
+    public function definition(): array
+    {
+        return [
+            'transfer_requisition_id' => TransferRequisition::factory(),
+            'payload_checksum'        => hash('sha256', $this->faker->unique()->uuid()),
+            'resulting_item_states'   => [],
+            'created_at'              => now(),
+        ];
+    }
+}
+```
+
 ---
 
 ## ⚙️ Section 6: Transactional Service Layer
@@ -3806,6 +4738,7 @@ class DirectTransferItemFactory extends Factory
 ```php
 namespace App\Services;
 
+use App\Exceptions\OutstandingQuantityExceededException;
 use App\Models\PurchaseOrderItem;
 use App\Models\SalesOrderItem;
 
@@ -3815,8 +4748,11 @@ class GuardsOutstandingQuantity
     {
         $outstanding = $item->outstandingBaseQty();
         if ($newReceived > $outstanding) {
-            throw new \DomainException(
-                "Cannot receive {$newReceived} base units; outstanding is {$outstanding}."
+            throw new OutstandingQuantityExceededException(
+                itemType: $item::class,
+                itemId: (int) $item->id,
+                attempted: $newReceived,
+                outstanding: $outstanding,
             );
         }
     }
@@ -3825,8 +4761,11 @@ class GuardsOutstandingQuantity
     {
         $outstanding = $item->outstandingBaseQty();
         if ($newDispatch > $outstanding) {
-            throw new \DomainException(
-                "Cannot dispatch {$newDispatch} base units; outstanding is {$outstanding}."
+            throw new OutstandingQuantityExceededException(
+                itemType: $item::class,
+                itemId: (int) $item->id,
+                attempted: $newDispatch,
+                outstanding: $outstanding,
             );
         }
     }
@@ -3840,28 +4779,34 @@ namespace App\Services;
 
 use App\Enums\InTransitStatus;
 use App\Enums\StockMovementType;
+use App\Exceptions\DomainRuleViolationException;
+use App\Exceptions\InsufficientStockException;
+use App\Exceptions\InvalidDocumentStateException;
+use App\Exceptions\OutstandingQuantityExceededException;
 use App\Models\DirectTransfer;
 use App\Models\InTransit;
 use App\Models\LossLedger;
 use App\Models\ProductVariant;
+use App\Models\ProductVariantUnitConversion;
 use App\Models\StockMovement;
 use App\Models\StockMovementIdempotencyKey;
 use App\Models\TransferRequisition;
 use App\Models\TransferRequisitionItem;
 use App\Models\Warehouse;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
 class InventoryService
 {
-    public function __construct(
-        private readonly GuardsOutstandingQuantity $guards,
-    ) {}
-
     /**
      * Record a signed stock movement inside a lock.
      *
      * Restricted: purchase/sale/sale_return/purchase_return movements must
-     * go through PurchaseService / SalesService so their guards apply.
+     * go through PurchaseService / SalesService so their guards apply, and
+     * adjustment movements must go through `adjustment()` so the
+     * caller-supplied sign is preserved — `Adjustment` is intentionally not
+     * positive per `StockMovementType::isPositive()`, so routing it here
+     * would silently force every adjustment negative.
      */
     public function recordMovement(
         int $productVariantId,
@@ -3876,18 +4821,20 @@ class InventoryService
         ?string $notes = null,
     ): StockMovement {
         if (in_array($type, [
-            StockMovementType::Purchase,
-            StockMovementType::Sale,
-            StockMovementType::SaleReturn,
-            StockMovementType::PurchaseReturn,
-        ], true)) {
-            throw new \DomainException(
-                'Use dedicated service methods for purchase/sale movements.'
-            );
-        }
+        StockMovementType::Purchase,
+        StockMovementType::Sale,
+        StockMovementType::SaleReturn,
+        StockMovementType::PurchaseReturn,
+    ], true)) {
+        throw new DomainRuleViolationException('errors.invalid_movement_type', [
+            'type' => $type->value,
+        ]);
+    }
 
         if ($unitRatio < 1) {
-            throw new \DomainException('Unit ratio must be >= 1.');
+            throw new DomainRuleViolationException('errors.invalid_unit_ratio', [
+                'ratio' => $unitRatio,
+            ]);
         }
 
         return DB::transaction(function () use (
@@ -3936,24 +4883,35 @@ class InventoryService
         ?string $notes = null,
     ): DirectTransfer {
         if ($fromWarehouseId === $toWarehouseId) {
-            throw new \DomainException('Origin and destination warehouses must differ.');
+            throw new DomainRuleViolationException('errors.same_warehouse_transfer', [
+                'warehouse' => $fromWarehouseId,
+            ]);
         }
 
         if (empty($items)) {
-            throw new \DomainException('A direct transfer must contain at least one item.');
+            throw new DomainRuleViolationException('errors.empty_transfer_items');
         }
 
         foreach ($items as $index => $item) {
             foreach (['product_variant_id', 'unit_name', 'unit_ratio', 'qty'] as $key) {
                 if (! array_key_exists($key, $item)) {
-                    throw new \DomainException("Item [{$index}] is missing required field: {$key}.");
+                    throw new DomainRuleViolationException('errors.missing_item_field', [
+                        'index' => $index,
+                        'field' => $key,
+                    ]);
                 }
             }
             if ((int) $item['unit_ratio'] < 1) {
-                throw new \DomainException("Item [{$index}] unit ratio must be >= 1.");
+                throw new DomainRuleViolationException('errors.invalid_unit_ratio', [
+                    'index' => $index,
+                    'ratio' => (int) $item['unit_ratio'],
+                ]);
             }
             if ((int) $item['qty'] < 1) {
-                throw new \DomainException("Item [{$index}] quantity must be >= 1.");
+                throw new DomainRuleViolationException('errors.invalid_item_quantity', [
+                    'index' => $index,
+                    'qty' => (int) $item['qty'],
+                ]);
             }
         }
 
@@ -3961,15 +4919,18 @@ class InventoryService
             $fromWarehouseId, $toWarehouseId, $items, $referenceCode, $notes
         ) {
             // §20.3 — service independently verifies both warehouse endpoints
-            // are within the actor's operational scope.
+            // are within the actor's operational scope. Admins hold global
+            // scope with a possibly empty `user_warehouse` pivot, so the
+            // membership check applies to non-admin actors only.
             $actor = auth()->user();
-            if ($actor) {
+            if ($actor && ! $actor->isAdmin()) {
                 $allowed = $actor->warehouses()->pluck('id')->all();
                 if (! in_array($fromWarehouseId, $allowed, true)
                     || ! in_array($toWarehouseId, $allowed, true)) {
-                    throw new \DomainException(
-                        'Both warehouses must be within your operational scope.'
-                    );
+                    throw new DomainRuleViolationException('errors.warehouse_out_of_scope', [
+                        'from' => $fromWarehouseId,
+                        'to' => $toWarehouseId,
+                    ]);
                 }
             }
 
@@ -3996,7 +4957,64 @@ class InventoryService
 
             foreach ($variantIds as $vid) {
                 if (! $lockedVariants->has($vid)) {
-                    throw new \DomainException("Product variant [{$vid}] not found.");
+                    throw new DomainRuleViolationException('errors.unknown_variant', [
+                        'variant' => $vid,
+                    ]);
+                }
+            }
+
+            // Unit verification — the caller-supplied `unit_name` /
+            // `unit_ratio` pair must match the variant's own conversion row
+            // (same rule as `NegotiationService::submitRevision()`); the
+            // ratio is resolved server-side, never trusted from the caller.
+            foreach ($items as $index => $item) {
+                $storedRatio = ProductVariantUnitConversion::where(
+                    'product_variant_id',
+                    (int) $item['product_variant_id']
+                )
+                    ->where('unit_name', (string) $item['unit_name'])
+                    ->value('base_unit_ratio');
+
+                if ($storedRatio === null) {
+                    throw new DomainRuleViolationException('errors.undefined_unit', [
+                        'index' => $index,
+                        'unit' => (string) $item['unit_name'],
+                        'variant' => (int) $item['product_variant_id'],
+                    ]);
+                }
+
+                if ((int) $storedRatio !== (int) $item['unit_ratio']) {
+                    throw new DomainRuleViolationException('errors.unit_ratio_mismatch', [
+                        'index' => $index,
+                        'unit' => (string) $item['unit_name'],
+                    ]);
+                }
+            }
+
+            // Availability gate — a direct transfer must never drive the
+            // source warehouse negative. Required base qty per variant is
+            // summed across lines, then checked against batched availability
+            // (on-hand minus transfer and sales reservations) at the source.
+            $requiredByVariant = [];
+            foreach ($items as $item) {
+                $vid = (int) $item['product_variant_id'];
+                $requiredByVariant[$vid] = ($requiredByVariant[$vid] ?? 0)
+                    + ((int) $item['qty'] * (int) $item['unit_ratio']);
+            }
+
+            $availableByVariant = ProductVariant::batchAvailableQuantity(
+                array_keys($requiredByVariant),
+                $fromWarehouseId,
+            );
+
+            foreach ($requiredByVariant as $vid => $required) {
+                if (($availableByVariant[$vid] ?? 0) < $required) {
+                    throw new InsufficientStockException(
+                        variantId: $vid,
+                        warehouseId: $fromWarehouseId,
+                        requested: $required,
+                        available: $availableByVariant[$vid] ?? 0,
+                    );
                 }
             }
 
@@ -4074,7 +5092,12 @@ class InventoryService
             $fresh = TransferRequisition::lockForUpdate()->findOrFail($requisition->id);
 
             if ($fresh->status !== \App\Enums\TransferRequisitionStatus::Confirmed) {
-                throw new \DomainException('Only confirmed requisitions can be dispatched.');
+                throw new InvalidDocumentStateException(
+                    documentType: TransferRequisition::class,
+                    documentId: (int) $fresh->id,
+                    actualStatus: $fresh->status->value,
+                    action: 'dispatch',
+                );
             }
 
             $items = TransferRequisitionItem::where('transfer_requisition_id', $fresh->id)
@@ -4104,20 +5127,24 @@ class InventoryService
                 $fresh->id, // exclude own transfer reservation
             );
 
+            $reorderPoints = ProductVariant::whereIn('id', $variantIds)->pluck('reorder_point', 'id');
+
             foreach ($items as $item) {
                 if ($item->approved_base_qty === null) {
-                    throw new \DomainException(
-                        "Item {$item->id} has no approved base quantity."
-                    );
+                    throw new DomainRuleViolationException('errors.missing_approved_quantity', [
+                        'item' => (int) $item->id,
+                    ]);
                 }
 
                 $variantId = $item->actualVariantId();
                 $available = $availableByVariant[$variantId] ?? 0;
 
                 if ($item->approved_base_qty > $available) {
-                    throw new \DomainException(
-                        "Insufficient stock to dispatch variant {$variantId}. " .
-                        "Required: {$item->approved_base_qty}, available: {$available}."
+                    throw new InsufficientStockException(
+                        variantId: $variantId,
+                        warehouseId: $fresh->from_warehouse_id,
+                        requested: (int) $item->approved_base_qty,
+                        available: $available,
                     );
                 }
 
@@ -4145,7 +5172,13 @@ class InventoryService
 
                 $item->update(['shipped_base_qty' => $item->approved_base_qty]);
 
-                $availableByVariant[$variantId] = $available - $item->approved_base_qty;
+                $remaining = $available - $item->approved_base_qty;
+                $availableByVariant[$variantId] = $remaining;
+
+                $reorderPoint = $reorderPoints[$variantId] ?? 0;
+                if ($available >= $reorderPoint && $remaining < $reorderPoint) {
+                    event(new \App\Events\InventoryBelowReorderPoint($variantId, $fresh->from_warehouse_id));
+                }
             }
 
             $fresh->update([
@@ -4153,6 +5186,8 @@ class InventoryService
                 'dispatched_at' => now(),
                 'dispatched_by' => auth()->id(),
             ]);
+
+            event(new \App\Events\TransferDispatched($fresh->id));
         });
     }
 
@@ -4164,11 +5199,54 @@ class InventoryService
     public function scanToReceive(TransferRequisition $requisition, array $scanPayload): void
     {
         DB::transaction(function () use ($requisition, $scanPayload) {
-            TransferRequisition::lockForUpdate()->findOrFail($requisition->id);
+            $fresh = TransferRequisition::lockForUpdate()->findOrFail($requisition->id);
 
-            $checksum = hash('sha256', json_encode($scanPayload));
+            $items = TransferRequisitionItem::where('transfer_requisition_id', $fresh->id)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
 
-            $alreadyProcessed = StockMovementIdempotencyKey::where('transfer_requisition_id', $requisition->id)
+            $knownIds = $items->pluck('id')->all();
+
+            foreach (array_keys($scanPayload) as $payloadId) {
+                if (! in_array((int) $payloadId, $knownIds, true)) {
+                    throw new DomainRuleViolationException('errors.unknown_requisition_item', [
+                        'item' => (int) $payloadId,
+                    ]);
+                }
+            }
+
+            $normalized = [];
+            foreach ($scanPayload as $itemId => $quantities) {
+                $good = $quantities['received_good'] ?? 0;
+                $damaged = $quantities['received_damaged'] ?? 0;
+
+                if (! is_numeric($good) || ! is_numeric($damaged)
+                    || (int) $good != $good || (int) $damaged != $damaged) {
+                    throw new DomainRuleViolationException('errors.non_integer_payload', [
+                        'item' => (int) $itemId,
+                    ]);
+                }
+
+                $good = (int) $good;
+                $damaged = (int) $damaged;
+
+                if ($good < 0 || $damaged < 0) {
+                    throw new DomainRuleViolationException('errors.negative_payload', [
+                        'item' => (int) $itemId,
+                    ]);
+                }
+
+                $normalized[(int) $itemId] = [
+                    'received_damaged' => $damaged,
+                    'received_good' => $good,
+                ];
+            }
+
+            ksort($normalized, SORT_NUMERIC);
+            $checksum = hash('sha256', json_encode($normalized));
+
+            $alreadyProcessed = StockMovementIdempotencyKey::where('transfer_requisition_id', $fresh->id)
                 ->where('payload_checksum', $checksum)
                 ->exists();
 
@@ -4177,20 +5255,60 @@ class InventoryService
             }
 
             // First-scan detection: no idempotency record exists yet.
+            // Resolved BEFORE the key claim below — the claim itself writes
+            // a row, so detection must precede it.
             $isFirstScan = ! StockMovementIdempotencyKey::where(
                 'transfer_requisition_id',
-                $requisition->id
+                $fresh->id
             )->exists();
 
-            $items = TransferRequisitionItem::where('transfer_requisition_id', $requisition->id)
-                ->lockForUpdate()
-                ->get();
+            // §19.8 — the unique database constraint
+            // (`idempotency_requisition_checksum_unique`) is the final
+            // authority. Claim the key BEFORE any ledger write: the loser of
+            // a concurrent-duplicate race fails here while this transaction
+            // holds no stock-movement or loss-ledger side effects, re-reads
+            // the winner's key, and no-ops instead of surfacing a database
+            // error. Any other query failure is rethrown.
+            try {
+                $idempotencyKey = StockMovementIdempotencyKey::create([
+                    'transfer_requisition_id' => $fresh->id,
+                    'payload_checksum'        => $checksum,
+                    'resulting_item_states'   => [],
+                ]);
+            } catch (QueryException $e) {
+                $winner = StockMovementIdempotencyKey::where('transfer_requisition_id', $fresh->id)
+                    ->where('payload_checksum', $checksum)
+                    ->first();
+
+                if ($winner !== null) {
+                    return;
+                }
+
+                throw $e;
+            }
+
+            $actualVariantIds = $items->map(fn ($item) => $item->actualVariantId())
+                ->unique()
+                ->sort()
+                ->values()
+                ->all();
+
+            if (! empty($actualVariantIds)) {
+                ProductVariant::whereIn('id', $actualVariantIds)
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get();
+            }
+
+            Warehouse::lockForUpdate()->findOrFail($fresh->to_warehouse_id);
+
+            $scanPayload = $normalized;
 
             foreach ($items as $item) {
                 $payload = $scanPayload[$item->id] ?? null;
 
                 if ($payload === null && $isFirstScan) {
-                    $this->writeOffOmittedItem($requisition, $item);
+                    $this->writeOffOmittedItem($fresh, $item);
                     continue;
                 }
 
@@ -4201,17 +5319,28 @@ class InventoryService
                 $good = (int) ($payload['received_good'] ?? 0);
                 $damaged = (int) ($payload['received_damaged'] ?? 0);
 
+                $outstanding = max(0, (int) $item->approved_base_qty - (int) $item->received_good_base_qty - (int) $item->received_damaged_base_qty);
+
+                if ($good + $damaged > $outstanding) {
+                    throw new OutstandingQuantityExceededException(
+                        itemType: TransferRequisitionItem::class,
+                        itemId: (int) $item->id,
+                        attempted: $good + $damaged,
+                        outstanding: $outstanding,
+                    );
+                }
+
                 if ($good > 0) {
                     StockMovement::create([
                         'product_variant_id' => $item->actualVariantId(),
-                        'warehouse_id'       => $requisition->to_warehouse_id,
+                        'warehouse_id'       => $fresh->to_warehouse_id,
                         'type'               => StockMovementType::TransferIn,
                         'quantity'           => abs($good),
                         'unit_name_used'     => $item->approved_unit_name,
                         'unit_ratio_used'    => $item->approved_unit_ratio,
                         'reference_type'     => TransferRequisition::class,
-                        'reference_id'       => (string) $requisition->id,
-                        'reference_code'     => $requisition->reference_code,
+                        'reference_id'       => (string) $fresh->id,
+                        'reference_code'     => $fresh->reference_code,
                         'created_by'         => auth()->id(),
                     ]);
                 }
@@ -4229,23 +5358,13 @@ class InventoryService
                 }
             }
 
-            StockMovementIdempotencyKey::create([
-                'transfer_requisition_id' => $requisition->id,
-                'payload_checksum'        => $checksum,
-                'resulting_item_states'   => $requisition->items()->get()->toArray(),
+            $idempotencyKey->update([
+                'resulting_item_states' => $fresh->items()->get()->toArray(),
             ]);
 
-            $allReceived = $requisition->items()->get()->every(
-                fn ($item) => $item->received_good_base_qty + $item->received_damaged_base_qty >= $item->approved_base_qty
-            );
+            $this->updateReceiptClosingStatus($fresh);
 
-            $requisition->update([
-                'status'       => $allReceived
-                    ? \App\Enums\TransferRequisitionStatus::Completed
-                    : \App\Enums\TransferRequisitionStatus::PartiallyReceived,
-                'received_by'  => auth()->id(),
-                'completed_at' => $allReceived ? now() : null,
-            ]);
+            event(new \App\Events\TransferReceived($fresh->id));
         });
     }
 
@@ -4258,7 +5377,7 @@ class InventoryService
         $unitCost = LossLedger::snapshotUnitCostFrom($actualVariant);
         $totalLoss = LossLedger::calculateTotalFinancialLoss($unitCost, $item->approved_base_qty);
 
-        LossLedger::create([
+        $loss = LossLedger::create([
             'transfer_requisition_id'      => $requisition->id,
             'transfer_requisition_item_id' => $item->id,
             'product_variant_id'           => $item->actualVariantId(),
@@ -4275,6 +5394,8 @@ class InventoryService
             'recorded_at'                  => now(),
         ]);
 
+        event(new \App\Events\LossRecorded($loss->id));
+
         $this->markInTransit($item, InTransitStatus::Lost);
     }
 
@@ -4286,6 +5407,150 @@ class InventoryService
                 'status'     => $status->value,
                 'cleared_at' => now(),
             ]);
+    }
+
+    /**
+     * Terminal-state resolution shared by `scanToReceive()` and `recordLoss()`.
+     *
+     * An item is fully accounted when good + damaged receipts plus recorded
+     * shortfall losses (`loss_ledgers.lost_base_qty` — written by
+     * `writeOffOmittedItem()` and `recordLoss()`) cover its approved qty.
+     * When every item is fully accounted the requisition closes:
+     * `ClosedWithLoss` if any loss ledger exists for the requisition,
+     * otherwise `Completed`. Anything less stays `PartiallyReceived`.
+     */
+    private function updateReceiptClosingStatus(TransferRequisition $requisition): void
+    {
+        $lostByItem = LossLedger::query()
+            ->where('transfer_requisition_id', $requisition->id)
+            ->selectRaw('transfer_requisition_item_id, SUM(lost_base_qty) as total')
+            ->groupBy('transfer_requisition_item_id')
+            ->pluck('total', 'transfer_requisition_item_id');
+
+        $allAccounted = $requisition->items()->get()->every(
+            fn ($item) => (int) $item->received_good_base_qty
+                + (int) $item->received_damaged_base_qty
+                + (int) ($lostByItem[$item->id] ?? 0)
+                >= (int) $item->approved_base_qty
+        );
+
+        if (! $allAccounted) {
+            $requisition->update([
+                'status'       => \App\Enums\TransferRequisitionStatus::PartiallyReceived,
+                'received_by'  => auth()->id(),
+                'completed_at' => null,
+            ]);
+
+            return;
+        }
+
+        $hasLoss = LossLedger::where('transfer_requisition_id', $requisition->id)->exists();
+
+        $requisition->update([
+            'status'       => $hasLoss
+                ? \App\Enums\TransferRequisitionStatus::ClosedWithLoss
+                : \App\Enums\TransferRequisitionStatus::Completed,
+            'received_by'  => auth()->id(),
+            'completed_at' => now(),
+        ]);
+    }
+
+    /**
+     * Record a loss against one requisition item.
+     *
+     * Service boundary for the `recordLoss` table action (§7B.3): locks
+     * the requisition, item, and effective variant, snapshots cost, writes
+     * the LossLedger, accrues damaged qty into item receipt state
+     * (mirroring `scanToReceive()` damaged accounting), and transitions
+     * InTransit rows — `Cleared` when good + damaged receipts cover the
+     * approved qty (mirroring `scanToReceive()`), `Lost` when the
+     * shortfall write-off covers the remainder (mirroring
+     * `writeOffOmittedItem()`). Partial losses leave InTransit rows
+     * untouched. Finally resolves the parent requisition through
+     * `updateReceiptClosingStatus()` (`ClosedWithLoss` when fully
+     * accounted with losses, `Completed` when fully accounted without
+     * losses, otherwise `PartiallyReceived`).
+     */
+    public function recordLoss(
+        TransferRequisition $requisition,
+        TransferRequisitionItem $item,
+        int $lostBaseQty,
+        int $damagedBaseQty,
+        string $lossCategory,
+        ?string $notes = null,
+    ): LossLedger {
+        return DB::transaction(function () use (
+            $requisition, $item, $lostBaseQty, $damagedBaseQty, $lossCategory, $notes
+        ) {
+            $fresh = TransferRequisition::lockForUpdate()->findOrFail($requisition->id);
+
+            $freshItem = TransferRequisitionItem::where('transfer_requisition_id', $fresh->id)
+                ->lockForUpdate()
+                ->findOrFail($item->id);
+
+            $variant = ProductVariant::query()
+                ->lockForUpdate()
+                ->findOrFail($freshItem->actualVariantId());
+
+            if ($lostBaseQty + $damagedBaseQty < 1) {
+                throw new DomainRuleViolationException('errors.empty_loss', [
+                    'item' => (int) $freshItem->id,
+                ]);
+            }
+
+            $outstanding = max(0, (int) $freshItem->approved_base_qty - (int) $freshItem->received_good_base_qty - (int) $freshItem->received_damaged_base_qty);
+
+            if ($lostBaseQty + $damagedBaseQty > $outstanding) {
+                throw new OutstandingQuantityExceededException(
+                    itemType: TransferRequisitionItem::class,
+                    itemId: (int) $freshItem->id,
+                    attempted: $lostBaseQty + $damagedBaseQty,
+                    outstanding: $outstanding,
+                );
+            }
+
+            $unitCost = LossLedger::snapshotUnitCostFrom($variant);
+            $totalLoss = LossLedger::calculateTotalFinancialLoss(
+                $unitCost,
+                $lostBaseQty + $damagedBaseQty
+            );
+
+            $loss = LossLedger::create([
+                'transfer_requisition_id'      => $fresh->id,
+                'transfer_requisition_item_id' => $freshItem->id,
+                'product_variant_id'           => $variant->id,
+                'warehouse_id'                 => $fresh->to_warehouse_id,
+                'lost_base_qty'                => $lostBaseQty,
+                'damaged_base_qty'             => $damagedBaseQty,
+                'unit_cost_price'              => $unitCost,
+                'total_financial_loss'         => $totalLoss,
+                'loss_category'                => $lossCategory,
+                'notes'                        => $notes,
+                'recorded_by'                  => auth()->id(),
+                'recorded_at'                  => now(),
+            ]);
+
+            if ($damagedBaseQty > 0) {
+                $freshItem->update([
+                    'received_damaged_base_qty' => $freshItem->received_damaged_base_qty + $damagedBaseQty,
+                ]);
+                $freshItem->refresh();
+            }
+
+            $received = (int) $freshItem->received_good_base_qty + (int) $freshItem->received_damaged_base_qty;
+
+            if ($received >= (int) $freshItem->approved_base_qty) {
+                $this->markInTransit($freshItem, InTransitStatus::Cleared);
+            } elseif ($lostBaseQty >= max(0, (int) $freshItem->approved_base_qty - $received)) {
+                $this->markInTransit($freshItem, InTransitStatus::Lost);
+            }
+
+            $this->updateReceiptClosingStatus($fresh);
+
+            event(new \App\Events\LossRecorded($loss->id));
+
+            return $loss;
+        });
     }
 
     public function adjustment(
@@ -4318,24 +5583,40 @@ class InventoryService
 ```php
 namespace App\Services;
 
+use App\Enums\NegotiationSide;
 use App\Enums\RevisionStatus;
 use App\Enums\TransferRequisitionStatus;
+use App\Exceptions\DomainRuleViolationException;
+use App\Exceptions\InvalidDocumentStateException;
+use App\Exceptions\NegotiationNotAllowedException;
+use App\Models\ProductVariantUnitConversion;
 use App\Models\TransferRequisition;
+use App\Models\TransferRequisitionItem;
 use App\Models\TransferRequisitionItemRevision;
+use Illuminate\Support\Facades\DB;
 
 class NegotiationService
 {
     public function submitRequest(TransferRequisition $requisition): void
     {
-        if ($requisition->status !== TransferRequisitionStatus::Draft) {
-            throw new \DomainException('Only draft requisitions can be submitted.');
-        }
+        DB::transaction(function () use ($requisition) {
+            $fresh = TransferRequisition::lockForUpdate()->findOrFail($requisition->id);
 
-        $requisition->update([
-            'status'       => TransferRequisitionStatus::Requested,
-            'requested_at' => now(),
-            'requested_by' => $requisition->requested_by ?? auth()->id(),
-        ]);
+            if ($fresh->status !== TransferRequisitionStatus::Draft) {
+                throw new InvalidDocumentStateException(
+                    documentType: TransferRequisition::class,
+                    documentId: (int) $fresh->id,
+                    actualStatus: $fresh->status->value,
+                    action: 'submit',
+                );
+            }
+
+            $fresh->update([
+                'status'       => TransferRequisitionStatus::Requested,
+                'requested_at' => now(),
+                'requested_by' => $fresh->requested_by ?? auth()->id(),
+            ]);
+        });
     }
 
     /**
@@ -4361,9 +5642,9 @@ class NegotiationService
         }
 
         if ($requisition->items()->whereNull('approved_base_qty')->exists()) {
-            throw new \DomainException(
-                'All items must have an approved base quantity before confirmation.'
-            );
+            throw new DomainRuleViolationException('errors.missing_approved_quantity', [
+                'requisition' => (int) $requisition->id,
+            ]);
         }
     }
 
@@ -4376,37 +5657,363 @@ class NegotiationService
             TransferRequisitionStatus::UnderReviewRequestor,
         ], true)) {
             throw new \App\Exceptions\NegotiationNotAllowedException(
-                'Parent requisition is not in a negotiable status.'
+                'errors.negotiation_not_allowed',
+                ['requisition' => (int) $parent->id, 'status' => $parent->status->value],
             );
         }
         if ($revision->status !== RevisionStatus::Pending) {
             throw new \App\Exceptions\NegotiationNotAllowedException(
-                'Revision is already resolved.'
+                'errors.revision_already_resolved',
+                ['revision' => (int) $revision->id],
             );
         }
     }
 
     public function accept(TransferRequisitionItemRevision $revision): void
     {
-        $this->assertNegotiable($revision);
-        $revision->ensureCanTransitionTo(RevisionStatus::Accepted);
-        $revision->update([
-            'status'       => RevisionStatus::Accepted,
-            'responded_at' => now(),
-        ]);
+        DB::transaction(function () use ($revision) {
+            $freshRevision = TransferRequisitionItemRevision::query()
+                ->lockForUpdate()
+                ->findOrFail($revision->id);
+
+            $freshItem = TransferRequisitionItem::query()
+                ->lockForUpdate()
+                ->findOrFail($freshRevision->transfer_requisition_item_id);
+
+            $parent = TransferRequisition::query()
+                ->lockForUpdate()
+                ->findOrFail($freshItem->transfer_requisition_id);
+
+            // Bind the locked rows so the negotiability checks below
+            // operate on locked state instead of unlocked lazy-loaded copies.
+            $freshItem->setRelation('transferRequisition', $parent);
+            $freshRevision->setRelation('item', $freshItem);
+
+            $this->assertNegotiable($freshRevision);
+            $freshRevision->ensureCanTransitionTo(RevisionStatus::Accepted);
+            $freshRevision->update([
+                'status'       => RevisionStatus::Accepted,
+                'responded_at' => now(),
+            ]);
+        });
     }
 
     public function reject(TransferRequisitionItemRevision $revision): void
     {
-        $this->assertNegotiable($revision);
-        $revision->ensureCanTransitionTo(RevisionStatus::Rejected);
-        $revision->update([
-            'status'       => RevisionStatus::Rejected,
-            'responded_at' => now(),
+        DB::transaction(function () use ($revision) {
+            $freshRevision = TransferRequisitionItemRevision::query()
+                ->lockForUpdate()
+                ->findOrFail($revision->id);
+
+            $freshItem = TransferRequisitionItem::query()
+                ->lockForUpdate()
+                ->findOrFail($freshRevision->transfer_requisition_item_id);
+
+            $parent = TransferRequisition::query()
+                ->lockForUpdate()
+                ->findOrFail($freshItem->transfer_requisition_id);
+
+            // Bind the locked rows so the negotiability checks below
+            // operate on locked state instead of unlocked lazy-loaded copies.
+            $freshItem->setRelation('transferRequisition', $parent);
+            $freshRevision->setRelation('item', $freshItem);
+
+            $this->assertNegotiable($freshRevision);
+            $freshRevision->ensureCanTransitionTo(RevisionStatus::Rejected);
+            $freshRevision->update([
+                'status'       => RevisionStatus::Rejected,
+                'responded_at' => now(),
+            ]);
+        });
+    }
+
+    /**
+     * Submit a new negotiation revision for a requisition item.
+     *
+     * The proposed unit must be sourced from the effective variant's own
+     * conversion rows (Phase 09: substitute-variant unit sourcing) — the
+     * ratio is resolved server-side, never trusted from the form.
+     *
+     * The parent requisition status is transitioned to the opposite
+     * side's review state on revision submission: a revision submitted by
+     * the fulfiller moves the parent to `UnderReviewRequestor`; a revision
+     * submitted by the requestor moves the parent to
+     * `UnderReviewFulfiller`. This preserves the
+     * `UnderReviewFulfiller ⇌ UnderReviewRequestor` ping-pong lifecycle.
+     */
+    public function submitRevision(
+        TransferRequisitionItem $item,
+        ?int $substituteVariantId,
+        NegotiationSide $side,
+        string $proposedUnitName,
+        int $proposedQty,
+        ?string $negotiationReason = null,
+        ?int $respondsToRevisionId = null,
+    ): TransferRequisitionItemRevision {
+        return DB::transaction(function () use (
+            $item, $substituteVariantId, $side,
+            $proposedUnitName, $proposedQty,
+            $negotiationReason, $respondsToRevisionId
+        ) {
+            $freshItem = TransferRequisitionItem::query()
+                ->lockForUpdate()
+                ->findOrFail($item->id);
+
+            $parent = TransferRequisition::query()
+                ->lockForUpdate()
+                ->findOrFail($freshItem->transfer_requisition_id);
+
+            if (! in_array($parent->status, [
+                TransferRequisitionStatus::Requested,
+                TransferRequisitionStatus::UnderReviewFulfiller,
+                TransferRequisitionStatus::UnderReviewRequestor,
+            ], true)) {
+                throw new NegotiationNotAllowedException(
+                    'errors.negotiation_not_allowed',
+                    ['requisition' => (int) $parent->id, 'status' => $parent->status->value],
+                );
+            }
+
+            if ($proposedQty < 1) {
+                throw new DomainRuleViolationException('errors.invalid_proposed_quantity', [
+                    'qty' => $proposedQty,
+                ]);
+            }
+
+            $effectiveVariantId = $substituteVariantId ?? $freshItem->product_variant_id;
+
+            $proposedUnitRatio = ProductVariantUnitConversion::where(
+                'product_variant_id',
+                $effectiveVariantId
+            )
+                ->where('unit_name', $proposedUnitName)
+                ->value('base_unit_ratio');
+
+            if ($proposedUnitRatio === null) {
+                throw new DomainRuleViolationException('errors.undefined_unit', [
+                    'unit' => $proposedUnitName,
+                    'variant' => $effectiveVariantId,
+                ]);
+            }
+
+            if ($respondsToRevisionId !== null) {
+                $respondsTo = TransferRequisitionItemRevision::query()
+                    ->findOrFail($respondsToRevisionId);
+
+                if ((int) $respondsTo->transfer_requisition_item_id !== (int) $freshItem->id) {
+                    throw new DomainRuleViolationException('errors.cross_item_revision', [
+                        'revision' => $respondsToRevisionId,
+                        'item' => (int) $freshItem->id,
+                    ]);
+                }
+            }
+
+            $revision = TransferRequisitionItemRevision::create([
+                'transfer_requisition_item_id'  => $freshItem->id,
+                'user_id'                       => auth()->id(),
+                'product_variant_id'            => $freshItem->product_variant_id,
+                'substitute_product_variant_id' => $substituteVariantId,
+                'proposed_unit_name'            => $proposedUnitName,
+                'proposed_unit_ratio'           => $proposedUnitRatio,
+                'proposed_qty'                  => $proposedQty,
+                'proposed_base_qty'             => $proposedQty * (int) $proposedUnitRatio,
+                'negotiation_reason'            => $negotiationReason,
+                'side'                          => $side,
+                'status'                        => RevisionStatus::Pending,
+                'responds_to_revision_id'       => $respondsToRevisionId,
+            ]);
+
+            // Opposite-side review transition (owner decision): the
+            // submitting side proposes, the counterpart reviews next.
+            // Already in the target state → no-op.
+            $targetStatus = $side === NegotiationSide::Fulfiller
+                ? TransferRequisitionStatus::UnderReviewRequestor
+                : TransferRequisitionStatus::UnderReviewFulfiller;
+
+            if ($parent->status !== $targetStatus) {
+                $parent->update(['status' => $targetStatus]);
+            }
+
+            return $revision;
+        });
+    }
+}
+```
+
+**Exception contract** — typed domain exceptions (implements §0A.10). No service (§6) or model (§3) throws a bare `\DomainException` with English UI copy. Every domain failure is a typed exception carrying a stable translation key plus machine context; the presentation layer resolves `__($e->translationKey() . '.title', $e->context())`. All types extend `\DomainException` (directly or via the base below) so existing `catch (\DomainException)` handling keeps working.
+
+`app/Exceptions/DomainErrorException.php` — abstract base:
+
+```php
+namespace App\Exceptions;
+
+abstract class DomainErrorException extends \DomainException
+{
+    public function __construct(
+        private readonly string $translationKey,
+        private readonly array $context = [],
+    ) {
+        parent::__construct($translationKey);
+    }
+
+    public function translationKey(): string
+    {
+        return $this->translationKey;
+    }
+
+    /** @return array<string, mixed> */
+    public function context(): array
+    {
+        return $this->context;
+    }
+}
+```
+
+`app/Exceptions/InsufficientStockException.php` (the §0A.10 example, canonical):
+
+```php
+namespace App\Exceptions;
+
+class InsufficientStockException extends DomainErrorException
+{
+    public function __construct(
+        public readonly int $variantId,
+        public readonly int $warehouseId,
+        public readonly int $requested,
+        public readonly int $available,
+    ) {
+        parent::__construct('errors.insufficient_stock', [
+            'variant'   => $variantId,
+            'requested' => $requested,
+            'available' => $available,
         ]);
     }
 }
 ```
+
+`app/Exceptions/OutstandingQuantityExceededException.php`:
+
+```php
+namespace App\Exceptions;
+
+class OutstandingQuantityExceededException extends DomainErrorException
+{
+    public function __construct(
+        public readonly string $itemType,
+        public readonly int $itemId,
+        public readonly int $attempted,
+        public readonly int $outstanding,
+    ) {
+        parent::__construct('errors.outstanding_quantity_exceeded', [
+            'item'        => $itemId,
+            'attempted'   => $attempted,
+            'outstanding' => $outstanding,
+        ]);
+    }
+}
+```
+
+`app/Exceptions/InvalidDocumentStateException.php`:
+
+```php
+namespace App\Exceptions;
+
+class InvalidDocumentStateException extends DomainErrorException
+{
+    public function __construct(
+        public readonly string $documentType,
+        public readonly int $documentId,
+        public readonly string $actualStatus,
+        public readonly string $action,
+    ) {
+        parent::__construct('errors.invalid_document_state', [
+            'status' => $actualStatus,
+            'action' => $action,
+        ]);
+    }
+}
+```
+
+`app/Exceptions/InvalidRevisionTransitionException.php`:
+
+```php
+namespace App\Exceptions;
+
+class InvalidRevisionTransitionException extends DomainErrorException
+{
+    public function __construct(
+        public readonly string $actualStatus,
+        public readonly string $targetStatus,
+    ) {
+        parent::__construct('errors.invalid_revision_transition', [
+            'actual' => $actualStatus,
+            'target' => $targetStatus,
+        ]);
+    }
+}
+```
+
+`app/Exceptions/ProductFamilyHasVariantsException.php`:
+
+```php
+namespace App\Exceptions;
+
+class ProductFamilyHasVariantsException extends DomainErrorException
+{
+    public function __construct(public readonly int $productId)
+    {
+        parent::__construct('errors.product_family_has_variants', [
+            'product' => $productId,
+        ]);
+    }
+}
+```
+
+`app/Exceptions/DomainRuleViolationException.php` — concrete key + context carrier for caller/precondition violations with no dedicated type:
+
+```php
+namespace App\Exceptions;
+
+class DomainRuleViolationException extends DomainErrorException {}
+```
+
+`app/Exceptions/NegotiationNotAllowedException.php` (thrown by `NegotiationService::assertNegotiable()` and `submitRevision()`; extends `DomainErrorException` so existing domain-error handling keeps working):
+
+```php
+namespace App\Exceptions;
+
+class NegotiationNotAllowedException extends DomainErrorException {}
+```
+
+Key catalogue — every key below lives in the mandated `lang/{locale}/errors.php` (§0A.2, §25) with `.title` / `.body` entries per §0A.10:
+
+| Exception | Translation key | Context |
+|---|---|---|
+| `InsufficientStockException` | `errors.insufficient_stock` | `variant`, `requested`, `available` |
+| `OutstandingQuantityExceededException` | `errors.outstanding_quantity_exceeded` | `item`, `attempted`, `outstanding` |
+| `InvalidDocumentStateException` | `errors.invalid_document_state` | `status`, `action` |
+| `InvalidRevisionTransitionException` | `errors.invalid_revision_transition` | `actual`, `target` |
+| `ProductFamilyHasVariantsException` | `errors.product_family_has_variants` | `product` |
+| `NegotiationNotAllowedException` | `errors.negotiation_not_allowed` | `requisition`, `status` |
+| `NegotiationNotAllowedException` | `errors.revision_already_resolved` | `revision` |
+| `DomainRuleViolationException` | `errors.invalid_movement_type` | `type` |
+| `DomainRuleViolationException` | `errors.invalid_unit_ratio` | `ratio`, `index` when per-line |
+| `DomainRuleViolationException` | `errors.same_warehouse_transfer` | `warehouse` |
+| `DomainRuleViolationException` | `errors.empty_transfer_items` | — |
+| `DomainRuleViolationException` | `errors.missing_item_field` | `index`, `field` |
+| `DomainRuleViolationException` | `errors.invalid_item_quantity` | `index`, `qty` |
+| `DomainRuleViolationException` | `errors.unknown_variant` | `variant` |
+| `DomainRuleViolationException` | `errors.undefined_unit` | `unit`, `variant`, `index` when per-line |
+| `DomainRuleViolationException` | `errors.unit_ratio_mismatch` | `index`, `unit` |
+| `DomainRuleViolationException` | `errors.unknown_requisition_item` | `item` |
+| `DomainRuleViolationException` | `errors.non_integer_payload` | `item` |
+| `DomainRuleViolationException` | `errors.negative_payload` | `item` |
+| `DomainRuleViolationException` | `errors.empty_loss` | `item` |
+| `DomainRuleViolationException` | `errors.invalid_proposed_quantity` | `qty` |
+| `DomainRuleViolationException` | `errors.cross_item_revision` | `revision`, `item` |
+| `DomainRuleViolationException` | `errors.missing_approved_quantity` | `requisition` or `item` |
+| `DomainRuleViolationException` | `errors.warehouse_out_of_scope` | `from`, `to` |
+| `DomainRuleViolationException` | `errors.warehouse_code_exhausted` | `name` |
 
 ### 6.4 PurchaseService
 
@@ -4415,6 +6022,7 @@ namespace App\Services;
 
 use App\Enums\PurchaseOrderStatus;
 use App\Enums\StockMovementType;
+use App\Exceptions\InvalidDocumentStateException;
 use App\Models\ProductVariant;
 use App\Models\ProductVariantPrice;
 use App\Models\PurchaseOrder;
@@ -4435,7 +6043,12 @@ class PurchaseService
             $fresh = PurchaseOrder::lockForUpdate()->findOrFail($order->id);
 
             if ($fresh->status !== PurchaseOrderStatus::Draft) {
-                throw new \DomainException('Only draft purchase orders can be ordered.');
+                throw new InvalidDocumentStateException(
+                    documentType: PurchaseOrder::class,
+                    documentId: (int) $fresh->id,
+                    actualStatus: $fresh->status->value,
+                    action: 'order',
+                );
             }
 
             $fresh->update([
@@ -4458,7 +6071,12 @@ class PurchaseService
                 PurchaseOrderStatus::Ordered,
                 PurchaseOrderStatus::PartiallyReceived,
             ], true)) {
-                throw new \DomainException('Purchase order is not in a receivable state.');
+                throw new InvalidDocumentStateException(
+                    documentType: PurchaseOrder::class,
+                    documentId: (int) $order->id,
+                    actualStatus: $order->status->value,
+                    action: 'receive',
+                );
             }
 
             $items = PurchaseOrderItem::where('purchase_order_id', $order->id)
@@ -4498,10 +6116,6 @@ class PurchaseService
                 ]);
 
                 $item->update(['received_base_qty' => $item->received_base_qty + $received]);
-
-                if ($order->update_cost_price) {
-                    $this->updateCurrentCostPrice($item->product_variant_id, $item->unit_cost_price);
-                }
             }
 
             $allReceived = $items->every(
@@ -4513,6 +6127,28 @@ class PurchaseService
                 'received_at' => $allReceived ? now() : null,
                 'received_by' => auth()->id(),
             ]);
+
+            event(new \App\Events\PurchaseOrderReceived($order->id));
+
+            if ($order->update_cost_price) {
+                // One current-price row per variant per receipt: several lines
+                // may share a variant, so only the first line's cost wins.
+                // (`$items` carries the post-update `received_base_qty`
+                // values in memory — `update()` syncs attributes — while the
+                // `$allReceived` completion check above re-reads each row via
+                // `fresh()` so concurrent receipts are observed.)
+                $priceUpdated = [];
+                foreach ($items as $item) {
+                    if ((int) ($receivedByItemId[$item->id] ?? 0) <= 0) {
+                        continue;
+                    }
+                    if (isset($priceUpdated[$item->product_variant_id])) {
+                        continue;
+                    }
+                    $priceUpdated[$item->product_variant_id] = true;
+                    $this->updateCurrentCostPrice($item->product_variant_id, $item->unit_cost_price);
+                }
+            }
         });
     }
 
@@ -4522,7 +6158,12 @@ class PurchaseService
             $fresh = PurchaseOrder::lockForUpdate()->findOrFail($order->id);
 
             if (! $fresh->canBeCancelled()) {
-                throw new \DomainException('Purchase order cannot be cancelled.');
+                throw new InvalidDocumentStateException(
+                    documentType: PurchaseOrder::class,
+                    documentId: (int) $fresh->id,
+                    actualStatus: $fresh->status->value,
+                    action: 'cancel',
+                );
             }
 
             $fresh->update([
@@ -4564,6 +6205,9 @@ namespace App\Services;
 
 use App\Enums\SalesOrderStatus;
 use App\Enums\StockMovementType;
+use App\Exceptions\InsufficientStockException;
+use App\Exceptions\InvalidDocumentStateException;
+use App\Exceptions\OutstandingQuantityExceededException;
 use App\Models\ProductVariant;
 use App\Models\SalesOrder;
 use App\Models\SalesOrderItem;
@@ -4583,7 +6227,12 @@ class SalesService
             $fresh = SalesOrder::lockForUpdate()->findOrFail($order->id);
 
             if ($fresh->status !== SalesOrderStatus::Draft) {
-                throw new \DomainException('Only draft sales orders can be confirmed.');
+                throw new InvalidDocumentStateException(
+                    documentType: SalesOrder::class,
+                    documentId: (int) $fresh->id,
+                    actualStatus: $fresh->status->value,
+                    action: 'confirm',
+                );
             }
 
             $items = SalesOrderItem::where('sales_order_id', $fresh->id)
@@ -4624,7 +6273,12 @@ class SalesService
                 SalesOrderStatus::Confirmed,
                 SalesOrderStatus::PartiallyDispatched,
             ], true)) {
-                throw new \DomainException('Sales order is not in a dispatchable state.');
+                throw new InvalidDocumentStateException(
+                    documentType: SalesOrder::class,
+                    documentId: (int) $order->id,
+                    actualStatus: $order->status->value,
+                    action: 'dispatch',
+                );
             }
 
             $items = SalesOrderItem::where('sales_order_id', $order->id)
@@ -4650,6 +6304,8 @@ class SalesService
                 $order->id,
             );
 
+            $reorderPoints = ProductVariant::whereIn('id', $variantIds)->pluck('reorder_point', 'id');
+
             foreach ($items as $item) {
                 $dispatched = (int) ($dispatchByItemId[$item->id] ?? 0);
                 if ($dispatched <= 0) {
@@ -4660,8 +6316,11 @@ class SalesService
 
                 $available = $availableByVariant[$item->product_variant_id] ?? 0;
                 if ($dispatched > $available) {
-                    throw new \DomainException(
-                        "Insufficient stock for variant {$item->product_variant_id}."
+                    throw new InsufficientStockException(
+                        variantId: $item->product_variant_id,
+                        warehouseId: $order->warehouse_id,
+                        requested: $dispatched,
+                        available: $available,
                     );
                 }
 
@@ -4679,7 +6338,13 @@ class SalesService
                 ]);
 
                 $item->update(['dispatched_base_qty' => $item->dispatched_base_qty + $dispatched]);
-                $availableByVariant[$item->product_variant_id] = $available - $dispatched;
+                $remaining = $available - $dispatched;
+                $availableByVariant[$item->product_variant_id] = $remaining;
+
+                $reorderPoint = $reorderPoints[$item->product_variant_id] ?? 0;
+                if ($available >= $reorderPoint && $remaining < $reorderPoint) {
+                    event(new \App\Events\InventoryBelowReorderPoint($item->product_variant_id, $order->warehouse_id));
+                }
             }
 
             $allDispatched = $items->every(
@@ -4691,6 +6356,8 @@ class SalesService
                 'dispatched_at' => $allDispatched ? now() : null,
                 'dispatched_by' => auth()->id(),
             ]);
+
+            event(new \App\Events\SalesOrderDispatched($order->id));
         });
     }
 
@@ -4714,8 +6381,11 @@ class SalesService
                 ->sum('quantity');
 
             if ($alreadyReturned + $returnedBaseQty > $item->dispatched_base_qty) {
-                throw new \DomainException(
-                    "Return of {$returnedBaseQty} would exceed dispatched quantity. Already returned: {$alreadyReturned}."
+                throw new OutstandingQuantityExceededException(
+                    itemType: SalesOrderItem::class,
+                    itemId: (int) $item->id,
+                    attempted: $alreadyReturned + $returnedBaseQty,
+                    outstanding: (int) $item->dispatched_base_qty,
                 );
             }
 
@@ -4741,13 +6411,109 @@ class SalesService
             $fresh = SalesOrder::lockForUpdate()->findOrFail($order->id);
 
             if (! in_array($fresh->status, [SalesOrderStatus::Draft, SalesOrderStatus::Confirmed], true)) {
-                throw new \DomainException('Sales order cannot be cancelled.');
+                throw new InvalidDocumentStateException(
+                    documentType: SalesOrder::class,
+                    documentId: (int) $fresh->id,
+                    actualStatus: $fresh->status->value,
+                    action: 'cancel',
+                );
             }
 
             $fresh->update([
                 'status'       => SalesOrderStatus::Cancelled,
                 'cancelled_at' => now(),
             ]);
+        });
+    }
+}
+```
+
+### 6.6 TransferRequisitionService
+
+```php
+namespace App\Services;
+
+use App\Enums\TransferRequisitionStatus;
+use App\Exceptions\InvalidDocumentStateException;
+use App\Models\TransferRequisition;
+use App\Models\TransferRequisitionItem;
+use Illuminate\Support\Facades\DB;
+
+class TransferRequisitionService
+{
+    public function __construct(
+        private readonly NegotiationService $negotiation,
+    ) {}
+
+    public function confirm(TransferRequisition $requisition): void
+    {
+        // Canonical boundary (§19.1): the event is dispatched INSIDE the
+        // transaction. After-commit delivery is guaranteed by
+        // `ShouldDispatchAfterCommit` on the event (§22.1a/§22.2).
+        DB::transaction(function () use ($requisition) {
+            $fresh = TransferRequisition::query()
+                ->lockForUpdate()
+                ->findOrFail($requisition->id);
+
+            if (! in_array($fresh->status, [
+                TransferRequisitionStatus::Requested,
+                TransferRequisitionStatus::UnderReviewFulfiller,
+                TransferRequisitionStatus::UnderReviewRequestor,
+            ], true)) {
+                throw new InvalidDocumentStateException(
+                    documentType: TransferRequisition::class,
+                    documentId: (int) $fresh->id,
+                    actualStatus: $fresh->status->value,
+                    action: 'confirm',
+                );
+            }
+
+            // The locked item collection is bound to the parent relation so
+            // materializeRequestedAsApproved() operates on locked rows
+            // instead of lazy-loading unlocked copies.
+            $items = TransferRequisitionItem::query()
+                ->where('transfer_requisition_id', $fresh->id)
+                ->lockForUpdate()
+                ->get();
+
+            $fresh->setRelation('items', $items);
+
+            $this->negotiation->materializeRequestedAsApproved($fresh);
+
+            $fresh->update([
+                'status' => TransferRequisitionStatus::Confirmed,
+                'approved_at' => now(),
+                'approved_by' => auth()->id(),
+            ]);
+
+            event(new \App\Events\TransferConfirmed($fresh->id));
+        });
+    }
+
+    public function cancelRequisition(TransferRequisition $requisition): void
+    {
+        // Canonical boundary (§19.2): the event is dispatched INSIDE the
+        // transaction. After-commit delivery is guaranteed by
+        // `ShouldDispatchAfterCommit` on the event (§22.1a/§22.2).
+        DB::transaction(function () use ($requisition) {
+            $fresh = TransferRequisition::query()
+                ->lockForUpdate()
+                ->findOrFail($requisition->id);
+
+            if (! $fresh->canBeCancelled()) {
+                throw new InvalidDocumentStateException(
+                    documentType: TransferRequisition::class,
+                    documentId: (int) $fresh->id,
+                    actualStatus: $fresh->status->value,
+                    action: 'cancel',
+                );
+            }
+
+            $fresh->update([
+                'status' => TransferRequisitionStatus::Cancelled,
+            ]);
+
+            event(new \App\Events\TransferCancelled($fresh->id));
         });
     }
 }
@@ -4780,58 +6546,70 @@ class ProductForm
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            Tabs::make('Product Variant')
+            Tabs::make()
                 ->persistTabInQueryString()
                 ->columnSpanFull()
                 ->tabs([
-                    Tab::make('Identity')
+                    Tab::make(__('resources.products.tabs.identity'))
                         ->icon(Heroicon::Identification)
                         ->columns(['default' => 1, 'md' => 2, 'xl' => 2])
                         ->schema([
                             Select::make('product_id')
+                                ->label(__('resources.products.fields.product_family'))
                                 ->relationship('product', 'name')
                                 ->prefixIcon(Heroicon::FolderOpen)
                                 ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                                 ->required()
+                                // Native behavior (P1 §16.3 #2): the newly
+                                // created family is auto-selected — no custom
+                                // afterStateUpdated callback required.
                                 ->createOptionForm(fn (Schema $schema) => $schema->components([
                                     TextInput::make('name')
+                                        ->label(__('resources.products.fields.family_name'))
                                         ->prefixIcon(Heroicon::Identification)
                                         ->columnSpanFull()
                                         ->required()
                                         ->maxLength(255),
                                     TextInput::make('category')
+                                        ->label(__('resources.products.fields.family_category'))
                                         ->prefixIcon(Heroicon::Tag)
                                         ->columnSpanFull(),
                                 ])),
 
                             TextInput::make('sku')
+                                ->label(__('resources.products.fields.sku'))
                                 ->prefixIcon(Heroicon::Tag)
                                 ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                                 ->required()
                                 ->unique(ignoreRecord: true),
 
                             TextInput::make('barcode')
+                                ->label(__('resources.products.fields.barcode'))
                                 ->prefixIcon(Heroicon::QrCode)
                                 ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                                 ->nullable()
+                                ->dehydrateStateUsing(fn ($state) => filled($state) ? $state : null)
                                 ->unique(ignoreRecord: true),
 
                             TextInput::make('name')
+                                ->label(__('resources.products.fields.variant_name'))
                                 ->prefixIcon(Heroicon::Identification)
                                 ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2])
                                 ->required(),
                         ]),
 
-                    Tab::make('Stock & Pricing')
+                    Tab::make(__('resources.products.tabs.stock_pricing'))
                         ->icon(Heroicon::CurrencyDollar)
                         ->columns(['default' => 1, 'md' => 2, 'xl' => 2])
                         ->schema([
                             TextInput::make('base_unit_name')
+                                ->label(__('resources.products.fields.base_unit_name'))
                                 ->prefixIcon(Heroicon::Scale)
                                 ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                                 ->required(),
 
                             TextInput::make('reorder_point')
+                                ->label(__('resources.products.fields.reorder_point'))
                                 ->prefixIcon(Heroicon::ExclamationTriangle)
                                 ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                                 ->numeric()
@@ -4839,13 +6617,15 @@ class ProductForm
                                 ->required(),
 
                             KeyValue::make('attributes')
+                                ->label(__('resources.products.fields.attributes'))
                                 ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2]),
                         ]),
 
-                    Tab::make('Status')
+                    Tab::make(__('resources.products.tabs.status'))
                         ->icon(Heroicon::CheckCircle)
                         ->schema([
                             Toggle::make('is_active')
+                                ->label(__('resources.products.fields.is_active'))
                                 ->onIcon(Heroicon::CheckCircle)
                                 ->offIcon(Heroicon::XCircle)
                                 ->columnSpanFull()
@@ -4891,6 +6671,7 @@ class ProductsTable
                 Stack::make([
                     Split::make([
                         TextColumn::make('sku')
+                            ->label(__('resources.products.table.sku'))
                             ->fontFamily('mono')
                             ->weight(FontWeight::Bold)
                             ->searchable()
@@ -4899,6 +6680,7 @@ class ProductsTable
                             ->copyMessage(__('common.copied')),
 
                         TextColumn::make('currentPrice.sale_price')
+                            ->label(__('resources.products.table.sale_price'))
                             ->money(config('app.currency'))
                             ->weight(FontWeight::Bold)
                             ->alignEnd()
@@ -4906,6 +6688,7 @@ class ProductsTable
                     ])->from('md'),
 
                     TextColumn::make('name')
+                        ->label(__('resources.products.table.name'))
                         ->searchable()
                         ->sortable()
                         ->limit(50)
@@ -4913,21 +6696,25 @@ class ProductsTable
 
                     Split::make([
                         TextColumn::make('product.name')
+                            ->label(__('resources.products.table.family'))
                             ->badge()
                             ->color('gray')
                             ->searchable(),
 
                         TextColumn::make('base_unit_name')
+                            ->label(__('resources.products.table.base_unit'))
                             ->badge()
                             ->color('info'),
 
                         TextColumn::make('reorder_point')
+                            ->label(__('resources.products.table.reorder_point'))
                             ->badge()
                             ->color(fn ($state) => $state > 0 ? 'warning' : 'gray')
                             ->numeric(),
                     ])->from('md'),
 
                     IconColumn::make('is_active')
+                        ->label(__('resources.products.table.status'))
                         ->boolean()
                         ->trueIcon(Heroicon::CheckCircle)
                         ->falseIcon(Heroicon::XCircle)
@@ -4940,8 +6727,10 @@ class ProductsTable
                 'xl' => 3,
             ])
             ->filters([
-                TernaryFilter::make('is_active'),
+                TernaryFilter::make('is_active')
+                    ->label(__('resources.products.filters.is_active')),
                 SelectFilter::make('product_id')
+                    ->label(__('resources.products.filters.product_family'))
                     ->relationship('product', 'name')
                     ->searchable(),
                 TrashedFilter::make(),
@@ -4949,15 +6738,16 @@ class ProductsTable
             ->defaultSort('sku')
             ->defaultPaginationPageOption(12)
             ->paginated([12, 24, 48])
+            // `ProductResource` is bound to the `ProductVariant` model (§7A
+            // header), so the `view` route resolves the same variant record
+            // the table row represents — no cross-model binding applies.
             ->recordUrl(fn ($record) => ProductResource::getUrl('view', ['record' => $record]))
             ->recordActions([
                 EditAction::make()
                     ->icon(Heroicon::PencilSquare)
                     ->modalWidth(Width::Large),
 
-                SetCurrentPriceAction::make()
-                    ->icon(Heroicon::CurrencyDollar)
-                    ->color('primary'),
+                SetCurrentPriceAction::make(),
 
                 EditProductFamilyAction::make()
                     ->icon(Heroicon::FolderOpen),
@@ -4965,9 +6755,7 @@ class ProductsTable
                 ManageUnitConversionsAction::make()
                     ->icon(Heroicon::Scale),
 
-                QuickStockAdjustmentAction::make()
-                    ->icon(Heroicon::AdjustmentsHorizontal)
-                    ->color('warning'),
+                QuickStockAdjustmentAction::make(),
 
                 DeleteAction::make()
                     ->icon(Heroicon::Trash)
@@ -4999,43 +6787,52 @@ class ProductInfolist
     {
         return $schema->components([
             Grid::make(['default' => 1, 'md' => 3, 'xl' => 3])->schema([
-                Section::make('Identity')
+                Section::make(__('resources.products.infolist.identity'))
                     ->icon(Heroicon::Identification)
                     ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2])
                     ->columns(['default' => 1, 'md' => 2, 'xl' => 2])
                     ->schema([
                         TextEntry::make('product.name')
+                            ->label(__('resources.products.fields.family_name'))
                             ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2]),
                         TextEntry::make('sku')
+                            ->label(__('resources.products.fields.sku'))
                             ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
                         TextEntry::make('barcode')
+                            ->label(__('resources.products.fields.barcode'))
                             ->placeholder('—')
                             ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
                     ]),
 
-                Section::make('Pricing')
+                Section::make(__('resources.products.infolist.pricing'))
                     ->icon(Heroicon::CurrencyDollar)
                     ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                     ->columns(['default' => 1, 'md' => 1, 'xl' => 1])
                     ->schema([
                         TextEntry::make('currentPrice.cost_price')
+                            ->label(__('resources.products.fields.cost_price'))
                             ->money(config('app.currency')),
                         TextEntry::make('currentPrice.sale_price')
+                            ->label(__('resources.products.fields.sale_price'))
                             ->money(config('app.currency')),
                     ]),
 
-                Section::make('Unit Conversions')
+                Section::make(__('resources.products.infolist.unit_conversions'))
                     ->icon(Heroicon::Scale)
                     ->columnSpanFull()
                     ->schema([
                         RepeatableEntry::make('unitConversions')
+                            ->label(__('resources.products.fields.unit_conversions'))
                             ->schema([
                                 Grid::make(['default' => 1, 'md' => 3, 'xl' => 3])->schema([
                                     TextEntry::make('unit_name')
+                                        ->label(__('resources.products.fields.unit_name'))
                                         ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
                                     TextEntry::make('base_unit_ratio')
+                                        ->label(__('resources.products.fields.base_unit_ratio'))
                                         ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
                                     TextEntry::make('is_default_purchase')
+                                        ->label(__('resources.products.fields.is_default_purchase'))
                                         ->badge()->boolean()
                                         ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
                                 ]),
@@ -5047,11 +6844,252 @@ class ProductInfolist
 }
 ```
 
-#### 7A.4 ManageUnitConversionsAction
+#### 7A.4 Product Actions — Full Implementations
+
+##### 7A.4.1 SetCurrentPriceAction.php
 
 ```php
 namespace App\Filament\Resources\Products\Actions;
 
+use App\Models\ProductVariant;
+use App\Models\ProductVariantPrice;
+use Filament\Actions\Action;
+use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
+use Filament\Support\Enums\Width;
+use Filament\Support\Icons\Heroicon;
+use Illuminate\Support\Facades\DB;
+
+class SetCurrentPriceAction
+{
+    public static function make(): Action
+    {
+        return Action::make('setCurrentPrice')
+            ->label(__('resources.products.actions.set_current_price'))
+            ->icon(Heroicon::CurrencyDollar)
+            ->color('primary')
+            ->modalWidth(Width::Large)
+            ->authorize('update')
+            ->fillForm(fn (ProductVariant $record) => [
+                'cost_price' => $record->currentPrice?->cost_price ?? '0.0000',
+                'sale_price' => $record->currentPrice?->sale_price ?? '0.0000',
+                'notes'      => null,
+            ])
+            ->schema([
+                TextInput::make('cost_price')
+                    ->label(__('resources.products.fields.cost_price'))
+                    ->prefixIcon(Heroicon::CurrencyDollar)
+                    ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
+                    ->numeric()
+                    ->step(0.0001)
+                    ->minValue(0)
+                    ->required(),
+
+                TextInput::make('sale_price')
+                    ->label(__('resources.products.fields.sale_price'))
+                    ->prefixIcon(Heroicon::CurrencyDollar)
+                    ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
+                    ->numeric()
+                    ->step(0.0001)
+                    ->minValue(0)
+                    ->required(),
+
+                TextInput::make('notes')
+                    ->label(__('resources.products.fields.price_change_notes'))
+                    ->prefixIcon(Heroicon::ChatBubbleBottomCenterText)
+                    ->columnSpanFull()
+                    ->maxLength(500),
+            ])
+            ->action(function (array $data, ProductVariant $record) {
+                DB::transaction(function () use ($data, $record) {
+                    $variant = ProductVariant::lockForUpdate()->findOrFail($record->id);
+                    $current = $variant->currentPrice;
+
+                    // No-op guard: identical cost and sale price produces no new row.
+                    if ($current
+                        && bccomp((string) $current->cost_price, (string) $data['cost_price'], 4) === 0
+                        && bccomp((string) $current->sale_price, (string) $data['sale_price'], 4) === 0) {
+                        return;
+                    }
+
+                    if ($current) {
+                        $current->update(['is_current' => false]);
+                    }
+
+                    ProductVariantPrice::create([
+                        'product_variant_id' => $variant->id,
+                        'cost_price'         => $data['cost_price'],
+                        'sale_price'         => $data['sale_price'],
+                        'effective_from'     => now(),
+                        'is_current'         => true,
+                        'set_by'             => auth()->id(),
+                        'notes'              => $data['notes'] ?? null,
+                    ]);
+                });
+
+                Notification::make()
+                    ->title(__('resources.products.notifications.price_updated'))
+                    ->success()
+                    ->send();
+            })
+            ->successNotificationTitle(null);
+    }
+}
+```
+
+##### 7A.4.2 EditProductFamilyAction.php
+
+```php
+namespace App\Filament\Resources\Products\Actions;
+
+use App\Models\ProductVariant;
+use Filament\Actions\Action;
+use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
+use Filament\Support\Enums\Width;
+use Filament\Support\Icons\Heroicon;
+
+class EditProductFamilyAction
+{
+    public static function make(): Action
+    {
+        return Action::make('editProductFamily')
+            ->label(__('resources.products.actions.edit_family'))
+            ->icon(Heroicon::FolderOpen)
+            ->modalWidth(Width::Large)
+            ->authorize(function (ProductVariant $record): bool {
+                // This action mutates the parent `Product`, not the variant —
+                // so the `ProductPolicy::update` ability governs, not
+                // `ProductVariantPolicy::update`.
+                $product = $record->product;
+
+                return $product
+                    ? auth()->user()->can('update', $product)
+                    : auth()->user()->can('update', $record);
+            })
+            ->fillForm(fn (ProductVariant $record) => [
+                'family_name'     => $record->product?->name,
+                'family_category' => $record->product?->category,
+            ])
+            ->schema([
+                TextInput::make('family_name')
+                    ->label(__('resources.products.fields.family_name'))
+                    ->prefixIcon(Heroicon::Identification)
+                    ->columnSpanFull()
+                    ->required()
+                    ->maxLength(255),
+
+                TextInput::make('family_category')
+                    ->label(__('resources.products.fields.family_category'))
+                    ->prefixIcon(Heroicon::Tag)
+                    ->columnSpanFull()
+                    ->maxLength(255),
+            ])
+            ->action(function (array $data, ProductVariant $record) {
+                $product = $record->product;
+
+                if (! $product) {
+                    Notification::make()
+                        ->title(__('resources.products.notifications.family_missing'))
+                        ->danger()
+                        ->send();
+                    return;
+                }
+
+                // Server-side re-check: UI visibility is not authorization.
+                \Illuminate\Support\Facades\Gate::authorize('update', $product);
+
+                $product->update([
+                    'name'     => $data['family_name'],
+                    'category' => $data['family_category'] ?: null,
+                ]);
+
+                Notification::make()
+                    ->title(__('resources.products.notifications.family_updated'))
+                    ->success()
+                    ->send();
+            });
+    }
+}
+```
+
+##### 7A.4.3 QuickStockAdjustmentAction.php
+
+```php
+namespace App\Filament\Resources\Products\Actions;
+
+use App\Models\ProductVariant;
+use App\Services\InventoryService;
+use Filament\Actions\Action;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
+use Filament\Support\Enums\Width;
+use Filament\Support\Icons\Heroicon;
+
+class QuickStockAdjustmentAction
+{
+    public static function make(): Action
+    {
+        return Action::make('quickStockAdjustment')
+            ->label(__('resources.products.actions.quick_adjustment'))
+            ->icon(Heroicon::AdjustmentsHorizontal)
+            ->color('warning')
+            ->modalWidth(Width::Large)
+            ->authorize('update')
+            ->schema(fn (ProductVariant $record) => [
+                Select::make('warehouse_id')
+                    ->label(__('resources.products.fields.warehouse'))
+                    ->prefixIcon(Heroicon::BuildingOffice2)
+                    ->columnSpanFull()
+                    ->options(fn () => auth()->user()->isAdmin() || auth()->user()->isAuditor()
+                        ? \App\Models\Warehouse::query()->pluck('name', 'id')
+                        : auth()->user()->warehouses()->pluck('name', 'id'))
+                    ->default(fn () => auth()->user()->warehouses()->count() === 1
+                        ? auth()->user()->warehouses()->first()->id
+                        : null)
+                    ->required(),
+
+                TextInput::make('signed_base_quantity')
+                    ->label(__('resources.products.fields.signed_quantity_base'))
+                    ->hintIcon(Heroicon::InformationCircle)
+                    ->hint(__('resources.products.hints.signed_quantity'))
+                    ->prefixIcon(Heroicon::Hashtag)
+                    ->columnSpanFull()
+                    ->numeric()
+                    ->required(),
+
+                Textarea::make('notes')
+                    ->label(__('resources.products.fields.adjustment_notes'))
+                    ->prefixIcon(Heroicon::ChatBubbleBottomCenterText)
+                    ->columnSpanFull()
+                    ->required()
+                    ->minLength(15),
+            ])
+            ->action(function (array $data, ProductVariant $record) {
+                app(InventoryService::class)->adjustment(
+                    productVariantId:  $record->id,
+                    warehouseId:       (int) $data['warehouse_id'],
+                    signedBaseQuantity: (int) $data['signed_base_quantity'],
+                    notes:             (string) $data['notes'],
+                );
+
+                Notification::make()
+                    ->title(__('resources.products.notifications.adjustment_recorded'))
+                    ->success()
+                    ->send();
+            });
+    }
+}
+```
+
+##### 7A.4.4 ManageUnitConversionsAction.php
+
+```php
+namespace App\Filament\Resources\Products\Actions;
+
+use App\Models\ProductVariant;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\TextInput;
@@ -5068,30 +7106,50 @@ class ManageUnitConversionsAction
             ->label(__('resources.products.actions.manage_units'))
             ->icon(Heroicon::Scale)
             ->modalWidth(Width::SevenExtraLarge)
-            ->fillForm(fn ($record) => [
+            ->authorize('update')
+            ->fillForm(fn (ProductVariant $record) => [
                 'unitConversions' => $record->unitConversions
                     ->map->only(['unit_name', 'base_unit_ratio', 'is_default_purchase', 'is_default_transfer'])
                     ->toArray(),
             ])
-            ->schema([
+            ->schema(fn (ProductVariant $record) => [
+                // `$record` here is the page record (the parent
+                // `ProductVariant`) captured via `use` — never the
+                // repeater item. Per-item state is always read through the
+                // item-relative `Get $get`, so base-unit guards cannot bind
+                // to the wrong record. The guard therefore lives on the
+                // per-item `deleteAction()` (evaluated in item context):
+                // `deletable()` on the Repeater itself evaluates in the
+                // parent form context where `unit_name` does not exist, so
+                // it must stay unconditional. The server-side `->action()`
+                // below re-checks and skips the base-unit row regardless.
                 Repeater::make('unitConversions')
                     ->schema([
                         TextInput::make('unit_name')
+                            ->label(__('resources.products.fields.unit_name'))
                             ->required()
-                            ->disabled(fn (Get $get, $record) => $get('unit_name') === $record->base_unit_name),
+                            ->disabled(fn (Get $get) use ($record): bool => $get('unit_name') === $record->base_unit_name),
 
                         TextInput::make('base_unit_ratio')
+                            ->label(__('resources.products.fields.base_unit_ratio'))
                             ->numeric()
                             ->required()
-                            ->disabled(fn (Get $get, $record) => $get('unit_name') === $record->base_unit_name),
+                            ->disabled(fn (Get $get) use ($record): bool => $get('unit_name') === $record->base_unit_name),
 
-                        Toggle::make('is_default_purchase'),
-                        Toggle::make('is_default_transfer'),
+                        Toggle::make('is_default_purchase')
+                            ->label(__('resources.products.fields.is_default_purchase')),
+
+                        Toggle::make('is_default_transfer')
+                            ->label(__('resources.products.fields.is_default_transfer')),
                     ])
                     ->columns(4)
-                    ->deletable(fn ($record, array $item) => ($item['unit_name'] ?? null) !== $record->base_unit_name),
+                    ->deleteAction(
+                        fn (Action $action) => $action->visible(
+                            fn (Get $get) use ($record): bool => $get('unit_name') !== $record->base_unit_name
+                        ),
+                    ),
             ])
-            ->action(function (array $data, $record) {
+            ->action(function (array $data, ProductVariant $record) {
                 $baseName = $record->base_unit_name;
                 $incoming = collect($data['unitConversions'] ?? []);
 
@@ -5111,20 +7169,28 @@ class ManageUnitConversionsAction
 }
 ```
 
+
 ---
 
 ### 7B. TransferRequisitionResource
 
 **Model:** `App\Models\TransferRequisition` · **Group:** OPERATIONS · **Sort:** 1 · **Route:** `/admin/transfer-requisitions`
 
+**Record title:** `reference_code` (matching `DirectTransferResource::$recordTitleAttribute`).
+
 #### 7B.1 TransferRequisitionForm.php
 
 ```php
 namespace App\Filament\Resources\TransferRequisitions\Schemas;
 
+use App\Enums\NegotiationSide;
+use App\Enums\RevisionStatus;
+use App\Models\ProductVariant;
 use App\Models\ProductVariantUnitConversion;
+use App\Models\TransferRequisition;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
@@ -5153,7 +7219,9 @@ class TransferRequisitionForm
                         ->label(__('resources.transfer_requisitions.fields.from_warehouse'))
                         ->prefixIcon(Heroicon::BuildingOffice)
                         ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
-                        ->options(fn () => auth()->user()->warehouses()->pluck('name', 'id'))
+                        ->options(fn () => auth()->user()->isAdmin() || auth()->user()->isAuditor()
+                        ? \App\Models\Warehouse::query()->pluck('name', 'id')
+                        : auth()->user()->warehouses()->pluck('name', 'id'))
                         ->default(fn () => auth()->user()->warehouses()->count() === 1
                             ? auth()->user()->warehouses()->first()->id
                             : null)
@@ -5163,7 +7231,9 @@ class TransferRequisitionForm
                         ->label(__('resources.transfer_requisitions.fields.to_warehouse'))
                         ->prefixIcon(Heroicon::BuildingOffice2)
                         ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
-                        ->options(fn () => auth()->user()->warehouses()->pluck('name', 'id'))
+                        ->options(fn () => auth()->user()->isAdmin() || auth()->user()->isAuditor()
+                        ? \App\Models\Warehouse::query()->pluck('name', 'id')
+                        : auth()->user()->warehouses()->pluck('name', 'id'))
                         ->required()
                         ->different('from_warehouse_id'),
                 ]),
@@ -5247,8 +7317,140 @@ class TransferRequisitionForm
                 }),
         ];
     }
+
+    /**
+     * Negotiation revision modal fields (Phase 09).
+     *
+     * Used by the `submitRevision` table action. The proposed unit is
+     * sourced from the substitute variant's own conversion rows when a
+     * substitute is chosen, otherwise from the item's original variant —
+     * the ratio itself is re-resolved server-side by
+     * `NegotiationService::submitRevision()`.
+     *
+     * @return array<int, mixed>
+     */
+    public static function getRevisionFields(TransferRequisition $requisition): array
+    {
+        return [
+            Select::make('transfer_requisition_item_id')
+                ->label(__('resources.transfer_requisitions.fields.revision_item'))
+                ->prefixIcon(Heroicon::ClipboardDocumentList)
+                ->columnSpanFull()
+                ->options(fn () => $requisition->items
+                    ->mapWithKeys(fn ($item) => [
+                        $item->id => $item->productVariant->sku,
+                    ])
+                    ->toArray())
+                ->required()
+                ->live(),
+
+            Select::make('substitute_product_variant_id')
+                ->label(__('resources.transfer_requisitions.fields.substitute_sku'))
+                ->prefixIcon(Heroicon::Tag)
+                ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
+                ->options(fn () => ProductVariant::query()
+                    ->where('is_active', true)
+                    ->orderBy('sku')
+                    ->pluck('sku', 'id'))
+                ->searchable()
+                ->live()
+                ->afterStateUpdated(function ($set) {
+                    $set('proposed_unit_name', null);
+                    $set('proposed_unit_ratio', null);
+                }),
+
+            Select::make('side')
+                ->label(__('resources.transfer_requisitions.fields.negotiation_side'))
+                ->prefixIcon(Heroicon::ChatBubbleLeftRight)
+                ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
+                ->options(NegotiationSide::class)
+                ->required(),
+
+            Select::make('proposed_unit_name')
+                ->label(__('resources.transfer_requisitions.fields.unit'))
+                ->prefixIcon(Heroicon::Scale)
+                ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
+                ->options(function (Get $get) use ($requisition) {
+                    $item = $requisition->items->firstWhere(
+                        'id',
+                        (int) $get('transfer_requisition_item_id')
+                    );
+                    $variantId = $get('substitute_product_variant_id')
+                        ?? $item?->product_variant_id;
+                    if (! $variantId) {
+                        return [];
+                    }
+                    return ProductVariantUnitConversion::where('product_variant_id', $variantId)
+                        ->orderByDesc('base_unit_ratio')
+                        ->pluck('unit_name', 'unit_name')
+                        ->toArray();
+                })
+                ->required()
+                ->live()
+                ->afterStateUpdated(function (Get $get, $set, $state) use ($requisition) {
+                    $item = $requisition->items->firstWhere(
+                        'id',
+                        (int) $get('transfer_requisition_item_id')
+                    );
+                    $variantId = $get('substitute_product_variant_id')
+                        ?? $item?->product_variant_id;
+                    $ratio = $variantId
+                        ? ProductVariantUnitConversion::where('product_variant_id', $variantId)
+                            ->where('unit_name', $state)
+                            ->value('base_unit_ratio')
+                        : null;
+                    $set('proposed_unit_ratio', $ratio ?? 1);
+                }),
+
+            TextInput::make('proposed_unit_ratio')
+                ->label(__('resources.transfer_requisitions.fields.ratio_base'))
+                ->hintIcon(Heroicon::InformationCircle)
+                ->hint(__('resources.transfer_requisitions.hints.ratio_auto'))
+                ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
+                ->numeric()
+                ->disabled()
+                ->dehydrated()
+                ->required(),
+
+            TextInput::make('proposed_qty')
+                ->label(__('resources.transfer_requisitions.fields.qty'))
+                ->prefixIcon(Heroicon::Hashtag)
+                ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
+                ->numeric()
+                ->minValue(1)
+                ->required(),
+
+            Select::make('responds_to_revision_id')
+                ->label(__('resources.transfer_requisitions.fields.responds_to'))
+                ->prefixIcon(Heroicon::ChatBubbleLeftRight)
+                ->columnSpanFull()
+                ->options(function (Get $get) use ($requisition) {
+                    $itemId = (int) $get('transfer_requisition_item_id');
+                    if (! $itemId) {
+                        return [];
+                    }
+                    $item = $requisition->items->firstWhere('id', $itemId);
+                    if (! $item) {
+                        return [];
+                    }
+                    return $item->revisions
+                        ->where('status', RevisionStatus::Pending)
+                        ->mapWithKeys(fn ($revision) => [
+                            $revision->id => "{$revision->proposed_qty} {$revision->proposed_unit_name}",
+                        ])
+                        ->toArray();
+                }),
+
+            Textarea::make('negotiation_reason')
+                ->label(__('resources.transfer_requisitions.fields.negotiation_reason'))
+                ->prefixIcon(Heroicon::ChatBubbleBottomCenterText)
+                ->columnSpanFull(),
+        ];
+    }
 }
 ```
+
+**Note:** `reference_code` has no editable form field; it is system-generated as `TR-...` in `CreateTransferRequisition::mutateFormDataBeforeCreate()`.
 
 #### 7B.2 CreateTransferRequisition.php
 
@@ -5257,6 +7459,7 @@ namespace App\Filament\Resources\TransferRequisitions\Pages;
 
 use App\Filament\Resources\TransferRequisitions\TransferRequisitionResource;
 use App\Filament\Resources\TransferRequisitions\Schemas\TransferRequisitionForm;
+use App\Support\GeneratesReferenceCodes;
 use Filament\Forms\Components\Placeholder;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Resources\Pages\CreateRecord\Concerns\HasWizard;
@@ -5293,9 +7496,9 @@ class CreateTransferRequisition extends CreateRecord
                 ->schema([
                     Placeholder::make('review_summary')
                         ->columnSpanFull()
-                        ->content(fn (Get $get) => view(
+                        ->content(fn (Get $get) => \App\Livewire\Filament\Wizards\WizardReviewStep::renderSummary(
                             'filament.wizards.transfer-review',
-                            ['state' => $get()],
+                            $get(),
                         )),
                 ]),
         ];
@@ -5304,7 +7507,7 @@ class CreateTransferRequisition extends CreateRecord
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $data['reference_code'] = $data['reference_code']
-            ?? 'TR-' . now()->format('YmdHis') . '-' . random_int(100, 999);
+            ?? GeneratesReferenceCodes::generateReferenceCode('TR');
         $data['requested_by'] = auth()->id();
         $data['status'] = \App\Enums\TransferRequisitionStatus::Draft->value;
         return $data;
@@ -5322,14 +7525,23 @@ class CreateTransferRequisition extends CreateRecord
 ```php
 namespace App\Filament\Resources\TransferRequisitions\Tables;
 
+use App\Enums\NegotiationSide;
+use App\Enums\RevisionStatus;
 use App\Enums\TransferRequisitionStatus;
+use App\Filament\Resources\TransferRequisitions\Schemas\TransferRequisitionForm;
+use App\Filament\Resources\TransferRequisitions\TransferRequisitionResource;
 use App\Models\TransferRequisition;
+use App\Models\TransferRequisitionItemRevision;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\RestoreAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Support\Enums\FontWeight;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
@@ -5421,9 +7633,10 @@ class TransferRequisitionsTable
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(12)
             ->paginated([12, 24, 48])
-            ->recordUrl(fn (TransferRequisition $record) => $record->getUrl('view'))
+            ->recordUrl(fn (TransferRequisition $record) => TransferRequisitionResource::getUrl('view', ['record' => $record]))
             ->recordActions([
-                ViewAction::make(),
+                ViewAction::make()
+                    ->icon(Heroicon::Eye),
 
                 EditAction::make()
                     ->icon(Heroicon::PencilSquare)
@@ -5443,12 +7656,130 @@ class TransferRequisitionsTable
                     ->label(__('resources.transfer_requisitions.actions.review'))
                     ->icon(Heroicon::ChatBubbleLeftRight)
                     ->color('warning')
+                    ->authorize('negotiate')
                     ->visible(fn (TransferRequisition $record) => in_array($record->status, [
                         TransferRequisitionStatus::Requested,
                         TransferRequisitionStatus::UnderReviewFulfiller,
                         TransferRequisitionStatus::UnderReviewRequestor,
                     ], true))
-                    ->url(fn (TransferRequisition $record) => $record->getUrl('edit')),
+                    ->url(fn (TransferRequisition $record) => TransferRequisitionResource::getUrl('edit', ['record' => $record])),
+
+                Action::make('submitRevision')
+                    ->label(__('resources.transfer_requisitions.actions.propose_revision'))
+                    ->icon(Heroicon::ChatBubbleLeftRight)
+                    ->color('warning')
+                    ->authorize('negotiate')
+                    ->visible(fn (TransferRequisition $record) => in_array($record->status, [
+                        TransferRequisitionStatus::Requested,
+                        TransferRequisitionStatus::UnderReviewFulfiller,
+                        TransferRequisitionStatus::UnderReviewRequestor,
+                    ], true))
+                    ->modalWidth(Width::FourExtraLarge)
+                    ->schema(fn (TransferRequisition $record) => TransferRequisitionForm::getRevisionFields($record))
+                    ->action(function (array $data, TransferRequisition $record) {
+                        $item = $record->items()->findOrFail((int) $data['transfer_requisition_item_id']);
+
+                        app(\App\Services\NegotiationService::class)->submitRevision(
+                            item: $item,
+                            substituteVariantId: $data['substitute_product_variant_id'] ?? null,
+                            side: NegotiationSide::from($data['side']),
+                            proposedUnitName: (string) $data['proposed_unit_name'],
+                            proposedQty: (int) $data['proposed_qty'],
+                            negotiationReason: $data['negotiation_reason'] ?? null,
+                            respondsToRevisionId: $data['responds_to_revision_id'] ?? null,
+                        );
+
+                        Notification::make()
+                            ->title(__('resources.transfer_requisitions.notifications.revision_submitted'))
+                            ->success()
+                            ->send();
+                    }),
+
+                Action::make('acceptRevision')
+                    ->label(__('resources.transfer_requisitions.actions.accept_revision'))
+                    ->icon(Heroicon::CheckCircle)
+                    ->color('success')
+                    ->authorize('acceptRevision')
+                    ->visible(fn (TransferRequisition $record) => in_array($record->status, [
+                        TransferRequisitionStatus::Requested,
+                        TransferRequisitionStatus::UnderReviewFulfiller,
+                        TransferRequisitionStatus::UnderReviewRequestor,
+                    ], true) && $record->items->flatMap(fn ($item) => $item->revisions)
+                        ->contains(fn ($revision) => $revision->status === RevisionStatus::Pending))
+                    ->schema(fn (TransferRequisition $record) => [
+                        Select::make('revision_id')
+                            ->label(__('resources.transfer_requisitions.fields.revision'))
+                            ->prefixIcon(Heroicon::CheckCircle)
+                            ->columnSpanFull()
+                            ->options(fn () => $record->items
+                                ->flatMap(fn ($item) => $item->revisions
+                                    ->where('status', RevisionStatus::Pending)
+                                    ->mapWithKeys(fn ($revision) => [
+                                        $revision->id => "{$item->productVariant->sku}: {$revision->proposed_qty} {$revision->proposed_unit_name}",
+                                    ]))
+                                ->toArray())
+                            ->required(),
+                    ])
+                    ->action(function (array $data, TransferRequisition $record) {
+                        $revision = TransferRequisitionItemRevision::query()
+                            ->findOrFail((int) $data['revision_id']);
+
+                        abort_unless(
+                            (int) $revision->item->transfer_requisition_id === (int) $record->id,
+                            403,
+                        );
+
+                        app(\App\Services\NegotiationService::class)->accept($revision);
+
+                        Notification::make()
+                            ->title(__('resources.transfer_requisitions.notifications.revision_accepted'))
+                            ->success()
+                            ->send();
+                    })
+                    ->requiresConfirmation(),
+
+                Action::make('rejectRevision')
+                    ->label(__('resources.transfer_requisitions.actions.reject_revision'))
+                    ->icon(Heroicon::XCircle)
+                    ->color('danger')
+                    ->authorize('rejectRevision')
+                    ->visible(fn (TransferRequisition $record) => in_array($record->status, [
+                        TransferRequisitionStatus::Requested,
+                        TransferRequisitionStatus::UnderReviewFulfiller,
+                        TransferRequisitionStatus::UnderReviewRequestor,
+                    ], true) && $record->items->flatMap(fn ($item) => $item->revisions)
+                        ->contains(fn ($revision) => $revision->status === RevisionStatus::Pending))
+                    ->schema(fn (TransferRequisition $record) => [
+                        Select::make('revision_id')
+                            ->label(__('resources.transfer_requisitions.fields.revision'))
+                            ->prefixIcon(Heroicon::XCircle)
+                            ->columnSpanFull()
+                            ->options(fn () => $record->items
+                                ->flatMap(fn ($item) => $item->revisions
+                                    ->where('status', RevisionStatus::Pending)
+                                    ->mapWithKeys(fn ($revision) => [
+                                        $revision->id => "{$item->productVariant->sku}: {$revision->proposed_qty} {$revision->proposed_unit_name}",
+                                    ]))
+                                ->toArray())
+                            ->required(),
+                    ])
+                    ->action(function (array $data, TransferRequisition $record) {
+                        $revision = TransferRequisitionItemRevision::query()
+                            ->findOrFail((int) $data['revision_id']);
+
+                        abort_unless(
+                            (int) $revision->item->transfer_requisition_id === (int) $record->id,
+                            403,
+                        );
+
+                        app(\App\Services\NegotiationService::class)->reject($revision);
+
+                        Notification::make()
+                            ->title(__('resources.transfer_requisitions.notifications.revision_rejected'))
+                            ->success()
+                            ->send();
+                    })
+                    ->requiresConfirmation(),
 
                 Action::make('confirm')
                     ->label(__('resources.transfer_requisitions.actions.confirm'))
@@ -5460,14 +7791,7 @@ class TransferRequisitionsTable
                         TransferRequisitionStatus::UnderReviewFulfiller,
                         TransferRequisitionStatus::UnderReviewRequestor,
                     ], true))
-                    ->action(function (TransferRequisition $record) {
-                        app(\App\Services\NegotiationService::class)->materializeRequestedAsApproved($record);
-                        $record->update([
-                            'status'      => TransferRequisitionStatus::Confirmed,
-                            'approved_at' => now(),
-                            'approved_by' => auth()->id(),
-                        ]);
-                    })
+                    ->action(fn (TransferRequisition $record) => app(\App\Services\TransferRequisitionService::class)->confirm($record))
                     ->requiresConfirmation(),
 
                 Action::make('dispatch')
@@ -5488,7 +7812,82 @@ class TransferRequisitionsTable
                         TransferRequisitionStatus::Dispatched,
                         TransferRequisitionStatus::PartiallyReceived,
                     ], true))
-                    ->url(fn (TransferRequisition $record) => route('stn.scan', ['transferRequisition' => $record->id])),
+                    ->url(fn (TransferRequisition $record) => \Illuminate\Support\Facades\URL::temporarySignedRoute('stn.scan', now()->addDays(7), ['transferRequisition' => $record->getKey()])),
+
+                Action::make('recordLoss')
+                    ->label(__('resources.transfer_requisitions.actions.record_loss'))
+                    ->icon(Heroicon::ExclamationTriangle)
+                    ->color('danger')
+                    ->authorize('recordLoss')
+                    ->visible(fn (TransferRequisition $record) => in_array($record->status, [
+                        TransferRequisitionStatus::Dispatched,
+                        TransferRequisitionStatus::PartiallyReceived,
+                    ], true))
+                    ->modalWidth(Width::Large)
+                    ->schema(fn (TransferRequisition $record) => [
+                        Select::make('transfer_requisition_item_id')
+                            ->label(__('resources.transfer_requisitions.fields.revision_item'))
+                            ->prefixIcon(Heroicon::ClipboardDocumentList)
+                            ->columnSpanFull()
+                            ->options(fn () => $record->items
+                                ->mapWithKeys(fn ($item) => [
+                                    $item->id => $item->productVariant->sku,
+                                ])
+                                ->toArray())
+                            ->required(),
+
+                        TextInput::make('lost_base_qty')
+                            ->label(__('resources.loss_ledgers.fields.lost_base'))
+                            ->prefixIcon(Heroicon::Hashtag)
+                            ->columnSpan(['default' => 1, 'md' => 1])
+                            ->numeric()
+                            ->minValue(0)
+                            ->default(0)
+                            ->required(),
+
+                        TextInput::make('damaged_base_qty')
+                            ->label(__('resources.loss_ledgers.fields.damaged_base'))
+                            ->prefixIcon(Heroicon::Hashtag)
+                            ->columnSpan(['default' => 1, 'md' => 1])
+                            ->numeric()
+                            ->minValue(0)
+                            ->default(0)
+                            ->required(),
+
+                        Select::make('loss_category')
+                            ->label(__('resources.loss_ledgers.table.category'))
+                            ->prefixIcon(Heroicon::ExclamationTriangle)
+                            ->columnSpanFull()
+                            ->options([
+                                'shortfall' => __('enums.loss_category.shortfall'),
+                                'damage'    => __('enums.loss_category.damage'),
+                                'spoilage'  => __('enums.loss_category.spoilage'),
+                                'theft'     => __('enums.loss_category.theft'),
+                                'other'     => __('enums.loss_category.other'),
+                            ])
+                            ->required(),
+
+                        Textarea::make('notes')
+                            ->label(__('resources.loss_ledgers.fields.notes'))
+                            ->prefixIcon(Heroicon::ChatBubbleBottomCenterText)
+                            ->columnSpanFull(),
+                    ])
+                    ->action(function (array $data, TransferRequisition $record) {
+                        app(\App\Services\InventoryService::class)->recordLoss(
+                            $record,
+                            $record->items()->findOrFail((int) $data['transfer_requisition_item_id']),
+                            (int) $data['lost_base_qty'],
+                            (int) $data['damaged_base_qty'],
+                            (string) $data['loss_category'],
+                            $data['notes'] ?? null,
+                        );
+
+                        Notification::make()
+                            ->title(__('resources.transfer_requisitions.notifications.loss_recorded'))
+                            ->success()
+                            ->send();
+                    })
+                    ->requiresConfirmation(),
 
                 Action::make('cancel')
                     ->label(__('resources.transfer_requisitions.actions.cancel'))
@@ -5537,7 +7936,7 @@ class TransferRequisitionInfolist
     {
         return $schema->components([
             Grid::make(['default' => 1, 'md' => 3, 'xl' => 3])->schema([
-                Section::make('REQUISITION PROFILE')
+                Section::make(__('resources.transfer_requisitions.infolist.profile'))
                     ->icon(Heroicon::DocumentText)
                     ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2])
                     ->columns(['default' => 1, 'md' => 2, 'xl' => 2])
@@ -5566,17 +7965,17 @@ class TransferRequisitionInfolist
                             ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
                     ]),
 
-                Section::make('AUTHORIZATION SIGN-OFFS')
+                Section::make(__('resources.transfer_requisitions.infolist.signoffs'))
                     ->icon(Heroicon::ShieldCheck)
                     ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                     ->schema([
-                        TextEntry::make('requestedBy.name')->label(__('resources.transfer_requisitions.fields.requested_by'))->icon(Heroicon::User)->placeholder('System Initialized'),
-                        TextEntry::make('approvedBy.name')->label(__('resources.transfer_requisitions.fields.approved_by'))->icon(Heroicon::Check)->placeholder('Pending Approval'),
-                        TextEntry::make('dispatchedBy.name')->label(__('resources.transfer_requisitions.fields.dispatched_by'))->icon(Heroicon::Truck)->placeholder('Pending Dispatch'),
-                        TextEntry::make('receivedBy.name')->label(__('resources.transfer_requisitions.fields.received_by'))->icon(Heroicon::QrCode)->placeholder('Pending Intake'),
+                        TextEntry::make('requestedBy.name')->label(__('resources.transfer_requisitions.fields.requested_by'))->icon(Heroicon::User)->placeholder(__('resources.transfer_requisitions.placeholders.system_initialized')),
+                        TextEntry::make('approvedBy.name')->label(__('resources.transfer_requisitions.fields.approved_by'))->icon(Heroicon::Check)->placeholder(__('resources.transfer_requisitions.placeholders.pending_approval')),
+                        TextEntry::make('dispatchedBy.name')->label(__('resources.transfer_requisitions.fields.dispatched_by'))->icon(Heroicon::Truck)->placeholder(__('resources.transfer_requisitions.placeholders.pending_dispatch')),
+                        TextEntry::make('receivedBy.name')->label(__('resources.transfer_requisitions.fields.received_by'))->icon(Heroicon::QrCode)->placeholder(__('resources.transfer_requisitions.placeholders.pending_intake')),
                     ]),
 
-                Section::make('MATERIAL MANIFEST ITEMS')
+                Section::make(__('resources.transfer_requisitions.infolist.manifest'))
                     ->icon(Heroicon::ClipboardDocumentList)
                     ->columnSpanFull()
                     ->schema([
@@ -5617,6 +8016,59 @@ class TransferRequisitionInfolist
                                         ->numeric()
                                         ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
                                 ]),
+                            ]),
+                    ]),
+
+                Section::make(__('resources.transfer_requisitions.infolist.negotiation_history'))
+                    ->icon(Heroicon::ChatBubbleLeftRight)
+                    ->columnSpanFull()
+                    ->visible(fn ($record) => $record->items
+                        ->flatMap(fn ($item) => $item->revisions)
+                        ->isNotEmpty())
+                    ->schema([
+                        RepeatableEntry::make('items')
+                            ->schema([
+                                TextEntry::make('productVariant.sku')
+                                    ->label(__('resources.transfer_requisitions.fields.original_sku'))
+                                    ->weight(FontWeight::Bold),
+
+                                RepeatableEntry::make('revisions')
+                                    ->label(__('resources.transfer_requisitions.fields.revisions'))
+                                    ->schema([
+                                        Grid::make(['default' => 1, 'md' => 3, 'xl' => 5])->schema([
+                                            TextEntry::make('side')
+                                                ->label(__('resources.transfer_requisitions.fields.negotiation_side'))
+                                                ->badge()
+                                                ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+
+                                            TextEntry::make('status')
+                                                ->label(__('resources.transfer_requisitions.fields.status'))
+                                                ->badge()
+                                                ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+
+                                            TextEntry::make('proposed_qty')
+                                                ->label(__('resources.transfer_requisitions.fields.proposed'))
+                                                ->state(fn ($record) => "{$record->proposed_qty} {$record->proposed_unit_name}")
+                                                ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+
+                                            TextEntry::make('user.name')
+                                                ->label(__('resources.transfer_requisitions.fields.proposed_by'))
+                                                ->icon(Heroicon::User)
+                                                ->placeholder('—')
+                                                ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+
+                                            TextEntry::make('responded_at')
+                                                ->label(__('resources.transfer_requisitions.fields.responded_at'))
+                                                ->dateTime('M j, Y H:i')
+                                                ->placeholder(__('resources.transfer_requisitions.placeholders.pending_approval'))
+                                                ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+
+                                            TextEntry::make('negotiation_reason')
+                                                ->label(__('resources.transfer_requisitions.fields.negotiation_reason'))
+                                                ->placeholder('—')
+                                                ->columnSpanFull(),
+                                        ]),
+                                    ]),
                             ]),
                     ]),
             ]),
@@ -5669,7 +8121,9 @@ class DirectTransferForm
                         ->label(__('resources.direct_transfers.fields.from_warehouse'))
                         ->prefixIcon(Heroicon::BuildingOffice)
                         ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
-                        ->options(fn () => auth()->user()->warehouses()->pluck('name', 'id'))
+                        ->options(fn () => auth()->user()->isAdmin() || auth()->user()->isAuditor()
+                        ? \App\Models\Warehouse::query()->pluck('name', 'id')
+                        : auth()->user()->warehouses()->pluck('name', 'id'))
                         ->default(fn () => auth()->user()->warehouses()->count() === 1
                             ? auth()->user()->warehouses()->first()->id
                             : null)
@@ -5679,7 +8133,9 @@ class DirectTransferForm
                         ->label(__('resources.direct_transfers.fields.to_warehouse'))
                         ->prefixIcon(Heroicon::BuildingOffice2)
                         ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
-                        ->options(fn () => auth()->user()->warehouses()->pluck('name', 'id'))
+                        ->options(fn () => auth()->user()->isAdmin() || auth()->user()->isAuditor()
+                        ? \App\Models\Warehouse::query()->pluck('name', 'id')
+                        : auth()->user()->warehouses()->pluck('name', 'id'))
                         ->required()
                         ->different('from_warehouse_id'),
                 ]),
@@ -5689,81 +8145,89 @@ class DirectTransferForm
     public static function getStockAllocationFields(): array
     {
         return [
-            Repeater::make('items')
+            Section::make(__('resources.direct_transfers.sections.stock_allocation'))
+                ->icon(Heroicon::Cube)
                 ->columnSpanFull()
                 ->columns(['default' => 1, 'md' => 2, 'xl' => 4])
                 ->schema([
-                    Select::make('product_variant_id')
-                        ->label(__('resources.direct_transfers.fields.variant_sku'))
-                        ->prefixIcon(Heroicon::Tag)
-                        ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2])
-                        ->options(fn () => ProductVariant::query()
-                            ->where('is_active', true)
-                            ->orderBy('sku')
-                            ->pluck('sku', 'id'))
-                        ->searchable()
+                    Repeater::make('items')
+                        ->columnSpanFull()
+                        ->columns(['default' => 1, 'md' => 2, 'xl' => 4])
+                        ->schema([
+                            Select::make('product_variant_id')
+                                ->label(__('resources.direct_transfers.fields.variant_sku'))
+                                ->prefixIcon(Heroicon::Tag)
+                                ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2])
+                                ->options(fn () => ProductVariant::query()
+                                    ->where('is_active', true)
+                                    ->orderBy('sku')
+                                    ->pluck('sku', 'id'))
+                                ->searchable()
+                                ->required()
+                                ->live()
+                                ->afterStateUpdated(function ($set) {
+                                    $set('unit_name', null);
+                                    $set('unit_ratio', null);
+                                }),
+
+                            Select::make('unit_name')
+                                ->label(__('resources.direct_transfers.fields.unit'))
+                                ->prefixIcon(Heroicon::Scale)
+                                ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
+                                ->options(function (Get $get) {
+                                    $variantId = $get('product_variant_id');
+                                    if (! $variantId) {
+                                        return [];
+                                    }
+                                    return ProductVariantUnitConversion::where('product_variant_id', $variantId)
+                                        ->orderByDesc('base_unit_ratio')
+                                        ->pluck('unit_name', 'unit_name')
+                                        ->toArray();
+                                })
+                                ->required()
+                                ->live()
+                                ->afterStateUpdated(function (Get $get, $set, $state) {
+                                    $ratio = ProductVariantUnitConversion::where('product_variant_id', $get('product_variant_id'))
+                                        ->where('unit_name', $state)
+                                        ->value('base_unit_ratio');
+                                    $set('unit_ratio', $ratio ?? 1);
+                                }),
+
+                            TextInput::make('unit_ratio')
+                                ->label(__('resources.direct_transfers.fields.ratio_base'))
+                                ->hintIcon(Heroicon::InformationCircle)
+                                ->hint(__('resources.direct_transfers.hints.ratio_auto'))
+                                ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
+                                ->numeric()
+                                ->disabled()
+                                ->dehydrated()
+                                ->required(),
+
+                            TextInput::make('qty')
+                                ->label(__('resources.direct_transfers.fields.qty'))
+                                ->prefixIcon(Heroicon::Hashtag)
+                                ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
+                                ->numeric()
+                                ->minValue(1)
+                                ->required(),
+                        ])
+                        ->minItems(1)
                         ->required()
-                        ->live()
-                        ->afterStateUpdated(function ($set) {
-                            $set('unit_name', null);
-                            $set('unit_ratio', null);
-                        }),
+                        ->dehydrated(),
 
-                    Select::make('unit_name')
-                        ->label(__('resources.direct_transfers.fields.unit'))
-                        ->prefixIcon(Heroicon::Scale)
-                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
-                        ->options(function (Get $get) {
-                            $variantId = $get('product_variant_id');
-                            if (! $variantId) {
-                                return [];
-                            }
-                            return ProductVariantUnitConversion::where('product_variant_id', $variantId)
-                                ->orderByDesc('base_unit_ratio')
-                                ->pluck('unit_name', 'unit_name')
-                                ->toArray();
-                        })
+                    Textarea::make('notes')
+                        ->label(__('resources.direct_transfers.fields.notes'))
+                        ->prefixIcon(Heroicon::ChatBubbleBottomCenterText)
+                        ->columnSpanFull()
                         ->required()
-                        ->live()
-                        ->afterStateUpdated(function (Get $get, $set, $state) {
-                            $ratio = ProductVariantUnitConversion::where('product_variant_id', $get('product_variant_id'))
-                                ->where('unit_name', $state)
-                                ->value('base_unit_ratio');
-                            $set('unit_ratio', $ratio ?? 1);
-                        }),
-
-                    TextInput::make('unit_ratio')
-                        ->label(__('resources.direct_transfers.fields.ratio_base'))
-                        ->hintIcon(Heroicon::InformationCircle)
-                        ->hint(__('resources.direct_transfers.hints.ratio_auto'))
-                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
-                        ->numeric()
-                        ->disabled()
-                        ->dehydrated()
-                        ->required(),
-
-                    TextInput::make('qty')
-                        ->label(__('resources.direct_transfers.fields.qty'))
-                        ->prefixIcon(Heroicon::Hashtag)
-                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
-                        ->numeric()
-                        ->minValue(1)
-                        ->required(),
-                ])
-                ->minItems(1)
-                ->required()
-                ->dehydrated(),
-
-            Textarea::make('notes')
-                ->label(__('resources.direct_transfers.fields.notes'))
-                ->prefixIcon(Heroicon::ChatBubbleBottomCenterText)
-                ->columnSpanFull()
-                ->required()
-                ->minLength(15),
+                        ->minLength(15),
+                ]),
         ];
     }
 }
 ```
+
+**Note:** `reference_code` has no editable form field; it is system-generated as `DT-...` in `CreateDirectTransfer::handleRecordCreation()`.
 
 #### 7C.2 CreateDirectTransfer.php
 
@@ -5772,6 +8236,7 @@ namespace App\Filament\Resources\DirectTransfers\Pages;
 
 use App\Filament\Resources\DirectTransfers\DirectTransferResource;
 use App\Filament\Resources\DirectTransfers\Schemas\DirectTransferForm;
+use App\Support\GeneratesReferenceCodes;
 use Filament\Forms\Components\Placeholder;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Resources\Pages\CreateRecord\Concerns\HasWizard;
@@ -5779,6 +8244,7 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Support\Facades\Gate;
 
 class CreateDirectTransfer extends CreateRecord
 {
@@ -5808,9 +8274,9 @@ class CreateDirectTransfer extends CreateRecord
                 ->schema([
                     Placeholder::make('review_summary')
                         ->columnSpanFull()
-                        ->content(fn (Get $get) => view(
+                        ->content(fn (Get $get) => \App\Livewire\Filament\Wizards\WizardReviewStep::renderSummary(
                             'filament.wizards.direct-transfer-review',
-                            ['state' => $get()],
+                            $get(),
                         )),
                 ]),
         ];
@@ -5818,7 +8284,13 @@ class CreateDirectTransfer extends CreateRecord
 
     protected function handleRecordCreation(array $data): \Illuminate\Database\Eloquent\Model
     {
-        $referenceCode = 'DT-' . now()->format('YmdHis') . '-' . random_int(100, 999);
+        // §20.3 — the Create page explicitly authorizes via the policy before
+        // accepting wizard submission. UI visibility is never the boundary;
+        // the service re-verifies both warehouse endpoints (§6.2).
+        Gate::authorize('create', \App\Models\DirectTransfer::class);
+
+        $referenceCode = $data['reference_code']
+            ?? GeneratesReferenceCodes::generateReferenceCode('DT');
 
         return app(\App\Services\InventoryService::class)->directTransfer(
             fromWarehouseId: (int) $data['from_warehouse_id'],
@@ -5965,7 +8437,7 @@ class DirectTransferInfolist
     {
         return $schema->components([
             Grid::make(['default' => 1, 'md' => 3, 'xl' => 3])->schema([
-                Section::make('DIRECT TRANSFER PROFILE')
+                Section::make(__('resources.direct_transfers.infolist.profile'))
                     ->icon(Heroicon::ArrowPath)
                     ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2])
                     ->columns(['default' => 1, 'md' => 2, 'xl' => 2])
@@ -5994,7 +8466,7 @@ class DirectTransferInfolist
                             ->placeholder('—'),
                     ]),
 
-                Section::make('AUTHORIZATION')
+                Section::make(__('resources.direct_transfers.infolist.authorization'))
                     ->icon(Heroicon::ShieldCheck)
                     ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                     ->schema([
@@ -6004,7 +8476,7 @@ class DirectTransferInfolist
                             ->placeholder('—'),
                     ]),
 
-                Section::make('MATERIAL MANIFEST')
+                Section::make(__('resources.direct_transfers.infolist.manifest'))
                     ->icon(Heroicon::ClipboardDocumentList)
                     ->columnSpanFull()
                     ->schema([
@@ -6064,6 +8536,21 @@ class DirectTransferResource extends Resource
     protected static string | \BackedEnum | null $navigationIcon = Heroicon::OutlinedArrowPath;
     protected static string | \BackedEnum | null $activeNavigationIcon = Heroicon::ArrowPath;
 
+    public static function getModelLabel(): string
+    {
+        return __('resources.direct_transfers.model.singular');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('resources.direct_transfers.model.plural');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('resources.direct_transfers.navigation.label');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return DirectTransferForm::configure($schema);
@@ -6083,9 +8570,15 @@ class DirectTransferResource extends Resource
     {
         return parent::getEloquentQuery()
             ->with(['fromWarehouse', 'toWarehouse', 'transferredBy', 'items.productVariant'])
+            ->withCount('items')
             ->when(
                 ! auth()->user()->isAdmin() && ! auth()->user()->isAuditor(),
                 function (Builder $q) {
+                    // Intentional AND-scope (§20.1): a direct transfer moves
+                    // stock between two warehouses, so a non-privileged user
+                    // must be assigned to BOTH endpoints to list it. A
+                    // single-warehouse user therefore sees zero direct
+                    // transfers by design — not a bug.
                     $ids = auth()->user()->warehouses()->pluck('id')->all();
                     $q->whereIn('from_warehouse_id', $ids)
                       ->whereIn('to_warehouse_id', $ids);
@@ -6104,11 +8597,15 @@ class DirectTransferResource extends Resource
 }
 ```
 
+> Canonical duplicate: the same thin class is listed in §18.1a alongside the other resource classes. Both sites are authoritative and must be kept identical — `§7C` owns the `DirectTransferResource` definition for the Direct Transfers domain section, `§18.1a` owns the file-contract copy.
+
 ---
 
 ### 7D. InTransitResource
 
 **Model:** `App\Models\InTransit` · **Group:** OPERATIONS · **Sort:** 3
+
+**Record title:** `$recordTitleAttribute = null` — `InTransit` has no own code column; rows are identified via `transferRequisition.reference_code` plus variant SKU (already the first table columns). **Owner decision (recorded):** keep `null`, no schema change; revisit only if global search over in-transit rows is required, which would need a stored/generated column and a new schema decision.
 
 #### 7D.1 InTransitInfolist.php
 
@@ -6127,7 +8624,7 @@ class InTransitInfolist
     {
         return $schema->components([
             Grid::make(['default' => 1, 'md' => 3, 'xl' => 3])->schema([
-                Section::make('IN-TRANSIT CARGO')
+                Section::make(__('resources.in_transits.infolist.cargo'))
                     ->icon(Heroicon::Truck)
                     ->columnSpanFull()
                     ->columns(['default' => 1, 'md' => 3, 'xl' => 3])
@@ -6167,6 +8664,8 @@ class InTransitInfolist
 namespace App\Filament\Resources\InTransits\Tables;
 
 use App\Enums\InTransitStatus;
+use Filament\Actions\ViewAction;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -6208,12 +8707,19 @@ class InTransitsTable
                     ->sortable(),
             ])
             ->filters([
+                // `SelectFilter::options()` accepts any `HasLabel` enum —
+                // `HasColor` is not required. `InTransitStatus` labels resolve
+                // through `__()` (§4.7), so the filter renders translated
+                // options without further configuration.
                 SelectFilter::make('status')->options(InTransitStatus::class),
             ])
             ->defaultSort('dispatched_at', 'desc')
             ->stackedOnMobile()
             ->paginated([25, 50, 100])
-            ->defaultPaginationPageOption(50);
+            ->defaultPaginationPageOption(50)
+            ->recordActions([
+                ViewAction::make()->icon(Heroicon::Eye),
+            ]);
     }
 }
 ```
@@ -6241,7 +8747,7 @@ class StockMovementInfolist
     {
         return $schema->components([
             Grid::make(['default' => 1, 'md' => 2, 'xl' => 2])->schema([
-                Section::make('MOVEMENT')
+                Section::make(__('resources.stock_movements.infolist.movement'))
                     ->icon(Heroicon::QueueList)
                     ->columnSpanFull()
                     ->columns(['default' => 1, 'md' => 2, 'xl' => 2])
@@ -6258,7 +8764,7 @@ class StockMovementInfolist
                             ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
                         TextEntry::make('unit_name_used')->label(__('resources.stock_movements.fields.unit'))
                             ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
-                        TextEntry::make('reference_code')->label(__('resources.stock_movements.fields.reference'))
+                        TextEntry::make('reference_code')->label(__('resources.stock_movements.fields.reference_code'))
                             ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
                         TextEntry::make('createdBy.name')->label(__('resources.stock_movements.fields.by'))
                             ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
@@ -6276,6 +8782,8 @@ class StockMovementInfolist
 namespace App\Filament\Resources\StockMovements\Tables;
 
 use App\Enums\StockMovementType;
+use Filament\Actions\ViewAction;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -6298,6 +8806,7 @@ class StockMovementsTable
                     ->sortable(),
 
                 TextColumn::make('warehouse.code')
+                    // Ledger tables show the warehouse `code` for density; all other resources show `warehouse.name`.
                     ->label(__('resources.stock_movements.table.warehouse'))
                     ->badge()
                     ->color('gray')
@@ -6324,7 +8833,7 @@ class StockMovementsTable
                     ->visibleFrom('lg'),
 
                 TextColumn::make('reference_code')
-                    ->label(__('resources.stock_movements.table.reference'))
+                    ->label(__('resources.stock_movements.table.reference_code'))
                     ->fontFamily('mono')
                     ->copyable()
                     ->searchable()
@@ -6350,7 +8859,10 @@ class StockMovementsTable
             ->defaultSort('created_at', 'desc')
             ->stackedOnMobile()
             ->paginated([25, 50, 100])
-            ->defaultPaginationPageOption(50);
+            ->defaultPaginationPageOption(50)
+            ->recordActions([
+                ViewAction::make()->icon(Heroicon::Eye),
+            ]);
     }
 }
 ```
@@ -6378,7 +8890,7 @@ class LossLedgerInfolist
     {
         return $schema->components([
             Grid::make(['default' => 1, 'md' => 2, 'xl' => 2])->schema([
-                Section::make('LOSS RECORD')
+                Section::make(__('resources.loss_ledgers.infolist.record'))
                     ->icon(Heroicon::ExclamationTriangle)
                     ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                     ->schema([
@@ -6389,7 +8901,7 @@ class LossLedgerInfolist
                         TextEntry::make('loss_category')->badge()->columnSpanFull(),
                     ]),
 
-                Section::make('FINANCIAL IMPACT')
+                Section::make(__('resources.loss_ledgers.infolist.financial_impact'))
                     ->icon(Heroicon::CurrencyDollar)
                     ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                     ->schema([
@@ -6412,6 +8924,8 @@ class LossLedgerInfolist
 ```php
 namespace App\Filament\Resources\LossLedgers\Tables;
 
+use Filament\Actions\ViewAction;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -6495,7 +9009,10 @@ class LossLedgersTable
             ->defaultSort('recorded_at', 'desc')
             ->stackedOnMobile()
             ->paginated([25, 50, 100])
-            ->defaultPaginationPageOption(50);
+            ->defaultPaginationPageOption(50)
+            ->recordActions([
+                ViewAction::make()->icon(Heroicon::Eye),
+            ]);
     }
 }
 ```
@@ -6505,6 +9022,8 @@ class LossLedgersTable
 ### 7G. PurchaseOrderResource
 
 **Model:** `App\Models\PurchaseOrder` · **Group:** PURCHASING · **Sort:** 1
+
+**Record title:** `reference_code` (matching `DirectTransferResource::$recordTitleAttribute`).
 
 #### 7G.1 PurchaseOrderForm.php
 
@@ -6535,7 +9054,7 @@ class PurchaseOrderForm
     public static function getSupplierWarehouseFields(): array
     {
         return [
-            Section::make('SUPPLIER & WAREHOUSE')
+            Section::make(__('resources.purchase_orders.form.supplier_warehouse'))
                 ->icon(Heroicon::BuildingStorefront)
                 ->columnSpanFull()
                 ->columns(['default' => 1, 'md' => 2, 'xl' => 2])
@@ -6554,7 +9073,9 @@ class PurchaseOrderForm
                         ->label(__('resources.purchase_orders.fields.receiving_warehouse'))
                         ->prefixIcon(Heroicon::BuildingOffice2)
                         ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
-                        ->options(fn () => auth()->user()->warehouses()->pluck('name', 'id'))
+                        ->options(fn () => auth()->user()->isAdmin() || auth()->user()->isAuditor()
+                        ? \App\Models\Warehouse::query()->pluck('name', 'id')
+                        : auth()->user()->warehouses()->pluck('name', 'id'))
                         ->default(fn () => auth()->user()->warehouses()->count() === 1
                             ? auth()->user()->warehouses()->first()->id
                             : null)
@@ -6665,11 +9186,13 @@ class PurchaseOrderForm
                 ->helperText(__('resources.purchase_orders.help.update_cost_price'))
                 ->onIcon(Heroicon::CurrencyDollar)
                 ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2])
-                ->default(false),
+                    ->default(false),
         ];
     }
 }
 ```
+
+**Note:** `reference_code` has no editable form field; it is system-generated as `PO-...` in `CreatePurchaseOrder::mutateFormDataBeforeCreate()`.
 
 #### 7G.2 CreatePurchaseOrder.php
 
@@ -6678,6 +9201,7 @@ namespace App\Filament\Resources\PurchaseOrders\Pages;
 
 use App\Filament\Resources\PurchaseOrders\PurchaseOrderResource;
 use App\Filament\Resources\PurchaseOrders\Schemas\PurchaseOrderForm;
+use App\Support\GeneratesReferenceCodes;
 use Filament\Forms\Components\Placeholder;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Resources\Pages\CreateRecord\Concerns\HasWizard;
@@ -6712,9 +9236,9 @@ class CreatePurchaseOrder extends CreateRecord
                     ...PurchaseOrderForm::getReviewFields(),
                     Placeholder::make('review_summary')
                         ->columnSpanFull()
-                        ->content(fn (Get $get) => view(
+                        ->content(fn (Get $get) => \App\Livewire\Filament\Wizards\WizardReviewStep::renderSummary(
                             'filament.wizards.purchase-order-review',
-                            ['state' => $get()],
+                            $get(),
                         )),
                 ]),
         ];
@@ -6723,7 +9247,7 @@ class CreatePurchaseOrder extends CreateRecord
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $data['reference_code'] = $data['reference_code']
-            ?? 'PO-' . now()->format('YmdHis') . '-' . random_int(100, 999);
+            ?? GeneratesReferenceCodes::generateReferenceCode('PO');
         $data['ordered_by'] = auth()->id();
         return $data;
     }
@@ -6741,6 +9265,7 @@ class CreatePurchaseOrder extends CreateRecord
 namespace App\Filament\Resources\PurchaseOrders\Tables;
 
 use App\Enums\PurchaseOrderStatus;
+use App\Filament\Resources\PurchaseOrders\PurchaseOrderResource;
 use App\Models\PurchaseOrder;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
@@ -6835,9 +9360,10 @@ class PurchaseOrdersTable
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(12)
             ->paginated([12, 24, 48])
-            ->recordUrl(fn (PurchaseOrder $record) => $record->getUrl('view'))
+            ->recordUrl(fn (PurchaseOrder $record) => PurchaseOrderResource::getUrl('view', ['record' => $record]))
             ->recordActions([
-                ViewAction::make(),
+                ViewAction::make()
+                    ->icon(Heroicon::Eye),
 
                 EditAction::make()
                     ->icon(Heroicon::PencilSquare)
@@ -6870,7 +9396,24 @@ class PurchaseOrdersTable
                                 ? round($outstandingBase / $item->ordered_unit_ratio, 2)
                                 : $outstandingBase;
                             return TextInput::make("received.{$item->id}")
-                                ->label("{$item->productVariant->sku} — outstanding {$outstandingDisplay} {$item->ordered_unit_name} ({$outstandingBase} base)")
+                                // Base-unit contract: `PurchaseService::receivePurchase()`
+                                // consumes base quantities, and `default()` /
+                                // `maxValue()` below are base units — so the
+                                // label MUST also render the outstanding in
+                                // base units (never display units) to avoid a
+                                // display→base mismatch at submit time. The
+                                // display-unit equivalent is informational
+                                // helper text only.
+                                ->label(__('resources.purchase_orders.fields.receive_line', [
+                                    'sku'         => $item->productVariant->sku,
+                                    'outstanding' => $outstandingBase,
+                                    'unit'        => $item->productVariant->base_unit_name,
+                                    'base'        => $outstandingBase,
+                                ]))
+                                ->helperText(__('resources.purchase_orders.help.receive_display_equivalent', [
+                                    'display' => $outstandingDisplay,
+                                    'unit'    => $item->ordered_unit_name,
+                                ]))
                                 ->prefixIcon(Heroicon::ArchiveBoxArrowDown)
                                 ->columnSpan(['default' => 1, 'md' => 1])
                                 ->numeric()
@@ -6936,7 +9479,7 @@ class PurchaseOrderInfolist
     {
         return $schema->components([
             Grid::make(['default' => 1, 'md' => 3, 'xl' => 3])->schema([
-                Section::make('PURCHASE ORDER PROFILE')
+                Section::make(__('resources.purchase_orders.infolist.profile'))
                     ->icon(Heroicon::DocumentText)
                     ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2])
                     ->columns(['default' => 1, 'md' => 2, 'xl' => 2])
@@ -6956,7 +9499,7 @@ class PurchaseOrderInfolist
                             ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2]),
                     ]),
 
-                Section::make('SIGN-OFFS')
+                Section::make(__('resources.purchase_orders.infolist.signoffs'))
                     ->icon(Heroicon::ShieldCheck)
                     ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                     ->schema([
@@ -6966,7 +9509,7 @@ class PurchaseOrderInfolist
                         TextEntry::make('received_at')->label(__('resources.purchase_orders.fields.received_at'))->dateTime('M j, Y H:i')->placeholder('—'),
                     ]),
 
-                Section::make('LINE ITEMS')
+                Section::make(__('resources.purchase_orders.infolist.line_items'))
                     ->icon(Heroicon::ClipboardDocumentList)
                     ->columnSpanFull()
                     ->schema([
@@ -6998,6 +9541,8 @@ class PurchaseOrderInfolist
 
 **Model:** `App\Models\SalesOrder` · **Group:** SALES · **Sort:** 1
 
+**Record title:** `reference_code` (matching `DirectTransferResource::$recordTitleAttribute`).
+
 #### 7H.1 SalesOrderForm.php
 
 ```php
@@ -7026,7 +9571,7 @@ class SalesOrderForm
     public static function getCustomerWarehouseFields(): array
     {
         return [
-            Section::make('CUSTOMER & WAREHOUSE')
+            Section::make(__('resources.sales_orders.form.customer_warehouse'))
                 ->icon(Heroicon::UserGroup)
                 ->columnSpanFull()
                 ->columns(['default' => 1, 'md' => 2, 'xl' => 2])
@@ -7043,7 +9588,9 @@ class SalesOrderForm
                         ->label(__('resources.sales_orders.fields.dispatching_warehouse'))
                         ->prefixIcon(Heroicon::BuildingOffice2)
                         ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
-                        ->options(fn () => auth()->user()->warehouses()->pluck('name', 'id'))
+                        ->options(fn () => auth()->user()->isAdmin() || auth()->user()->isAuditor()
+                        ? \App\Models\Warehouse::query()->pluck('name', 'id')
+                        : auth()->user()->warehouses()->pluck('name', 'id'))
                         ->default(fn () => auth()->user()->warehouses()->count() === 1
                             ? auth()->user()->warehouses()->first()->id
                             : null)
@@ -7130,6 +9677,8 @@ class SalesOrderForm
 }
 ```
 
+**Note:** `reference_code` has no editable form field; it is system-generated as `SO-...` in `CreateSalesOrder::mutateFormDataBeforeCreate()`.
+
 #### 7H.2 CreateSalesOrder.php
 
 ```php
@@ -7137,6 +9686,7 @@ namespace App\Filament\Resources\SalesOrders\Pages;
 
 use App\Filament\Resources\SalesOrders\SalesOrderResource;
 use App\Filament\Resources\SalesOrders\Schemas\SalesOrderForm;
+use App\Support\GeneratesReferenceCodes;
 use Filament\Forms\Components\Placeholder;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Resources\Pages\CreateRecord\Concerns\HasWizard;
@@ -7170,9 +9720,9 @@ class CreateSalesOrder extends CreateRecord
                 ->schema([
                     Placeholder::make('review_summary')
                         ->columnSpanFull()
-                        ->content(fn (Get $get) => view(
+                        ->content(fn (Get $get) => \App\Livewire\Filament\Wizards\WizardReviewStep::renderSummary(
                             'filament.wizards.sales-order-review',
-                            ['state' => $get()],
+                            $get(),
                         )),
                 ]),
         ];
@@ -7181,7 +9731,7 @@ class CreateSalesOrder extends CreateRecord
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $data['reference_code'] = $data['reference_code']
-            ?? 'SO-' . now()->format('YmdHis') . '-' . random_int(100, 999);
+            ?? GeneratesReferenceCodes::generateReferenceCode('SO');
         $data['ordered_by'] = auth()->id();
         return $data;
     }
@@ -7199,6 +9749,7 @@ class CreateSalesOrder extends CreateRecord
 namespace App\Filament\Resources\SalesOrders\Tables;
 
 use App\Enums\SalesOrderStatus;
+use App\Filament\Resources\SalesOrders\SalesOrderResource;
 use App\Models\SalesOrder;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
@@ -7272,9 +9823,10 @@ class SalesOrdersTable
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(12)
             ->paginated([12, 24, 48])
-            ->recordUrl(fn (SalesOrder $record) => $record->getUrl('view'))
+            ->recordUrl(fn (SalesOrder $record) => SalesOrderResource::getUrl('view', ['record' => $record]))
             ->recordActions([
-                \Filament\Actions\ViewAction::make(),
+                \Filament\Actions\ViewAction::make()
+                    ->icon(Heroicon::Eye),
 
                 \Filament\Actions\EditAction::make()
                     ->icon(Heroicon::PencilSquare)
@@ -7323,7 +9875,12 @@ class SalesOrdersTable
                                 }
 
                                 return TextInput::make("dispatch.{$item->id}")
-                                    ->label("{$item->productVariant->sku} — outstanding {$item->outstandingBaseQty()} {$item->unit_name} (available: {$available})")
+                                    ->label(__('resources.sales_orders.fields.dispatch_line', [
+                                        'sku'         => $item->productVariant->sku,
+                                        'outstanding' => $item->outstandingBaseQty(),
+                                        'unit'        => $item->unit_name,
+                                        'available'   => $available,
+                                    ]))
                                     ->prefixIcon(Heroicon::Truck)
                                     ->columnSpan(['default' => 1, 'md' => 1])
                                     ->numeric()
@@ -7360,7 +9917,11 @@ class SalesOrdersTable
                             ->options(fn (SalesOrder $record) => $record->items
                                 ->where('dispatched_base_qty', '>', 0)
                                 ->mapWithKeys(fn ($item) => [
-                                    $item->id => "{$item->productVariant->sku} (dispatched: {$item->dispatched_base_qty}, already returned: {$item->alreadyReturnedBaseQty()})",
+                                    $item->id => __('resources.sales_orders.fields.return_option', [
+                                        'sku'        => $item->productVariant->sku,
+                                        'dispatched' => $item->dispatched_base_qty,
+                                        'returned'   => $item->alreadyReturnedBaseQty(),
+                                    ]),
                                 ]))
                             ->required()
                             ->live(),
@@ -7430,7 +9991,7 @@ class SalesOrderInfolist
     {
         return $schema->components([
             Grid::make(['default' => 1, 'md' => 3, 'xl' => 3])->schema([
-                Section::make('SALES ORDER PROFILE')
+                Section::make(__('resources.sales_orders.infolist.profile'))
                     ->icon(Heroicon::DocumentText)
                     ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2])
                     ->columns(['default' => 1, 'md' => 2, 'xl' => 2])
@@ -7446,7 +10007,7 @@ class SalesOrderInfolist
                             ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
                     ]),
 
-                Section::make('SIGN-OFFS')
+                Section::make(__('resources.sales_orders.infolist.signoffs'))
                     ->icon(Heroicon::ShieldCheck)
                     ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                     ->schema([
@@ -7456,7 +10017,7 @@ class SalesOrderInfolist
                         TextEntry::make('dispatched_at')->label(__('resources.sales_orders.fields.dispatched_at'))->dateTime('M j, Y H:i')->placeholder('—'),
                     ]),
 
-                Section::make('LINE ITEMS')
+                Section::make(__('resources.sales_orders.infolist.line_items'))
                     ->icon(Heroicon::ClipboardDocumentList)
                     ->columnSpanFull()
                     ->schema([
@@ -7573,6 +10134,7 @@ class SuppliersTable
                 Stack::make([
                     Split::make([
                         TextColumn::make('name')
+                            ->label(__('resources.suppliers.table.name'))
                             ->weight(FontWeight::Bold)
                             ->searchable()->sortable(),
 
@@ -7590,10 +10152,12 @@ class SuppliersTable
 
                     Split::make([
                         TextColumn::make('phone')
+                            ->label(__('resources.suppliers.table.phone'))
                             ->icon(Heroicon::Phone)->iconColor('gray')
                             ->copyable()->placeholder('—'),
 
                         TextColumn::make('email')
+                            ->label(__('resources.suppliers.table.email'))
                             ->icon(Heroicon::Envelope)->iconColor('gray')
                             ->copyable()->placeholder('—'),
                     ])->from('md'),
@@ -7726,7 +10290,9 @@ class CustomersTable
             ->columns([
                 Stack::make([
                     Split::make([
-                        TextColumn::make('name')->weight(FontWeight::Bold)->searchable()->sortable(),
+                        TextColumn::make('name')
+                            ->label(__('resources.customers.table.name'))
+                            ->weight(FontWeight::Bold)->searchable()->sortable(),
                         TextColumn::make('is_active')
                             ->label(__('resources.customers.table.status'))->badge()->alignEnd()
                             ->formatStateUsing(fn (bool $state) => $state ? __('common.active') : __('common.inactive'))
@@ -7738,8 +10304,12 @@ class CustomersTable
                         ->searchable()->placeholder('—'),
 
                     Split::make([
-                        TextColumn::make('phone')->icon(Heroicon::Phone)->iconColor('gray')->copyable()->placeholder('—'),
-                        TextColumn::make('email')->icon(Heroicon::Envelope)->iconColor('gray')->copyable()->placeholder('—'),
+                        TextColumn::make('phone')
+                            ->label(__('resources.customers.table.phone'))
+                            ->icon(Heroicon::Phone)->iconColor('gray')->copyable()->placeholder('—'),
+                        TextColumn::make('email')
+                            ->label(__('resources.customers.table.email'))
+                            ->icon(Heroicon::Envelope)->iconColor('gray')->copyable()->placeholder('—'),
                     ])->from('md'),
 
                     TextColumn::make('sales_orders_count')
@@ -7792,7 +10362,7 @@ class WarehouseForm
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('WAREHOUSE PROFILE')
+            Section::make(__('resources.warehouses.form.profile'))
                 ->icon(Heroicon::BuildingOffice)
                 ->columnSpanFull()
                 ->columns(['default' => 1, 'md' => 2, 'xl' => 2])
@@ -7801,7 +10371,8 @@ class WarehouseForm
                         ->label(__('resources.warehouses.fields.code'))
                         ->prefixIcon(Heroicon::Tag)
                         ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
-                        ->required()->unique(ignoreRecord: true)->maxLength(50)
+                        ->nullable()->unique(ignoreRecord: true)->maxLength(50)
+                        ->placeholder(__('resources.warehouses.placeholders.code'))
                         ->helperText(__('resources.warehouses.help.code')),
 
                     TextInput::make('name')
@@ -7816,7 +10387,7 @@ class WarehouseForm
                         ->columnSpanFull()->rows(2)->maxLength(500),
                 ]),
 
-            Section::make('ACCESS & STATUS')
+            Section::make(__('resources.warehouses.form.access_status'))
                 ->icon(Heroicon::ShieldCheck)
                 ->columnSpanFull()
                 ->columns(['default' => 1, 'md' => 2, 'xl' => 2])
@@ -7871,6 +10442,7 @@ class WarehousesTable
                 Stack::make([
                     Split::make([
                         TextColumn::make('code')
+                            ->label(__('resources.warehouses.table.code'))
                             ->fontFamily('mono')
                             ->weight(FontWeight::Bold)
                             ->searchable()->sortable()->copyable()->copyMessage(__('common.copied')),
@@ -7883,9 +10455,11 @@ class WarehousesTable
                     ])->from('md'),
 
                     TextColumn::make('name')
+                        ->label(__('resources.warehouses.table.name'))
                         ->searchable()->sortable()->weight(FontWeight::SemiBold),
 
                     TextColumn::make('location')
+                        ->label(__('resources.warehouses.table.location'))
                         ->icon(Heroicon::MapPin)->iconColor('gray')
                         ->searchable()->limit(60)->placeholder('—'),
 
@@ -7947,7 +10521,7 @@ class WarehouseInfolist
     {
         return $schema->components([
             Grid::make(['default' => 1, 'md' => 3, 'xl' => 3])->schema([
-                Section::make('WAREHOUSE PROFILE')
+                Section::make(__('resources.warehouses.infolist.profile'))
                     ->icon(Heroicon::BuildingOffice)
                     ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2])
                     ->columns(['default' => 1, 'md' => 2, 'xl' => 2])
@@ -7961,7 +10535,7 @@ class WarehouseInfolist
                             ->columnSpanFull(),
                     ]),
 
-                Section::make('STATUS')
+                Section::make(__('resources.warehouses.infolist.status'))
                     ->icon(Heroicon::ShieldCheck)
                     ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                     ->schema([
@@ -7974,7 +10548,7 @@ class WarehouseInfolist
                             ->state(fn ($record) => $record->users()->count()),
                     ]),
 
-                Section::make('ASSIGNED STAFF')
+                Section::make(__('resources.warehouses.infolist.assigned_staff'))
                     ->icon(Heroicon::UserGroup)
                     ->columnSpanFull()
                     ->schema([
@@ -8011,6 +10585,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class WarehouseResource extends Resource
 {
@@ -8020,6 +10595,21 @@ class WarehouseResource extends Resource
     protected static ?string $recordTitleAttribute = 'name';
     protected static string | \BackedEnum | null $navigationIcon = Heroicon::OutlinedBuildingOffice;
     protected static string | \BackedEnum | null $activeNavigationIcon = Heroicon::BuildingOffice;
+
+    public static function getModelLabel(): string
+    {
+        return __('resources.warehouses.model.singular');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('resources.warehouses.model.plural');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('resources.warehouses.navigation.label');
+    }
 
     public static function form(Schema $schema): Schema
     {
@@ -8036,6 +10626,20 @@ class WarehouseResource extends Resource
         return WarehouseInfolist::configure($schema);
     }
 
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with(['users'])
+            ->withCount(['users', 'stockMovements'])
+            ->when(
+                ! auth()->user()->isAdmin() && ! auth()->user()->isAuditor(),
+                function (Builder $q) {
+                    $ids = auth()->user()->warehouses()->pluck('warehouses.id')->all();
+                    $q->whereIn('warehouses.id', $ids);
+                }
+            );
+    }
+
     public static function getPages(): array
     {
         return [
@@ -8047,6 +10651,8 @@ class WarehouseResource extends Resource
     }
 }
 ```
+
+> Canonical duplicate: the same thin class is listed in §18.1a alongside the other resource classes. Both sites are authoritative and must be kept identical — `§7K` owns the `WarehouseResource` definition for the Warehouses domain section, `§18.1a` owns the file-contract copy.
 
 ---
 
@@ -8140,12 +10746,15 @@ class UsersTable
         return $table
             ->columns([
                 TextColumn::make('name')
+                    ->label(__('resources.users.table.name'))
                     ->searchable()->sortable()->weight('bold'),
 
                 TextColumn::make('email')
+                    ->label(__('resources.users.table.email'))
                     ->searchable()->copyable()->visibleFrom('md'),
 
                 TextColumn::make('role')
+                    ->label(__('resources.users.table.role'))
                     ->badge()->sortable(),
 
                 TextColumn::make('warehouses_count')
@@ -8198,6 +10807,77 @@ class UsersTable
 }
 ```
 
+#### 7L.3 UserResource.php
+
+```php
+namespace App\Filament\Resources\Users;
+
+use App\Filament\Resources\Users\Pages\CreateUser;
+use App\Filament\Resources\Users\Pages\EditUser;
+use App\Filament\Resources\Users\Pages\ListUsers;
+use App\Filament\Resources\Users\Schemas\UserForm;
+use App\Filament\Resources\Users\Tables\UsersTable;
+use App\Models\User;
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+
+class UserResource extends Resource
+{
+    protected static ?string $model = User::class;
+    protected static string | \UnitEnum | null $navigationGroup = 'SYSTEM ADMIN';
+    protected static ?int $navigationSort = 2;
+    protected static ?string $recordTitleAttribute = 'name';
+    protected static string | \BackedEnum | null $navigationIcon = Heroicon::OutlinedUsers;
+    protected static string | \BackedEnum | null $activeNavigationIcon = Heroicon::Users;
+
+    public static function getModelLabel(): string
+    {
+        return __('resources.users.model.singular');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('resources.users.model.plural');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('resources.users.navigation.label');
+    }
+
+    public static function form(Schema $schema): Schema
+    {
+        return UserForm::configure($schema);
+    }
+
+    public static function table(Table $table): Table
+    {
+        return UsersTable::configure($table);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with(['warehouses'])
+            ->withCount('warehouses');
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => ListUsers::route('/'),
+            'create' => CreateUser::route('/create'),
+            'edit' => EditUser::route('/{record}/edit'),
+        ];
+    }
+}
+```
+
+> Canonical duplicate: the same thin class is listed in §18.1a alongside the other resource classes. Both sites are authoritative and must be kept identical — `§7L` owns the `UserResource` definition for the Users domain section, `§18.1a` owns the file-contract copy.
+
 ---
 
 ## 📐 Section 7M: Filament v5 Layout & Styling Components
@@ -8216,8 +10896,7 @@ TextInput::make('sku')->columnSpan(['md' => 2, 'xl' => 1])
 ### 7M.2 Section Component
 
 ```php
-Section::make('Routing Pathways')
-    ->description('Define origin and destination warehouses')
+Section::make(__('resources.transfer_requisitions.sections.routing'))
     ->icon(Heroicon::BuildingOffice)
     ->columnSpanFull()
     ->columns(['default' => 1, 'md' => 2, 'xl' => 2])
@@ -8227,10 +10906,14 @@ Section::make('Routing Pathways')
 ### 7M.3 Fieldset Component
 
 ```php
-Fieldset::make('Line Item Details')
+Fieldset::make(__('...'))
     ->schema([
-        Select::make('product_variant_id')->prefixIcon(Heroicon::Tag)->required(),
-        TextInput::make('qty')->prefixIcon(Heroicon::Hashtag)->numeric()->required(),
+        Select::make('product_variant_id')
+            ->label(__('resources.transfer_requisitions.fields.variant_sku'))
+            ->prefixIcon(Heroicon::Tag)->required(),
+        TextInput::make('qty')
+            ->label(__('resources.transfer_requisitions.fields.qty'))
+            ->prefixIcon(Heroicon::Hashtag)->numeric()->required(),
     ])
     ->columns(3)
 ```
@@ -8238,12 +10921,12 @@ Fieldset::make('Line Item Details')
 ### 7M.4 Tabs Component
 
 ```php
-Tabs::make('Order Details')
+Tabs::make()
     ->persistTabInQueryString()
     ->tabs([
-        Tab::make('Customer')->icon(Heroicon::User)->schema([...]),
-        Tab::make('Line Items')->icon(Heroicon::ClipboardDocumentList)->schema([...]),
-        Tab::make('Notes')->icon(Heroicon::ChatBubbleBottomCenterText)->schema([...]),
+        Tab::make(__('resources.products.tabs.identity'))->icon(Heroicon::Identification)->schema([...]),
+        Tab::make(__('resources.products.tabs.stock_pricing'))->icon(Heroicon::CurrencyDollar)->schema([...]),
+        Tab::make(__('resources.products.tabs.status'))->icon(Heroicon::CheckCircle)->schema([...]),
     ])
 ```
 
@@ -8265,8 +10948,8 @@ Flex::make([
 |---|---|
 | Two side-by-side fields with equal weight | `Grid::make(2)` |
 | Full-width field below a 2-col row | `TextInput::make(...)->columnSpanFull()` |
-| Themed card with heading + description | `Section::make('Title')->icon(Heroicon::...)->description('...')` |
-| Lightweight grouping without card chrome | `Fieldset::make('Label')` |
+| Themed card with heading + description | `Section::make(__('...'))->icon(Heroicon::...)->description(__('...'))` |
+| Lightweight grouping without card chrome | `Fieldset::make(__('...'))` |
 | Reduce visual clutter in long forms | `Tabs::make()->tabs([...])` with `->icon()` on each tab |
 | Unequal-width side-by-side fields | `Flex::make([...])->justify('between')` |
 | Sign-off rows in infolist | `Flex::make([...])->justify('between')` |
@@ -8504,13 +11187,18 @@ class TransferRequisitionPolicy
     public function view(User $user, TransferRequisition $r): bool
     {
         return $user->isAdmin()
+            || $user->isAuditor()
             || $user->warehouses->contains($r->from_warehouse_id)
             || $user->warehouses->contains($r->to_warehouse_id);
     }
 
     public function create(User $user): bool
     {
-        return $user->warehouses()->exists();
+        // Both warehouse selects are scoped to the user's assigned
+        // warehouses and must differ (§7B.1) — a single-warehouse user
+        // could see the action but never submit a valid requisition,
+        // so non-admin create requires at least two assignments.
+        return $user->isAdmin() || $user->warehouses()->count() >= 2;
     }
 
     public function update(User $user, TransferRequisition $r): bool
@@ -8567,17 +11255,20 @@ class TransferRequisitionPolicy
 
     public function dispatch(User $user, TransferRequisition $r): bool
     {
-        return $user->warehouses->contains($r->from_warehouse_id);
+        return $user->isAdmin()
+            || $user->warehouses->contains($r->from_warehouse_id);
     }
 
     public function receive(User $user, TransferRequisition $r): bool
     {
-        return $user->warehouses->contains($r->to_warehouse_id);
+        return $user->isAdmin()
+            || $user->warehouses->contains($r->to_warehouse_id);
     }
 
     public function recordLoss(User $user, TransferRequisition $r): bool
     {
-        return $user->warehouses->contains($r->to_warehouse_id);
+        return $user->isAdmin()
+            || $user->warehouses->contains($r->to_warehouse_id);
     }
 
     public function cancel(User $user, TransferRequisition $r): bool
@@ -8587,6 +11278,30 @@ class TransferRequisitionPolicy
     }
 
     public function negotiate(User $user, TransferRequisition $r): bool
+    {
+        return in_array($r->status, [
+            \App\Enums\TransferRequisitionStatus::Requested,
+            \App\Enums\TransferRequisitionStatus::UnderReviewFulfiller,
+            \App\Enums\TransferRequisitionStatus::UnderReviewRequestor,
+        ], true) && (
+            $user->warehouses->contains($r->from_warehouse_id)
+            || $user->warehouses->contains($r->to_warehouse_id)
+        );
+    }
+
+    public function acceptRevision(User $user, TransferRequisition $r): bool
+    {
+        return in_array($r->status, [
+            \App\Enums\TransferRequisitionStatus::Requested,
+            \App\Enums\TransferRequisitionStatus::UnderReviewFulfiller,
+            \App\Enums\TransferRequisitionStatus::UnderReviewRequestor,
+        ], true) && (
+            $user->warehouses->contains($r->from_warehouse_id)
+            || $user->warehouses->contains($r->to_warehouse_id)
+        );
+    }
+
+    public function rejectRevision(User $user, TransferRequisition $r): bool
     {
         return in_array($r->status, [
             \App\Enums\TransferRequisitionStatus::Requested,
@@ -8730,12 +11445,12 @@ class PurchaseOrderPolicy
 
     public function view(User $user, PurchaseOrder $o): bool
     {
-        return $user->isAdmin() || $user->warehouses->contains($o->warehouse_id);
+        return $user->isAdmin() || $user->isAuditor() || $user->warehouses->contains($o->warehouse_id);
     }
 
     public function create(User $user): bool
     {
-        return $user->warehouses()->exists();
+        return $user->isAdmin() || $user->warehouses()->exists();
     }
 
     public function update(User $user, PurchaseOrder $o): bool
@@ -8779,12 +11494,14 @@ class PurchaseOrderPolicy
 
     public function orderPurchase(User $user, PurchaseOrder $o): bool
     {
-        return $user->warehouses->contains($o->warehouse_id);
+        return $user->isAdmin()
+            || $user->warehouses->contains($o->warehouse_id);
     }
 
     public function receivePurchase(User $user, PurchaseOrder $o): bool
     {
-        return $user->warehouses->contains($o->warehouse_id);
+        return $user->isAdmin()
+            || $user->warehouses->contains($o->warehouse_id);
     }
 
     public function cancelPurchase(User $user, PurchaseOrder $o): bool
@@ -8817,12 +11534,12 @@ class SalesOrderPolicy
 
     public function view(User $user, SalesOrder $o): bool
     {
-        return $user->isAdmin() || $user->warehouses->contains($o->warehouse_id);
+        return $user->isAdmin() || $user->isAuditor() || $user->warehouses->contains($o->warehouse_id);
     }
 
     public function create(User $user): bool
     {
-        return $user->warehouses()->exists();
+        return $user->isAdmin() || $user->warehouses()->exists();
     }
 
     public function update(User $user, SalesOrder $o): bool
@@ -8843,17 +11560,20 @@ class SalesOrderPolicy
 
     public function confirmSalesOrder(User $user, SalesOrder $o): bool
     {
-        return $user->warehouses->contains($o->warehouse_id);
+        return $user->isAdmin()
+            || $user->warehouses->contains($o->warehouse_id);
     }
 
     public function dispatchSale(User $user, SalesOrder $o): bool
     {
-        return $user->warehouses->contains($o->warehouse_id);
+        return $user->isAdmin()
+            || $user->warehouses->contains($o->warehouse_id);
     }
 
     public function recordSalesReturn(User $user, SalesOrder $o): bool
     {
-        return $user->warehouses->contains($o->warehouse_id);
+        return $user->isAdmin()
+            || $user->warehouses->contains($o->warehouse_id);
     }
 
     public function cancelSalesOrder(User $user, SalesOrder $o): bool
@@ -8926,7 +11646,12 @@ class WarehousePolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->isAdmin() || $user->isAuditor();
+        // Warehouse staff may list only their assigned warehouses — the
+        // database-level restriction lives in the resource query scope
+        // (§20.1). `viewAny` must therefore pass for staff with assignments.
+        return $user->isAdmin()
+            || $user->isAuditor()
+            || $user->warehouses()->exists();
     }
 
     public function view(User $user, Warehouse $w): bool
@@ -8948,7 +11673,8 @@ class WarehousePolicy
 
     /**
      * A warehouse may only be deleted when it has no ledger history and is
-     * not referenced by any document (PO, SO, TR, or direct transfer).
+     * not referenced by any document (PO, SO, TR, or direct transfer) and
+     * has no loss ledger rows.
      * This prevents raw FK violations from bubbling up as 500s.
      */
     public function delete(User $user, Warehouse $w): bool
@@ -8982,6 +11708,10 @@ class WarehousePolicy
         }
 
         if ($w->directTransfersTo()->exists()) {
+            return false;
+        }
+
+        if ($w->lossLedgers()->exists()) {
             return false;
         }
 
@@ -9061,7 +11791,14 @@ class DirectTransferPolicy
 
     public function create(User $user): bool
     {
-        return $user->warehouses()->count() >= 1;
+        // Admins hold global operational scope with a possibly empty
+        // `user_warehouse` pivot, so they must not be gated on assignments.
+        // Both warehouse selects are scoped to the user's assigned
+        // warehouses and must differ (§7C.1) — a single-warehouse user
+        // could see the action but never submit a valid direct transfer,
+        // so non-admin create requires at least one assigned warehouse.
+        return $user->isAdmin()
+            || $user->warehouses()->count() >= 1;
     }
 
     public function update(User $user, DirectTransfer $t): bool
@@ -9299,39 +12036,791 @@ class AdminReviewFilters
 
 ### Implementation Examples
 
+Caching rule: every widget reads through `Cache::remember(static::cacheKey($user->id, $warehouseIds), static::cacheTtl(), ...)` — the declared `cacheKey()`/`cacheTtl()` methods are the single caching mechanism, never comments. The key embeds `scopeHash = md5()` of the sorted in-scope warehouse ID set, never just the first warehouse ID, so a warehouse-assignment change cannot share or poison another scope's cache. Grain: summary widgets list one row per in-scope warehouse with per-row metrics computed via `state()` closures over the same cached payload.
+
 ```php
+namespace App\Filament\Widgets;
+
+use App\Enums\TransferRequisitionStatus;
+use App\Models\InTransit;
+use App\Models\PurchaseOrder;
+use App\Models\SalesOrder;
+use App\Models\StockMovement;
+use App\Models\Warehouse;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
+use Filament\Widgets\ChartWidget;
+use Filament\Widgets\TableWidget;
+use Filament\Widgets\Widget;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Number;
+
+class StatsOverviewWidget extends TableWidget
+{
+    protected static ?int $sort = 1;
+    protected int | string | array $columnSpan = ['default' => 1, 'md' => 2, 'xl' => 2];
+
+    public static function canView(): bool
+    {
+        // Role-Based Widget Visibility (§10): all authenticated users (scoped).
+        return auth()->user() !== null;
+    }
+
+    public static function cacheTtl(): int
+    {
+        return 300;
+    }
+
+    public static function cacheKey(int $userId, array $warehouseIds): string
+    {
+        sort($warehouseIds);
+
+        return 'stats_overview_' . $userId . '_' . md5(implode(',', $warehouseIds));
+    }
+
+    public function table(Table $table): Table
+    {
+        $user = auth()->user();
+        $warehouseIds = $user->isAdmin() || $user->isAuditor()
+            ? Warehouse::query()->pluck('id')->all()
+            : $user->warehouses()->pluck('warehouses.id')->all();
+
+        // Rows (owner decision, recorded — one row per in-scope warehouse):
+        // - Total On-Hand = SUM(stock_movements.quantity) for that warehouse.
+        // - Pending Requisitions = count of requisitions in the five canBeCancelled states
+        //   (Draft, Requested, UnderReviewFulfiller, UnderReviewRequestor, Confirmed)
+        //   where that warehouse is either endpoint (from_warehouse_id and
+        //   to_warehouse_id are always distinct, so the two grouped counts
+        //   never double-count the same requisition for one row).
+        // - Active In-Transit = count of in_transits with status in_transit
+        //   whose parent requisition touches that warehouse as either endpoint.
+        // - Total Write-Off = SUM(loss_ledgers.total_financial_loss) for that warehouse.
+        $metrics = Cache::remember(
+            static::cacheKey($user->id, $warehouseIds),
+            static::cacheTtl(),
+            function () use ($warehouseIds) {
+                $toIntMap = fn ($rows) => $rows
+                    ->map(fn ($v) => (int) $v)
+                    ->all();
+
+                $pendingStatuses = [
+                    TransferRequisitionStatus::Draft->value,
+                    TransferRequisitionStatus::Requested->value,
+                    TransferRequisitionStatus::UnderReviewFulfiller->value,
+                    TransferRequisitionStatus::UnderReviewRequestor->value,
+                    TransferRequisitionStatus::Confirmed->value,
+                ];
+
+                return [
+                    'on_hand' => $toIntMap(StockMovement::query()
+                        ->selectRaw('warehouse_id, SUM(quantity) as total')
+                        ->whereIn('warehouse_id', $warehouseIds)
+                        ->groupBy('warehouse_id')
+                        ->pluck('total', 'warehouse_id')),
+                    'pending_from' => $toIntMap(\App\Models\TransferRequisition::query()
+                        ->selectRaw('from_warehouse_id as warehouse_id, COUNT(*) as total')
+                        ->whereIn('status', $pendingStatuses)
+                        ->whereIn('from_warehouse_id', $warehouseIds)
+                        ->groupBy('from_warehouse_id')
+                        ->pluck('total', 'warehouse_id')),
+                    'pending_to' => $toIntMap(\App\Models\TransferRequisition::query()
+                        ->selectRaw('to_warehouse_id as warehouse_id, COUNT(*) as total')
+                        ->whereIn('status', $pendingStatuses)
+                        ->whereIn('to_warehouse_id', $warehouseIds)
+                        ->groupBy('to_warehouse_id')
+                        ->pluck('total', 'warehouse_id')),
+                    'in_transit_from' => $toIntMap(InTransit::query()
+                        ->join('transfer_requisitions', 'transfer_requisitions.id', '=', 'in_transits.transfer_requisition_id')
+                        ->selectRaw('transfer_requisitions.from_warehouse_id as warehouse_id, COUNT(in_transits.id) as total')
+                        ->where('in_transits.status', \App\Enums\InTransitStatus::InTransit->value)
+                        ->whereIn('transfer_requisitions.from_warehouse_id', $warehouseIds)
+                        ->groupBy('transfer_requisitions.from_warehouse_id')
+                        ->pluck('total', 'warehouse_id')),
+                    'in_transit_to' => $toIntMap(InTransit::query()
+                        ->join('transfer_requisitions', 'transfer_requisitions.id', '=', 'in_transits.transfer_requisition_id')
+                        ->selectRaw('transfer_requisitions.to_warehouse_id as warehouse_id, COUNT(in_transits.id) as total')
+                        ->where('in_transits.status', \App\Enums\InTransitStatus::InTransit->value)
+                        ->whereIn('transfer_requisitions.to_warehouse_id', $warehouseIds)
+                        ->groupBy('transfer_requisitions.to_warehouse_id')
+                        ->pluck('total', 'warehouse_id')),
+                    'write_off' => \App\Models\LossLedger::query()
+                        ->selectRaw('warehouse_id, SUM(total_financial_loss) as total')
+                        ->whereIn('warehouse_id', $warehouseIds)
+                        ->groupBy('warehouse_id')
+                        ->pluck('total', 'warehouse_id')
+                        ->map(fn ($v) => (float) $v)
+                        ->all(),
+                ];
+            },
+        );
+
+        return $table
+            ->query(Warehouse::query()->whereIn('warehouses.id', $warehouseIds))
+            ->columns([
+                TextColumn::make('name')
+                    ->label(__('dashboard.stats.warehouse')),
+
+                TextColumn::make('on_hand')
+                    ->label(__('dashboard.stats.on_hand'))
+                    ->state(fn (Warehouse $record) => Number::format($metrics['on_hand'][$record->id] ?? 0))
+                    ->numeric(),
+
+                TextColumn::make('pending')
+                    ->label(__('dashboard.stats.pending'))
+                    ->state(fn (Warehouse $record) => Number::format(
+                        ($metrics['pending_from'][$record->id] ?? 0)
+                        + ($metrics['pending_to'][$record->id] ?? 0)
+                    ))
+                    ->numeric(),
+
+                TextColumn::make('in_transit')
+                    ->label(__('dashboard.stats.in_transit'))
+                    ->state(fn (Warehouse $record) => Number::format(
+                        ($metrics['in_transit_from'][$record->id] ?? 0)
+                        + ($metrics['in_transit_to'][$record->id] ?? 0)
+                    ))
+                    ->numeric(),
+
+                TextColumn::make('write_off')
+                    ->label(__('dashboard.stats.write_off'))
+                    ->state(fn (Warehouse $record) => Number::currency(
+                        $metrics['write_off'][$record->id] ?? 0,
+                        config('app.currency')
+                    ))
+                    ->numeric(),
+            ])
+            ->paginated(false);
+    }
+}
+
+class LowStockAlertsWidget extends ChartWidget
+{
+    protected static ?int $sort = 2;
+    protected int | string | array $columnSpan = ['default' => 1, 'md' => 1, 'xl' => 1];
+
+    public static function canView(): bool
+    {
+        // Role-Based Widget Visibility (§10): Admin, Auditor, Warehouse Staff.
+        $user = auth()->user();
+
+        return $user !== null
+            && ($user->isAdmin() || $user->isAuditor() || $user->isWarehouseStaff());
+    }
+
+    protected function getType(): string
+    {
+        return 'bar';
+    }
+
+    public static function cacheTtl(): int
+    {
+        return 300;
+    }
+
+    public static function cacheKey(int $userId, array $warehouseIds): string
+    {
+        sort($warehouseIds);
+
+        return 'low_stock_alerts_chart_' . $userId . '_' . md5(implode(',', $warehouseIds));
+    }
+
+    protected function getData(): array
+    {
+        $user = auth()->user();
+        $warehouseIds = $user->isAdmin() || $user->isAuditor()
+            ? Warehouse::query()->pluck('id')->all()
+            : $user->warehouses()->pluck('warehouses.id')->all();
+
+        // Data: variants where availableQuantity <= reorder_point — warehouse-scoped, 300s cache.
+        // Owner decision (recorded): keep the per-variant loop. Authorized trigger for the
+        // aggregate replacement: active variants exceed ~5,000 or a cache-miss exceeds ~1–2s —
+        // then swap in ProductVariant::batchAvailableQuantity() with a PHP-side
+        // available <= reorder_point filter plus a loop-vs-aggregate parity check.
+        return Cache::remember(
+            static::cacheKey($user->id, $warehouseIds),
+            static::cacheTtl(),
+            function () use ($warehouseIds) {
+                if (empty($warehouseIds)) {
+                    return [
+                        'labels'   => [],
+                        'datasets' => [
+                            [
+                                'label' => __('dashboard.charts.available'),
+                                'data'  => [],
+                            ],
+                        ],
+                    ];
+                }
+
+                // Scan every active variant first, filter to low-stock, then cap the
+                // rendered chart at 20 rows — the limit applies after the filter,
+                // never before it.
+                $rows = \App\Models\ProductVariant::query()
+                    ->where('is_active', true)
+                    ->with('currentPrice')
+                    ->get()
+                    ->map(fn ($v) => [
+                        'sku'       => $v->sku,
+                        'available' => array_sum(array_map(
+                            fn ($wid) => $v->availableQuantity($wid),
+                            $warehouseIds,
+                        )),
+                        'reorder'   => (int) $v->reorder_point,
+                    ])
+                    ->filter(fn ($r) => $r['available'] <= $r['reorder'])
+                    ->take(20)
+                    ->values();
+
+                return [
+                    'labels'   => $rows->pluck('sku')->all(),
+                    'datasets' => [
+                        [
+                            'label' => __('dashboard.charts.available'),
+                            'data'  => $rows->pluck('available')->all(),
+                        ],
+                    ],
+                ];
+            },
+        );
+    }
+}
+
+class RecentMovementsWidget extends ChartWidget
+{
+    protected static ?int $sort = 3;
+    protected int | string | array $columnSpan = ['default' => 1, 'md' => 1, 'xl' => 1];
+
+    public static function canView(): bool
+    {
+        // Role-Based Widget Visibility (§10): all authenticated users.
+        return auth()->user() !== null;
+    }
+
+    protected function getType(): string
+    {
+        return 'line';
+    }
+
+    public static function cacheTtl(): int
+    {
+        return 60;
+    }
+
+    public static function cacheKey(int $userId, array $warehouseIds): string
+    {
+        sort($warehouseIds);
+
+        return 'recent_movements_chart_' . $userId . '_' . md5(implode(',', $warehouseIds));
+    }
+
+    protected function getData(): array
+    {
+        $user = auth()->user();
+        $warehouseIds = $user->isAdmin() || $user->isAuditor()
+            ? Warehouse::query()->pluck('id')->all()
+            : $user->warehouses()->pluck('warehouses.id')->all();
+
+        // Data: recent stock_movements daily buckets, 7 days — warehouse-scoped.
+        return Cache::remember(
+            static::cacheKey($user->id, $warehouseIds),
+            static::cacheTtl(),
+            function () use ($warehouseIds) {
+                $buckets = StockMovement::query()
+                    ->whereIn('warehouse_id', $warehouseIds)
+                    ->where('created_at', '>=', now()->subDays(7))
+                    ->selectRaw('CAST(created_at AS DATE) as day, SUM(quantity) as total')
+                    ->groupBy('day')
+                    ->orderBy('day')
+                    ->pluck('total', 'day');
+
+                return [
+                    'labels'   => $buckets->keys()->all(),
+                    'datasets' => [
+                        [
+                            'label' => __('dashboard.charts.net_movement'),
+                            'data'  => $buckets->map(fn ($v) => (int) $v)->values()->all(),
+                        ],
+                    ],
+                ];
+            },
+        );
+    }
+}
+
 class SalesRevenueTrendWidget extends ChartWidget
 {
     protected static ?int $sort = 4;
     protected int | string | array $columnSpan = ['default' => 1, 'md' => 2, 'xl' => 2];
-    // getType() returns 'line'; getData() scoped by warehouses
+
+    public static function canView(): bool
+    {
+        // Role-Based Widget Visibility (§10): Admin, Auditor.
+        $user = auth()->user();
+
+        return $user !== null && ($user->isAdmin() || $user->isAuditor());
+    }
+
+    protected function getType(): string
+    {
+        return 'line';
+    }
+
+    public static function cacheTtl(): int
+    {
+        return 300;
+    }
+
+    public static function cacheKey(int $userId, array $warehouseIds): string
+    {
+        sort($warehouseIds);
+
+        return 'sales_revenue_trend_' . $userId . '_' . md5(implode(',', $warehouseIds));
+    }
+
+    protected function getData(): array
+    {
+        $user = auth()->user();
+        $warehouseIds = $user->isAdmin() || $user->isAuditor()
+            ? Warehouse::query()->pluck('id')->all()
+            : $user->warehouses()->pluck('warehouses.id')->all();
+
+        // Data: daily sale value, 30 days — warehouse-scoped.
+        return Cache::remember(
+            static::cacheKey($user->id, $warehouseIds),
+            static::cacheTtl(),
+            function () use ($warehouseIds) {
+                $buckets = DB::table('sales_order_items')
+                    ->join('sales_orders', 'sales_orders.id', '=', 'sales_order_items.sales_order_id')
+                    ->whereIn('sales_orders.warehouse_id', $warehouseIds)
+                    ->where('sales_orders.created_at', '>=', now()->subDays(30))
+                    ->selectRaw('CAST(sales_orders.created_at AS DATE) as day, SUM(sales_order_items.dispatched_base_qty * sales_order_items.unit_sale_price_snapshot) as total')
+                    ->groupBy('day')
+                    ->orderBy('day')
+                    ->pluck('total', 'day');
+
+                return [
+                    'labels'   => $buckets->keys()->all(),
+                    'datasets' => [
+                        [
+                            'label' => __('dashboard.charts.revenue'),
+                            'data'  => $buckets->map(fn ($v) => (float) $v)->values()->all(),
+                        ],
+                    ],
+                ];
+            },
+        );
+    }
+}
+
+class ActiveInTransitWidget extends TableWidget
+{
+    protected static ?int $sort = 5;
+    protected int | string | array $columnSpan = ['default' => 1, 'md' => 2, 'xl' => 2];
+
+    public static function canView(): bool
+    {
+        // Role-Based Widget Visibility (§10): Admin, Auditor, Warehouse Staff.
+        $user = auth()->user();
+
+        return $user !== null
+            && ($user->isAdmin() || $user->isAuditor() || $user->isWarehouseStaff());
+    }
+
+    public static function cacheTtl(): int
+    {
+        return 300;
+    }
+
+    public static function cacheKey(int $userId, array $warehouseIds): string
+    {
+        sort($warehouseIds);
+
+        return 'active_in_transit_' . $userId . '_' . md5(implode(',', $warehouseIds));
+    }
+
+    public function table(Table $table): Table
+    {
+        $user = auth()->user();
+        $warehouseIds = $user->isAdmin() || $user->isAuditor()
+            ? Warehouse::query()->pluck('id')->all()
+            : $user->warehouses()->pluck('warehouses.id')->all();
+
+        // Rows: InTransit rows where status != cleared — warehouse-scoped through the parent requisition.
+        // The ID set is read through Cache::remember (300s); the table query re-hydrates
+        // from the cached IDs so sorting and eager-loads still apply on every render.
+        $ids = Cache::remember(
+            static::cacheKey($user->id, $warehouseIds),
+            static::cacheTtl(),
+            fn () => InTransit::query()
+                ->where('status', '!=', \App\Enums\InTransitStatus::Cleared->value)
+                ->whereHas('transferRequisition', fn ($q) => $q
+                    ->whereIn('from_warehouse_id', $warehouseIds)
+                    ->orWhereIn('to_warehouse_id', $warehouseIds))
+                ->latest('dispatched_at')
+                ->pluck('id')
+                ->all(),
+        );
+
+        return $table
+            ->query(
+                InTransit::query()
+                    ->whereIn('id', $ids)
+                    ->with(['transferRequisition', 'productVariant'])
+                    ->latest('dispatched_at')
+            )
+            ->columns([
+                TextColumn::make('transferRequisition.reference_code')
+                    ->label(__('dashboard.active_in_transit.requisition'))
+                    ->fontFamily('mono'),
+
+                TextColumn::make('productVariant.sku')
+                    ->label(__('dashboard.active_in_transit.sku'))
+                    ->fontFamily('mono'),
+
+                TextColumn::make('dispatched_base_qty')
+                    ->label(__('dashboard.active_in_transit.qty'))
+                    ->numeric(),
+
+                TextColumn::make('status')
+                    ->label(__('dashboard.active_in_transit.status'))
+                    ->badge(),
+            ])
+            ->paginated([5, 10]);
+    }
+}
+
+class SalesVsPurchasesWidget extends ChartWidget
+{
+    protected static ?int $sort = 6;
+    protected int | string | array $columnSpan = ['default' => 1, 'md' => 2, 'xl' => 2];
+
+    public static function canView(): bool
+    {
+        // Role-Based Widget Visibility (§10): Admin, Auditor.
+        $user = auth()->user();
+
+        return $user !== null && ($user->isAdmin() || $user->isAuditor());
+    }
+
+    protected function getType(): string
+    {
+        return 'bar';
+    }
+
+    public static function cacheTtl(): int
+    {
+        return 300;
+    }
+
+    public static function cacheKey(int $userId, array $warehouseIds): string
+    {
+        sort($warehouseIds);
+
+        return 'sales_vs_purchases_' . $userId . '_' . md5(implode(',', $warehouseIds));
+    }
+
+    protected function getData(): array
+    {
+        $user = auth()->user();
+        $warehouseIds = $user->isAdmin() || $user->isAuditor()
+            ? Warehouse::query()->pluck('id')->all()
+            : $user->warehouses()->pluck('warehouses.id')->all();
+
+        // Data: side-by-side monthly purchase vs sale value, 6 months — warehouse-scoped.
+        return Cache::remember(
+            static::cacheKey($user->id, $warehouseIds),
+            static::cacheTtl(),
+            function () use ($warehouseIds) {
+                $months = collect(range(5, 0))->map(fn ($i) => now()->subMonths($i)->format('Y-m'));
+
+                // Portable day buckets (`CAST(... AS DATE)` is supported by
+                // both MySQL and PostgreSQL); rolled up to months in PHP.
+                $rollUp = function ($rows) {
+                    $out = [];
+                    foreach ($rows as $day => $total) {
+                        $month = substr((string) $day, 0, 7);
+                        $out[$month] = ($out[$month] ?? 0) + (float) $total;
+                    }
+                    return $out;
+                };
+
+                $purchases = $rollUp(DB::table('purchase_order_items')
+                    ->join('purchase_orders', 'purchase_orders.id', '=', 'purchase_order_items.purchase_order_id')
+                    ->whereIn('purchase_orders.warehouse_id', $warehouseIds)
+                    ->where('purchase_orders.created_at', '>=', now()->subMonths(6))
+                    ->selectRaw('CAST(purchase_orders.created_at AS DATE) as day, SUM(purchase_order_items.received_base_qty * purchase_order_items.unit_cost_price) as total')
+                    ->groupBy('day')
+                    ->pluck('total', 'day'));
+
+                $sales = $rollUp(DB::table('sales_order_items')
+                    ->join('sales_orders', 'sales_orders.id', '=', 'sales_order_items.sales_order_id')
+                    ->whereIn('sales_orders.warehouse_id', $warehouseIds)
+                    ->where('sales_orders.created_at', '>=', now()->subMonths(6))
+                    ->selectRaw('CAST(sales_orders.created_at AS DATE) as day, SUM(sales_order_items.dispatched_base_qty * sales_order_items.unit_sale_price_snapshot) as total')
+                    ->groupBy('day')
+                    ->pluck('total', 'day'));
+
+                return [
+                    'labels'   => $months->all(),
+                    'datasets' => [
+                        [
+                            'label' => __('dashboard.charts.purchases'),
+                            'data'  => $months->map(fn ($m) => (float) ($purchases[$m] ?? 0))->all(),
+                        ],
+                        [
+                            'label' => __('dashboard.charts.sales'),
+                            'data'  => $months->map(fn ($m) => (float) ($sales[$m] ?? 0))->all(),
+                        ],
+                    ],
+                ];
+            },
+        );
+    }
+}
+
+class TopSellingVariantsWidget extends ChartWidget
+{
+    protected static ?int $sort = 7;
+    protected int | string | array $columnSpan = ['default' => 1, 'md' => 1, 'xl' => 1];
+
+    public static function canView(): bool
+    {
+        // Role-Based Widget Visibility (§10): Admin, Auditor.
+        $user = auth()->user();
+
+        return $user !== null && ($user->isAdmin() || $user->isAuditor());
+    }
+
+    protected function getType(): string
+    {
+        return 'bar';
+    }
+
+    public static function cacheTtl(): int
+    {
+        return 300;
+    }
+
+    public static function cacheKey(int $userId, array $warehouseIds, string $month): string
+    {
+        sort($warehouseIds);
+
+        return 'top_selling_variants_' . $userId . '_' . md5(implode(',', $warehouseIds)) . '_' . $month;
+    }
+
+    protected function getData(): array
+    {
+        $user = auth()->user();
+        $warehouseIds = $user->isAdmin() || $user->isAuditor()
+            ? Warehouse::query()->pluck('id')->all()
+            : $user->warehouses()->pluck('warehouses.id')->all();
+        $month = now()->format('Y-m');
+
+        // Data: top 10 variants by dispatched base qty, current month — warehouse-scoped.
+        return Cache::remember(
+            static::cacheKey($user->id, $warehouseIds, $month),
+            static::cacheTtl(),
+            function () use ($warehouseIds) {
+                $rows = DB::table('sales_order_items')
+                    ->join('sales_orders', 'sales_orders.id', '=', 'sales_order_items.sales_order_id')
+                    ->join('product_variants', 'product_variants.id', '=', 'sales_order_items.product_variant_id')
+                    ->whereIn('sales_orders.warehouse_id', $warehouseIds)
+                    ->where('sales_orders.created_at', '>=', now()->startOfMonth())
+                    ->selectRaw('product_variants.sku as sku, SUM(sales_order_items.dispatched_base_qty) as total')
+                    ->groupBy('product_variants.sku')
+                    ->orderByDesc('total')
+                    ->limit(10)
+                    ->get();
+
+                return [
+                    'labels'   => $rows->pluck('sku')->all(),
+                    'datasets' => [
+                        [
+                            'label' => __('dashboard.charts.dispatched'),
+                            'data'  => $rows->pluck('total')->map(fn ($v) => (int) $v)->all(),
+                        ],
+                    ],
+                ];
+            },
+        );
+    }
+}
+
+class PendingFulfillmentWidget extends TableWidget
+{
+    protected static ?int $sort = 8;
+    protected int | string | array $columnSpan = ['default' => 1, 'md' => 1, 'xl' => 1];
+
+    public static function canView(): bool
+    {
+        // Role-Based Widget Visibility (§10): all authenticated users (scoped).
+        return auth()->user() !== null;
+    }
+
+    public static function cacheTtl(): int
+    {
+        return 60;
+    }
+
+    public static function cacheKey(int $userId, array $warehouseIds): string
+    {
+        sort($warehouseIds);
+
+        return 'pending_fulfillment_' . $userId . '_' . md5(implode(',', $warehouseIds));
+    }
+
+    public function table(Table $table): Table
+    {
+        $user = auth()->user();
+        $warehouseIds = $user->isAdmin() || $user->isAuditor()
+            ? Warehouse::query()->pluck('id')->all()
+            : $user->warehouses()->pluck('warehouses.id')->all();
+
+        // Rows: one per in-scope warehouse with pending SO/PO counts (60s cache).
+        $counts = Cache::remember(
+            static::cacheKey($user->id, $warehouseIds),
+            static::cacheTtl(),
+            fn () => [
+                'sales' => SalesOrder::query()
+                    ->selectRaw('warehouse_id, COUNT(*) as total')
+                    ->whereIn('warehouse_id', $warehouseIds)
+                    ->whereIn('status', [
+                        \App\Enums\SalesOrderStatus::Confirmed->value,
+                        \App\Enums\SalesOrderStatus::PartiallyDispatched->value,
+                    ])
+                    ->groupBy('warehouse_id')
+                    ->pluck('total', 'warehouse_id')
+                    ->map(fn ($v) => (int) $v)
+                    ->all(),
+                'purchases' => PurchaseOrder::query()
+                    ->selectRaw('warehouse_id, COUNT(*) as total')
+                    ->whereIn('warehouse_id', $warehouseIds)
+                    ->whereIn('status', [
+                        \App\Enums\PurchaseOrderStatus::Ordered->value,
+                        \App\Enums\PurchaseOrderStatus::PartiallyReceived->value,
+                    ])
+                    ->groupBy('warehouse_id')
+                    ->pluck('total', 'warehouse_id')
+                    ->map(fn ($v) => (int) $v)
+                    ->all(),
+            ],
+        );
+
+        return $table
+            ->query(Warehouse::query()->whereIn('warehouses.id', $warehouseIds))
+            ->columns([
+                TextColumn::make('name')
+                    ->label(__('dashboard.pending.warehouse')),
+
+                TextColumn::make('pending_sales')
+                    ->label(__('dashboard.pending.sales'))
+                    ->state(fn (Warehouse $record) => $counts['sales'][$record->id] ?? 0)
+                    ->numeric(),
+
+                TextColumn::make('pending_purchases')
+                    ->label(__('dashboard.pending.purchases'))
+                    ->state(fn (Warehouse $record) => $counts['purchases'][$record->id] ?? 0)
+                    ->numeric(),
+            ])
+            ->paginated(false);
+    }
 }
 
 class QuickActionsWidget extends Widget
 {
     protected static ?int $sort = 9;
     protected int | string | array $columnSpan = ['default' => 1, 'md' => 2, 'xl' => 4];
+
+    public static function canView(): bool
+    {
+        // Role-Based Widget Visibility (§10): all authenticated users.
+        return auth()->user() !== null;
+    }
+
+    protected static string $view = 'filament.widgets.quick-actions';
+
+    // Static shortcut buttons; no cache.
+
+    /**
+     * @return array<int, array{label: string, url: string, icon: \Filament\Support\Icons\Heroicon}>
+     */
+    public static function actions(): array
+    {
+        return [
+            [
+                'label' => __('dashboard.quick_actions.new_transfer'),
+                'url'   => \App\Filament\Resources\TransferRequisitions\TransferRequisitionResource::getUrl('create'),
+                'icon'  => \Filament\Support\Icons\Heroicon::ArrowsRightLeft,
+            ],
+            [
+                'label' => __('dashboard.quick_actions.new_purchase'),
+                'url'   => \App\Filament\Resources\PurchaseOrders\PurchaseOrderResource::getUrl('create'),
+                'icon'  => \Filament\Support\Icons\Heroicon::ShoppingCart,
+            ],
+            [
+                'label' => __('dashboard.quick_actions.new_sale'),
+                'url'   => \App\Filament\Resources\SalesOrders\SalesOrderResource::getUrl('create'),
+                'icon'  => \Filament\Support\Icons\Heroicon::Banknotes,
+            ],
+            [
+                'label' => __('dashboard.quick_actions.new_direct_transfer'),
+                'url'   => \App\Filament\Resources\DirectTransfers\DirectTransferResource::getUrl('create'),
+                'icon'  => \Filament\Support\Icons\Heroicon::ArrowPath,
+            ],
+        ];
+    }
+
+    protected function getViewData(): array
+    {
+        return ['actions' => static::actions()];
+    }
 }
 ```
+
+`resources/views/filament/widgets/quick-actions.blade.php`:
+
+```blade
+<div class="grid grid-cols-2 gap-3 md:grid-cols-4">
+    @foreach ($actions as $action)
+        <a
+            href="{{ $action['url'] }}"
+            class="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm font-medium text-zinc-900 hover:bg-zinc-50"
+        >
+            <x-filament::icon
+                :icon="$action['icon']"
+                class="h-5 w-5 text-zinc-500"
+            />
+            {{ $action['label'] }}
+        </a>
+    @endforeach
+</div>
+```
+
+> **Verified:** `<x-filament::icon>` is the canonical Filament v5 Blade icon component and accepts `Heroicon` enum instances directly via `:icon` (the `class` attribute forwards to the underlying SVG, so `class="h-5 w-5 text-zinc-500"` works as written). The existing usage is correct.
 
 ### Cache Key Reference
 
 | Widget | Cache Key Pattern | TTL |
 |---|---|---|
-| `StatsOverviewWidget` | `stats_overview_{userId}_{firstWarehouseId}` | 300s |
-| `LowStockAlertsWidget` | `low_stock_alerts_chart_{userId}_{firstWarehouseId}` | 300s |
-| `RecentMovementsWidget` | `recent_movements_chart_{userId}_{firstWarehouseId}` | 60s |
-| `SalesRevenueTrendWidget` | `sales_revenue_trend_{userId}_{firstWarehouseId}` | 300s |
-| `ActiveInTransitWidget` | `active_in_transit_{userId}_{firstWarehouseId}` | 300s |
-| `SalesVsPurchasesWidget` | `sales_vs_purchases_{userId}_{firstWarehouseId}` | 300s |
-| `TopSellingVariantsWidget` | `top_selling_variants_{userId}_{firstWarehouseId}_{month}` | 300s |
-| `PendingFulfillmentWidget` | `pending_fulfillment_{userId}_{firstWarehouseId}` | 60s |
+| `StatsOverviewWidget` | `stats_overview_{userId}_{scopeHash}` | 300s |
+| `LowStockAlertsWidget` | `low_stock_alerts_chart_{userId}_{scopeHash}` | 300s |
+| `RecentMovementsWidget` | `recent_movements_chart_{userId}_{scopeHash}` | 60s |
+| `SalesRevenueTrendWidget` | `sales_revenue_trend_{userId}_{scopeHash}` | 300s |
+| `ActiveInTransitWidget` | `active_in_transit_{userId}_{scopeHash}` | 300s |
+| `SalesVsPurchasesWidget` | `sales_vs_purchases_{userId}_{scopeHash}` | 300s |
+| `TopSellingVariantsWidget` | `top_selling_variants_{userId}_{scopeHash}_{month}` | 300s |
+| `PendingFulfillmentWidget` | `pending_fulfillment_{userId}_{scopeHash}` | 60s |
+
+`scopeHash = md5()` of the comma-joined, sorted in-scope warehouse ID set (`md5(implode(',', sort($warehouseIds)))`).
 
 ### Widget Caching — `[ACCEPTED RISK]`
 
-> **`[ACCEPTED RISK NOTE]`** The `LowStockAlertsWidget` iterates `ProductVariant` records and calls the `availableQuantity()` accessor per row, with the entire widget result wrapped in a single 300-second cache window. Every cache miss still issues 2N queries for N variants. At small-to-medium catalog sizes this is acceptable. At large catalog sizes (tens of thousands of variants), this will produce a spiky cache-refresh moment every 5 minutes and should be revisited.
+> **`[ACCEPTED RISK NOTE]`** The `LowStockAlertsWidget` iterates all active `ProductVariant` records and calls the `availableQuantity()` accessor per row, with the entire widget result wrapped in a single 300-second cache window. The scan covers every active variant — the `take(20)` cap applies after the low-stock filter to the rendered chart only, never to the scanned set. Every cache miss still issues 2N queries for N variants. At small-to-medium catalog sizes this is acceptable. At large catalog sizes (tens of thousands of variants), this will produce a spiky cache-refresh moment every 5 minutes and should be revisited.
 >
 > **Upgrade path:** replace the per-variant loop with a single grouped aggregate query. Red flag threshold: `product_variants` count exceeds ~5,000–10,000 active rows, or cache-miss load exceeds ~1–2 seconds.
+>
+> **Owner-authorized trigger (recorded):** when active variants exceed ~5,000 or a cache-miss exceeds ~1–2 seconds, swap in `ProductVariant::batchAvailableQuantity()` with a PHP-side `available <= reorder_point` filter, plus a loop-vs-aggregate parity check. No re-decision required.
 
 ### Role-Based Widget Visibility
 
@@ -9386,7 +12875,7 @@ class QuickActionsWidget extends Widget
 
 **Phase 01: Relational Schema Migrations.** 22 tables in dependency order, including `in_transits.cleared_at`, idempotency uniqueness, current-price uniqueness, `created_at` indexes on document tables, and the `direct_transfers` / `direct_transfer_items` tables created **after** `purchase_order_items`. Direct-transfer tables have `restrictOnDelete` FKs on `product_variants` and `warehouses`, `cascadeOnDelete` on the header→items FK, and `created_at` indexes.
 
-**Phase 02: Base Seeders & Opening Ledger.** Including base-unit self-conversion rows, `DirectTransferFactory`, and `DirectTransferItemFactory`.
+**Phase 02: Base Seeders & Opening Ledger.** Entry point `database/seeders/DatabaseSeeder.php` calls per-domain base seeders in §2 FK-dependency order — warehouses → users (with `user_warehouse` assignments) → products/variants (prices, unit conversions including base-unit self-conversion rows) → suppliers → customers — using the §5 factories, including `DirectTransferFactory` and `DirectTransferItemFactory`. Observers are registered before any seeder runs (Phase 00.12) so the base-unit self-conversion row is observer-materialized. Opening-ledger stock is written exclusively through the existing service paths (`InventoryService::adjustment()` / `recordMovement()`), never through direct `StockMovement` inserts. Seed volumes and opening balances per warehouse/variant: [NEEDS INPUT: owner-provided seed quantities and opening balances].
 
 **Phase 03: Eloquent Model Projections & Enums.** Derived stock methods, eight backed enums, observers, `StockMovementIdempotencyKey`, `DirectTransfer`, and `DirectTransferItem` models. Extend `Warehouse` with `directTransfersFrom()` and `directTransfersTo()`.
 
@@ -9617,6 +13106,15 @@ The following are intentionally **not silently decided by the Council** because 
 8. **`AdminReviewFilters::period()` — richer range presets** (last N days, YTD).
 9. **Low-stock widget scaling redesign** once the active-variant threshold is reached.
 
+### Owner Decisions (recorded — all recommendations approved)
+
+- Items 1 (supplier shipment tracking), 2 (purchase-side negotiation), 6 (Purchases/Sales reporting tabs), 8 (richer period presets): **deferred** — no action until operators request them.
+- Item 3 (COGS costing): **snapshot-cost only** — `LossLedger::snapshotUnitCostFrom()` remains the operational costing; no margin/P&L reporting may be built on it until a costing methodology is decided. Suggested default when that day comes: weighted-average.
+- Item 4 (`PurchaseReturn` UI/lifecycle): **deferred pending supplier-return practice** — the movement type stays; no UI until returns to suppliers are confirmed as an operating practice (required states to be specified then).
+- Item 5 (backorder auto-fulfillment): **explicit NO for v1** — manual dispatch only; any future proposal needs its own race analysis.
+- Item 7 (per-card bulk selection): **deferred** — approve `mkdev-grid-card-layout` only when a bulk operation on card tables is requested.
+- Item 9 (low-stock widget redesign): **deferred until the authorized trigger fires** (see §10 Widget Caching).
+
 ### Decision Boundary
 
 The Council may implement technical integrity fixes without further product clarification. It must stop and request user direction when a change would alter:
@@ -9827,7 +13325,7 @@ This section is authoritative. Where an older section says that a surface exists
 ### 16.3 P1 Gaps Closed
 
 1. Wizard review placeholders become a reusable `WizardReviewStep` Livewire component.
-2. Inline Product creation must auto-select the newly created variant.
+2. Inline Product-family creation must auto-select the newly created family via native `createOptionForm` auto-select (see §7A.1 `product_id` — no custom callback required; "variant" in earlier drafts meant the family record behind `product_id`).
 3. All resource `getEloquentQuery()` implementations must eager-load referenced relationships.
 4. All operational resources must apply warehouse data scoping before filters, sorting, pagination, or card rendering.
 5. Every declared action must resolve a real service method or a real policy method; no blueprint-only action names are accepted.
@@ -9875,7 +13373,7 @@ class InventoryServiceProvider extends ServiceProvider
 }
 ```
 
-No service may depend on a controller, Filament Page, Livewire component, or HTTP request object. Services operate on domain models/DTOs and receive the authenticated actor only through an explicit actor/context parameter where required.
+No service may depend on a controller, Filament Page, Livewire component, or HTTP request object. Services operate on domain models/DTOs and resolve the request actor via `auth()` for request-scoped calls.
 
 ### 17.2 Provider Registration
 
@@ -9885,49 +13383,163 @@ No service may depend on a controller, Filament Page, Livewire component, or HTT
 return [
     App\Providers\AppServiceProvider::class,
     App\Providers\AuthServiceProvider::class,
+    App\Providers\EventServiceProvider::class,
     App\Providers\InventoryServiceProvider::class,
+    App\Providers\Filament\AdminPanelProvider::class,
 ];
 ```
 
 The test suite must prove each provider is loaded.
 
-### 17.3 Observer Registration
-
-`AppServiceProvider::boot()` must register:
+Complete `AppServiceProvider` — owns observer registration (§17.3) and the badge-scope flush call site (§1B.3):
 
 ```php
+namespace App\Providers;
+
+use App\Filament\Resources\InTransits\InTransitResource;
+use App\Filament\Resources\PurchaseOrders\PurchaseOrderResource;
+use App\Filament\Resources\SalesOrders\SalesOrderResource;
+use App\Filament\Resources\TransferRequisitions\TransferRequisitionResource;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Observers\ProductObserver;
 use App\Observers\ProductVariantObserver;
+use Illuminate\Auth\Events\Logout;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\ServiceProvider;
 
-public function boot(): void
+class AppServiceProvider extends ServiceProvider
 {
-    Product::observe(ProductObserver::class);
-    ProductVariant::observe(ProductVariantObserver::class);
+    public function register(): void {}
+
+    public function boot(): void
+    {
+        // Observer registration — must run before seeders or factories
+        // create variants so the base-unit conversion always exists.
+        Product::observe(ProductObserver::class);
+        ProductVariant::observe(ProductVariantObserver::class);
+
+        // Badge-scope flush — the single canonical call site. Each
+        // badge-bearing resource holds its own trait-static scope and
+        // count caches, so all four are flushed (scope AND count).
+        // Only matters for long-lived workers; harmless per-request
+        // under PHP-FPM.
+        Event::listen(Logout::class, function (): void {
+            TransferRequisitionResource::flushBadgeScope();
+            PurchaseOrderResource::flushBadgeScope();
+            SalesOrderResource::flushBadgeScope();
+            InTransitResource::flushBadgeScope();
+        });
+    }
 }
+```
+
+### 17.3 Observer Registration
+
+Observers are registered in `AppServiceProvider::boot()` as shown in the complete class in §17.2:
+
+```php
+Product::observe(ProductObserver::class);
+ProductVariant::observe(ProductVariantObserver::class);
 ```
 
 The base-unit observer must be registered **before** seeders or factories create variants.
 
 ### 17.4 Policy Registration
 
-`AuthServiceProvider::boot()` must register:
+Complete `AuthServiceProvider` — owns every `Gate::policy()` binding in one place:
 
 ```php
-Gate::policy(Product::class, ProductPolicy::class);
-Gate::policy(ProductVariant::class, ProductVariantPolicy::class);
-Gate::policy(TransferRequisition::class, TransferRequisitionPolicy::class);
-Gate::policy(InTransit::class, InTransitPolicy::class);
-Gate::policy(StockMovement::class, StockMovementPolicy::class);
-Gate::policy(LossLedger::class, LossLedgerPolicy::class);
-Gate::policy(PurchaseOrder::class, PurchaseOrderPolicy::class);
-Gate::policy(SalesOrder::class, SalesOrderPolicy::class);
-Gate::policy(Supplier::class, SupplierPolicy::class);
-Gate::policy(Customer::class, CustomerPolicy::class);
-Gate::policy(Warehouse::class, WarehousePolicy::class);
-Gate::policy(User::class, UserPolicy::class);
-Gate::policy(DirectTransfer::class, DirectTransferPolicy::class);
+namespace App\Providers;
+
+use App\Models\Customer;
+use App\Models\DirectTransfer;
+use App\Models\InTransit;
+use App\Models\LossLedger;
+use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Models\PurchaseOrder;
+use App\Models\SalesOrder;
+use App\Models\StockMovement;
+use App\Models\Supplier;
+use App\Models\TransferRequisition;
+use App\Models\User;
+use App\Models\Warehouse;
+use App\Policies\CustomerPolicy;
+use App\Policies\DirectTransferPolicy;
+use App\Policies\InTransitPolicy;
+use App\Policies\LossLedgerPolicy;
+use App\Policies\ProductPolicy;
+use App\Policies\ProductVariantPolicy;
+use App\Policies\PurchaseOrderPolicy;
+use App\Policies\SalesOrderPolicy;
+use App\Policies\StockMovementPolicy;
+use App\Policies\SupplierPolicy;
+use App\Policies\TransferRequisitionPolicy;
+use App\Policies\UserPolicy;
+use App\Policies\WarehousePolicy;
+use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+use Illuminate\Support\Facades\Gate;
+
+class AuthServiceProvider extends ServiceProvider
+{
+    public function boot(): void
+    {
+        $this->registerPolicies();
+
+        Gate::policy(Product::class, ProductPolicy::class);
+        Gate::policy(ProductVariant::class, ProductVariantPolicy::class);
+        Gate::policy(TransferRequisition::class, TransferRequisitionPolicy::class);
+        Gate::policy(InTransit::class, InTransitPolicy::class);
+        Gate::policy(StockMovement::class, StockMovementPolicy::class);
+        Gate::policy(LossLedger::class, LossLedgerPolicy::class);
+        Gate::policy(PurchaseOrder::class, PurchaseOrderPolicy::class);
+        Gate::policy(SalesOrder::class, SalesOrderPolicy::class);
+        Gate::policy(Supplier::class, SupplierPolicy::class);
+        Gate::policy(Customer::class, CustomerPolicy::class);
+        Gate::policy(Warehouse::class, WarehousePolicy::class);
+        Gate::policy(User::class, UserPolicy::class);
+        Gate::policy(DirectTransfer::class, DirectTransferPolicy::class);
+    }
+}
+```
+
+Complete `EventServiceProvider` — owns the event→listener wiring (§22.3a):
+
+```php
+namespace App\Providers;
+
+use App\Events\InventoryBelowReorderPoint;
+use App\Events\LossRecorded;
+use App\Events\PurchaseOrderReceived;
+use App\Events\SalesOrderDispatched;
+use App\Events\TransferCancelled;
+use App\Events\TransferConfirmed;
+use App\Events\TransferDispatched;
+use App\Events\TransferReceived;
+use App\Listeners\NotifyInventoryBelowReorderPoint;
+use App\Listeners\NotifyLossRecorded;
+use App\Listeners\NotifyPurchaseOrderReceived;
+use App\Listeners\NotifySalesOrderDispatched;
+use App\Listeners\NotifyTransferCancelled;
+use App\Listeners\NotifyTransferConfirmed;
+use App\Listeners\NotifyTransferDispatched;
+use App\Listeners\NotifyTransferReceived;
+use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
+
+class EventServiceProvider extends ServiceProvider
+{
+    protected $listen = [
+        TransferConfirmed::class          => [NotifyTransferConfirmed::class],
+        TransferCancelled::class          => [NotifyTransferCancelled::class],
+        TransferDispatched::class         => [NotifyTransferDispatched::class],
+        TransferReceived::class           => [NotifyTransferReceived::class],
+        LossRecorded::class               => [NotifyLossRecorded::class],
+        PurchaseOrderReceived::class      => [NotifyPurchaseOrderReceived::class],
+        SalesOrderDispatched::class       => [NotifySalesOrderDispatched::class],
+        InventoryBelowReorderPoint::class => [NotifyInventoryBelowReorderPoint::class],
+    ];
+}
 ```
 
 ### 17.5 Filament Panel Provider
@@ -9952,6 +13564,92 @@ The provider must own:
 
 All resources named in Section 1 must be registered/discoverable at runtime. The provider must not reference classes that do not exist.
 
+```php
+namespace App\Providers\Filament;
+
+use Filament\Http\Middleware\Authenticate;
+use Filament\Http\Middleware\DisableBladeIconComponents;
+use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Panel;
+use Filament\PanelProvider;
+use Filament\Support\Colors\Color;
+use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
+use Illuminate\Cookie\Middleware\EncryptCookies;
+use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
+use Illuminate\Routing\Middleware\SubstituteBindings;
+use Illuminate\Session\Middleware\AuthenticateSession;
+use Illuminate\Session\Middleware\StartSession;
+use Illuminate\View\Middleware\ShareErrorsFromSession;
+
+class AdminPanelProvider extends PanelProvider
+{
+    public function panel(Panel $panel): Panel
+    {
+        return $panel
+            ->default()
+            ->id('admin')
+            ->path('admin')
+            ->login()
+            ->profile()
+            ->colors([
+                // Primary maps to the §10 dashboard palette token.
+                'primary' => Color::Blue,
+            ])
+            ->viteTheme('resources/css/filament/admin/theme.css')
+            ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
+            ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
+            ->widgets([
+                \App\Filament\Widgets\StatsOverviewWidget::class,
+                \App\Filament\Widgets\LowStockAlertsWidget::class,
+                \App\Filament\Widgets\RecentMovementsWidget::class,
+                \App\Filament\Widgets\SalesRevenueTrendWidget::class,
+                \App\Filament\Widgets\ActiveInTransitWidget::class,
+                \App\Filament\Widgets\SalesVsPurchasesWidget::class,
+                \App\Filament\Widgets\TopSellingVariantsWidget::class,
+                \App\Filament\Widgets\PendingFulfillmentWidget::class,
+                \App\Filament\Widgets\QuickActionsWidget::class,
+            ])
+            ->navigationGroups([
+                \Filament\Navigation\NavigationGroup::make('CATALOG')->label(__('navigation.groups.catalog'))->icon(\Filament\Support\Icons\Heroicon::CubeTransparent)->collapsible(),
+                \Filament\Navigation\NavigationGroup::make('OPERATIONS')->label(__('navigation.groups.operations'))->icon(\Filament\Support\Icons\Heroicon::OutlinedRectangleStack)->collapsible(),
+                \Filament\Navigation\NavigationGroup::make('PURCHASING')->label(__('navigation.groups.purchasing'))->icon(\Filament\Support\Icons\Heroicon::OutlinedShoppingCart)->collapsible(),
+                \Filament\Navigation\NavigationGroup::make('SALES')->label(__('navigation.groups.sales'))->icon(\Filament\Support\Icons\Heroicon::OutlinedBanknotes)->collapsible(),
+                \Filament\Navigation\NavigationGroup::make('AUDIT LEDGERS')->label(__('navigation.groups.audit_ledgers'))->icon(\Filament\Support\Icons\Heroicon::QueueList)->collapsible(),
+                \Filament\Navigation\NavigationGroup::make('SYSTEM ADMIN')->label(__('navigation.groups.system_admin'))->icon(\Filament\Support\Icons\Heroicon::BuildingOffice)->collapsible(false),
+            ])
+            ->middleware([
+                EncryptCookies::class,
+                AddQueuedCookiesToResponse::class,
+                StartSession::class,
+                AuthenticateSession::class,
+                ShareErrorsFromSession::class,
+                VerifyCsrfToken::class,
+                SubstituteBindings::class,
+                DisableBladeIconComponents::class,
+                DispatchServingFilamentEvent::class,
+            ])
+            ->authMiddleware([
+                Authenticate::class,
+            ])
+            ->strictAuthorization();
+    }
+}
+```
+
+Group `make()` keys stay stable identifiers matching each resource's `$navigationGroup`; only `->label()` translates (§1A.1). `discoverPages` targets `Filament/Pages` (custom panel pages); resource pages resolve through their resource's `getPages()` and are not discovered from the resources directory. Widgets are registered only through the explicit `->widgets([...])` list (§10 Dashboard Registration) — `->discoverWidgets()` is intentionally absent so the nine dashboard widgets are not registered (and rendered) twice.
+
+`resources/css/filament/admin/theme.css` (§25 file map) — admin panel theme loaded via `->viteTheme()` above. Required content contract:
+
+```css
+/* Admin panel theme for the Filament v5 `admin` panel. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* Filament v5 theme overrides — confirm import path against installed packages. */
+```
+
+No custom design tokens are defined by this blueprint beyond the §10 dashboard palette reference (`Color::Blue` primary); do not invent theme variables here.
+
 ### 17.6 No Hidden Service Locator Requirement
 
 Using `app(Service::class)` inside a Filament action is permitted, but it is not the wiring mechanism. The container/provider contract above is the canonical registration boundary.
@@ -9970,10 +13668,12 @@ Dependency injection may be used when the surrounding Filament lifecycle support
 
 The `ScopesNavigationBadges` trait lives at `app/Filament/Support/Concerns/ScopesNavigationBadges.php` and is consumed by every resource that declares a non-null navigation badge:
 
-- `TransferRequisitionResource`
-- `PurchaseOrderResource`
-- `SalesOrderResource`
-- `InTransitResource`
+- `TransferRequisitionResource` — `use ScopesNavigationBadges;` (§1B.3a, §18.1a)
+- `PurchaseOrderResource` — `use ScopesNavigationBadges;` (§1B.3a, §18.1a)
+- `SalesOrderResource` — `use ScopesNavigationBadges;` (§1B.3a, §18.1a)
+- `InTransitResource` — `use ScopesNavigationBadges;` (§1B.3a, §18.1a)
+
+Each of the four canonical implementations above shows the `use` statement explicitly; no badge-bearing resource relies on an implied or inherited import. No other resource declares a navigation badge (§1B.2), so no other resource may consume the trait for badge purposes.
 
 A runtime test must assert that each of the four classes uses the trait and that the resolver returns the expected warehouse set for each role × cardinality combination.
 
@@ -10060,6 +13760,1118 @@ class ExampleResource extends Resource
 }
 ```
 
+### 18.1a Thin Resource Classes
+
+```php
+namespace App\Filament\Resources\Products;
+
+use App\Filament\Resources\Products\Pages\CreateProduct;
+use App\Filament\Resources\Products\Pages\EditProduct;
+use App\Filament\Resources\Products\Pages\ListProducts;
+use App\Filament\Resources\Products\Pages\ViewProduct;
+use App\Filament\Resources\Products\Schemas\ProductForm;
+use App\Filament\Resources\Products\Schemas\ProductInfolist;
+use App\Filament\Resources\Products\Tables\ProductsTable;
+use App\Models\ProductVariant;
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+
+class ProductResource extends Resource
+{
+    protected static ?string $model = ProductVariant::class;
+    protected static string | \UnitEnum | null $navigationGroup = 'CATALOG';
+    protected static ?int $navigationSort = 1;
+    protected static ?string $recordTitleAttribute = 'sku';
+    protected static string | \BackedEnum | null $navigationIcon = Heroicon::OutlinedCube;
+    protected static string | \BackedEnum | null $activeNavigationIcon = Heroicon::Cube;
+
+    public static function getModelLabel(): string
+    {
+        return __('resources.products.model.singular');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('resources.products.model.plural');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('resources.products.navigation.label');
+    }
+
+    public static function form(Schema $schema): Schema
+    {
+        return ProductForm::configure($schema);
+    }
+
+    public static function table(Table $table): Table
+    {
+        return ProductsTable::configure($table);
+    }
+
+    public static function infolist(Schema $schema): Schema
+    {
+        return ProductInfolist::configure($schema);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with(['product', 'unitConversions', 'currentPrice']);
+    }
+
+    public static function getRecordRouteBindingEloquentQuery(): Builder
+    {
+        return parent::getRecordRouteBindingEloquentQuery()
+            ->withoutGlobalScopes([SoftDeletingScope::class]);
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => ListProducts::route('/'),
+            'create' => CreateProduct::route('/create'),
+            'view' => ViewProduct::route('/{record}'),
+            'edit' => EditProduct::route('/{record}/edit'),
+        ];
+    }
+}
+```
+
+```php
+namespace App\Filament\Resources\TransferRequisitions;
+
+use App\Filament\Resources\TransferRequisitions\Pages\CreateTransferRequisition;
+use App\Filament\Resources\TransferRequisitions\Pages\EditTransferRequisition;
+use App\Filament\Resources\TransferRequisitions\Pages\ListTransferRequisitions;
+use App\Filament\Resources\TransferRequisitions\Pages\ViewTransferRequisition;
+use App\Filament\Resources\TransferRequisitions\Schemas\TransferRequisitionForm;
+use App\Filament\Resources\TransferRequisitions\Schemas\TransferRequisitionInfolist;
+use App\Filament\Resources\TransferRequisitions\Tables\TransferRequisitionsTable;
+use App\Filament\Support\Concerns\ScopesNavigationBadges;
+use App\Enums\TransferRequisitionStatus;
+use App\Models\TransferRequisition;
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+
+class TransferRequisitionResource extends Resource
+{
+    use ScopesNavigationBadges;
+
+    protected static ?string $model = TransferRequisition::class;
+    protected static string | \UnitEnum | null $navigationGroup = 'OPERATIONS';
+    protected static ?int $navigationSort = 1;
+    protected static ?string $recordTitleAttribute = 'reference_code';
+    protected static string | \BackedEnum | null $navigationIcon = Heroicon::OutlinedArrowsRightLeft;
+    protected static string | \BackedEnum | null $activeNavigationIcon = Heroicon::ArrowsRightLeft;
+
+    public static function getModelLabel(): string
+    {
+        return __('resources.transfer_requisitions.model.singular');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('resources.transfer_requisitions.model.plural');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('resources.transfer_requisitions.navigation.label');
+    }
+
+    public static function form(Schema $schema): Schema
+    {
+        return TransferRequisitionForm::configure($schema);
+    }
+
+    public static function table(Table $table): Table
+    {
+        return TransferRequisitionsTable::configure($table);
+    }
+
+    public static function infolist(Schema $schema): Schema
+    {
+        return TransferRequisitionInfolist::configure($schema);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with(['fromWarehouse', 'toWarehouse', 'requestedBy', 'approvedBy', 'dispatchedBy', 'receivedBy', 'items.productVariant', 'items.substituteProductVariant', 'items.revisions'])
+            ->withCount('items')
+            ->when(
+                ! auth()->user()->isAdmin() && ! auth()->user()->isAuditor(),
+                function (Builder $q) {
+                    $ids = auth()->user()->warehouses()->pluck('id')->all();
+                    $q->where(function (Builder $qq) use ($ids) {
+                        $qq->whereIn('from_warehouse_id', $ids)
+                            ->orWhereIn('to_warehouse_id', $ids);
+                    });
+                }
+            );
+    }
+
+    public static function getRecordRouteBindingEloquentQuery(): Builder
+    {
+        return parent::getRecordRouteBindingEloquentQuery()
+            ->withoutGlobalScopes([SoftDeletingScope::class]);
+    }
+
+    // Badge contract — canonical counting logic and the cached count live in §1B.3a; merged here so this class is complete.
+    private static function getScopedBadgeCount(): int
+    {
+        if (self::$badgeCount !== null) {
+            return self::$badgeCount;
+        }
+
+        if (! self::hasBadgeScope()) {
+            return self::$badgeCount = 0;
+        }
+
+        $warehouseIds = self::badgeScopedWarehouseIds();
+
+        return self::$badgeCount = static::getModel()::query()
+            ->where('status', TransferRequisitionStatus::Requested->value)
+            ->where(function ($q) use ($warehouseIds) {
+                $q->whereIn('from_warehouse_id', $warehouseIds)
+                  ->orWhereIn('to_warehouse_id', $warehouseIds);
+            })
+            ->count();
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+        $count = self::getScopedBadgeCount();
+
+        return $count > 0 ? (string) $count : null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return self::getScopedBadgeCount() > 10 ? 'warning' : 'primary';
+    }
+
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        return __('resources.transfer_requisitions.badge_tooltip');
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => ListTransferRequisitions::route('/'),
+            'create' => CreateTransferRequisition::route('/create'),
+            'view' => ViewTransferRequisition::route('/{record}'),
+            'edit' => EditTransferRequisition::route('/{record}/edit'),
+        ];
+    }
+}
+```
+
+```php
+namespace App\Filament\Resources\DirectTransfers;
+
+use App\Filament\Resources\DirectTransfers\Pages\CreateDirectTransfer;
+use App\Filament\Resources\DirectTransfers\Pages\ListDirectTransfers;
+use App\Filament\Resources\DirectTransfers\Pages\ViewDirectTransfer;
+use App\Filament\Resources\DirectTransfers\Schemas\DirectTransferForm;
+use App\Filament\Resources\DirectTransfers\Schemas\DirectTransferInfolist;
+use App\Filament\Resources\DirectTransfers\Tables\DirectTransfersTable;
+use App\Models\DirectTransfer;
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+
+class DirectTransferResource extends Resource
+{
+    protected static ?string $model = DirectTransfer::class;
+    protected static string | \UnitEnum | null $navigationGroup = 'OPERATIONS';
+    protected static ?int $navigationSort = 2;
+    protected static ?string $recordTitleAttribute = 'reference_code';
+    protected static string | \BackedEnum | null $navigationIcon = Heroicon::OutlinedArrowPath;
+    protected static string | \BackedEnum | null $activeNavigationIcon = Heroicon::ArrowPath;
+
+    public static function getModelLabel(): string
+    {
+        return __('resources.direct_transfers.model.singular');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('resources.direct_transfers.model.plural');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('resources.direct_transfers.navigation.label');
+    }
+
+    public static function form(Schema $schema): Schema
+    {
+        return DirectTransferForm::configure($schema);
+    }
+
+    public static function table(Table $table): Table
+    {
+        return DirectTransfersTable::configure($table);
+    }
+
+    public static function infolist(Schema $schema): Schema
+    {
+        return DirectTransferInfolist::configure($schema);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with(['fromWarehouse', 'toWarehouse', 'transferredBy', 'items.productVariant'])
+            ->withCount('items')
+            ->when(
+                ! auth()->user()->isAdmin() && ! auth()->user()->isAuditor(),
+                function (Builder $q) {
+                    // Intentional AND-scope (§20.1): a direct transfer moves
+                    // stock between two warehouses, so a non-privileged user
+                    // must be assigned to BOTH endpoints to list it. A
+                    // single-warehouse user therefore sees zero direct
+                    // transfers by design — not a bug.
+                    $ids = auth()->user()->warehouses()->pluck('id')->all();
+                    $q->whereIn('from_warehouse_id', $ids)
+                      ->whereIn('to_warehouse_id', $ids);
+                }
+            );
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => ListDirectTransfers::route('/'),
+            'create' => CreateDirectTransfer::route('/create'),
+            'view' => ViewDirectTransfer::route('/{record}'),
+        ];
+    }
+}
+```
+
+```php
+namespace App\Filament\Resources\PurchaseOrders;
+
+use App\Filament\Resources\PurchaseOrders\Pages\CreatePurchaseOrder;
+use App\Filament\Resources\PurchaseOrders\Pages\EditPurchaseOrder;
+use App\Filament\Resources\PurchaseOrders\Pages\ListPurchaseOrders;
+use App\Filament\Resources\PurchaseOrders\Pages\ViewPurchaseOrder;
+use App\Filament\Resources\PurchaseOrders\Schemas\PurchaseOrderForm;
+use App\Filament\Resources\PurchaseOrders\Schemas\PurchaseOrderInfolist;
+use App\Filament\Resources\PurchaseOrders\Tables\PurchaseOrdersTable;
+use App\Filament\Support\Concerns\ScopesNavigationBadges;
+use App\Enums\PurchaseOrderStatus;
+use App\Models\PurchaseOrder;
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+
+class PurchaseOrderResource extends Resource
+{
+    use ScopesNavigationBadges;
+
+    protected static ?string $model = PurchaseOrder::class;
+    protected static string | \UnitEnum | null $navigationGroup = 'PURCHASING';
+    protected static ?int $navigationSort = 1;
+    protected static ?string $recordTitleAttribute = 'reference_code';
+    protected static string | \BackedEnum | null $navigationIcon = Heroicon::OutlinedShoppingCart;
+    protected static string | \BackedEnum | null $activeNavigationIcon = Heroicon::ShoppingCart;
+
+    public static function getModelLabel(): string
+    {
+        return __('resources.purchase_orders.model.singular');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('resources.purchase_orders.model.plural');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('resources.purchase_orders.navigation.label');
+    }
+
+    public static function form(Schema $schema): Schema
+    {
+        return PurchaseOrderForm::configure($schema);
+    }
+
+    public static function table(Table $table): Table
+    {
+        return PurchaseOrdersTable::configure($table);
+    }
+
+    public static function infolist(Schema $schema): Schema
+    {
+        return PurchaseOrderInfolist::configure($schema);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with(['supplier', 'warehouse', 'orderedBy', 'receivedBy', 'items.productVariant'])
+            ->withCount('items')
+            ->when(
+                ! auth()->user()->isAdmin() && ! auth()->user()->isAuditor(),
+                function (Builder $q) {
+                    $ids = auth()->user()->warehouses()->pluck('id')->all();
+                    $q->whereIn('warehouse_id', $ids);
+                }
+            );
+    }
+
+    public static function getRecordRouteBindingEloquentQuery(): Builder
+    {
+        return parent::getRecordRouteBindingEloquentQuery()
+            ->withoutGlobalScopes([SoftDeletingScope::class]);
+    }
+
+    // Badge contract — canonical counting logic and the cached count live in §1B.3a; merged here so this class is complete.
+    private static function getScopedBadgeCount(): int
+    {
+        if (self::$badgeCount !== null) {
+            return self::$badgeCount;
+        }
+
+        if (! self::hasBadgeScope()) {
+            return self::$badgeCount = 0;
+        }
+
+        return self::$badgeCount = static::getModel()::query()
+            ->where('status', PurchaseOrderStatus::Ordered->value)
+            ->whereIn('warehouse_id', self::badgeScopedWarehouseIds())
+            ->count();
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+        $count = self::getScopedBadgeCount();
+
+        return $count > 0 ? (string) $count : null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return self::getScopedBadgeCount() > 10 ? 'warning' : 'primary';
+    }
+
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        return __('resources.purchase_orders.badge_tooltip');
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => ListPurchaseOrders::route('/'),
+            'create' => CreatePurchaseOrder::route('/create'),
+            'view' => ViewPurchaseOrder::route('/{record}'),
+            'edit' => EditPurchaseOrder::route('/{record}/edit'),
+        ];
+    }
+}
+```
+
+```php
+namespace App\Filament\Resources\SalesOrders;
+
+use App\Filament\Resources\SalesOrders\Pages\CreateSalesOrder;
+use App\Filament\Resources\SalesOrders\Pages\EditSalesOrder;
+use App\Filament\Resources\SalesOrders\Pages\ListSalesOrders;
+use App\Filament\Resources\SalesOrders\Pages\ViewSalesOrder;
+use App\Filament\Resources\SalesOrders\Schemas\SalesOrderForm;
+use App\Filament\Resources\SalesOrders\Schemas\SalesOrderInfolist;
+use App\Filament\Resources\SalesOrders\Tables\SalesOrdersTable;
+use App\Filament\Support\Concerns\ScopesNavigationBadges;
+use App\Enums\SalesOrderStatus;
+use App\Models\SalesOrder;
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+
+class SalesOrderResource extends Resource
+{
+    use ScopesNavigationBadges;
+
+    protected static ?string $model = SalesOrder::class;
+    protected static string | \UnitEnum | null $navigationGroup = 'SALES';
+    protected static ?int $navigationSort = 1;
+    protected static ?string $recordTitleAttribute = 'reference_code';
+    protected static string | \BackedEnum | null $navigationIcon = Heroicon::OutlinedBanknotes;
+    protected static string | \BackedEnum | null $activeNavigationIcon = Heroicon::Banknotes;
+
+    public static function getModelLabel(): string
+    {
+        return __('resources.sales_orders.model.singular');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('resources.sales_orders.model.plural');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('resources.sales_orders.navigation.label');
+    }
+
+    public static function form(Schema $schema): Schema
+    {
+        return SalesOrderForm::configure($schema);
+    }
+
+    public static function table(Table $table): Table
+    {
+        return SalesOrdersTable::configure($table);
+    }
+
+    public static function infolist(Schema $schema): Schema
+    {
+        return SalesOrderInfolist::configure($schema);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with(['customer', 'warehouse', 'orderedBy', 'dispatchedBy', 'items.productVariant'])
+            ->withCount('items')
+            ->when(
+                ! auth()->user()->isAdmin() && ! auth()->user()->isAuditor(),
+                function (Builder $q) {
+                    $ids = auth()->user()->warehouses()->pluck('id')->all();
+                    $q->whereIn('warehouse_id', $ids);
+                }
+            );
+    }
+
+    public static function getRecordRouteBindingEloquentQuery(): Builder
+    {
+        return parent::getRecordRouteBindingEloquentQuery()
+            ->withoutGlobalScopes([SoftDeletingScope::class]);
+    }
+
+    // Badge contract — canonical counting logic and the cached count live in §1B.3a; merged here so this class is complete.
+    private static function getScopedBadgeCount(): int
+    {
+        if (self::$badgeCount !== null) {
+            return self::$badgeCount;
+        }
+
+        if (! self::hasBadgeScope()) {
+            return self::$badgeCount = 0;
+        }
+
+        return self::$badgeCount = static::getModel()::query()
+            ->where('status', SalesOrderStatus::Confirmed->value)
+            ->whereIn('warehouse_id', self::badgeScopedWarehouseIds())
+            ->count();
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+        $count = self::getScopedBadgeCount();
+
+        return $count > 0 ? (string) $count : null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return self::getScopedBadgeCount() > 10 ? 'warning' : 'primary';
+    }
+
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        return __('resources.sales_orders.badge_tooltip');
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => ListSalesOrders::route('/'),
+            'create' => CreateSalesOrder::route('/create'),
+            'view' => ViewSalesOrder::route('/{record}'),
+            'edit' => EditSalesOrder::route('/{record}/edit'),
+        ];
+    }
+}
+```
+
+```php
+namespace App\Filament\Resources\InTransits;
+
+use App\Filament\Resources\InTransits\Pages\ListInTransits;
+use App\Filament\Resources\InTransits\Pages\ViewInTransit;
+use App\Filament\Resources\InTransits\Schemas\InTransitInfolist;
+use App\Filament\Resources\InTransits\Tables\InTransitsTable;
+use App\Filament\Support\Concerns\ScopesNavigationBadges;
+use App\Enums\InTransitStatus;
+use App\Models\InTransit;
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+
+class InTransitResource extends Resource
+{
+    use ScopesNavigationBadges;
+
+    protected static ?string $model = InTransit::class;
+    protected static string | \UnitEnum | null $navigationGroup = 'OPERATIONS';
+    protected static ?int $navigationSort = 3;
+    protected static ?string $recordTitleAttribute = null;
+    protected static string | \BackedEnum | null $navigationIcon = Heroicon::OutlinedTruck;
+    protected static string | \BackedEnum | null $activeNavigationIcon = Heroicon::Truck;
+
+    public static function getModelLabel(): string
+    {
+        return __('resources.in_transits.model.singular');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('resources.in_transits.model.plural');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('resources.in_transits.navigation.label');
+    }
+
+    public static function table(Table $table): Table
+    {
+        return InTransitsTable::configure($table);
+    }
+
+    public static function infolist(Schema $schema): Schema
+    {
+        return InTransitInfolist::configure($schema);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with(['transferRequisition', 'transferRequisitionItem', 'productVariant'])
+            ->when(
+                ! auth()->user()->isAdmin() && ! auth()->user()->isAuditor(),
+                function (Builder $q) {
+                    $ids = auth()->user()->warehouses()->pluck('id')->all();
+                    $q->whereHas('transferRequisition', function (Builder $qq) use ($ids) {
+                        $qq->whereIn('from_warehouse_id', $ids)
+                            ->orWhereIn('to_warehouse_id', $ids);
+                    });
+                }
+            );
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => ListInTransits::route('/'),
+            'view' => ViewInTransit::route('/{record}'),
+        ];
+    }
+
+    // Badge contract — canonical counting logic and the cached count live in §1B.3a; merged here so this class is complete.
+    private static function getScopedBadgeCount(): int
+    {
+        if (self::$badgeCount !== null) {
+            return self::$badgeCount;
+        }
+
+        if (! self::hasBadgeScope()) {
+            return self::$badgeCount = 0;
+        }
+
+        $warehouseIds = self::badgeScopedWarehouseIds();
+
+        return self::$badgeCount = static::getModel()::query()
+            ->where('status', InTransitStatus::InTransit->value)
+            ->whereHas('transferRequisition', function ($q) use ($warehouseIds) {
+                $q->whereIn('from_warehouse_id', $warehouseIds)
+                  ->orWhereIn('to_warehouse_id', $warehouseIds);
+            })
+            ->count();
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+        $count = self::getScopedBadgeCount();
+
+        return $count > 0 ? (string) $count : null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'primary';
+    }
+
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        return __('resources.in_transits.badge_tooltip');
+    }
+}
+```
+
+```php
+namespace App\Filament\Resources\StockMovements;
+
+use App\Filament\Resources\StockMovements\Pages\ListStockMovements;
+use App\Filament\Resources\StockMovements\Pages\ViewStockMovement;
+use App\Filament\Resources\StockMovements\Schemas\StockMovementInfolist;
+use App\Filament\Resources\StockMovements\Tables\StockMovementsTable;
+use App\Models\StockMovement;
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+
+class StockMovementResource extends Resource
+{
+    protected static ?string $model = StockMovement::class;
+    protected static string | \UnitEnum | null $navigationGroup = 'AUDIT LEDGERS';
+    protected static ?int $navigationSort = 1;
+    protected static string | \BackedEnum | null $navigationIcon = Heroicon::OutlinedQueueList;
+    protected static string | \BackedEnum | null $activeNavigationIcon = Heroicon::QueueList;
+
+    public static function getModelLabel(): string
+    {
+        return __('resources.stock_movements.model.singular');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('resources.stock_movements.model.plural');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('resources.stock_movements.navigation.label');
+    }
+
+    public static function table(Table $table): Table
+    {
+        return StockMovementsTable::configure($table);
+    }
+
+    public static function infolist(Schema $schema): Schema
+    {
+        return StockMovementInfolist::configure($schema);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with(['productVariant', 'warehouse', 'createdBy'])
+            ->when(
+                ! auth()->user()->isAdmin() && ! auth()->user()->isAuditor(),
+                function (Builder $q) {
+                    $ids = auth()->user()->warehouses()->pluck('id')->all();
+                    $q->whereIn('warehouse_id', $ids);
+                }
+            );
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => ListStockMovements::route('/'),
+            'view' => ViewStockMovement::route('/{record}'),
+        ];
+    }
+}
+```
+
+```php
+namespace App\Filament\Resources\LossLedgers;
+
+use App\Filament\Resources\LossLedgers\Pages\ListLossLedgers;
+use App\Filament\Resources\LossLedgers\Pages\ViewLossLedger;
+use App\Filament\Resources\LossLedgers\Schemas\LossLedgerInfolist;
+use App\Filament\Resources\LossLedgers\Tables\LossLedgersTable;
+use App\Models\LossLedger;
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+
+class LossLedgerResource extends Resource
+{
+    protected static ?string $model = LossLedger::class;
+    protected static string | \UnitEnum | null $navigationGroup = 'AUDIT LEDGERS';
+    protected static ?int $navigationSort = 2;
+    protected static string | \BackedEnum | null $navigationIcon = Heroicon::OutlinedExclamationTriangle;
+    protected static string | \BackedEnum | null $activeNavigationIcon = Heroicon::ExclamationTriangle;
+
+    public static function getModelLabel(): string
+    {
+        return __('resources.loss_ledgers.model.singular');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('resources.loss_ledgers.model.plural');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('resources.loss_ledgers.navigation.label');
+    }
+
+    public static function table(Table $table): Table
+    {
+        return LossLedgersTable::configure($table);
+    }
+
+    public static function infolist(Schema $schema): Schema
+    {
+        return LossLedgerInfolist::configure($schema);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with(['transferRequisition', 'transferRequisitionItem', 'productVariant', 'warehouse', 'recordedBy'])
+            ->when(
+                ! auth()->user()->isAdmin() && ! auth()->user()->isAuditor(),
+                function (Builder $q) {
+                    $ids = auth()->user()->warehouses()->pluck('id')->all();
+                    $q->whereIn('warehouse_id', $ids);
+                }
+            );
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => ListLossLedgers::route('/'),
+            'view' => ViewLossLedger::route('/{record}'),
+        ];
+    }
+}
+```
+
+```php
+namespace App\Filament\Resources\Warehouses;
+
+use App\Filament\Resources\Warehouses\Pages\CreateWarehouse;
+use App\Filament\Resources\Warehouses\Pages\EditWarehouse;
+use App\Filament\Resources\Warehouses\Pages\ListWarehouses;
+use App\Filament\Resources\Warehouses\Pages\ViewWarehouse;
+use App\Filament\Resources\Warehouses\Schemas\WarehouseForm;
+use App\Filament\Resources\Warehouses\Schemas\WarehouseInfolist;
+use App\Filament\Resources\Warehouses\Tables\WarehousesTable;
+use App\Models\Warehouse;
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+
+class WarehouseResource extends Resource
+{
+    protected static ?string $model = Warehouse::class;
+    protected static string | \UnitEnum | null $navigationGroup = 'SYSTEM ADMIN';
+    protected static ?int $navigationSort = 1;
+    protected static ?string $recordTitleAttribute = 'name';
+    protected static string | \BackedEnum | null $navigationIcon = Heroicon::OutlinedBuildingOffice;
+    protected static string | \BackedEnum | null $activeNavigationIcon = Heroicon::BuildingOffice;
+
+    public static function getModelLabel(): string
+    {
+        return __('resources.warehouses.model.singular');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('resources.warehouses.model.plural');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('resources.warehouses.navigation.label');
+    }
+
+    public static function form(Schema $schema): Schema
+    {
+        return WarehouseForm::configure($schema);
+    }
+
+    public static function table(Table $table): Table
+    {
+        return WarehousesTable::configure($table);
+    }
+
+    public static function infolist(Schema $schema): Schema
+    {
+        return WarehouseInfolist::configure($schema);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with(['users'])
+            ->withCount(['users', 'stockMovements'])
+            ->when(
+                ! auth()->user()->isAdmin() && ! auth()->user()->isAuditor(),
+                function (Builder $q) {
+                    $ids = auth()->user()->warehouses()->pluck('warehouses.id')->all();
+                    $q->whereIn('warehouses.id', $ids);
+                }
+            );
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => ListWarehouses::route('/'),
+            'create' => CreateWarehouse::route('/create'),
+            'view' => ViewWarehouse::route('/{record}'),
+            'edit' => EditWarehouse::route('/{record}/edit'),
+        ];
+    }
+}
+```
+
+```php
+namespace App\Filament\Resources\Users;
+
+use App\Filament\Resources\Users\Pages\CreateUser;
+use App\Filament\Resources\Users\Pages\EditUser;
+use App\Filament\Resources\Users\Pages\ListUsers;
+use App\Filament\Resources\Users\Schemas\UserForm;
+use App\Filament\Resources\Users\Tables\UsersTable;
+use App\Models\User;
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+
+class UserResource extends Resource
+{
+    protected static ?string $model = User::class;
+    protected static string | \UnitEnum | null $navigationGroup = 'SYSTEM ADMIN';
+    protected static ?int $navigationSort = 2;
+    protected static ?string $recordTitleAttribute = 'name';
+    protected static string | \BackedEnum | null $navigationIcon = Heroicon::OutlinedUsers;
+    protected static string | \BackedEnum | null $activeNavigationIcon = Heroicon::Users;
+
+    public static function getModelLabel(): string
+    {
+        return __('resources.users.model.singular');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('resources.users.model.plural');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('resources.users.navigation.label');
+    }
+
+    public static function form(Schema $schema): Schema
+    {
+        return UserForm::configure($schema);
+    }
+
+    public static function table(Table $table): Table
+    {
+        return UsersTable::configure($table);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with(['warehouses'])
+            ->withCount('warehouses');
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => ListUsers::route('/'),
+            'create' => CreateUser::route('/create'),
+            'edit' => EditUser::route('/{record}/edit'),
+        ];
+    }
+}
+```
+
+```php
+namespace App\Filament\Resources\Suppliers;
+
+use App\Filament\Resources\Suppliers\Pages\CreateSupplier;
+use App\Filament\Resources\Suppliers\Pages\EditSupplier;
+use App\Filament\Resources\Suppliers\Pages\ListSuppliers;
+use App\Filament\Resources\Suppliers\Schemas\SupplierForm;
+use App\Filament\Resources\Suppliers\Tables\SuppliersTable;
+use App\Models\Supplier;
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+
+class SupplierResource extends Resource
+{
+    protected static ?string $model = Supplier::class;
+    protected static string | \UnitEnum | null $navigationGroup = 'PURCHASING';
+    protected static ?int $navigationSort = 2;
+    protected static ?string $recordTitleAttribute = 'name';
+    protected static string | \BackedEnum | null $navigationIcon = Heroicon::OutlinedBuildingStorefront;
+    protected static string | \BackedEnum | null $activeNavigationIcon = Heroicon::BuildingStorefront;
+
+    public static function getModelLabel(): string
+    {
+        return __('resources.suppliers.model.singular');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('resources.suppliers.model.plural');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('resources.suppliers.navigation.label');
+    }
+
+    public static function form(Schema $schema): Schema
+    {
+        return SupplierForm::configure($schema);
+    }
+
+    public static function table(Table $table): Table
+    {
+        return SuppliersTable::configure($table);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->withCount('purchaseOrders');
+    }
+
+    public static function getRecordRouteBindingEloquentQuery(): Builder
+    {
+        return parent::getRecordRouteBindingEloquentQuery()
+            ->withoutGlobalScopes([SoftDeletingScope::class]);
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => ListSuppliers::route('/'),
+            'create' => CreateSupplier::route('/create'),
+            'edit' => EditSupplier::route('/{record}/edit'),
+        ];
+    }
+}
+```
+
+```php
+namespace App\Filament\Resources\Customers;
+
+use App\Filament\Resources\Customers\Pages\CreateCustomer;
+use App\Filament\Resources\Customers\Pages\EditCustomer;
+use App\Filament\Resources\Customers\Pages\ListCustomers;
+use App\Filament\Resources\Customers\Schemas\CustomerForm;
+use App\Filament\Resources\Customers\Tables\CustomersTable;
+use App\Models\Customer;
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+
+class CustomerResource extends Resource
+{
+    protected static ?string $model = Customer::class;
+    protected static string | \UnitEnum | null $navigationGroup = 'SALES';
+    protected static ?int $navigationSort = 2;
+    protected static ?string $recordTitleAttribute = 'name';
+    protected static string | \BackedEnum | null $navigationIcon = Heroicon::OutlinedUserGroup;
+    protected static string | \BackedEnum | null $activeNavigationIcon = Heroicon::UserGroup;
+
+    public static function getModelLabel(): string
+    {
+        return __('resources.customers.model.singular');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('resources.customers.model.plural');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('resources.customers.navigation.label');
+    }
+
+    public static function form(Schema $schema): Schema
+    {
+        return CustomerForm::configure($schema);
+    }
+
+    public static function table(Table $table): Table
+    {
+        return CustomersTable::configure($table);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->withCount('salesOrders');
+    }
+
+    public static function getRecordRouteBindingEloquentQuery(): Builder
+    {
+        return parent::getRecordRouteBindingEloquentQuery()
+            ->withoutGlobalScopes([SoftDeletingScope::class]);
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => ListCustomers::route('/'),
+            'create' => CreateCustomer::route('/create'),
+            'edit' => EditCustomer::route('/{record}/edit'),
+        ];
+    }
+}
+```
+
+---
+
 ### 18.2 Required Page Classes
 
 The following page classes are mandatory implementation surfaces, not documentation-only names:
@@ -10084,12 +14896,15 @@ DirectTransfers:
 
 InTransits:
   ListInTransits
+  ViewInTransit
 
 StockMovements:
   ListStockMovements
+  ViewStockMovement
 
 LossLedgers:
   ListLossLedgers
+  ViewLossLedger
 
 Warehouses:
   ListWarehouses
@@ -10125,17 +14940,570 @@ Customers:
   EditCustomer
 ```
 
+### 18.2a Page Class Stubs
+
+List/Edit/View pages below are intentionally thin (`ListRecords`/`EditRecord`/`ViewRecord` with only `$resource`) — the resource's schema/table/infolist contracts carry the behavior. The four wizard `Create*` pages are NOT stubbed here: their canonical `HasWizard` implementations live in §7B.2 (`CreateTransferRequisition`), §7C.2 (`CreateDirectTransfer`), §7G.2 (`CreatePurchaseOrder`), and §7H.2 (`CreateSalesOrder`). Those sections are authoritative; no stub in this section may contradict them.
+
+`View*` pages (`ViewPurchaseOrder`, `ViewSalesOrder`, `ViewWarehouse`, and peers) are complete as thin `ViewRecord` subclasses: a Filament v5 view page renders the resource's `infolist()` contract and needs no overrides unless it adds page-specific actions or header widgets — none do by design. A view route is implemented exactly when its `ViewRecord` subclass is autoloadable and the resource defines `infolist()`.
+
+**One-class-per-file contract:** the code blocks below group classes by namespace for readability only. Each class MUST live in its own file exactly as enumerated in §25 — `app/Filament/Resources/<Resource>/Pages/<Class>.php` contains exactly `class <Class>`. A block showing four classes therefore maps to four files, not one.
+
+```php
+namespace App\Filament\Resources\Products\Pages;
+
+use App\Filament\Resources\Products\ProductResource;
+use Filament\Resources\Pages\CreateRecord;
+use Filament\Resources\Pages\EditRecord;
+use Filament\Resources\Pages\ListRecords;
+use Filament\Resources\Pages\ViewRecord;
+
+class ListProducts extends ListRecords
+{
+    protected static string $resource = ProductResource::class;
+}
+
+class CreateProduct extends CreateRecord
+{
+    protected static string $resource = ProductResource::class;
+}
+
+class EditProduct extends EditRecord
+{
+    protected static string $resource = ProductResource::class;
+}
+
+class ViewProduct extends ViewRecord
+{
+    protected static string $resource = ProductResource::class;
+}
+```
+
+```php
+namespace App\Filament\Resources\TransferRequisitions\Pages;
+
+use App\Filament\Resources\TransferRequisitions\TransferRequisitionResource;
+use Filament\Resources\Pages\EditRecord;
+use Filament\Resources\Pages\ListRecords;
+use Filament\Resources\Pages\ViewRecord;
+
+class ListTransferRequisitions extends ListRecords
+{
+    protected static string $resource = TransferRequisitionResource::class;
+}
+
+// Canonical HasWizard implementation: §7B.2 — intentionally not stubbed here.
+
+class EditTransferRequisition extends EditRecord
+{
+    protected static string $resource = TransferRequisitionResource::class;
+}
+
+class ViewTransferRequisition extends ViewRecord
+{
+    protected static string $resource = TransferRequisitionResource::class;
+}
+```
+
+```php
+namespace App\Filament\Resources\DirectTransfers\Pages;
+
+use App\Filament\Resources\DirectTransfers\DirectTransferResource;
+use Filament\Resources\Pages\ListRecords;
+use Filament\Resources\Pages\ViewRecord;
+
+class ListDirectTransfers extends ListRecords
+{
+    protected static string $resource = DirectTransferResource::class;
+}
+
+// Canonical HasWizard implementation: §7C.2 — intentionally not stubbed here.
+
+class ViewDirectTransfer extends ViewRecord
+{
+    protected static string $resource = DirectTransferResource::class;
+}
+```
+
+```php
+namespace App\Filament\Resources\InTransits\Pages;
+
+use App\Filament\Resources\InTransits\InTransitResource;
+use Filament\Resources\Pages\ListRecords;
+use Filament\Resources\Pages\ViewRecord;
+
+class ListInTransits extends ListRecords
+{
+    protected static string $resource = InTransitResource::class;
+}
+
+class ViewInTransit extends ViewRecord
+{
+    protected static string $resource = InTransitResource::class;
+}
+```
+
+```php
+namespace App\Filament\Resources\StockMovements\Pages;
+
+use App\Filament\Resources\StockMovements\StockMovementResource;
+use Filament\Resources\Pages\ListRecords;
+use Filament\Resources\Pages\ViewRecord;
+
+class ListStockMovements extends ListRecords
+{
+    protected static string $resource = StockMovementResource::class;
+}
+
+class ViewStockMovement extends ViewRecord
+{
+    protected static string $resource = StockMovementResource::class;
+}
+```
+
+```php
+namespace App\Filament\Resources\LossLedgers\Pages;
+
+use App\Filament\Resources\LossLedgers\LossLedgerResource;
+use Filament\Resources\Pages\ListRecords;
+use Filament\Resources\Pages\ViewRecord;
+
+class ListLossLedgers extends ListRecords
+{
+    protected static string $resource = LossLedgerResource::class;
+}
+
+class ViewLossLedger extends ViewRecord
+{
+    protected static string $resource = LossLedgerResource::class;
+}
+```
+
+```php
+namespace App\Filament\Resources\Warehouses\Pages;
+
+use App\Exceptions\DomainRuleViolationException;
+use App\Filament\Resources\Warehouses\WarehouseResource;
+use App\Models\Warehouse;
+use Filament\Resources\Pages\CreateRecord;
+use Filament\Resources\Pages\EditRecord;
+use Filament\Resources\Pages\ListRecords;
+use Filament\Resources\Pages\ViewRecord;
+
+class ListWarehouses extends ListRecords
+{
+    protected static string $resource = WarehouseResource::class;
+}
+
+class CreateWarehouse extends CreateRecord
+{
+    protected static string $resource = WarehouseResource::class;
+
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        // §2 warehouses.code rule: a blank code is derived from `name`,
+        // never stored as an empty string.
+        if (blank($data['code'] ?? null)) {
+            $data['code'] = self::deriveCode((string) ($data['name'] ?? ''));
+        }
+
+        return $data;
+    }
+
+    /**
+     * Derive a unique warehouse code from the warehouse name (§2):
+     * uppercase, non-alphanumeric runs replaced with `-`, trimmed,
+     * truncated to 50 chars, `-NNN` appended on unique collision.
+     * The base is shortened to 46 chars when a suffix is required so the
+     * result keeps the form's `maxLength(50)` ceiling.
+     */
+    private static function deriveCode(string $name): string
+    {
+        $base = substr(trim((string) preg_replace('/[^A-Z0-9]+/', '-', strtoupper($name)), '-'), 0, 50);
+
+        if ($base === '') {
+            $base = 'WH';
+        }
+
+        if (! Warehouse::where('code', $base)->exists()) {
+            return $base;
+        }
+
+        for ($i = 1; $i <= 999; $i++) {
+            $candidate = substr($base, 0, 46) . '-' . sprintf('%03d', $i);
+
+            if (! Warehouse::where('code', $candidate)->exists()) {
+                return $candidate;
+            }
+        }
+
+        throw new DomainRuleViolationException('errors.warehouse_code_exhausted', ['name' => $name]);
+    }
+}
+
+class EditWarehouse extends EditRecord
+{
+    protected static string $resource = WarehouseResource::class;
+}
+
+class ViewWarehouse extends ViewRecord
+{
+    protected static string $resource = WarehouseResource::class;
+}
+```
+
+```php
+namespace App\Filament\Resources\Users\Pages;
+
+use App\Filament\Resources\Users\UserResource;
+use Filament\Resources\Pages\CreateRecord;
+use Filament\Resources\Pages\EditRecord;
+use Filament\Resources\Pages\ListRecords;
+
+class ListUsers extends ListRecords
+{
+    protected static string $resource = UserResource::class;
+}
+
+class CreateUser extends CreateRecord
+{
+    protected static string $resource = UserResource::class;
+}
+
+class EditUser extends EditRecord
+{
+    protected static string $resource = UserResource::class;
+}
+```
+
+```php
+namespace App\Filament\Resources\PurchaseOrders\Pages;
+
+use App\Filament\Resources\PurchaseOrders\PurchaseOrderResource;
+use Filament\Resources\Pages\EditRecord;
+use Filament\Resources\Pages\ListRecords;
+use Filament\Resources\Pages\ViewRecord;
+
+class ListPurchaseOrders extends ListRecords
+{
+    protected static string $resource = PurchaseOrderResource::class;
+}
+
+// Canonical HasWizard implementation: §7G.2 — intentionally not stubbed here.
+
+class EditPurchaseOrder extends EditRecord
+{
+    protected static string $resource = PurchaseOrderResource::class;
+}
+
+class ViewPurchaseOrder extends ViewRecord
+{
+    protected static string $resource = PurchaseOrderResource::class;
+}
+```
+
+```php
+namespace App\Filament\Resources\SalesOrders\Pages;
+
+use App\Filament\Resources\SalesOrders\SalesOrderResource;
+use Filament\Resources\Pages\EditRecord;
+use Filament\Resources\Pages\ListRecords;
+use Filament\Resources\Pages\ViewRecord;
+
+class ListSalesOrders extends ListRecords
+{
+    protected static string $resource = SalesOrderResource::class;
+}
+
+// Canonical HasWizard implementation: §7H.2 — intentionally not stubbed here.
+
+class EditSalesOrder extends EditRecord
+{
+    protected static string $resource = SalesOrderResource::class;
+}
+
+class ViewSalesOrder extends ViewRecord
+{
+    protected static string $resource = SalesOrderResource::class;
+}
+```
+
+```php
+namespace App\Filament\Resources\Suppliers\Pages;
+
+use App\Filament\Resources\Suppliers\SupplierResource;
+use Filament\Resources\Pages\CreateRecord;
+use Filament\Resources\Pages\EditRecord;
+use Filament\Resources\Pages\ListRecords;
+
+class ListSuppliers extends ListRecords
+{
+    protected static string $resource = SupplierResource::class;
+}
+
+class CreateSupplier extends CreateRecord
+{
+    protected static string $resource = SupplierResource::class;
+}
+
+class EditSupplier extends EditRecord
+{
+    protected static string $resource = SupplierResource::class;
+}
+```
+
+```php
+namespace App\Filament\Resources\Customers\Pages;
+
+use App\Filament\Resources\Customers\CustomerResource;
+use Filament\Resources\Pages\CreateRecord;
+use Filament\Resources\Pages\EditRecord;
+use Filament\Resources\Pages\ListRecords;
+
+class ListCustomers extends ListRecords
+{
+    protected static string $resource = CustomerResource::class;
+}
+
+class CreateCustomer extends CreateRecord
+{
+    protected static string $resource = CustomerResource::class;
+}
+
+class EditCustomer extends EditRecord
+{
+    protected static string $resource = CustomerResource::class;
+}
+```
+
 A Resource route is not considered implemented until the referenced Page class can be autoloaded.
 
 ### 18.3 Wizard Review Component
 
-Replace the four `review_summary` `Placeholder` implementations with:
+Render the four `review_summary` `Placeholder` implementations through:
 
 ```text
 app/Livewire/Filament/Wizards/WizardReviewStep.php
 ```
 
-The component receives the current wizard state and renders a read-only summary. It must never mutate inventory or call a domain service.
+```php
+namespace App\Livewire\Filament\Wizards;
+
+use Illuminate\Contracts\View\View;
+use Livewire\Component;
+
+class WizardReviewStep extends Component
+{
+    public array $state = [];
+
+    public string $reviewView = '';
+
+    public function forView(string $view, array $state): static
+    {
+        $this->reviewView = $view;
+        $this->state = $state;
+
+        return $this;
+    }
+
+    public static function renderSummary(string $view, array $state): View
+    {
+        return view($view, ['state' => $state]);
+    }
+
+    public function render(): View
+    {
+        return view($this->reviewView, ['state' => $this->state]);
+    }
+}
+```
+
+The component receives the current wizard state and renders a read-only summary. It must never mutate inventory or call a domain service. It renders the existing blade review views (`transfer-review`, `purchase-order-review`, `sales-order-review`, `direct-transfer-review`).
+
+Review views live under `resources/views/filament/wizards/` (§0A.11) and render the raw wizard `$state` array (keys mirror the form field names). All strings resolve through `__()`:
+
+```blade
+{{-- resources/views/filament/wizards/transfer-review.blade.php --}}
+@php
+    // Wizard state carries foreign keys (§7B.1: `from_warehouse_id`,
+    // `to_warehouse_id`, repeater `product_variant_id`). Display names are
+    // resolved from those keys at render time — never stored in the state.
+    $fromName = isset($state['from_warehouse_id']) ? \App\Models\Warehouse::find($state['from_warehouse_id'])?->name : null;
+    $toName = isset($state['to_warehouse_id']) ? \App\Models\Warehouse::find($state['to_warehouse_id'])?->name : null;
+@endphp
+<div class="space-y-4">
+    <h3 class="text-base font-semibold">{{ __('wizards.transfer_review.title') }}</h3>
+    <dl class="grid grid-cols-2 gap-3 text-sm">
+        <div>
+            <dt class="text-zinc-500">{{ __('wizards.transfer_review.from') }}</dt>
+            <dd class="font-medium">{{ $fromName ?? '—' }}</dd>
+        </div>
+        <div>
+            <dt class="text-zinc-500">{{ __('wizards.transfer_review.to') }}</dt>
+            <dd class="font-medium">{{ $toName ?? '—' }}</dd>
+        </div>
+    </dl>
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="text-left text-zinc-500">
+                <th>{{ __('wizards.transfer_review.sku') }}</th>
+                <th>{{ __('wizards.transfer_review.qty') }}</th>
+                <th>{{ __('wizards.transfer_review.unit') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (($state['items'] ?? []) as $item)
+                @php($sku = isset($item['product_variant_id']) ? \App\Models\ProductVariant::find($item['product_variant_id'])?->sku : null)
+                <tr class="border-t border-zinc-200">
+                    <td class="font-mono">{{ $sku ?? '—' }}</td>
+                    <td>{{ $item['requested_qty'] ?? 0 }}</td>
+                    <td>{{ $item['requested_unit_name'] ?? '—' }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+    @if (! empty($state['notes']))
+        <p class="text-sm text-zinc-500">{{ $state['notes'] }}</p>
+    @endif
+</div>
+```
+
+```blade
+{{-- resources/views/filament/wizards/purchase-order-review.blade.php --}}
+@php
+    // Wizard state carries foreign keys (§7G.1: `supplier_id`,
+    // `warehouse_id`, repeater `product_variant_id`). Display names are
+    // resolved from those keys at render time — never stored in the state.
+    $supplierName = isset($state['supplier_id']) ? \App\Models\Supplier::find($state['supplier_id'])?->name : null;
+    $warehouseName = isset($state['warehouse_id']) ? \App\Models\Warehouse::find($state['warehouse_id'])?->name : null;
+@endphp
+<div class="space-y-4">
+    <h3 class="text-base font-semibold">{{ __('wizards.purchase_order_review.title') }}</h3>
+    <dl class="grid grid-cols-2 gap-3 text-sm">
+        <div>
+            <dt class="text-zinc-500">{{ __('wizards.purchase_order_review.supplier') }}</dt>
+            <dd class="font-medium">{{ $supplierName ?? '—' }}</dd>
+        </div>
+        <div>
+            <dt class="text-zinc-500">{{ __('wizards.purchase_order_review.warehouse') }}</dt>
+            <dd class="font-medium">{{ $warehouseName ?? '—' }}</dd>
+        </div>
+    </dl>
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="text-left text-zinc-500">
+                <th>{{ __('wizards.purchase_order_review.sku') }}</th>
+                <th>{{ __('wizards.purchase_order_review.qty') }}</th>
+                <th>{{ __('wizards.purchase_order_review.unit_cost') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (($state['items'] ?? []) as $item)
+                @php($sku = isset($item['product_variant_id']) ? \App\Models\ProductVariant::find($item['product_variant_id'])?->sku : null)
+                <tr class="border-t border-zinc-200">
+                    <td class="font-mono">{{ $sku ?? '—' }}</td>
+                    <td>{{ $item['ordered_qty'] ?? 0 }}</td>
+                    <td>{{ $item['unit_cost_price'] ?? '—' }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+    @if (! empty($state['notes']))
+        <p class="text-sm text-zinc-500">{{ $state['notes'] }}</p>
+    @endif
+</div>
+```
+
+```blade
+{{-- resources/views/filament/wizards/sales-order-review.blade.php --}}
+@php
+    // Wizard state carries foreign keys (§7H.1: `customer_id`,
+    // `warehouse_id`, repeater `product_variant_id`). Display names are
+    // resolved from those keys at render time — never stored in the state.
+    $customerName = isset($state['customer_id']) ? \App\Models\Customer::find($state['customer_id'])?->name : null;
+    $warehouseName = isset($state['warehouse_id']) ? \App\Models\Warehouse::find($state['warehouse_id'])?->name : null;
+@endphp
+<div class="space-y-4">
+    <h3 class="text-base font-semibold">{{ __('wizards.sales_order_review.title') }}</h3>
+    <dl class="grid grid-cols-2 gap-3 text-sm">
+        <div>
+            <dt class="text-zinc-500">{{ __('wizards.sales_order_review.customer') }}</dt>
+            <dd class="font-medium">{{ $customerName ?? '—' }}</dd>
+        </div>
+        <div>
+            <dt class="text-zinc-500">{{ __('wizards.sales_order_review.warehouse') }}</dt>
+            <dd class="font-medium">{{ $warehouseName ?? '—' }}</dd>
+        </div>
+    </dl>
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="text-left text-zinc-500">
+                <th>{{ __('wizards.sales_order_review.sku') }}</th>
+                <th>{{ __('wizards.sales_order_review.qty') }}</th>
+                <th>{{ __('wizards.sales_order_review.unit') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (($state['items'] ?? []) as $item)
+                @php($sku = isset($item['product_variant_id']) ? \App\Models\ProductVariant::find($item['product_variant_id'])?->sku : null)
+                <tr class="border-t border-zinc-200">
+                    <td class="font-mono">{{ $sku ?? '—' }}</td>
+                    <td>{{ $item['qty'] ?? 0 }}</td>
+                    <td>{{ $item['unit_name'] ?? '—' }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+    @if (! empty($state['notes']))
+        <p class="text-sm text-zinc-500">{{ $state['notes'] }}</p>
+    @endif
+</div>
+```
+
+```blade
+{{-- resources/views/filament/wizards/direct-transfer-review.blade.php --}}
+@php
+    // Wizard state carries foreign keys (§7C.1: `from_warehouse_id`,
+    // `to_warehouse_id`, repeater `product_variant_id`). Display names are
+    // resolved from those keys at render time — never stored in the state.
+    $fromName = isset($state['from_warehouse_id']) ? \App\Models\Warehouse::find($state['from_warehouse_id'])?->name : null;
+    $toName = isset($state['to_warehouse_id']) ? \App\Models\Warehouse::find($state['to_warehouse_id'])?->name : null;
+@endphp
+<div class="space-y-4">
+    <h3 class="text-base font-semibold">{{ __('wizards.direct_transfer_review.title') }}</h3>
+    <dl class="grid grid-cols-2 gap-3 text-sm">
+        <div>
+            <dt class="text-zinc-500">{{ __('wizards.direct_transfer_review.from') }}</dt>
+            <dd class="font-medium">{{ $fromName ?? '—' }}</dd>
+        </div>
+        <div>
+            <dt class="text-zinc-500">{{ __('wizards.direct_transfer_review.to') }}</dt>
+            <dd class="font-medium">{{ $toName ?? '—' }}</dd>
+        </div>
+    </dl>
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="text-left text-zinc-500">
+                <th>{{ __('wizards.direct_transfer_review.sku') }}</th>
+                <th>{{ __('wizards.direct_transfer_review.qty') }}</th>
+                <th>{{ __('wizards.direct_transfer_review.unit') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (($state['items'] ?? []) as $item)
+                @php($sku = isset($item['product_variant_id']) ? \App\Models\ProductVariant::find($item['product_variant_id'])?->sku : null)
+                <tr class="border-t border-zinc-200">
+                    <td class="font-mono">{{ $sku ?? '—' }}</td>
+                    <td>{{ $item['qty'] ?? 0 }}</td>
+                    <td>{{ $item['unit_name'] ?? '—' }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+    @if (! empty($state['notes']))
+        <p class="text-sm text-zinc-500">{{ $state['notes'] }}</p>
+    @endif
+</div>
+```
 
 The sales current-price preview may remain a `Placeholder` because it is a derived display value, not a wizard review component.
 
@@ -10150,6 +15518,11 @@ app/Models/StockMovementIdempotencyKey.php
 Required behavior:
 
 ```php
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
 class StockMovementIdempotencyKey extends Model
 {
     public $timestamps = false;
@@ -10174,6 +15547,40 @@ class StockMovementIdempotencyKey extends Model
 ```
 
 The database unique constraint on `(transfer_requisition_id, payload_checksum)` remains mandatory.
+
+Migration (runs in Phase 01 order, after `transfer_requisitions`):
+
+```php
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('stock_movement_idempotency_keys', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('transfer_requisition_id')
+                ->constrained('transfer_requisitions')
+                ->cascadeOnDelete();
+            $table->string('payload_checksum', 64);
+            $table->json('resulting_item_states');
+            $table->timestamp('created_at')->useCurrent();
+
+            $table->unique(
+                ['transfer_requisition_id', 'payload_checksum'],
+                'idempotency_requisition_checksum_unique',
+            );
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('stock_movement_idempotency_keys');
+    }
+};
+```
 
 ### 18.5 Badge Scope Trait
 
@@ -10215,7 +15622,7 @@ public function confirm(TransferRequisition $requisition): void
             TransferRequisitionStatus::UnderReviewFulfiller,
             TransferRequisitionStatus::UnderReviewRequestor,
         ], true)) {
-            throw new DomainException('Requisition cannot be confirmed.');
+            throw new \App\Exceptions\InvalidDocumentStateException(TransferRequisition::class, (int) $fresh->id, $fresh->status->value, 'confirm');
         }
 
         $items = TransferRequisitionItem::query()
@@ -10223,7 +15630,11 @@ public function confirm(TransferRequisition $requisition): void
             ->lockForUpdate()
             ->get();
 
-        $this->negotiation->materializeRequestedAsApproved($fresh, $items);
+        // Bind the locked collection so materialization cannot lazy-load
+        // unlocked copies.
+        $fresh->setRelation('items', $items);
+
+        $this->negotiation->materializeRequestedAsApproved($fresh);
 
         $fresh->update([
             'status' => TransferRequisitionStatus::Confirmed,
@@ -10236,7 +15647,7 @@ public function confirm(TransferRequisition $requisition): void
 }
 ```
 
-The event must be dispatched after commit.
+After-commit delivery is guaranteed by `ShouldDispatchAfterCommit` on the event (§22.1a/§22.2): the `event()` call stays lexically inside the transaction and Laravel releases it only after commit. Dispatching outside the transaction would lose that guarantee, so §6.6 follows this same inside-transaction shape.
 
 ### 19.2 Transfer Cancellation Service
 
@@ -10251,7 +15662,7 @@ public function cancelRequisition(TransferRequisition $requisition): void
             ->findOrFail($requisition->id);
 
         if (! $fresh->canBeCancelled()) {
-            throw new DomainException('Transfer requisition cannot be cancelled.');
+            throw new \App\Exceptions\InvalidDocumentStateException(TransferRequisition::class, (int) $fresh->id, $fresh->status->value, 'cancel');
         }
 
         $fresh->update([
@@ -10275,7 +15686,7 @@ $fresh = TransferRequisition::query()
     ->findOrFail($requisition->id);
 
 if ($fresh->status !== TransferRequisitionStatus::Confirmed) {
-    throw new DomainException('Only confirmed requisitions can be dispatched.');
+    throw new \App\Exceptions\InvalidDocumentStateException(TransferRequisition::class, (int) $fresh->id, $fresh->status->value, 'dispatch');
 }
 ```
 
@@ -10428,7 +15839,7 @@ Authorization lives on **`DirectTransferPolicy`** — not on `StockMovementPolic
 ```php
 DirectTransferPolicy::create(User $user): bool
 {
-    return $user->warehouses()->count() >= 1;
+    return $user->isAdmin() || $user->warehouses()->count() >= 1;
 }
 ```
 
@@ -10445,7 +15856,7 @@ Badge scope (Section 1B) and query scope (this section) are related but distinct
 - **Query scope** restricts which records the user may fetch and page through.
 - **Badge scope** restricts which records contribute to the navigation badge count.
 
-They must be consistent: a user's badge count must never exceed the number of records they can list. Both must resolve through the same warehouse ID set — the badge scope resolver and the query scope resolver must agree for the same user.
+They must be consistent: a user's badge count must never exceed the number of records they can list. Both must resolve through the same warehouse ID set — the badge scope resolver and the query scope resolver must agree for the same user. `DirectTransfer` declares no navigation badge (§1B.2), so this rule applies per badge-bearing resource.
 
 ---
 
@@ -10453,9 +15864,12 @@ They must be consistent: a user's badge count must never exceed the number of re
 
 ### 21.1 Routes
 
-Create:
+Full `routes/web.php` wiring (the STN endpoints are the only custom web routes; everything else is served by the Filament panel):
 
 ```php
+use App\Http\Controllers\StnController;
+use Illuminate\Support\Facades\Route;
+
 Route::middleware('auth')
     ->get('/stn/{transferRequisition}/print', [StnController::class, 'print'])
     ->name('stn.print');
@@ -10466,6 +15880,181 @@ Route::middleware(['auth', 'signed'])
 ```
 
 The `scan` endpoint must authorize `receive`.
+
+`resources/views/stn/print.blade.php` — printable transfer note (print view strings resolve through `__()`, §0A.11/§0A.12):
+
+```blade
+{{-- resources/views/stn/print.blade.php --}}
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<head>
+    <meta charset="utf-8">
+    <title>{{ __('stn.print.title', ['ref' => $requisition->reference_code]) }}</title>
+    <style>
+        body { font-family: sans-serif; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #333; padding: 6px 8px; text-align: left; font-size: 13px; }
+        @media print { .no-print { display: none; } }
+    </style>
+</head>
+<body>
+    <h1>{{ __('stn.print.heading') }} — <span style="font-family: monospace;">{{ $requisition->reference_code }}</span></h1>
+    <p>{{ __('stn.print.route', ['from' => $requisition->fromWarehouse->name, 'to' => $requisition->toWarehouse->name]) }}</p>
+    <p>{{ __('stn.print.status', ['status' => $requisition->status->getLabel()]) }}</p>
+    <table>
+        <thead>
+            <tr>
+                <th>{{ __('stn.print.sku') }}</th>
+                <th>{{ __('stn.print.variant') }}</th>
+                <th>{{ __('stn.print.qty') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach ($requisition->items as $item)
+                <tr>
+                    <td style="font-family: monospace;">{{ $item->productVariant->sku }}</td>
+                    <td>{{ $item->productVariant->name }}</td>
+                    <td>{{ $item->approved_base_qty ?? $item->requested_base_qty }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+    <button class="no-print" onclick="window.print()">{{ __('stn.print.print_button') }}</button>
+</body>
+</html>
+```
+
+`resources/views/stn/scan.blade.php` — signed QR landing page; renders the scan UI shell and delegates all mutations to `InventoryService::scanToReceive()` via a Livewire component (no direct ledger writes from the view):
+
+```blade
+{{-- resources/views/stn/scan.blade.php --}}
+<x-layouts.app :title="__('stn.scan.title', ['ref' => $requisition->reference_code])">
+    <h1 class="text-lg font-semibold">
+        {{ __('stn.scan.heading') }} — <span class="font-mono">{{ $requisition->reference_code }}</span>
+    </h1>
+    <p class="text-sm text-zinc-500">
+        {{ __('stn.scan.route', ['from' => $requisition->fromWarehouse->name, 'to' => $requisition->toWarehouse->name]) }}
+    </p>
+    <livewire:stn.scan-form :requisition="$requisition->id" />
+</x-layouts.app>
+```
+
+`resources/views/components/layouts/app.blade.php` — minimal print/scan shell layout backing the `<x-layouts.app>` component used above (locale handling mirrors `stn/print.blade.php`):
+
+```blade
+{{-- resources/views/components/layouts/app.blade.php --}}
+@props(['title' => config('app.name')])
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ $title }}</title>
+</head>
+<body class="bg-white text-zinc-900">
+    <main class="mx-auto max-w-3xl space-y-4 p-6">
+        {{ $slot }}
+    </main>
+</body>
+</html>
+```
+
+`app/Livewire/Stn/ScanForm.php` — the `<livewire:stn.scan-form>` component referenced above. Mounts on the requisition id, renders one `received_good` / `received_damaged` row per requisition item, and delegates all mutations to `InventoryService::scanToReceive()` (never writes ledger records directly). The full `$lines` map is always submitted — omitting an item on the first scan is a write-off under `scanToReceive()` semantics (§6.2), so the form pre-fills every line with `0` rather than filtering empty rows. Client-side rules mirror the canonicalization contract (§19.6); the service re-validates canonically:
+
+```php
+namespace App\Livewire\Stn;
+
+use App\Models\TransferRequisition;
+use App\Services\InventoryService;
+use Illuminate\Contracts\View\View;
+use Livewire\Component;
+
+class ScanForm extends Component
+{
+    public int $requisitionId;
+
+    /** @var array<int, array{received_good: int, received_damaged: int}> */
+    public array $lines = [];
+
+    public ?string $error = null;
+
+    public function mount(int $requisition): void
+    {
+        $requisitionModel = TransferRequisition::findOrFail($requisition);
+
+        $this->requisitionId = $requisitionModel->id;
+
+        foreach ($requisitionModel->items()->orderBy('id')->pluck('id') as $itemId) {
+            $this->lines[$itemId] = ['received_good' => 0, 'received_damaged' => 0];
+        }
+    }
+
+    public function submit(InventoryService $inventory): void
+    {
+        $this->error = null;
+
+        $this->validate([
+            'lines'                       => 'required|array|min:1',
+            'lines.*.received_good'       => 'required|integer|min:0',
+            'lines.*.received_damaged'    => 'required|integer|min:0',
+        ]);
+
+        try {
+            $inventory->scanToReceive(
+                TransferRequisition::findOrFail($this->requisitionId),
+                collect($this->lines)
+                    ->map(fn ($line) => [
+                        'received_good'    => (int) $line['received_good'],
+                        'received_damaged' => (int) $line['received_damaged'],
+                    ])
+                    ->all(),
+            );
+        } catch (\App\Exceptions\DomainErrorException $e) {
+            $this->error = __($e->translationKey() . '.title', $e->context());
+        } catch (\DomainException $e) {
+            $this->error = $e->getMessage();
+        }
+    }
+
+    public function render(): View
+    {
+        return view('livewire.stn.scan-form', [
+            'items' => TransferRequisition::findOrFail($this->requisitionId)
+                ->items()->with('productVariant')->orderBy('id')->get(),
+        ]);
+    }
+}
+```
+
+`resources/views/livewire/stn/scan-form.blade.php` — the component view (scan strings resolve through `__()`, §0A.11):
+
+```blade
+{{-- resources/views/livewire/stn/scan-form.blade.php --}}
+<form wire:submit="submit" class="space-y-4">
+    @if ($error)
+        <p class="text-sm text-red-600">{{ $error }}</p>
+    @endif
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="text-left text-zinc-500">
+                <th>{{ __('stn.scan.sku') }}</th>
+                <th>{{ __('stn.scan.received_good') }}</th>
+                <th>{{ __('stn.scan.received_damaged') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach ($items as $item)
+                <tr class="border-t border-zinc-200">
+                    <td class="font-mono">{{ $item->productVariant->sku }}</td>
+                    <td><input type="number" min="0" step="1" wire:model="lines.{{ $item->id }}.received_good" class="w-24 border px-2 py-1"></td>
+                    <td><input type="number" min="0" step="1" wire:model="lines.{{ $item->id }}.received_damaged" class="w-24 border px-2 py-1"></td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+    <button type="submit" class="no-print bg-zinc-900 px-4 py-2 text-sm font-medium text-white">{{ __('stn.scan.submit') }}</button>
+</form>
+```
 
 ### 21.2 Signed URL Generation
 
@@ -10487,6 +16076,8 @@ route('stn.scan', ['transferRequisition' => $record->id])
 
 for the QR destination.
 
+**QR payload:** there is no stored QR-payload column by design (owner decision); the QR payload is the temporary signed `stn.scan` URL itself (7-day expiry).
+
 ### 21.3 Controller Contract
 
 ```text
@@ -10495,9 +16086,36 @@ app/Http/Controllers/StnController.php
 
 Methods:
 
-```text
-print(TransferRequisition $transferRequisition)
-scan(TransferRequisition $transferRequisition)
+```php
+namespace App\Http\Controllers;
+
+use App\Enums\TransferRequisitionStatus;
+use App\Models\TransferRequisition;
+use Illuminate\Support\Facades\Gate;
+
+class StnController extends Controller
+{
+    public function print(TransferRequisition $transferRequisition)
+    {
+        Gate::authorize('view', $transferRequisition);
+
+        return view('stn.print', ['requisition' => $transferRequisition]);
+    }
+
+    public function scan(TransferRequisition $transferRequisition)
+    {
+        Gate::authorize('receive', $transferRequisition);
+
+        if (! in_array($transferRequisition->status, [
+            TransferRequisitionStatus::Dispatched,
+            TransferRequisitionStatus::PartiallyReceived,
+        ], true)) {
+            abort(403);
+        }
+
+        return view('stn.scan', ['requisition' => $transferRequisition]);
+    }
+}
 ```
 
 `scan()`:
@@ -10519,6 +16137,7 @@ The controller must never create `StockMovement`, `LossLedger`, or `InTransit` r
 ```text
 InventoryBelowReorderPoint
 TransferConfirmed
+TransferCancelled
 TransferDispatched
 TransferReceived
 LossRecorded
@@ -10526,7 +16145,158 @@ PurchaseOrderReceived
 SalesOrderDispatched
 ```
 
-`TransferConfirmed` is added because confirmation is now an explicit transactional service boundary.
+`TransferConfirmed` is added because confirmation is now an explicit transactional service boundary. `TransferCancelled` is listed because `TransferRequisitionService::cancelRequisition()` dispatches it (§19.2).
+
+### 22.1a Event Class Contract
+
+Create under `app/Events/` — one file per event, matching the §25 file map 1:1. All events use after-commit dispatch semantics (§22.2) via `ShouldDispatchAfterCommit`. Payloads are minimal ids (owner-approved): document-header ids for lifecycle events, the created ledger id for loss events, and variant + warehouse ids for the reorder-point alert. Listeners re-query relations from these ids.
+
+`app/Events/TransferConfirmed.php`:
+
+```php
+namespace App\Events;
+
+use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
+
+class TransferConfirmed implements ShouldDispatchAfterCommit
+{
+    use Dispatchable, InteractsWithSockets, SerializesModels;
+
+    public function __construct(public readonly int $requisitionId) {}
+}
+```
+
+`app/Events/TransferCancelled.php`:
+
+```php
+namespace App\Events;
+
+use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
+
+class TransferCancelled implements ShouldDispatchAfterCommit
+{
+    use Dispatchable, InteractsWithSockets, SerializesModels;
+
+    public function __construct(public readonly int $requisitionId) {}
+}
+```
+
+`app/Events/TransferDispatched.php`:
+
+```php
+namespace App\Events;
+
+use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
+
+class TransferDispatched implements ShouldDispatchAfterCommit
+{
+    use Dispatchable, InteractsWithSockets, SerializesModels;
+
+    public function __construct(public readonly int $requisitionId) {}
+}
+```
+
+`app/Events/TransferReceived.php`:
+
+```php
+namespace App\Events;
+
+use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
+
+class TransferReceived implements ShouldDispatchAfterCommit
+{
+    use Dispatchable, InteractsWithSockets, SerializesModels;
+
+    public function __construct(public readonly int $requisitionId) {}
+}
+```
+
+`app/Events/LossRecorded.php`:
+
+```php
+namespace App\Events;
+
+use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
+
+class LossRecorded implements ShouldDispatchAfterCommit
+{
+    use Dispatchable, InteractsWithSockets, SerializesModels;
+
+    public function __construct(public readonly int $lossLedgerId) {}
+}
+```
+
+`app/Events/PurchaseOrderReceived.php`:
+
+```php
+namespace App\Events;
+
+use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
+
+class PurchaseOrderReceived implements ShouldDispatchAfterCommit
+{
+    use Dispatchable, InteractsWithSockets, SerializesModels;
+
+    public function __construct(public readonly int $purchaseOrderId) {}
+}
+```
+
+`app/Events/SalesOrderDispatched.php`:
+
+```php
+namespace App\Events;
+
+use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
+
+class SalesOrderDispatched implements ShouldDispatchAfterCommit
+{
+    use Dispatchable, InteractsWithSockets, SerializesModels;
+
+    public function __construct(public readonly int $salesOrderId) {}
+}
+```
+
+`app/Events/InventoryBelowReorderPoint.php`:
+
+```php
+namespace App\Events;
+
+use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
+
+class InventoryBelowReorderPoint implements ShouldDispatchAfterCommit
+{
+    use Dispatchable, InteractsWithSockets, SerializesModels;
+
+    public function __construct(
+        public readonly int $productVariantId,
+        public readonly int $warehouseId,
+    ) {}
+}
+```
 
 ### 22.2 Event Timing
 
@@ -10556,6 +16326,576 @@ Listeners may:
 - publish broadcast events.
 
 Listeners may not bypass the domain services to mutate stock.
+
+### 22.3a Listener Class Contract
+
+Create under `app/Listeners/`. Each listener is queued (`ShouldQueue`) and performs only the allowed side effects above — never a stock mutation. One listener per domain event, following this canonical shape:
+
+```php
+namespace App\Listeners;
+
+use App\Enums\UserRole;
+use App\Events\TransferConfirmed;
+use App\Models\TransferRequisition;
+use App\Models\User;
+use App\Notifications\TransferConfirmedNotification;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Support\Facades\Notification;
+
+class NotifyTransferConfirmed implements ShouldQueue
+{
+    public function handle(TransferConfirmed $event): void
+    {
+        // v1 (owner-approved): database notification only, queued. Audience is
+        // warehouse-scoped — admins plus staff assigned to the affected
+        // warehouse(s). No mail/broadcast until operators request it.
+        $requisition = TransferRequisition::find($event->requisitionId);
+
+        if (! $requisition) {
+            return;
+        }
+
+        $warehouseIds = [$requisition->from_warehouse_id, $requisition->to_warehouse_id];
+
+        $users = User::query()
+            ->where('role', UserRole::Admin->value)
+            ->orWhereHas('warehouses', function ($query) use ($warehouseIds) {
+                $query->whereIn('warehouses.id', $warehouseIds);
+            })
+            ->get();
+
+        Notification::send($users, new TransferConfirmedNotification(
+            $requisition->id,
+            $requisition->reference_code,
+        ));
+    }
+}
+```
+
+```php
+namespace App\Listeners;
+
+use App\Enums\UserRole;
+use App\Events\TransferCancelled;
+use App\Models\TransferRequisition;
+use App\Models\User;
+use App\Notifications\TransferCancelledNotification;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Support\Facades\Notification;
+
+class NotifyTransferCancelled implements ShouldQueue
+{
+    public function handle(TransferCancelled $event): void
+    {
+        // v1 (owner-approved): database notification only, queued. Audience is
+        // warehouse-scoped — admins plus staff assigned to the requisition's
+        // source warehouse. No mail/broadcast until operators request it.
+        $requisition = TransferRequisition::find($event->requisitionId);
+
+        if (! $requisition) {
+            return;
+        }
+
+        $users = User::query()
+            ->where('role', UserRole::Admin->value)
+            ->orWhereHas('warehouses', function ($query) use ($requisition) {
+                $query->whereIn('warehouses.id', [$requisition->from_warehouse_id]);
+            })
+            ->get();
+
+        Notification::send($users, new TransferCancelledNotification(
+            $requisition->id,
+            $requisition->reference_code,
+        ));
+    }
+}
+```
+
+```php
+namespace App\Listeners;
+
+use App\Enums\UserRole;
+use App\Events\TransferDispatched;
+use App\Models\TransferRequisition;
+use App\Models\User;
+use App\Notifications\TransferDispatchedNotification;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Support\Facades\Notification;
+
+class NotifyTransferDispatched implements ShouldQueue
+{
+    public function handle(TransferDispatched $event): void
+    {
+        // v1 (owner-approved): database notification only, queued. Audience is
+        // warehouse-scoped — admins plus staff assigned to the requisition's
+        // destination warehouse. No mail/broadcast until operators request it.
+        $requisition = TransferRequisition::find($event->requisitionId);
+
+        if (! $requisition) {
+            return;
+        }
+
+        $users = User::query()
+            ->where('role', UserRole::Admin->value)
+            ->orWhereHas('warehouses', function ($query) use ($requisition) {
+                $query->whereIn('warehouses.id', [$requisition->to_warehouse_id]);
+            })
+            ->get();
+
+        Notification::send($users, new TransferDispatchedNotification(
+            $requisition->id,
+            $requisition->reference_code,
+        ));
+    }
+}
+```
+
+```php
+namespace App\Listeners;
+
+use App\Enums\UserRole;
+use App\Events\TransferReceived;
+use App\Models\TransferRequisition;
+use App\Models\User;
+use App\Notifications\TransferReceivedNotification;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Support\Facades\Notification;
+
+class NotifyTransferReceived implements ShouldQueue
+{
+    public function handle(TransferReceived $event): void
+    {
+        // v1 (owner-approved): database notification only, queued. Audience is
+        // warehouse-scoped — admins plus staff assigned to both endpoint
+        // warehouses. No mail/broadcast until operators request it.
+        $requisition = TransferRequisition::find($event->requisitionId);
+
+        if (! $requisition) {
+            return;
+        }
+
+        $warehouseIds = [$requisition->from_warehouse_id, $requisition->to_warehouse_id];
+
+        $users = User::query()
+            ->where('role', UserRole::Admin->value)
+            ->orWhereHas('warehouses', function ($query) use ($warehouseIds) {
+                $query->whereIn('warehouses.id', $warehouseIds);
+            })
+            ->get();
+
+        Notification::send($users, new TransferReceivedNotification(
+            $requisition->id,
+            $requisition->reference_code,
+        ));
+    }
+}
+```
+
+```php
+namespace App\Listeners;
+
+use App\Enums\UserRole;
+use App\Events\LossRecorded;
+use App\Models\LossLedger;
+use App\Models\User;
+use App\Notifications\LossRecordedNotification;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Support\Facades\Notification;
+
+class NotifyLossRecorded implements ShouldQueue
+{
+    public function handle(LossRecorded $event): void
+    {
+        // v1 (owner-approved): database notification only, queued. Audience is
+        // warehouse-scoped — admins, auditors, plus staff assigned to the
+        // loss warehouse. No mail/broadcast until operators request it.
+        $loss = LossLedger::find($event->lossLedgerId);
+
+        if (! $loss) {
+            return;
+        }
+
+        $users = User::query()
+            ->whereIn('role', [UserRole::Admin->value, UserRole::Auditor->value])
+            ->orWhereHas('warehouses', function ($query) use ($loss) {
+                $query->whereIn('warehouses.id', [$loss->warehouse_id]);
+            })
+            ->get();
+
+        Notification::send($users, new LossRecordedNotification($loss->id));
+    }
+}
+```
+
+```php
+namespace App\Listeners;
+
+use App\Enums\UserRole;
+use App\Events\PurchaseOrderReceived;
+use App\Models\PurchaseOrder;
+use App\Models\User;
+use App\Notifications\PurchaseOrderReceivedNotification;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Support\Facades\Notification;
+
+class NotifyPurchaseOrderReceived implements ShouldQueue
+{
+    public function handle(PurchaseOrderReceived $event): void
+    {
+        // v1 (owner-approved): database notification only, queued. Audience is
+        // warehouse-scoped — admins plus staff assigned to the order's
+        // warehouse. No mail/broadcast until operators request it.
+        $order = PurchaseOrder::find($event->purchaseOrderId);
+
+        if (! $order) {
+            return;
+        }
+
+        $users = User::query()
+            ->where('role', UserRole::Admin->value)
+            ->orWhereHas('warehouses', function ($query) use ($order) {
+                $query->whereIn('warehouses.id', [$order->warehouse_id]);
+            })
+            ->get();
+
+        Notification::send($users, new PurchaseOrderReceivedNotification(
+            $order->id,
+            $order->reference_code,
+        ));
+    }
+}
+```
+
+```php
+namespace App\Listeners;
+
+use App\Enums\UserRole;
+use App\Events\SalesOrderDispatched;
+use App\Models\SalesOrder;
+use App\Models\User;
+use App\Notifications\SalesOrderDispatchedNotification;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Support\Facades\Notification;
+
+class NotifySalesOrderDispatched implements ShouldQueue
+{
+    public function handle(SalesOrderDispatched $event): void
+    {
+        // v1 (owner-approved): database notification only, queued. Audience is
+        // warehouse-scoped — admins plus staff assigned to the order's
+        // warehouse. No mail/broadcast until operators request it.
+        $order = SalesOrder::find($event->salesOrderId);
+
+        if (! $order) {
+            return;
+        }
+
+        $users = User::query()
+            ->where('role', UserRole::Admin->value)
+            ->orWhereHas('warehouses', function ($query) use ($order) {
+                $query->whereIn('warehouses.id', [$order->warehouse_id]);
+            })
+            ->get();
+
+        Notification::send($users, new SalesOrderDispatchedNotification(
+            $order->id,
+            $order->reference_code,
+        ));
+    }
+}
+```
+
+```php
+namespace App\Listeners;
+
+use App\Enums\UserRole;
+use App\Events\InventoryBelowReorderPoint;
+use App\Models\User;
+use App\Notifications\InventoryBelowReorderPointNotification;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Support\Facades\Notification;
+
+class NotifyInventoryBelowReorderPoint implements ShouldQueue
+{
+    public function handle(InventoryBelowReorderPoint $event): void
+    {
+        // v1 (owner-approved): database notification only, queued. Audience is
+        // warehouse-scoped — admins plus staff assigned to the alert's
+        // warehouse. No mail/broadcast until operators request it.
+        $users = User::query()
+            ->where('role', UserRole::Admin->value)
+            ->orWhereHas('warehouses', function ($query) use ($event) {
+                $query->whereIn('warehouses.id', [$event->warehouseId]);
+            })
+            ->get();
+
+        Notification::send($users, new InventoryBelowReorderPointNotification(
+            $event->productVariantId,
+            $event->warehouseId,
+        ));
+    }
+}
+```
+
+Wiring: the eight event→listener pairs are registered in `EventServiceProvider::$listen` (§17.4), which is the single canonical registration site — no ad hoc `Event::listen()` calls elsewhere.
+
+### 22.3b Notification Class Contract
+
+Create under `app/Notifications/` — one file per notification, matching the §25 file map 1:1. One concrete database notification per domain event — these are the classes the §22.3a listeners send. Constructors carry scalar ids (plus header reference codes resolved by the listener) so queued payloads stay serializable. Channel is database-only per the v1 owner approval in §22.3a; body strings resolve through `__()` (§0A.8):
+
+`app/Notifications/TransferConfirmedNotification.php`:
+
+```php
+namespace App\Notifications;
+
+use Illuminate\Notifications\Notification;
+
+class TransferConfirmedNotification extends Notification
+{
+    public function __construct(
+        public readonly int $requisitionId,
+        public readonly ?string $referenceCode = null,
+    ) {}
+
+    /** @return array<int, string> */
+    public function via(object $notifiable): array
+    {
+        return ['database'];
+    }
+
+    /** @return array<string, mixed> */
+    public function toDatabase(object $notifiable): array
+    {
+        return [
+            'requisition_id' => $this->requisitionId,
+            'reference_code' => $this->referenceCode,
+            'message'        => __('notifications.transfer_confirmed.body', ['ref' => $this->referenceCode ?? (string) $this->requisitionId]),
+        ];
+    }
+}
+```
+
+`app/Notifications/TransferCancelledNotification.php`:
+
+```php
+namespace App\Notifications;
+
+use Illuminate\Notifications\Notification;
+
+class TransferCancelledNotification extends Notification
+{
+    public function __construct(
+        public readonly int $requisitionId,
+        public readonly ?string $referenceCode = null,
+    ) {}
+
+    /** @return array<int, string> */
+    public function via(object $notifiable): array
+    {
+        return ['database'];
+    }
+
+    /** @return array<string, mixed> */
+    public function toDatabase(object $notifiable): array
+    {
+        return [
+            'requisition_id' => $this->requisitionId,
+            'reference_code' => $this->referenceCode,
+            'message'        => __('notifications.transfer_cancelled.body', ['ref' => $this->referenceCode ?? (string) $this->requisitionId]),
+        ];
+    }
+}
+```
+
+`app/Notifications/TransferDispatchedNotification.php`:
+
+```php
+namespace App\Notifications;
+
+use Illuminate\Notifications\Notification;
+
+class TransferDispatchedNotification extends Notification
+{
+    public function __construct(
+        public readonly int $requisitionId,
+        public readonly ?string $referenceCode = null,
+    ) {}
+
+    /** @return array<int, string> */
+    public function via(object $notifiable): array
+    {
+        return ['database'];
+    }
+
+    /** @return array<string, mixed> */
+    public function toDatabase(object $notifiable): array
+    {
+        return [
+            'requisition_id' => $this->requisitionId,
+            'reference_code' => $this->referenceCode,
+            'message'        => __('notifications.transfer_dispatched.body', ['ref' => $this->referenceCode ?? (string) $this->requisitionId]),
+        ];
+    }
+}
+```
+
+`app/Notifications/TransferReceivedNotification.php`:
+
+```php
+namespace App\Notifications;
+
+use Illuminate\Notifications\Notification;
+
+class TransferReceivedNotification extends Notification
+{
+    public function __construct(
+        public readonly int $requisitionId,
+        public readonly ?string $referenceCode = null,
+    ) {}
+
+    /** @return array<int, string> */
+    public function via(object $notifiable): array
+    {
+        return ['database'];
+    }
+
+    /** @return array<string, mixed> */
+    public function toDatabase(object $notifiable): array
+    {
+        return [
+            'requisition_id' => $this->requisitionId,
+            'reference_code' => $this->referenceCode,
+            'message'        => __('notifications.transfer_received.body', ['ref' => $this->referenceCode ?? (string) $this->requisitionId]),
+        ];
+    }
+}
+```
+
+`app/Notifications/LossRecordedNotification.php`:
+
+```php
+namespace App\Notifications;
+
+use Illuminate\Notifications\Notification;
+
+class LossRecordedNotification extends Notification
+{
+    public function __construct(public readonly int $lossLedgerId) {}
+
+    /** @return array<int, string> */
+    public function via(object $notifiable): array
+    {
+        return ['database'];
+    }
+
+    /** @return array<string, mixed> */
+    public function toDatabase(object $notifiable): array
+    {
+        return [
+            'loss_ledger_id' => $this->lossLedgerId,
+            'message'        => __('notifications.loss_recorded.body', ['id' => $this->lossLedgerId]),
+        ];
+    }
+}
+```
+
+`app/Notifications/PurchaseOrderReceivedNotification.php`:
+
+```php
+namespace App\Notifications;
+
+use Illuminate\Notifications\Notification;
+
+class PurchaseOrderReceivedNotification extends Notification
+{
+    public function __construct(
+        public readonly int $purchaseOrderId,
+        public readonly ?string $referenceCode = null,
+    ) {}
+
+    /** @return array<int, string> */
+    public function via(object $notifiable): array
+    {
+        return ['database'];
+    }
+
+    /** @return array<string, mixed> */
+    public function toDatabase(object $notifiable): array
+    {
+        return [
+            'purchase_order_id' => $this->purchaseOrderId,
+            'reference_code'    => $this->referenceCode,
+            'message'           => __('notifications.purchase_order_received.body', ['ref' => $this->referenceCode ?? (string) $this->purchaseOrderId]),
+        ];
+    }
+}
+```
+
+`app/Notifications/SalesOrderDispatchedNotification.php`:
+
+```php
+namespace App\Notifications;
+
+use Illuminate\Notifications\Notification;
+
+class SalesOrderDispatchedNotification extends Notification
+{
+    public function __construct(
+        public readonly int $salesOrderId,
+        public readonly ?string $referenceCode = null,
+    ) {}
+
+    /** @return array<int, string> */
+    public function via(object $notifiable): array
+    {
+        return ['database'];
+    }
+
+    /** @return array<string, mixed> */
+    public function toDatabase(object $notifiable): array
+    {
+        return [
+            'sales_order_id' => $this->salesOrderId,
+            'reference_code' => $this->referenceCode,
+            'message'        => __('notifications.sales_order_dispatched.body', ['ref' => $this->referenceCode ?? (string) $this->salesOrderId]),
+        ];
+    }
+}
+```
+
+`app/Notifications/InventoryBelowReorderPointNotification.php`:
+
+```php
+namespace App\Notifications;
+
+use Illuminate\Notifications\Notification;
+
+class InventoryBelowReorderPointNotification extends Notification
+{
+    public function __construct(
+        public readonly int $productVariantId,
+        public readonly int $warehouseId,
+    ) {}
+
+    /** @return array<int, string> */
+    public function via(object $notifiable): array
+    {
+        return ['database'];
+    }
+
+    /** @return array<string, mixed> */
+    public function toDatabase(object $notifiable): array
+    {
+        return [
+            'product_variant_id' => $this->productVariantId,
+            'warehouse_id'       => $this->warehouseId,
+            'message'            => __('notifications.inventory_below_reorder_point.body', ['variant' => $this->productVariantId]),
+        ];
+    }
+}
+```
+
+Recipients resolve through `User::notify()` / `Notification::send()`, so `App\Models\User` (§3.18) uses the `Notifiable` trait — the standard Laravel notifiable contract, no custom recipient infrastructure.
 
 ### 22.4 Queue Boundary
 
@@ -10673,12 +17013,54 @@ The following paths are part of the blueprint's implementation contract:
 app/
 ├── Console/
 ├── Enums/
-├── Events/
+│   ├── TransferRequisitionStatus.php
+│   ├── PurchaseOrderStatus.php
+│   ├── SalesOrderStatus.php
+│   ├── StockMovementType.php
+│   ├── RevisionStatus.php
+│   ├── NegotiationSide.php
+│   ├── InTransitStatus.php
+│   └── UserRole.php
 ├── Exceptions/
+│   ├── DomainErrorException.php
+│   ├── InsufficientStockException.php
+│   ├── OutstandingQuantityExceededException.php
+│   ├── InvalidDocumentStateException.php
+│   ├── InvalidRevisionTransitionException.php
+│   ├── ProductFamilyHasVariantsException.php
+│   ├── DomainRuleViolationException.php
+│   └── NegotiationNotAllowedException.php
 ├── Filament/
 │   ├── Resources/
 │   │   ├── Products/
+│   │   │   ├── ProductResource.php
+│   │   │   ├── Pages/
+│   │   │   │   ├── ListProducts.php
+│   │   │   │   ├── CreateProduct.php
+│   │   │   │   ├── EditProduct.php
+│   │   │   │   └── ViewProduct.php
+│   │   │   ├── Schemas/
+│   │   │   │   ├── ProductForm.php
+│   │   │   │   └── ProductInfolist.php
+│   │   │   ├── Tables/
+│   │   │   │   └── ProductsTable.php
+│   │   │   └── Actions/
+│   │   │       ├── SetCurrentPriceAction.php
+│   │   │       ├── EditProductFamilyAction.php
+│   │   │       ├── ManageUnitConversionsAction.php
+│   │   │       └── QuickStockAdjustmentAction.php
 │   │   ├── TransferRequisitions/
+│   │   │   ├── TransferRequisitionResource.php
+│   │   │   ├── Pages/
+│   │   │   │   ├── ListTransferRequisitions.php
+│   │   │   │   ├── CreateTransferRequisition.php
+│   │   │   │   ├── EditTransferRequisition.php
+│   │   │   │   └── ViewTransferRequisition.php
+│   │   │   ├── Schemas/
+│   │   │   │   ├── TransferRequisitionForm.php
+│   │   │   │   └── TransferRequisitionInfolist.php
+│   │   │   └── Tables/
+│   │   │       └── TransferRequisitionsTable.php
 │   │   ├── DirectTransfers/
 │   │   │   ├── DirectTransferResource.php
 │   │   │   ├── Pages/
@@ -10691,37 +17073,174 @@ app/
 │   │   │   └── Tables/
 │   │   │       └── DirectTransfersTable.php
 │   │   ├── InTransits/
+│   │   │   ├── InTransitResource.php
+│   │   │   ├── Pages/
+│   │   │   │   ├── ListInTransits.php
+│   │   │   │   └── ViewInTransit.php
+│   │   │   ├── Schemas/
+│   │   │   │   └── InTransitInfolist.php
+│   │   │   └── Tables/
+│   │   │       └── InTransitsTable.php
 │   │   ├── StockMovements/
+│   │   │   ├── StockMovementResource.php
+│   │   │   ├── Pages/
+│   │   │   │   ├── ListStockMovements.php
+│   │   │   │   └── ViewStockMovement.php
+│   │   │   ├── Schemas/
+│   │   │   │   └── StockMovementInfolist.php
+│   │   │   └── Tables/
+│   │   │       └── StockMovementsTable.php
 │   │   ├── LossLedgers/
+│   │   │   ├── LossLedgerResource.php
+│   │   │   ├── Pages/
+│   │   │   │   ├── ListLossLedgers.php
+│   │   │   │   └── ViewLossLedger.php
+│   │   │   ├── Schemas/
+│   │   │   │   └── LossLedgerInfolist.php
+│   │   │   └── Tables/
+│   │   │       └── LossLedgersTable.php
 │   │   ├── Warehouses/
+│   │   │   ├── WarehouseResource.php
+│   │   │   ├── Pages/
+│   │   │   │   ├── ListWarehouses.php
+│   │   │   │   ├── CreateWarehouse.php
+│   │   │   │   ├── EditWarehouse.php
+│   │   │   │   └── ViewWarehouse.php
+│   │   │   ├── Schemas/
+│   │   │   │   ├── WarehouseForm.php
+│   │   │   │   └── WarehouseInfolist.php
+│   │   │   └── Tables/
+│   │   │       └── WarehousesTable.php
 │   │   ├── Users/
+│   │   │   ├── UserResource.php
+│   │   │   ├── Pages/
+│   │   │   │   ├── ListUsers.php
+│   │   │   │   ├── CreateUser.php
+│   │   │   │   └── EditUser.php
+│   │   │   ├── Schemas/
+│   │   │   │   └── UserForm.php
+│   │   │   └── Tables/
+│   │   │       └── UsersTable.php
 │   │   ├── PurchaseOrders/
+│   │   │   ├── PurchaseOrderResource.php
+│   │   │   ├── Pages/
+│   │   │   │   ├── ListPurchaseOrders.php
+│   │   │   │   ├── CreatePurchaseOrder.php
+│   │   │   │   ├── EditPurchaseOrder.php
+│   │   │   │   └── ViewPurchaseOrder.php
+│   │   │   ├── Schemas/
+│   │   │   │   ├── PurchaseOrderForm.php
+│   │   │   │   └── PurchaseOrderInfolist.php
+│   │   │   └── Tables/
+│   │   │       └── PurchaseOrdersTable.php
 │   │   ├── SalesOrders/
+│   │   │   ├── SalesOrderResource.php
+│   │   │   ├── Pages/
+│   │   │   │   ├── ListSalesOrders.php
+│   │   │   │   ├── CreateSalesOrder.php
+│   │   │   │   ├── EditSalesOrder.php
+│   │   │   │   └── ViewSalesOrder.php
+│   │   │   ├── Schemas/
+│   │   │   │   ├── SalesOrderForm.php
+│   │   │   │   └── SalesOrderInfolist.php
+│   │   │   └── Tables/
+│   │   │       └── SalesOrdersTable.php
 │   │   ├── Suppliers/
+│   │   │   ├── SupplierResource.php
+│   │   │   ├── Pages/
+│   │   │   │   ├── ListSuppliers.php
+│   │   │   │   ├── CreateSupplier.php
+│   │   │   │   └── EditSupplier.php
+│   │   │   ├── Schemas/
+│   │   │   │   └── SupplierForm.php
+│   │   │   └── Tables/
+│   │   │       └── SuppliersTable.php
 │   │   └── Customers/
+│   │       ├── CustomerResource.php
+│   │       ├── Pages/
+│   │       │   ├── ListCustomers.php
+│   │       │   ├── CreateCustomer.php
+│   │       │   └── EditCustomer.php
+│   │       ├── Schemas/
+│   │       │   └── CustomerForm.php
+│   │       └── Tables/
+│   │           └── CustomersTable.php
 │   ├── Support/
-│   │   └── Concerns/
-│   │       └── ScopesNavigationBadges.php
-│   └── Widgets/
+│   │   ├── Concerns/
+│   │   │   └── ScopesNavigationBadges.php
+│   │   └── Filters/
+│   │       └── AdminReviewFilters.php   # namespace App\Filament\Support\Filters (§9)
+│   ├── Widgets/
+│   │   ├── StatsOverviewWidget.php
+│   │   ├── LowStockAlertsWidget.php
+│   │   ├── RecentMovementsWidget.php
+│   │   ├── SalesRevenueTrendWidget.php
+│   │   ├── ActiveInTransitWidget.php
+│   │   ├── SalesVsPurchasesWidget.php
+│   │   ├── TopSellingVariantsWidget.php
+│   │   ├── PendingFulfillmentWidget.php
+│   │   └── QuickActionsWidget.php
 ├── Http/
 │   └── Controllers/
 │       └── StnController.php
 ├── Livewire/
-│   └── Filament/
-│       └── Wizards/
-│           └── WizardReviewStep.php
+│   ├── Filament/
+│   │   └── Wizards/
+│   │       └── WizardReviewStep.php
+│   └── Stn/
+│       └── ScanForm.php
 ├── Models/
+│   ├── Product.php
+│   ├── ProductVariant.php
+│   ├── ProductVariantPrice.php
+│   ├── ProductVariantUnitConversion.php
+│   ├── Warehouse.php
+│   ├── StockMovement.php
+│   ├── TransferRequisition.php
+│   ├── TransferRequisitionItem.php
+│   ├── TransferRequisitionItemRevision.php
+│   ├── InTransit.php
+│   ├── LossLedger.php
+│   ├── Supplier.php
+│   ├── Customer.php
+│   ├── PurchaseOrder.php
+│   ├── PurchaseOrderItem.php
+│   ├── SalesOrder.php
+│   ├── SalesOrderItem.php
+│   ├── User.php
 │   ├── DirectTransfer.php
 │   ├── DirectTransferItem.php
 │   └── StockMovementIdempotencyKey.php
 ├── Notifications/
+│   ├── TransferConfirmedNotification.php
+│   ├── TransferCancelledNotification.php
+│   ├── TransferDispatchedNotification.php
+│   ├── TransferReceivedNotification.php
+│   ├── LossRecordedNotification.php
+│   ├── PurchaseOrderReceivedNotification.php
+│   ├── SalesOrderDispatchedNotification.php
+│   └── InventoryBelowReorderPointNotification.php
 ├── Observers/
+│   ├── ProductObserver.php
+│   └── ProductVariantObserver.php
 ├── Policies/
-│   ├── DirectTransferPolicy.php
-│   └── StockMovementPolicy.php       # createDirectTransfer() removed
+│   ├── ProductPolicy.php
+│   ├── ProductVariantPolicy.php
+│   ├── TransferRequisitionPolicy.php
+│   ├── InTransitPolicy.php
+│   ├── StockMovementPolicy.php       # createDirectTransfer() removed
+│   ├── LossLedgerPolicy.php
+│   ├── PurchaseOrderPolicy.php
+│   ├── SalesOrderPolicy.php
+│   ├── SupplierPolicy.php
+│   ├── CustomerPolicy.php
+│   ├── WarehousePolicy.php
+│   ├── UserPolicy.php
+│   └── DirectTransferPolicy.php
 ├── Providers/
 │   ├── AppServiceProvider.php
 │   ├── AuthServiceProvider.php
+│   ├── EventServiceProvider.php
 │   ├── InventoryServiceProvider.php
 │   └── Filament/
 │       └── AdminPanelProvider.php
@@ -10732,18 +17251,117 @@ app/
 │   ├── TransferRequisitionService.php
 │   ├── PurchaseService.php
 │   └── SalesService.php
-└── Support/
-    └── Filters/
+├── Support/
+│   └── GeneratesReferenceCodes.php
+├── Events/
+│   ├── TransferConfirmed.php
+│   ├── TransferCancelled.php
+│   ├── TransferDispatched.php
+│   ├── TransferReceived.php
+│   ├── LossRecorded.php
+│   ├── PurchaseOrderReceived.php
+│   ├── SalesOrderDispatched.php
+│   └── InventoryBelowReorderPoint.php
+├── Listeners/
+│   ├── NotifyTransferConfirmed.php
+│   ├── NotifyTransferCancelled.php
+│   ├── NotifyTransferDispatched.php
+│   ├── NotifyTransferReceived.php
+│   ├── NotifyLossRecorded.php
+│   ├── NotifyPurchaseOrderReceived.php
+│   ├── NotifySalesOrderDispatched.php
+│   └── NotifyInventoryBelowReorderPoint.php
 
 database/
 ├── factories/
+│   ├── ProductFactory.php
+│   ├── ProductVariantFactory.php
+│   ├── ProductVariantPriceFactory.php
+│   ├── ProductVariantUnitConversionFactory.php
+│   ├── WarehouseFactory.php
+│   ├── UserFactory.php
+│   ├── SupplierFactory.php
+│   ├── CustomerFactory.php
+│   ├── TransferRequisitionFactory.php
+│   ├── TransferRequisitionItemFactory.php
+│   ├── TransferRequisitionItemRevisionFactory.php
+│   ├── InTransitFactory.php
+│   ├── StockMovementFactory.php
+│   ├── StockMovementIdempotencyKeyFactory.php
+│   ├── LossLedgerFactory.php
+│   ├── PurchaseOrderFactory.php
+│   ├── PurchaseOrderItemFactory.php
+│   ├── SalesOrderFactory.php
+│   ├── SalesOrderItemFactory.php
 │   ├── DirectTransferFactory.php
 │   └── DirectTransferItemFactory.php
-└── migrations/
-    └── xxxx_xx_xx_create_direct_transfers_tables.php
+│   ├── seeders/   # Phase 02 base seeders, called in §2 dependency order
+│   │   └── DatabaseSeeder.php
+└── migrations/   # one migration per §2 table, in dependency order (Phase 01)
+    ├── xxxx_xx_xx_create_products_table.php
+    ├── xxxx_xx_xx_create_product_variants_table.php
+    ├── xxxx_xx_xx_create_product_variant_prices_table.php
+    ├── xxxx_xx_xx_create_product_variant_unit_conversions_table.php
+    ├── xxxx_xx_xx_create_warehouses_table.php
+    ├── xxxx_xx_xx_create_stock_movements_table.php
+    ├── xxxx_xx_xx_create_transfer_requisitions_table.php
+    ├── xxxx_xx_xx_create_transfer_requisition_items_table.php
+    ├── xxxx_xx_xx_create_transfer_requisition_item_revisions_table.php
+    ├── xxxx_xx_xx_create_in_transits_table.php
+    ├── xxxx_xx_xx_create_loss_ledgers_table.php
+    ├── xxxx_xx_xx_add_role_columns_to_users_table.php
+    ├── xxxx_xx_xx_create_user_warehouse_table.php
+    ├── xxxx_xx_xx_create_suppliers_table.php
+    ├── xxxx_xx_xx_create_customers_table.php
+    ├── xxxx_xx_xx_create_purchase_orders_table.php
+    ├── xxxx_xx_xx_create_purchase_order_items_table.php
+    ├── xxxx_xx_xx_create_sales_orders_table.php
+    ├── xxxx_xx_xx_create_sales_order_items_table.php
+    ├── xxxx_xx_xx_create_stock_movement_idempotency_keys_table.php
+    ├── xxxx_xx_xx_create_direct_transfers_table.php
+    └── xxxx_xx_xx_create_direct_transfer_items_table.php
 
 resources/views/filament/wizards/
+├── transfer-review.blade.php
+├── purchase-order-review.blade.php
+├── sales-order-review.blade.php
 └── direct-transfer-review.blade.php  # iterates items
+
+resources/views/filament/widgets/
+└── quick-actions.blade.php  # QuickActionsWidget view (§10)
+
+resources/views/components/layouts/
+└── app.blade.php
+
+resources/views/livewire/stn/
+└── scan-form.blade.php
+
+resources/views/stn/
+├── print.blade.php
+└── scan.blade.php
+
+resources/css/filament/admin/
+└── theme.css  # admin panel theme loaded via ->viteTheme() (§17.5)
+
+lang/   # required locale tree per §0A.2 — every locale carries the same key set
+├── en/
+│   ├── actions.php
+│   ├── attributes.php
+│   ├── enums.php
+│   ├── forms.php
+│   ├── navigation.php
+│   ├── notifications.php
+│   ├── resources.php
+│   ├── tables.php
+│   ├── validation.php
+│   ├── widgets.php
+│   ├── errors.php
+│   ├── common.php
+│   ├── wizards.php       # __('wizards.*') — §18.3 review views
+│   ├── stn.php           # __('stn.*') — §21 print/scan views
+│   └── dashboard.php     # __('dashboard.*') — §10 widgets
+└── <locale>/
+    └── same file set as en/
 
 routes/
 └── web.php
@@ -10821,7 +17439,7 @@ All criteria below are binding. The following consolidated list supersedes any e
 - [ ] `ScopesNavigationBadges::badgeScopedWarehouseIds()` returns `[]` for WarehouseStaff with N = 0.
 - [ ] `ScopesNavigationBadges::hasBadgeScope()` returns `false` when the resolver yields an empty set.
 - [ ] The resolver caches within the request.
-- [ ] `flushBadgeScope()` exists and is called on auth change in long-lived workers.
+- [ ] `flushBadgeScope()` exists, resets both the warehouse scope and the cached badge count, and is called on auth change in long-lived workers.
 - [ ] `TransferRequisitionResource`, `PurchaseOrderResource`, `SalesOrderResource`, and `InTransitResource` all consume `ScopesNavigationBadges`.
 - [ ] No badge-bearing resource computes warehouse IDs via `auth()->user()->warehouses()` directly.
 - [ ] A WarehouseStaff user assigned exactly one warehouse sees only that warehouse's documents in the badge count.

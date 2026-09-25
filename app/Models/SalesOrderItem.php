@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\StockMovementType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -30,6 +31,14 @@ class SalesOrderItem extends Model
         'qty', 'base_qty', 'unit_sale_price_snapshot', 'dispatched_base_qty', 'notes',
     ];
 
+    protected $casts = [
+        'unit_ratio' => 'integer',
+        'qty' => 'integer',
+        'base_qty' => 'integer',
+        'unit_sale_price_snapshot' => 'decimal:4',
+        'dispatched_base_qty' => 'integer',
+    ];
+
     public function salesOrder(): BelongsTo
     {
         return $this->belongsTo(SalesOrder::class);
@@ -42,16 +51,15 @@ class SalesOrderItem extends Model
 
     public function outstandingBaseQty(): int
     {
-        return max(0, $this->base_qty - $this->dispatched_base_qty);
+        return max(0, (int) $this->base_qty - (int) $this->dispatched_base_qty);
     }
 
-    public function lineTotal(): string
+    public function alreadyReturnedBaseQty(): int
     {
-        return bcmul((string) $this->dispatched_base_qty, (string) $this->unit_sale_price_snapshot, 4);
-    }
-
-    protected function casts(): array
-    {
-        return ['unit_sale_price_snapshot' => 'decimal:4'];
+        return (int) StockMovement::query()
+            ->where('type', StockMovementType::SaleReturn->value)
+            ->where('reference_type', self::class)
+            ->where('reference_id', (string) $this->id)
+            ->sum('quantity');
     }
 }

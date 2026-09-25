@@ -11,46 +11,56 @@ class ProductVariantPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->isAdmin() || $user->isAuditor() || $user->isBranchManager() || $user->isWarehouseStaff();
+        return true;
     }
 
     public function view(User $user, ProductVariant $variant): bool
     {
-        return $user->isAdmin() || $user->isAuditor() || $user->isBranchManager() || $user->isWarehouseStaff();
+        return true;
     }
 
     public function create(User $user): bool
     {
-        return $user->isAdmin() || $user->isBranchManager() || $user->isWarehouseStaff();
+        return $user->isAdmin();
     }
 
     public function update(User $user, ProductVariant $variant): bool
     {
-        return $user->isAdmin() || $user->isBranchManager() || $user->isWarehouseStaff();
+        return $user->isAdmin();
     }
 
     public function delete(User $user, ProductVariant $variant): bool
     {
-        return $user->isAdmin() || $user->isBranchManager() || $user->isWarehouseStaff();
+        return $user->isAdmin();
+    }
+
+    public function deleteAny(User $user): bool
+    {
+        return $user->isAdmin();
     }
 
     public function restore(User $user, ProductVariant $variant): bool
     {
-        return $user->isAdmin() || $user->isAuditor();
+        return $user->isAdmin();
+    }
+
+    public function restoreAny(User $user): bool
+    {
+        return $user->isAdmin();
     }
 
     public function forceDelete(User $user, ProductVariant $variant): bool
     {
-        return $user->isAdmin();
+        return false;
     }
 
-    public function setPrice(User $user, ProductVariant $variant): bool
+    public function forceDeleteAny(User $user): bool
     {
-        return $user->isAdmin() || $user->isBranchManager() || $user->isWarehouseStaff();
+        return false;
     }
 
-    public function adjustStock(User $user, ProductVariant $variant): bool
+    public function viewAuditFilters(User $user): bool
     {
-        return $user->isAdmin();
+        return $user->isAdmin() || $user->isAuditor();
     }
 }

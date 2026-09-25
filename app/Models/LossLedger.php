@@ -7,6 +7,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Log;
 
 class LossLedger extends Model
 {
@@ -27,34 +28,42 @@ class LossLedger extends Model
         'recorded_at',
     ];
 
+    protected $casts = [
+        'lost_base_qty' => 'integer',
+        'damaged_base_qty' => 'integer',
+        'unit_cost_price' => 'decimal:4',
+        'total_financial_loss' => 'decimal:4',
+        'recorded_at' => 'datetime',
+    ];
+
     /**
-     * [FIX v10] Snapshots variant's CURRENT cost price at the moment
-     * loss/intake is actually processed — not the price at time of
-     * original dispatch. This is a deliberate design choice: if cost_price
-     * changes mid-transit, loss/damage valuation reflects present-day
-     * replacement cost, not historical acquisition cost.
+     * Snapshot the current cost price of the variant (Principle 15).
      *
-     * Uses null-safe operator (?->) on the bare property chain, because
-     * `currentPrice` itself can be null (no is_current=true row exists
-     * for the variant) — a plain `??` on the property access would still
-     * throw, since PHP evaluates the property access before the null-coalesce
-     * is reached.
-     *
-     * Callers should eager-load `currentPrice` relation on $variant
-     * before calling this method to avoid an N+1 query per loss row.
+     * If cost is missing or zero, log a warning — the loss will be recorded
+     * at zero financial impact but flagged for review.
      */
     public static function snapshotUnitCostFrom(ProductVariant $variant): string
     {
-        if (config('app.debug')) {
-            assert($variant->relationLoaded('currentPrice'), 'LossLedger::snapshotUnitCostFrom requires currentPrice eager-loaded to avoid N+1');
+        $cost = $variant->currentPrice?->cost_price;
+
+        if ($cost === null || bccomp((string) $cost, '0.0000', 4) === 0) {
+            Log::warning('Loss recorded with missing or zero cost price.', [
+                'product_variant_id' => $variant->id,
+                'sku' => $variant->sku,
+            ]);
+
+            return '0.0000';
         }
 
-        return (string) ($variant->currentPrice?->cost_price ?? '0.0000');
+        return (string) $cost;
     }
 
+    /**
+     * Compute total loss using BCMath to avoid float drift.
+     */
     public static function calculateTotalFinancialLoss(string $unitCost, int $totalQty): string
     {
-        return bcadd(bcmul($unitCost, (string) $totalQty, 4), '0', 4);
+        return bcmul($unitCost, (string) $totalQty, 4);
     }
 
     public function transferRequisition(): BelongsTo
@@ -62,14 +71,14 @@ class LossLedger extends Model
         return $this->belongsTo(TransferRequisition::class);
     }
 
-    public function item(): BelongsTo
+    public function transferRequisitionItem(): BelongsTo
     {
-        return $this->belongsTo(TransferRequisitionItem::class, 'transfer_requisition_item_id');
+        return $this->belongsTo(TransferRequisitionItem::class);
     }
 
     public function productVariant(): BelongsTo
     {
-        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
+        return $this->belongsTo(ProductVariant::class);
     }
 
     public function warehouse(): BelongsTo
@@ -80,16 +89,5 @@ class LossLedger extends Model
     public function recordedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'recorded_by');
-    }
-
-    protected function casts(): array
-    {
-        return [
-            'lost_base_qty' => 'integer',
-            'damaged_base_qty' => 'integer',
-            'unit_cost_price' => 'decimal:4',
-            'total_financial_loss' => 'decimal:4',
-            'recorded_at' => 'datetime',
-        ];
     }
 }

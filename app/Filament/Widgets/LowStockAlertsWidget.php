@@ -23,7 +23,7 @@ class LowStockAlertsWidget extends ChartWidget
     {
         $user = auth()->user();
 
-        if (! ($user?->can('viewAny', ProductVariant::class) ?? false)) {
+        if (! ($user?->can('viewLowStockAlerts', ProductVariant::class) ?? false)) {
             return [
                 'labels' => [],
                 'datasets' => [
@@ -45,7 +45,31 @@ class LowStockAlertsWidget extends ChartWidget
             ];
         }
 
-        $firstWarehouseId = optional($user->warehouses->first())?->id;
+        $warehouseIds = $user->warehouses->pluck('id')->toArray();
+
+        if (empty($warehouseIds)) {
+            return [
+                'labels' => [],
+                'datasets' => [
+                    [
+                        'label' => 'Current Stock',
+                        'data' => [],
+                        'backgroundColor' => 'rgba(34, 197, 94, 0.8)',
+                        'borderColor' => 'rgb(34, 197, 94)',
+                        'borderWidth' => 1,
+                    ],
+                    [
+                        'label' => 'Reorder Point',
+                        'data' => [],
+                        'backgroundColor' => 'rgba(239, 68, 68, 0.8)',
+                        'borderColor' => 'rgb(239, 68, 68)',
+                        'borderWidth' => 1,
+                    ],
+                ],
+            ];
+        }
+
+        $firstWarehouseId = $user->warehouses->first()->id;
         $cacheKey = 'low_stock_alerts_chart_'.$user->id.'_'.$firstWarehouseId;
 
         return Cache::remember($cacheKey, 300, function () use ($user) {
@@ -165,7 +189,7 @@ class LowStockAlertsWidget extends ChartWidget
         }
 
         $labels = $lowStockVariants->pluck(function ($item) {
-            return $item['variant']->sku.' - '.$item['variant']->name;
+            return htmlspecialchars($item['variant']->sku.' - '.$item['variant']->name, ENT_QUOTES, 'UTF-8');
         })->toArray();
 
         $currentStockData = $lowStockVariants->pluck('total_stock')->toArray();

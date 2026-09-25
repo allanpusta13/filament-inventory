@@ -27,7 +27,9 @@ class SupplierResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'PURCHASING';
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingStorefront;
+
+    protected static string|BackedEnum|null $activeNavigationIcon = Heroicon::BuildingStorefront;
 
     public static function getNavigationGroup(): string|UnitEnum|null
     {

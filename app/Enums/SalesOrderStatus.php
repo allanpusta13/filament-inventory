@@ -22,12 +22,11 @@ enum SalesOrderStatus: string implements HasColor, HasIcon, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Draft => __('Draft'),
-            self::Confirmed => __('Confirmed'),
-            self::PartiallyDispatched => __('Partially dispatched'),
-            self::Dispatched => __('Dispatched'),
-            self::Completed => __('Completed'),
-            self::Cancelled => __('Cancelled'),
+            self::Draft => __('enums.sales_order_status.draft'),
+            self::Confirmed => __('enums.sales_order_status.confirmed'),
+            self::PartiallyDispatched => __('enums.sales_order_status.partially_dispatched'),
+            self::Dispatched => __('enums.sales_order_status.dispatched'),
+            self::Cancelled => __('enums.sales_order_status.cancelled'),
         };
     }
 
@@ -37,9 +36,8 @@ enum SalesOrderStatus: string implements HasColor, HasIcon, HasLabel
             self::Draft => 'gray',
             self::Confirmed => 'primary',
             self::PartiallyDispatched => 'warning',
-            self::Dispatched => 'info',
-            self::Completed => 'success',
-            self::Cancelled => 'gray',
+            self::Dispatched => 'success',
+            self::Cancelled => 'danger',
         };
     }
 

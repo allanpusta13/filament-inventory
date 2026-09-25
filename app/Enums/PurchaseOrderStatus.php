@@ -15,17 +15,17 @@ enum PurchaseOrderStatus: string implements HasColor, HasIcon, HasLabel
     case Draft = 'draft';
     case Ordered = 'ordered';
     case PartiallyReceived = 'partially_received';
-    case Completed = 'completed';
+    case Received = 'received';
     case Cancelled = 'cancelled';
 
     public function getLabel(): string
     {
         return match ($this) {
-            self::Draft => __('Draft'),
-            self::Ordered => __('Ordered'),
-            self::PartiallyReceived => __('Partially received'),
-            self::Completed => __('Completed'),
-            self::Cancelled => __('Cancelled'),
+            self::Draft => __('enums.purchase_order_status.draft'),
+            self::Ordered => __('enums.purchase_order_status.ordered'),
+            self::PartiallyReceived => __('enums.purchase_order_status.partially_received'),
+            self::Received => __('enums.purchase_order_status.received'),
+            self::Cancelled => __('enums.purchase_order_status.cancelled'),
         };
     }
 
@@ -33,10 +33,10 @@ enum PurchaseOrderStatus: string implements HasColor, HasIcon, HasLabel
     {
         return match ($this) {
             self::Draft => 'gray',
-            self::Ordered => 'info',
+            self::Ordered => 'primary',
             self::PartiallyReceived => 'warning',
-            self::Completed => 'success',
-            self::Cancelled => 'gray',
+            self::Received => 'success',
+            self::Cancelled => 'danger',
         };
     }
 
@@ -46,7 +46,7 @@ enum PurchaseOrderStatus: string implements HasColor, HasIcon, HasLabel
             self::Draft => Heroicon::DocumentText,
             self::Ordered => Heroicon::PaperAirplane,
             self::PartiallyReceived => Heroicon::ArchiveBoxArrowDown,
-            self::Completed => Heroicon::CheckBadge,
+            self::Received => Heroicon::CheckBadge,
             self::Cancelled => Heroicon::XCircle,
         };
     }

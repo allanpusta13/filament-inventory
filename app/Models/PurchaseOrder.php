@@ -21,6 +21,14 @@ class PurchaseOrder extends Model
         'ordered_at', 'received_at', 'cancelled_at', 'notes',
     ];
 
+    protected $casts = [
+        'status' => PurchaseOrderStatus::class,
+        'update_cost_price' => 'boolean',
+        'ordered_at' => 'datetime',
+        'received_at' => 'datetime',
+        'cancelled_at' => 'datetime',
+    ];
+
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
@@ -46,11 +54,12 @@ class PurchaseOrder extends Model
         return $this->hasMany(PurchaseOrderItem::class);
     }
 
-    protected function casts(): array
+    public function canBeCancelled(): bool
     {
-        return [
-            'status' => PurchaseOrderStatus::class,
-            'update_cost_price' => 'boolean',
-        ];
+        if (! in_array($this->status, [PurchaseOrderStatus::Draft, PurchaseOrderStatus::Ordered], true)) {
+            return false;
+        }
+
+        return ! $this->items()->where('received_base_qty', '>', 0)->exists();
     }
 }

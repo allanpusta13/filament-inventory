@@ -4,259 +4,131 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\SalesOrders\Schemas;
 
-use App\Models\Customer;
-use App\Models\ProductVariant;
-use App\Models\Warehouse;
+use App\Models\ProductVariantUnitConversion;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;
-use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
-use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 
 class SalesOrderForm
 {
     public static function configure(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                Section::make(__('STEP 1: CUSTOMER & WAREHOUSE'))
-                    ->schema([
-                        Grid::make(2)->schema([
-                            Select::make('customer_id')
-                                ->label(__('CUSTOMER'))
-                                ->options(fn () => Customer::query()->where('is_active', true)->pluck('name', 'id'))
-                                ->required()
-                                ->searchable()
-                                ->preload()
-                                ->createOptionForm([
-                                    TextInput::make('name')->required(),
-                                    TextInput::make('contact_person'),
-                                    TextInput::make('phone')->tel(),
-                                    TextInput::make('email')->email(),
-                                    Textarea::make('address')->columnSpanFull(),
-                                    Toggle::make('is_active')->required()->default(true),
-                                ])
-                                ->prefixIcon(\Filament\Support\Icons\Heroicon::Users),
-
-                            Select::make('warehouse_id')
-                                ->label(__('DISPATCH WAREHOUSE'))
-                                ->options(fn () => Warehouse::query()->where('is_active', true)->pluck('name', 'id'))
-                                ->required()
-                                ->searchable()
-                                ->preload()
-                                ->default(fn () => auth()->user()->warehouses()->count() === 1
-                                    ? auth()->user()->warehouses()->first()->id
-                                    : null)
-                                ->prefixIcon(\Filament\Support\Icons\Heroicon::BuildingOffice2),
-                        ]),
-                    ])->collapsible(),
-
-                Section::make(__('STEP 2: LINE ITEMS (READ-ONLY SALE PRICE PREVIEW)'))
-                    ->schema([
-                        Repeater::make('items')
-                            ->label(__('SALES ORDER LINES'))
-                            ->relationship()
-                            ->schema([
-                                Grid::make(6)->schema([
-                                    Select::make('product_variant_id')
-                                        ->label(__('PRODUCT VARIANT (SKU)'))
-                                        ->relationship('productVariant', 'sku')
-                                        ->getOptionLabelFromRecordUsing(fn (ProductVariant $v) => "{$v->sku} — {$v->name}")
-                                        ->required()
-                                        ->searchable()
-                                        ->preload()
-                                        ->columnSpan(3)
-                                        ->live(onBlur: true)
-                                        ->afterStateUpdated(fn (Set $set, Get $get, ?string $state) => [
-                                            $set('unit_name', ProductVariant::find($state)?->base_unit_name ?? ''),
-                                            $set('unit_ratio', ProductVariant::find($state)?->unitConversions()->first()?->ratio ?? 1),
-                                            $set('unit_sale_price_snapshot', ProductVariant::find($state)?->currentPrice?->price ?? 0),
-                                        ]),
-
-                                    TextInput::make('unit_name')
-                                        ->label(__('UNIT'))
-                                        ->required()
-                                        ->columnSpan(2),
-
-                                    TextInput::make('unit_ratio')
-                                        ->label(__('RATIO'))
-                                        ->required()
-                                        ->numeric()
-                                        ->minValue(1)
-                                        ->default(1)
-                                        ->columnSpan(1),
-
-                                    TextInput::make('qty')
-                                        ->label(__('QTY'))
-                                        ->required()
-                                        ->numeric()
-                                        ->minValue(1)
-                                        ->default(1)
-                                        ->live(onBlur: true)
-                                        ->afterStateUpdate(fn (Set $set, Get $get) => $set('base_qty', (int) ($get('qty') ?? 1) * (int) ($get('unit_ratio') ?? 1)))
-                                        ->columnSpan(2),
-
-                                    TextInput::make('base_qty')
-                                        ->label(__('BASE UNITS'))
-                                        ->required()
-                                        ->numeric()
-                                        ->minValue(1)
-                                        ->disabled()
-                                        ->dehydrated()
-                                        ->columnSpan(1),
-
-                                    TextInput::make('unit_sale_price_snapshot')
-                                        ->label(__('SALE PRICE (PREVIEW)'))
-                                        ->required()
-                                        ->numeric()
-                                        ->minValue(0)
-                                        ->step(0.0001)
-                                        ->prefix('₱')
-                                        ->disabled()
-                                        ->dehydrated()
-                                        ->helperText(__('Price snapped from current variant price at confirm time'))
-                                        ->columnSpan(2),
-
-                                    Textarea::make('notes')
-                                        ->label(__('LINE NOTES'))
-                                        ->columnSpanFull(),
-                                ]),
-                            ])
-                            ->columns(6)
-                            ->defaultItems(1)
-                            ->addActionLabel(__('ADD LINE')),
-                    ])->collapsible(),
-
-                Section::make(__('STEP 3: REVIEW & NOTES'))
-                    ->schema([
-                        Textarea::make('notes')
-                            ->label(__('ORDER NOTES'))
-                            ->columnSpanFull(),
-                    ])->collapsible(),
-            ]);
+        return $schema->components([
+            ...self::getCustomerWarehouseFields(),
+            ...self::getLineItemsFields(),
+        ]);
     }
 
-    public static function getRoutingSchema(): array
+    public static function getCustomerWarehouseFields(): array
     {
         return [
-            Select::make('customer_id')
-                ->label(__('CUSTOMER'))
-                ->options(fn () => Customer::query()->where('is_active', true)->pluck('name', 'id'))
-                ->required()
-                ->searchable()
-                ->preload()
-                ->createOptionForm([
-                    TextInput::make('name')->required(),
-                    TextInput::make('contact_person'),
-                    TextInput::make('phone')->tel(),
-                    TextInput::make('email')->email(),
-                    Textarea::make('address')->columnSpanFull(),
-                    Toggle::make('is_active')->required()->default(true),
-                ])
-                ->prefixIcon(\Filament\Support\Icons\Heroicon::Users),
+            Section::make('CUSTOMER & WAREHOUSE')
+                ->icon(Heroicon::UserGroup)
+                ->columnSpanFull()
+                ->columns(['default' => 1, 'md' => 2, 'xl' => 2])
+                ->schema([
+                    Select::make('customer_id')
+                        ->label(__('resources.sales_orders.fields.customer'))
+                        ->relationship('customer', 'name')
+                        ->prefixIcon(Heroicon::UserGroup)
+                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
+                        ->searchable()->preload()->required()
+                        ->createOptionForm(fn (Schema $schema) => \App\Filament\Resources\Customers\Schemas\CustomerForm::configure($schema)),
 
-            Select::make('warehouse_id')
-                ->label(__('DISPATCH WAREHOUSE'))
-                ->options(fn () => Warehouse::query()->where('is_active', true)->pluck('name', 'id'))
-                ->required()
-                ->searchable()
-                ->preload()
-                ->default(fn () => auth()->user()->warehouses()->count() === 1
-                    ? auth()->user()->warehouses()->first()->id
-                    : null)
-                ->prefixIcon(\Filament\Support\Icons\Heroicon::BuildingOffice2),
+                    Select::make('warehouse_id')
+                        ->label(__('resources.sales_orders.fields.dispatching_warehouse'))
+                        ->prefixIcon(Heroicon::BuildingOffice2)
+                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
+                        ->options(fn () => auth()->user()->warehouses()->pluck('name', 'id'))
+                        ->default(fn () => auth()->user()->warehouses()->count() === 1
+                            ? auth()->user()->warehouses()->first()->id
+                            : null)
+                        ->required(),
+                ]),
         ];
     }
 
-    public static function getItemsSchema(): array
+    public static function getLineItemsFields(): array
     {
         return [
             Repeater::make('items')
-                ->label(__('SALES ORDER LINES'))
                 ->relationship()
+                ->columnSpanFull()
+                ->columns(['default' => 1, 'md' => 2, 'xl' => 4])
                 ->schema([
-                    Grid::make(6)->schema([
-                        Select::make('product_variant_id')
-                            ->label(__('PRODUCT VARIANT (SKU)'))
-                            ->relationship('productVariant', 'sku')
-                            ->getOptionLabelFromRecordUsing(fn (ProductVariant $v) => "{$v->sku} — {$v->name}")
-                            ->required()
-                            ->searchable()
-                            ->preload()
-                            ->columnSpan(3)
-                            ->live(onBlur: true)
-                            ->afterStateUpdated(fn (Set $set, Get $get, ?string $state) => [
-                                $set('unit_name', ProductVariant::find($state)?->base_unit_name ?? ''),
-                                $set('unit_ratio', ProductVariant::find($state)?->unitConversions()->first()?->ratio ?? 1),
-                                $set('unit_sale_price_snapshot', ProductVariant::find($state)?->currentPrice?->price ?? 0),
-                            ]),
+                    Select::make('product_variant_id')
+                        ->label(__('resources.sales_orders.fields.variant_sku'))
+                        ->relationship('productVariant', 'sku')
+                        ->prefixIcon(Heroicon::Tag)
+                        ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2])
+                        ->searchable()->preload()->required()
+                        ->disableOptionsWhenSelectedInSiblingRepeaterItems()
+                        ->live()
+                        ->afterStateUpdated(function (Get $get, $set, $state) {
+                            $set('unit_name', null);
+                            $set('unit_ratio', null);
+                            $variant = \App\Models\ProductVariant::with('currentPrice')->find($state);
+                            $set('_current_sale_price_preview', $variant?->currentPrice?->sale_price ?? '0.0000');
+                        }),
 
-                        TextInput::make('unit_name')
-                            ->label(__('UNIT'))
-                            ->required()
-                            ->columnSpan(2),
+                    Select::make('unit_name')
+                        ->label(__('resources.sales_orders.fields.unit'))
+                        ->prefixIcon(Heroicon::Scale)
+                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
+                        ->options(function (Get $get) {
+                            $variantId = $get('product_variant_id');
+                            if (! $variantId) {
+                                return [];
+                            }
 
-                        TextInput::make('unit_ratio')
-                            ->label(__('RATIO'))
-                            ->required()
-                            ->numeric()
-                            ->minValue(1)
-                            ->default(1)
-                            ->columnSpan(1),
+                            return ProductVariantUnitConversion::where('product_variant_id', $variantId)
+                                ->orderByDesc('base_unit_ratio')
+                                ->pluck('unit_name', 'unit_name')
+                                ->toArray();
+                        })
+                        ->required()
+                        ->live()
+                        ->afterStateUpdated(function (Get $get, $set, $state) {
+                            $ratio = ProductVariantUnitConversion::where('product_variant_id', $get('product_variant_id'))
+                                ->where('unit_name', $state)
+                                ->value('base_unit_ratio');
+                            $set('unit_ratio', $ratio ?? 1);
+                        }),
 
-                        TextInput::make('qty')
-                            ->label(__('QTY'))
-                            ->required()
-                            ->numeric()
-                            ->minValue(1)
-                            ->default(1)
-                            ->live(onBlur: true)
-                            ->afterStateUpdated(fn (Set $set, Get $get) => $set('base_qty', (int) ($get('qty') ?? 1) * (int) ($get('unit_ratio') ?? 1)))
-                            ->columnSpan(2),
+                    TextInput::make('unit_ratio')
+                        ->label(__('resources.sales_orders.fields.ratio_base'))
+                        ->hintIcon(Heroicon::InformationCircle)
+                        ->hint(__('resources.sales_orders.hints.ratio_auto'))
+                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
+                        ->numeric()->disabled()->dehydrated()->required(),
 
-                        TextInput::make('base_qty')
-                            ->label(__('BASE UNITS'))
-                            ->required()
-                            ->numeric()
-                            ->minValue(1)
-                            ->disabled()
-                            ->dehydrated()
-                            ->columnSpan(1),
+                    TextInput::make('qty')
+                        ->label(__('resources.sales_orders.fields.qty'))
+                        ->prefixIcon(Heroicon::Hashtag)
+                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
+                        ->numeric()->minValue(1)->required(),
 
-                        TextInput::make('unit_sale_price_snapshot')
-                            ->label(__('SALE PRICE (PREVIEW)'))
-                            ->required()
-                            ->numeric()
-                            ->minValue(0)
-                            ->step(0.0001)
-                            ->prefix('₱')
-                            ->disabled()
-                            ->dehydrated()
-                            ->helperText(__('Price snapped from current variant price at confirm time'))
-                            ->columnSpan(2),
-
-                        Textarea::make('notes')
-                            ->label(__('LINE NOTES'))
-                            ->columnSpanFull(),
-                    ]),
+                    Placeholder::make('_current_sale_price_preview')
+                        ->label(__('resources.sales_orders.fields.catalog_sale_price'))
+                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
+                        ->content(fn (Get $get) => $get('_current_sale_price_preview') ?? '—'),
                 ])
-                ->columns(6)
-                ->defaultItems(1)
-                ->addActionLabel(__('ADD LINE')),
-        ];
-    }
+                ->minItems(1)->required()->dehydrated()
+                ->mutateRelationshipDataBeforeCreateUsing(function (array $data): array {
+                    $data['base_qty'] = (int) $data['qty'] * (int) $data['unit_ratio'];
 
-    public static function getReviewSchema(): array
-    {
-        return [
-            Textarea::make('notes')
-                ->label(__('ORDER NOTES'))
-                ->columnSpanFull(),
+                    return $data;
+                })
+                ->mutateRelationshipDataBeforeSaveUsing(function (array $data): array {
+                    $data['base_qty'] = (int) $data['qty'] * (int) $data['unit_ratio'];
+
+                    return $data;
+                }),
         ];
     }
 }

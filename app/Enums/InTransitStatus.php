@@ -13,15 +13,15 @@ use Filament\Support\Icons\Heroicon;
 enum InTransitStatus: string implements HasColor, HasIcon, HasLabel
 {
     case InTransit = 'in_transit';
-    case PartiallyReceived = 'partially_received';
     case Cleared = 'cleared';
+    case Lost = 'lost';
 
     public function getLabel(): string
     {
         return match ($this) {
-            self::InTransit => __('In transit'),
-            self::PartiallyReceived => __('Partially received'),
-            self::Cleared => __('Cleared'),
+            self::InTransit => __('enums.in_transit_status.in_transit'),
+            self::Cleared => __('enums.in_transit_status.cleared'),
+            self::Lost => __('enums.in_transit_status.lost'),
         };
     }
 
@@ -29,7 +29,7 @@ enum InTransitStatus: string implements HasColor, HasIcon, HasLabel
     {
         return match ($this) {
             self::InTransit => 'info',
-            self::PartiallyReceived => 'warning',
+            self::Lost => 'warning',
             self::Cleared => 'success',
         };
     }
@@ -38,7 +38,7 @@ enum InTransitStatus: string implements HasColor, HasIcon, HasLabel
     {
         return match ($this) {
             self::InTransit => Heroicon::Truck,
-            self::PartiallyReceived => Heroicon::ArchiveBoxArrowDown,
+            self::Lost => Heroicon::ArchiveBoxArrowDown,
             self::Cleared => Heroicon::CheckCircle,
         };
     }

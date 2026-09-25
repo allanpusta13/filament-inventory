@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Warehouses\Schemas;
 
-use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
@@ -17,92 +16,50 @@ class WarehouseInfolist
 {
     public static function configure(Schema $schema): Schema
     {
-        return $schema
-            ->schema([
-                Grid::make(3)
-                    ->columnSpanFull()
+        return $schema->components([
+            Grid::make(['default' => 1, 'md' => 3, 'xl' => 3])->schema([
+                Section::make('WAREHOUSE PROFILE')
+                    ->icon(Heroicon::BuildingOffice)
+                    ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2])
+                    ->columns(['default' => 1, 'md' => 2, 'xl' => 2])
                     ->schema([
-                        // Section 1: Physical Warehouse Profile (Left, Spans 2 Columns)
-                        Section::make('PHYSICAL WAREHOUSE PROFILE')
-                            ->icon(Heroicon::BuildingOffice)
-                            ->schema([
-                                Grid::make(2)
-                                    ->schema([
-                                        TextEntry::make('code')
-                                            ->label('BRANCH CODE')
-                                            ->weight(FontWeight::Bold)
-                                            ->copyable()
-                                            ->icon(Heroicon::Hashtag)
-                                            ->color('primary'),
-
-                                        TextEntry::make('name')
-                                            ->label('WAREHOUSE NAME')
-                                            ->weight(FontWeight::Bold)
-                                            ->size('lg'),
-
-                                        TextEntry::make('location')
-                                            ->label('PHYSICAL ADDRESS')
-                                            ->placeholder('No Address Registered')
-                                            ->icon(Heroicon::MapPin)
-                                            ->columnSpanFull(),
-                                    ]),
-                            ])
-                            ->columnSpan(2),
-
-                        // Section 2: System Status & Operator Metrics (Right, Spans 1 Column)
-                        Section::make('SYSTEM & ROUTING STATUS')
-                            ->icon(Heroicon::ShieldCheck)
-                            ->schema([
-                                IconEntry::make('is_active')
-                                    ->label('ROUTING ACTIVE')
-                                    ->boolean(),
-
-                                TextEntry::make('users_count')
-                                    ->counts('users')
-                                    ->label('AUTHORIZED OPERATORS')
-                                    ->badge()
-                                    ->color('info')
-                                    ->icon(Heroicon::UserGroup),
-
-                                TextEntry::make('created_at')
-                                    ->label('REGISTERED DATE')
-                                    ->dateTime('M d, Y H:i')
-                                    ->color('gray'),
-                            ])
-                            ->columnSpan(1),
-
-                        // Section 3: Authorized Operators Directory (Full Width)
-                        Section::make('AUTHORIZED OPERATORS DIRECTORY')
-                            ->icon(Heroicon::UserGroup)
-                            ->schema([
-                                RepeatableEntry::make('users')
-                                    ->label('')
-                                    ->schema([
-                                        Grid::make(3)
-                                            ->schema([
-                                                TextEntry::make('name')
-                                                    ->label('OPERATOR NAME')
-                                                    ->weight(FontWeight::Bold)
-                                                    ->icon(Heroicon::User),
-
-                                                TextEntry::make('email')
-                                                    ->label('EMAIL ADDRESS')
-                                                    ->icon(Heroicon::Envelope),
-
-                                                TextEntry::make('role')
-                                                    ->label('SYSTEM ROLE')
-                                                    ->badge()
-                                                    ->color(fn ($state) => match ($state->value ?? $state) {
-                                                        'admin' => 'danger',
-                                                        'auditor' => 'info',
-                                                        'branch_manager' => 'warning',
-                                                        default => 'gray',
-                                                    }),
-                                            ]),
-                                    ]),
-                            ])
+                        TextEntry::make('code')->label(__('resources.warehouses.fields.code'))
+                            ->weight(FontWeight::Bold)->size('lg')->copyable()->color('primary')
+                            ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+                        TextEntry::make('name')->label(__('resources.warehouses.fields.name'))
+                            ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+                        TextEntry::make('location')->label(__('resources.warehouses.fields.location'))->placeholder('—')
                             ->columnSpanFull(),
                     ]),
-            ]);
+
+                Section::make('STATUS')
+                    ->icon(Heroicon::ShieldCheck)
+                    ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
+                    ->schema([
+                        TextEntry::make('is_active')
+                            ->label(__('resources.warehouses.fields.is_active'))->badge()
+                            ->color(fn (bool $state) => $state ? 'success' : 'danger')
+                            ->formatStateUsing(fn (bool $state) => $state ? __('common.active') : __('common.inactive')),
+                        TextEntry::make('users_count')
+                            ->label(__('resources.warehouses.fields.assigned_staff'))
+                            ->state(fn ($record) => $record->users()->count()),
+                    ]),
+
+                Section::make('ASSIGNED STAFF')
+                    ->icon(Heroicon::UserGroup)
+                    ->columnSpanFull()
+                    ->schema([
+                        RepeatableEntry::make('users')
+                            ->schema([
+                                Grid::make(['default' => 1, 'md' => 3, 'xl' => 3])->schema([
+                                    TextEntry::make('name')->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+                                    TextEntry::make('email')->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+                                    TextEntry::make('role')->badge()->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+                                ]),
+                            ])
+                            ->placeholder(__('resources.warehouses.empty_staff')),
+                    ]),
+            ]),
+        ]);
     }
 }

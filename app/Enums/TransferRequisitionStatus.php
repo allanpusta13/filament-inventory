@@ -26,16 +26,16 @@ enum TransferRequisitionStatus: string implements HasColor, HasIcon, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Draft => __('Draft'),
-            self::Requested => __('Requested'),
-            self::UnderReviewFulfiller => __('Under review (fulfiller)'),
-            self::UnderReviewRequestor => __('Under review (requestor)'),
-            self::Confirmed => __('Confirmed'),
-            self::Dispatched => __('Dispatched'),
-            self::PartiallyReceived => __('Partially received'),
-            self::Completed => __('Completed'),
-            self::ClosedWithLoss => __('Closed with loss'),
-            self::Cancelled => __('Cancelled'),
+            self::Draft => __('enums.transfer_requisition_status.draft'),
+            self::Requested => __('enums.transfer_requisition_status.requested'),
+            self::UnderReviewFulfiller => __('enums.transfer_requisition_status.under_review_fulfiller'),
+            self::UnderReviewRequestor => __('enums.transfer_requisition_status.under_review_requestor'),
+            self::Confirmed => __('enums.transfer_requisition_status.confirmed'),
+            self::Dispatched => __('enums.transfer_requisition_status.dispatched'),
+            self::PartiallyReceived => __('enums.transfer_requisition_status.partially_received'),
+            self::Completed => __('enums.transfer_requisition_status.completed'),
+            self::ClosedWithLoss => __('enums.transfer_requisition_status.closed_with_loss'),
+            self::Cancelled => __('enums.transfer_requisition_status.cancelled'),
         };
     }
 
@@ -43,14 +43,15 @@ enum TransferRequisitionStatus: string implements HasColor, HasIcon, HasLabel
     {
         return match ($this) {
             self::Draft => 'gray',
-            self::Requested => 'info',
-            self::UnderReviewFulfiller, self::UnderReviewRequestor => 'warning',
+            self::Requested => 'warning',
+            self::UnderReviewFulfiller,
+            self::UnderReviewRequestor => 'warning',
             self::Confirmed => 'primary',
             self::Dispatched => 'info',
             self::PartiallyReceived => 'warning',
             self::Completed => 'success',
             self::ClosedWithLoss => 'danger',
-            self::Cancelled => 'gray',
+            self::Cancelled => 'danger',
         };
     }
 

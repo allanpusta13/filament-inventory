@@ -21,6 +21,12 @@ class ProductVariantUnitConversion extends Model
         'is_default_transfer',
     ];
 
+    protected $casts = [
+        'base_unit_ratio' => 'integer',
+        'is_default_purchase' => 'boolean',
+        'is_default_transfer' => 'boolean',
+    ];
+
     public function productVariant(): BelongsTo
     {
         return $this->belongsTo(ProductVariant::class, 'product_variant_id');
@@ -29,14 +35,5 @@ class ProductVariantUnitConversion extends Model
     public function toBaseUnits(int $qtyInThisUnit): int
     {
         return $qtyInThisUnit * $this->base_unit_ratio;
-    }
-
-    protected function casts(): array
-    {
-        return [
-            'base_unit_ratio' => 'integer',
-            'is_default_purchase' => 'boolean',
-            'is_default_transfer' => 'boolean',
-        ];
     }
 }

@@ -23,7 +23,7 @@ class WarehouseFactory extends Factory
             'code' => mb_strtoupper('WH-'.fake()->unique()->lexify('???')),
             'name' => fake()->city().' Warehouse',
             'location' => fake()->address(),
-            'is_active' => true,
+            'is_active' => fake()->boolean(),
         ];
     }
 }

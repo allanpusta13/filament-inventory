@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\TransferRequisitions\Pages;
 
+use App\Enums\TransferRequisitionStatus;
 use App\Filament\Resources\TransferRequisitions\TransferRequisitionResource;
 use App\Services\NegotiationService;
 use Filament\Actions\Action;
@@ -24,36 +25,35 @@ class EditTransferRequisition extends EditRecord
         return 'large';
     }
 
-    public function getFormSchema(): Schema
+    public function form(Schema $schema): Schema
     {
-        return Schema::make()
-            ->components([
-                \Filament\Forms\Components\TextInput::make('reference_code')
-                    ->label('REFERENCE CODE')
-                    ->required()
-                    ->maxLength(255)
-                    ->disabled(),
+        return $schema->components([
+            \Filament\Forms\Components\TextInput::make('reference_code')
+                ->label('REFERENCE CODE')
+                ->required()
+                ->maxLength(255)
+                ->disabled(),
 
-                Select::make('from_warehouse_id')
-                    ->label('ORIGIN WAREHOUSE')
-                    ->relationship('fromWarehouse', 'name')
-                    ->disabled(),
+            Select::make('from_warehouse_id')
+                ->label('ORIGIN WAREHOUSE')
+                ->relationship('fromWarehouse', 'name')
+                ->disabled(),
 
-                Select::make('to_warehouse_id')
-                    ->label('DESTINATION WAREHOUSE')
-                    ->relationship('toWarehouse', 'name')
-                    ->disabled(),
+            Select::make('to_warehouse_id')
+                ->label('DESTINATION WAREHOUSE')
+                ->relationship('toWarehouse', 'name')
+                ->disabled(),
 
-                Select::make('status')
-                    ->label('STATUS')
-                    ->options(TransferRequisitionStatus::class)
-                    ->required(),
+            Select::make('status')
+                ->label('STATUS')
+                ->options(TransferRequisitionStatus::class)
+                ->required(),
 
-                Textarea::make('notes')
-                    ->label('NOTES')
-                    ->columnSpanFull()
-                    ->rows(3),
-            ]);
+            Textarea::make('notes')
+                ->label('NOTES')
+                ->columnSpanFull()
+                ->rows(3),
+        ]);
     }
 
     protected function getHeaderActions(): array

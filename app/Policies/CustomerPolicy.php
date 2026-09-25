@@ -11,22 +11,22 @@ class CustomerPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->isAdmin() || $user->isAuditor() || $user->isBranchManager() || $user->isWarehouseStaff();
+        return true;
     }
 
     public function view(User $user, Customer $customer): bool
     {
-        return $user->isAdmin() || $user->isAuditor() || $user->isBranchManager() || $user->isWarehouseStaff();
+        return true;
     }
 
     public function create(User $user): bool
     {
-        return $user->isAdmin() || $user->isBranchManager() || $user->isWarehouseStaff();
+        return $user->isAdmin();
     }
 
     public function update(User $user, Customer $customer): bool
     {
-        return $user->isAdmin() || $user->isBranchManager() || $user->isWarehouseStaff();
+        return $user->isAdmin();
     }
 
     public function delete(User $user, Customer $customer): bool
@@ -34,12 +34,27 @@ class CustomerPolicy
         return $user->isAdmin();
     }
 
+    public function deleteAny(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+
     public function restore(User $user, Customer $customer): bool
     {
-        return $user->isAdmin() || $user->isAuditor();
+        return $user->isAdmin();
+    }
+
+    public function restoreAny(User $user): bool
+    {
+        return $user->isAdmin();
     }
 
     public function forceDelete(User $user, Customer $customer): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function forceDeleteAny(User $user): bool
     {
         return $user->isAdmin();
     }

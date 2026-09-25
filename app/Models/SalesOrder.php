@@ -21,6 +21,14 @@ class SalesOrder extends Model
         'dispatched_at', 'cancelled_at', 'notes',
     ];
 
+    protected $casts = [
+        'status' => SalesOrderStatus::class,
+        'ordered_at' => 'datetime',
+        'confirmed_at' => 'datetime',
+        'dispatched_at' => 'datetime',
+        'cancelled_at' => 'datetime',
+    ];
+
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
@@ -44,10 +52,5 @@ class SalesOrder extends Model
     public function items(): HasMany
     {
         return $this->hasMany(SalesOrderItem::class);
-    }
-
-    protected function casts(): array
-    {
-        return ['status' => SalesOrderStatus::class];
     }
 }

@@ -4,53 +4,64 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\TransferRequisitions\Pages;
 
-use App\Enums\TransferRequisitionStatus;
 use App\Filament\Resources\TransferRequisitions\Schemas\TransferRequisitionForm;
 use App\Filament\Resources\TransferRequisitions\TransferRequisitionResource;
+use Filament\Forms\Components\Placeholder;
 use Filament\Resources\Pages\CreateRecord;
+use Filament\Resources\Pages\CreateRecord\Concerns\HasWizard;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
-use Override;
+use Filament\Support\Enums\Width;
+use Filament\Support\Icons\Heroicon;
 
 class CreateTransferRequisition extends CreateRecord
 {
-    use CreateRecord\Concerns\HasWizard;
+    use HasWizard;
 
     protected static string $resource = TransferRequisitionResource::class;
 
-    protected ?string $heading = 'CREATE INTER-WAREHOUSE REQUISITION';
+    public function getMaxContentWidth(): ?string
+    {
+        return Width::SevenExtraLarge->value;
+    }
 
-    protected ?string $subheading = '3-step wizard: routing, items, review';
-
-    public function getSteps(): array
+    /**
+     * @return array<Step>
+     */
+    protected function getSteps(): array
     {
         return [
-            Step::make('Routing Pathways')
-                ->description('Identify dispatching & receiving locations')
-                ->schema(TransferRequisitionForm::getRoutingSchema()),
+            Step::make(__('resources.transfer_requisitions.steps.routing'))
+                ->description(__('resources.transfer_requisitions.steps.routing_description'))
+                ->icon(Heroicon::BuildingOffice)
+                ->schema(TransferRequisitionForm::getRoutingFields()),
 
-            Step::make('Material Manifest')
-                ->description('Declare variant items, order volumes')
-                ->schema(TransferRequisitionForm::getItemsSchema()),
+            Step::make(__('resources.transfer_requisitions.steps.manifest'))
+                ->description(__('resources.transfer_requisitions.steps.manifest_description'))
+                ->icon(Heroicon::ClipboardDocumentList)
+                ->schema(TransferRequisitionForm::getMaterialManifestFields()),
 
-            Step::make('Review & Verify')
-                ->description('Confirm accuracy before sending request')
-                ->schema(TransferRequisitionForm::getReviewSchema()),
+            Step::make(__('resources.transfer_requisitions.steps.review'))
+                ->description(__('resources.transfer_requisitions.steps.review_description'))
+                ->icon(Heroicon::CheckCircle)
+                ->schema([
+                    Placeholder::make('review_summary')
+                        ->columnSpanFull()
+                        ->content(fn (Get $get) => view(
+                            'filament.wizards.transfer-review',
+                            ['state' => $get()],
+                        )),
+                ]),
         ];
     }
 
-    #[Override]
-    public function mutateFormDataBeforeCreate(array $data): array
+    protected function mutateFormDataBeforeCreate(array $data): array
     {
-        $data['reference_code'] = 'TRQ-'.date('Ymd').'-'.mb_strtoupper(uniqid());
-        $data['status'] = TransferRequisitionStatus::Draft->value;
-        $data['requested_by'] = auth()->user()->id;
-        $data['requested_at'] = now();
+        $data['reference_code'] = $data['reference_code']
+            ?? 'TR-'.now()->format('YmdHis').'-'.random_int(100, 999);
+        $data['requested_by'] = auth()->id();
+        $data['status'] = \App\Enums\TransferRequisitionStatus::Draft->value;
 
-        return parent::mutateFormDataBeforeCreate($data);
-    }
-
-    protected function getRedirectUrl(): string
-    {
-        return $this->getResource()::getUrl('index');
+        return $data;
     }
 }

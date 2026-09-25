@@ -5,20 +5,20 @@ declare(strict_types=1);
 namespace App\Filament\Resources\PurchaseOrders\Tables;
 
 use App\Enums\PurchaseOrderStatus;
-use App\Filament\Support\Filters\AdminReviewFilters;
 use App\Models\PurchaseOrder;
 use Filament\Actions\Action;
-use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteAction;
-use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreAction;
-use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
-use Filament\Tables\Columns\IconColumn;
+use Filament\Support\Enums\FontWeight;
+use Filament\Support\Enums\Width;
+use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Columns\Layout\Split;
+use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
@@ -30,237 +30,153 @@ class PurchaseOrdersTable
     {
         return $table
             ->columns([
-                TextColumn::make('reference_code')
-                    ->label(__('REFERENCE'))
-                    ->searchable()
-                    ->sortable()
-                    ->copyable()
-                    ->weight(\Filament\Support\Enums\FontWeight::Bold)
-                    ->color('primary'),
+                Stack::make([
+                    Split::make([
+                        TextColumn::make('reference_code')
+                            ->label(__('resources.purchase_orders.table.reference'))
+                            ->fontFamily('mono')
+                            ->weight(FontWeight::Bold)
+                            ->searchable()
+                            ->sortable()
+                            ->copyable(),
 
-                TextColumn::make('supplier.name')
-                    ->label(__('SUPPLIER'))
-                    ->searchable()
-                    ->sortable(),
+                        TextColumn::make('status')
+                            ->badge()
+                            ->alignEnd()
+                            ->sortable(),
+                    ])->from('md'),
 
-                TextColumn::make('warehouse.name')
-                    ->label(__('WAREHOUSE'))
-                    ->searchable()
-                    ->sortable(),
+                    Split::make([
+                        TextColumn::make('supplier.name')
+                            ->label(__('resources.purchase_orders.table.supplier'))
+                            ->icon(Heroicon::BuildingStorefront)
+                            ->iconColor('gray')
+                            ->searchable()
+                            ->sortable(),
 
-                TextColumn::make('status')
-                    ->label(__('STATUS'))
-                    ->badge()
-                    ->color(fn (PurchaseOrderStatus $state): string => match ($state) {
-                        PurchaseOrderStatus::Draft => 'gray',
-                        PurchaseOrderStatus::Ordered => 'info',
-                        PurchaseOrderStatus::PartiallyReceived => 'warning',
-                        PurchaseOrderStatus::Completed => 'success',
-                        PurchaseOrderStatus::Cancelled => 'gray',
-                    })
-                    ->searchable(),
+                        TextColumn::make('warehouse.name')
+                            ->label(__('resources.purchase_orders.table.warehouse'))
+                            ->icon(Heroicon::BuildingOffice2)
+                            ->iconColor('gray')
+                            ->sortable(),
+                    ])->from('md'),
 
-                IconColumn::make('update_cost_price')
-                    ->label(__('UPDATE COST'))
-                    ->boolean()
-                    ->sortable(),
+                    Split::make([
+                        TextColumn::make('items_count')
+                            ->label(__('resources.purchase_orders.table.items'))
+                            ->counts('items')
+                            ->badge()
+                            ->color('gray')
+                            ->numeric(),
 
-                TextColumn::make('ordered_by')
-                    ->label(__('ORDERED BY'))
-                    ->numeric()
-                    ->sortable(),
+                        TextColumn::make('ordered_at')
+                            ->label(__('resources.purchase_orders.table.ordered'))
+                            ->dateTime('M j, Y')
+                            ->sortable()
+                            ->placeholder('—'),
 
-                TextColumn::make('received_by')
-                    ->label(__('RECEIVED BY'))
-                    ->numeric()
-                    ->sortable(),
-
-                TextColumn::make('ordered_at')
-                    ->label(__('ORDERED AT'))
-                    ->dateTime()
-                    ->sortable(),
-
-                TextColumn::make('received_at')
-                    ->label(__('RECEIVED AT'))
-                    ->dateTime()
-                    ->sortable(),
-
-                TextColumn::make('cancelled_at')
-                    ->label(__('CANCELLED AT'))
-                    ->dateTime()
-                    ->sortable(),
-
-                TextColumn::make('deleted_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                        TextColumn::make('received_at')
+                            ->label(__('resources.purchase_orders.table.received'))
+                            ->dateTime('M j, Y')
+                            ->sortable()
+                            ->placeholder('—')
+                            ->alignEnd(),
+                    ])->from('lg'),
+                ])->space(3),
+            ])
+            ->contentGrid([
+                'md' => 2,
+                'xl' => 3,
+            ])
+            ->filters([
+                SelectFilter::make('status')->options(PurchaseOrderStatus::class),
+                SelectFilter::make('supplier_id')->relationship('supplier', 'name')->label(__('resources.purchase_orders.filters.supplier'))->searchable(),
+                SelectFilter::make('warehouse_id')->relationship('warehouse', 'name')->label(__('resources.purchase_orders.filters.warehouse'))->searchable(),
+                TrashedFilter::make(),
+                \App\Filament\Support\Filters\AdminReviewFilters::period('ordered_at')
+                    ->authorize('viewAuditFilters'),
             ])
             ->defaultSort('created_at', 'desc')
-            ->filters([
-                SelectFilter::make('status')
-                    ->options(PurchaseOrderStatus::class)
-                    ->label(__('STATUS')),
-
-                SelectFilter::make('supplier_id')
-                    ->relationship('supplier', 'name')
-                    ->searchable()
-                    ->preload()
-                    ->label(__('SUPPLIER')),
-
-                SelectFilter::make('warehouse_id')
-                    ->relationship('warehouse', 'name')
-                    ->searchable()
-                    ->preload()
-                    ->label(__('WAREHOUSE')),
-
-                TrashedFilter::make(),
-
-                // [Added v11.1] Admin/Auditor-only cross-warehouse review filters.
-                // Note the existing warehouse_id SelectFilter above already covers
-                // basic warehouse filtering for all users — AdminReviewFilters::warehouse()
-                // is intentionally NOT duplicated here for this resource, since a plain
-                // SelectFilter on the same column already exists. Only the period
-                // filter is added here; see StockMovementsTable / LossLedgersTable
-                // below for a resource that needs both because it previously had
-                // neither.
-                AdminReviewFilters::period('ordered_at')
-                    ->visible(fn (): bool => auth()->user()?->can('viewAdminReview', PurchaseOrder::class) ?? false),
-            ])
+            ->defaultPaginationPageOption(12)
+            ->paginated([12, 24, 48])
+            ->recordUrl(fn (PurchaseOrder $record) => $record->getUrl('view'))
             ->recordActions([
-                ViewAction::make()
-                    ->modalWidth(\Filament\Support\Enums\Width::SevenExtraLarge),
+                ViewAction::make(),
 
                 EditAction::make()
-                    ->visible(fn (PurchaseOrder $record): bool => $record->status === PurchaseOrderStatus::Draft)
-                    ->modalWidth(\Filament\Support\Enums\Width::SevenExtraLarge),
+                    ->icon(Heroicon::PencilSquare)
+                    ->visible(fn (PurchaseOrder $record) => $record->status === PurchaseOrderStatus::Draft)
+                    ->modalWidth(Width::Large),
 
                 Action::make('orderPurchase')
-                    ->label(__('ORDER'))
-                    ->icon(\Filament\Support\Icons\Heroicon::PaperAirplane)
+                    ->label(__('resources.purchase_orders.actions.order'))
+                    ->icon(Heroicon::PaperAirplane)
                     ->color('primary')
                     ->authorize('orderPurchase')
-                    ->visible(fn (PurchaseOrder $record): bool => $record->status === PurchaseOrderStatus::Draft)
+                    ->visible(fn (PurchaseOrder $record) => $record->status === PurchaseOrderStatus::Draft)
                     ->requiresConfirmation()
-                    ->action(function (PurchaseOrder $record) {
-                        app(\App\Services\PurchaseService::class)->orderPurchase($record);
-                        Notification::make()
-                            ->title(__('Purchase order placed'))
-                            ->success()
-                            ->send();
-                    }),
+                    ->action(fn (PurchaseOrder $record) => app(\App\Services\PurchaseService::class)->orderPurchase($record)),
 
                 Action::make('receivePurchase')
-                    ->label(__('RECEIVE'))
-                    ->icon(\Filament\Support\Icons\Heroicon::ArrowDownTray)
+                    ->label(__('resources.purchase_orders.actions.receive'))
+                    ->icon(Heroicon::ArchiveBoxArrowDown)
                     ->color('success')
                     ->authorize('receivePurchase')
-                    ->visible(fn (PurchaseOrder $record): bool => in_array($record->status, [PurchaseOrderStatus::Ordered, PurchaseOrderStatus::PartiallyReceived]))
-                    ->modalWidth(\Filament\Support\Enums\Width::SevenExtraLarge)
-                    ->schema([
-                        \Filament\Forms\Components\Repeater::make('items')
-                            ->label(__('RECEIPT LINES'))
-                            ->schema([
-                                \Filament\Schemas\Components\Grid::make(5)->schema([
-                                    \Filament\Forms\Components\Select::make('item_id')
-                                        ->label(__('LINE'))
-                                        ->options(fn (PurchaseOrder $record) => $record->items->pluck('productVariant.sku', 'id')->toArray())
-                                        ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->productVariant->sku} — {$record->productVariant->name}")
-                                        ->required()
-                                        ->searchable()
-                                        ->preload()
-                                        ->columnSpan(2),
-
-                                    \Filament\Forms\Components\TextInput::make('received_base_qty')
-                                        ->label(__('RECEIVED BASE QTY'))
-                                        ->required()
-                                        ->numeric()
-                                        ->minValue(1)
-                                        ->columnSpan(1),
-
-                                    \Filament\Forms\Components\Select::make('unit_name')
-                                        ->label(__('UNIT'))
-                                        ->options(fn (PurchaseOrder $record) => $record->items->pluck('ordered_unit_name', 'id')->toArray())
-                                        ->required()
-                                        ->columnSpan(1),
-
-                                    \Filament\Forms\Components\TextInput::make('unit_ratio')
-                                        ->label(__('RATIO'))
-                                        ->required()
-                                        ->numeric()
-                                        ->minValue(1)
-                                        ->default(1)
-                                        ->columnSpan(1),
-
-                                    \Filament\Forms\Components\Textarea::make('notes')
-                                        ->label(__('NOTES'))
-                                        ->columnSpanFull(),
-                                ]),
-                            ])
-                            ->columns(5)
-                            ->defaultItems(0)
-                            ->addActionLabel(__('ADD RECEIPT LINE')),
-                    ])
-                    ->action(function (array $data, PurchaseOrder $record) {
-                        app(\App\Services\PurchaseService::class)->receivePurchase($record, $data['items']);
-                        Notification::make()
-                            ->title(__('Purchase received'))
-                            ->success()
-                            ->send();
-                    }),
-
-                Action::make('cancelPurchase')
-                    ->label(__('CANCEL'))
-                    ->icon(\Filament\Support\Icons\Heroicon::XCircle)
-                    ->color('danger')
-                    ->authorize('cancelPurchase')
-                    ->visible(fn (PurchaseOrder $record): bool => in_array($record->status, [
-                        PurchaseOrderStatus::Draft,
+                    ->visible(fn (PurchaseOrder $record) => in_array($record->status, [
                         PurchaseOrderStatus::Ordered,
                         PurchaseOrderStatus::PartiallyReceived,
-                    ]))
+                    ], true))
+                    ->modalWidth(Width::FourExtraLarge)
+                    ->schema(fn (PurchaseOrder $record) => collect($record->items)
+                        ->map(function ($item) {
+                            $outstandingBase = $item->outstandingBaseQty();
+                            $outstandingDisplay = $item->ordered_unit_ratio > 1
+                                ? round($outstandingBase / $item->ordered_unit_ratio, 2)
+                                : $outstandingBase;
+
+                            return TextInput::make("received.{$item->id}")
+                                ->label("{$item->productVariant->sku} — outstanding {$outstandingDisplay} {$item->ordered_unit_name} ({$outstandingBase} base)")
+                                ->prefixIcon(Heroicon::ArchiveBoxArrowDown)
+                                ->columnSpan(['default' => 1, 'md' => 1])
+                                ->numeric()
+                                ->minValue(0)
+                                ->maxValue($outstandingBase)
+                                ->default($outstandingBase);
+                        })
+                        ->all())
+                    ->action(function (array $data, PurchaseOrder $record) {
+                        $received = collect($data['received'] ?? [])
+                            ->filter(fn ($qty) => (int) $qty > 0)
+                            ->mapWithKeys(fn ($qty, $itemId) => [(int) $itemId => (int) $qty])
+                            ->all();
+                        app(\App\Services\PurchaseService::class)->receivePurchase($record->id, $received);
+                        Notification::make()->title(__('resources.purchase_orders.notifications.received'))->success()->send();
+                    })
+                    ->requiresConfirmation(),
+
+                Action::make('cancelPurchase')
+                    ->label(__('resources.purchase_orders.actions.cancel'))
+                    ->icon(Heroicon::XMark)
+                    ->color('danger')
+                    ->authorize('cancelPurchase')
+                    ->visible(fn (PurchaseOrder $record) => $record->canBeCancelled())
                     ->requiresConfirmation()
-                    ->action(function (PurchaseOrder $record) {
-                        app(\App\Services\PurchaseService::class)->cancelPurchaseOrder($record);
-                        Notification::make()
-                            ->title(__('Purchase order cancelled'))
-                            ->success()
-                            ->send();
-                    }),
+                    ->action(fn (PurchaseOrder $record) => app(\App\Services\PurchaseService::class)->cancelPurchaseOrder($record)),
 
                 DeleteAction::make()
+                    ->icon(Heroicon::Trash)
                     ->authorize('delete')
-                    ->visible(fn (PurchaseOrder $record): bool => in_array($record->status, [
+                    ->visible(fn (PurchaseOrder $record) => in_array($record->status, [
                         PurchaseOrderStatus::Draft,
                         PurchaseOrderStatus::Cancelled,
-                    ])),
+                    ], true)),
 
-                RestoreAction::make()
-                    ->authorize('restore'),
+                RestoreAction::make()->icon(Heroicon::ArrowUturnLeft)->authorize('restore'),
 
                 ForceDeleteAction::make()
-                    ->authorize('forceDelete'),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make()
-                        ->authorize('deleteAny'),
-
-                    RestoreBulkAction::make()
-                        ->authorize('restoreAny'),
-
-                    ForceDeleteBulkAction::make()
-                        ->authorize('forceDeleteAny'),
-                ]),
+                    ->icon(Heroicon::Trash)
+                    ->authorize('forceDelete')
+                    ->visible(fn () => auth()->user()->isAdmin()),
             ]);
     }
 }

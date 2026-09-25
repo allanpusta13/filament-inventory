@@ -15,6 +15,7 @@ use Filament\Actions\RestoreAction;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Support\Facades\URL;
 
 class ViewTransferRequisition extends ViewRecord
 {
@@ -32,9 +33,9 @@ class ViewTransferRequisition extends ViewRecord
                 ->color('primary')
                 ->authorize('confirm')
                 ->visible(fn ($record) => in_array($record->status?->value, [
-                    'requested',
-                    'under_review_fulfiller',
-                    'under_review_requestor',
+                    TransferRequisitionStatus::Requested->value,
+                    TransferRequisitionStatus::UnderReviewFulfiller->value,
+                    TransferRequisitionStatus::UnderReviewRequestor->value,
                 ], true))
                 ->action(function ($record) {
                     app(NegotiationService::class)
@@ -67,16 +68,20 @@ class ViewTransferRequisition extends ViewRecord
                 ->modalWidth(Width::Large),
 
             Action::make('scanToReceive')
-                ->label('SCAN TO RECEIVE')
+                ->label(__('resources.transfer_requisitions.actions.receive'))
                 ->name('scanToReceive')
                 ->icon(Heroicon::QrCode)
                 ->color('success')
                 ->authorize('receive')
                 ->visible(fn ($record) => in_array($record->status?->value, [
-                    'dispatched',
-                    'partially_received',
+                    TransferRequisitionStatus::Dispatched->value,
+                    TransferRequisitionStatus::PartiallyReceived->value,
                 ], true))
-                ->url(fn ($record) => route('stn.scan', ['transferRequisition' => $record->id])),
+                ->url(fn ($record) => URL::temporarySignedRoute(
+                    'stn.scan',
+                    now()->addDays(7),
+                    ['transferRequisition' => $record->id]
+                )),
 
             Action::make('recordLoss')
                 ->label('RECORD LOSS')
@@ -85,8 +90,8 @@ class ViewTransferRequisition extends ViewRecord
                 ->color('danger')
                 ->authorize('recordLoss')
                 ->visible(fn ($record) => in_array($record->status?->value, [
-                    'dispatched',
-                    'partially_received',
+                    TransferRequisitionStatus::Dispatched->value,
+                    TransferRequisitionStatus::PartiallyReceived->value,
                 ], true))
                 ->modalWidth(Width::Large)
                 ->schema([

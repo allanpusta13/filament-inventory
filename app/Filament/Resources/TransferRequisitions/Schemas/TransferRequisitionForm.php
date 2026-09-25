@@ -4,189 +4,132 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\TransferRequisitions\Schemas;
 
-use App\Filament\Components\WizardReviewStep;
-use App\Models\ProductVariant;
-use App\Models\Warehouse;
+use App\Models\ProductVariantUnitConversion;
 use Filament\Forms\Components\Repeater;
-use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Illuminate\Support\HtmlString;
 
 class TransferRequisitionForm
 {
     public static function configure(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                Section::make()
-                    ->schema([
-                        // Steps are handled by the CreateTransferRequisition page using HasWizard trait
-                        // This form just provides the schemas for each step
-                    ]),
-            ]);
+        return $schema->components([
+            ...self::getRoutingFields(),
+            ...self::getMaterialManifestFields(),
+        ]);
     }
 
-    /**
-     * Step 1: Warehouse Location Routing
-     */
-    public static function getRoutingSchema(): array
+    public static function getRoutingFields(): array
     {
         return [
-            Select::make('from_warehouse_id')
-                ->label('ORIGIN WAREHOUSE (FULFILLER)')
-                ->options(fn () => Warehouse::query()->where('is_active', true)->pluck('name', 'id'))
-                ->required()
-                ->searchable()
-                ->preload()
-                ->prefixIcon(Heroicon::BuildingOffice),
-
-            Select::make('to_warehouse_id')
-                ->label('DESTINATION WAREHOUSE (REQUESTOR)')
-                ->options(fn () => Warehouse::query()->where('is_active', true)->pluck('name', 'id'))
-                ->required()
-                ->searchable()
-                ->preload()
-                ->different('from_warehouse_id')
-                ->validationMessages([
-                    'different' => 'Destination warehouse cannot match the origin warehouse.',
-                ])
-                ->prefixIcon(Heroicon::BuildingOffice2),
-        ];
-    }
-
-    /**
-     * Step 2: Line Items & Packaging Formats
-     */
-    public static function getItemsSchema(): array
-    {
-        return [
-            Section::make('REQUESTED MATERIAL MANIFEST')
-                ->icon(Heroicon::ClipboardDocumentList)
-                ->description('Select SKU variants, packaging formats, conversion ratios, and quantities.')
+            Section::make(__('resources.transfer_requisitions.sections.routing'))
+                ->icon(Heroicon::BuildingOffice)
+                ->columnSpanFull()
+                ->columns(['default' => 1, 'md' => 2, 'xl' => 2])
                 ->schema([
-                    Repeater::make('items')
-                        ->relationship('items')
-                        ->table([
-                            TableColumn::make('PRODUCT VARIANT (SKU)'),
-                            TableColumn::make('PACKAGING FORMAT'),
-                            TableColumn::make('UNIT RATIO'),
-                            TableColumn::make('ORDER QUANTITY'),
-                        ])
-                        ->schema([
-                            Select::make('product_variant_id')
-                                ->relationship('productVariant', 'sku')
-                                ->required()
-                                ->searchable()
-                                ->preload()
-                                ->disableOptionsWhenSelectedInSiblingRepeaterItems()
-                                ->columnSpan(3),
+                    Select::make('from_warehouse_id')
+                        ->label(__('resources.transfer_requisitions.fields.from_warehouse'))
+                        ->prefixIcon(Heroicon::BuildingOffice)
+                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
+                        ->options(fn () => auth()->user()->warehouses()->pluck('name', 'id'))
+                        ->default(fn () => auth()->user()->warehouses()->count() === 1
+                            ? auth()->user()->warehouses()->first()->id
+                            : null)
+                        ->required(),
 
-                            TextInput::make('requested_unit_name')
-                                ->required()
-                                ->placeholder('Box')
-                                ->columnSpan(2),
-
-                            TextInput::make('requested_unit_ratio')
-                                ->numeric()
-                                ->required()
-                                ->minValue(1)
-                                ->default(1)
-                                ->columnSpan(1)
-                                ->helperText('Base units per package.'),
-
-                            TextInput::make('requested_qty')
-                                ->numeric()
-                                ->required()
-                                ->minValue(1)
-                                ->default(1)
-                                ->columnSpan(2),
-                        ])
-                        ->columns(8)
-                        ->defaultItems(1)
-                        ->mutateRelationshipDataBeforeCreateUsing(function (array $data): array {
-                            $ratio = (int) ($data['requested_unit_ratio'] ?? 1);
-                            $qty = (int) ($data['requested_qty'] ?? 1);
-
-                            $data['requested_base_qty'] = $qty * $ratio;
-
-                            return $data;
-                        }),
+                    Select::make('to_warehouse_id')
+                        ->label(__('resources.transfer_requisitions.fields.to_warehouse'))
+                        ->prefixIcon(Heroicon::BuildingOffice2)
+                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
+                        ->options(fn () => auth()->user()->warehouses()->pluck('name', 'id'))
+                        ->required()
+                        ->different('from_warehouse_id'),
                 ]),
         ];
     }
 
-    /**
-     * Step 3: Review & Confirm
-     */
-    public static function getReviewSchema(): array
+    public static function getMaterialManifestFields(): array
     {
         return [
-            WizardReviewStep::make('review_summary')
-                ->label('REVIEW & CONFIRM')
-                ->content(fn (Get $get) => self::buildReviewHtml(
-                    Warehouse::find($get('from_warehouse_id')),
-                    Warehouse::find($get('to_warehouse_id')),
-                    $get('items') ?? [],
-                )),
+            Repeater::make('items')
+                ->relationship()
+                ->columnSpanFull()
+                ->columns(['default' => 1, 'md' => 2, 'xl' => 4])
+                ->schema([
+                    Select::make('product_variant_id')
+                        ->label(__('resources.transfer_requisitions.fields.variant_sku'))
+                        ->relationship('productVariant', 'sku')
+                        ->prefixIcon(Heroicon::Tag)
+                        ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2])
+                        ->searchable()
+                        ->preload()
+                        ->required()
+                        ->disableOptionsWhenSelectedInSiblingRepeaterItems()
+                        ->live()
+                        ->afterStateUpdated(function ($set) {
+                            $set('requested_unit_name', null);
+                            $set('requested_unit_ratio', null);
+                        }),
+
+                    Select::make('requested_unit_name')
+                        ->label(__('resources.transfer_requisitions.fields.unit'))
+                        ->prefixIcon(Heroicon::Scale)
+                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
+                        ->options(function (Get $get) {
+                            $variantId = $get('product_variant_id');
+                            if (! $variantId) {
+                                return [];
+                            }
+
+                            return ProductVariantUnitConversion::where('product_variant_id', $variantId)
+                                ->orderByDesc('base_unit_ratio')
+                                ->pluck('unit_name', 'unit_name')
+                                ->toArray();
+                        })
+                        ->required()
+                        ->live()
+                        ->afterStateUpdated(function (Get $get, $set, $state) {
+                            $ratio = ProductVariantUnitConversion::where('product_variant_id', $get('product_variant_id'))
+                                ->where('unit_name', $state)
+                                ->value('base_unit_ratio');
+                            $set('requested_unit_ratio', $ratio ?? 1);
+                        }),
+
+                    TextInput::make('requested_unit_ratio')
+                        ->label(__('resources.transfer_requisitions.fields.ratio_base'))
+                        ->hintIcon(Heroicon::InformationCircle)
+                        ->hint(__('resources.transfer_requisitions.hints.ratio_auto'))
+                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
+                        ->numeric()
+                        ->disabled()
+                        ->dehydrated()
+                        ->required(),
+
+                    TextInput::make('requested_qty')
+                        ->label(__('resources.transfer_requisitions.fields.qty'))
+                        ->prefixIcon(Heroicon::Hashtag)
+                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
+                        ->numeric()
+                        ->minValue(1)
+                        ->required(),
+                ])
+                ->minItems(1)
+                ->required()
+                ->dehydrated()
+                ->mutateRelationshipDataBeforeCreateUsing(function (array $data): array {
+                    $data['requested_base_qty'] = (int) $data['requested_qty'] * (int) $data['requested_unit_ratio'];
+
+                    return $data;
+                })
+                ->mutateRelationshipDataBeforeSaveUsing(function (array $data): array {
+                    $data['requested_base_qty'] = (int) $data['requested_qty'] * (int) $data['requested_unit_ratio'];
+
+                    return $data;
+                }),
         ];
-    }
-
-    /**
-     * Build the review HTML for the wizard review step.
-     */
-    protected static function buildReviewHtml(?Warehouse $fromWarehouse, ?Warehouse $toWarehouse, array $items): HtmlString
-    {
-        if (! $fromWarehouse || ! $toWarehouse || empty($items)) {
-            return new HtmlString('Complete previous steps to construct the verification sheet.');
-        }
-
-        $rowsHtml = '';
-        foreach ($items as $item) {
-            $variant = ProductVariant::find($item['product_variant_id'] ?? null);
-            $sku = $variant?->sku ?? 'Unknown';
-            $format = $item['requested_unit_name'] ?? 'Base Unit';
-            $ratio = (int) ($item['requested_unit_ratio'] ?? 1);
-            $qty = (int) ($item['requested_qty'] ?? 0);
-            $totalBase = $qty * $ratio;
-
-            $rowsHtml .= "
-                <tr class='border-b border-zinc-200 dark:border-zinc-800'>
-                    <td class='py-2 font-mono text-xs font-bold text-primary-600'>{$sku}</td>
-                    <td class='py-2 text-xs'>{$format}</td>
-                    <td class='py-2 text-xs text-right'>1 : {$ratio}</td>
-                    <td class='py-2 text-xs text-right'>{$qty}</td>
-                    <td class='py-2 text-xs text-right font-semibold text-zinc-900 dark:text-zinc-100'>{$totalBase} Pcs</td>
-                </tr>";
-        }
-
-        return new HtmlString("
-            <div class='grid grid-cols-2 gap-4 mb-4 pb-4 border-b border-zinc-200 dark:border-zinc-800'>
-                <div>
-                    <span class='text-[10px] uppercase font-bold text-zinc-500'>Fulfilling Origin</span>
-                    <p class='text-sm font-semibold text-zinc-900 dark:text-zinc-100'>{$fromWarehouse->name}</p>
-                </div>
-                <div>
-                    <span class='text-[10px] uppercase font-bold text-zinc-500'>Receiving Destination</span>
-                    <p class='text-sm font-semibold text-zinc-900 dark:text-zinc-100'>{$toWarehouse->name}</p>
-                </div>
-            </div>
-            <table class='w-full text-left'>
-                <thead>
-                    <tr class='border-b border-zinc-300 dark:border-zinc-700'>
-                        <th class='pb-2 text-[10px] uppercase font-bold text-zinc-500'>SKU</th>
-                        <th class='pb-2 text-[10px] uppercase font-bold text-zinc-500'>Packaging</th>
-                        <th class='pb-2 text-[10px] uppercase font-bold text-zinc-500 text-right'>Ratio</th>
-                        <th class='pb-2 text-[10px] uppercase font-bold text-zinc-500 text-right'>Qty</th>
-                        <th class='pb-2 text-[10px] uppercase font-bold text-zinc-500 text-right'>Computed Base</th>
-                    </tr>
-                </thead>
-                <tbody>{$rowsHtml}</tbody>
-            </table>
-        ");
     }
 }

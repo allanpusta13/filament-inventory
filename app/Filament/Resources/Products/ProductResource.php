@@ -25,7 +25,9 @@ class ProductResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'CATALOG';
 
-    protected static BackedEnum|string|null $navigationIcon = Heroicon::CubeTransparent;
+    protected static BackedEnum|string|null $navigationIcon = Heroicon::OutlinedCube;
+
+    protected static BackedEnum|string|null $activeNavigationIcon = Heroicon::Cube;
 
     protected static ?int $navigationSort = 1;
 

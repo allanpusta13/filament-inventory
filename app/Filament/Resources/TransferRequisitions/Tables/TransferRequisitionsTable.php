@@ -7,17 +7,16 @@ namespace App\Filament\Resources\TransferRequisitions\Tables;
 use App\Enums\TransferRequisitionStatus;
 use App\Models\TransferRequisition;
 use Filament\Actions\Action;
-use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteAction;
-use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreAction;
-use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Support\Enums\FontWeight;
+use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Columns\Layout\Split;
+use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
@@ -29,116 +28,124 @@ class TransferRequisitionsTable
     {
         return $table
             ->columns([
-                TextColumn::make('reference_code')
-                    ->label('REFERENCE CODE')
-                    ->weight(FontWeight::Bold)
-                    ->searchable()
-                    ->sortable()
-                    ->copyable()
-                    ->color('primary'),
+                Stack::make([
+                    Split::make([
+                        TextColumn::make('reference_code')
+                            ->label(__('resources.transfer_requisitions.table.reference'))
+                            ->fontFamily('mono')
+                            ->weight(FontWeight::Bold)
+                            ->searchable()
+                            ->sortable()
+                            ->copyable()
+                            ->copyMessage(__('common.copied')),
 
-                TextColumn::make('fromWarehouse.name')
-                    ->label('ORIGIN SITE')
-                    ->sortable(),
+                        TextColumn::make('status')
+                            ->badge()
+                            ->alignEnd()
+                            ->sortable(),
+                    ])->from('md'),
 
-                TextColumn::make('toWarehouse.name')
-                    ->label('RECEIVING SITE')
-                    ->sortable(),
+                    Split::make([
+                        TextColumn::make('fromWarehouse.name')
+                            ->label(__('resources.transfer_requisitions.table.from'))
+                            ->icon(Heroicon::BuildingOffice)
+                            ->iconColor('gray')
+                            ->searchable(),
 
-                TextColumn::make('status')
-                    ->label('OPERATIONAL STATUS')
-                    ->badge(),
+                        TextColumn::make('toWarehouse.name')
+                            ->label(__('resources.transfer_requisitions.table.to'))
+                            ->icon(Heroicon::BuildingOffice2)
+                            ->iconColor('gray')
+                            ->searchable(),
+                    ])->from('md'),
 
-                TextColumn::make('requested_at')
-                    ->label('SUBMITTED ON')
-                    ->dateTime('M d, Y H:i')
-                    ->sortable(),
+                    Split::make([
+                        TextColumn::make('items_count')
+                            ->label(__('resources.transfer_requisitions.table.items'))
+                            ->counts('items')
+                            ->badge()
+                            ->color('gray')
+                            ->numeric(),
 
-                TextColumn::make('completed_at')
-                    ->label('COMPLETED ON')
-                    ->dateTime('M d, Y H:i')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                        TextColumn::make('requestedBy.name')
+                            ->label(__('resources.transfer_requisitions.table.requested_by'))
+                            ->icon(Heroicon::User)
+                            ->iconColor('gray')
+                            ->placeholder('—'),
+
+                        TextColumn::make('requested_at')
+                            ->label(__('resources.transfer_requisitions.table.requested'))
+                            ->dateTime('M j, Y')
+                            ->sortable()
+                            ->placeholder('—')
+                            ->alignEnd(),
+                    ])->from('lg'),
+                ])->space(3),
             ])
-            ->defaultSort('requested_at', 'desc')
-            ->recordClasses(fn ($record) => match ($record->status) {
-                'under_review_fulfiller', 'under_review_requestor' => 'hover:bg-amber-50/40 dark:hover:bg-amber-950/20 transition-colors',
-                default => 'hover:bg-zinc-50 dark:hover:bg-zinc-900/40 transition-colors',
-            })
+            ->contentGrid([
+                'md' => 2,
+                'xl' => 3,
+            ])
             ->filters([
-                SelectFilter::make('status')
-                    ->options(TransferRequisitionStatus::class)
-                    ->label('OPERATIONAL STATUS'),
-
+                SelectFilter::make('status')->options(TransferRequisitionStatus::class),
                 SelectFilter::make('from_warehouse_id')
-                    ->label('ORIGIN WAREHOUSE')
+                    ->label(__('resources.transfer_requisitions.filters.from_warehouse'))
                     ->relationship('fromWarehouse', 'name')
-                    ->searchable()
-                    ->preload()
-                    ->visible(fn (): bool => auth()->user()?->can('viewAdminReview', TransferRequisition::class) ?? false),
-
+                    ->searchable(),
                 SelectFilter::make('to_warehouse_id')
-                    ->label('RECEIVING WAREHOUSE')
+                    ->label(__('resources.transfer_requisitions.filters.to_warehouse'))
                     ->relationship('toWarehouse', 'name')
-                    ->searchable()
-                    ->preload()
-                    ->visible(fn (): bool => auth()->user()?->can('viewAdminReview', TransferRequisition::class) ?? false),
-
+                    ->searchable(),
                 TrashedFilter::make(),
+                \App\Filament\Support\Filters\AdminReviewFilters::period('requested_at')
+                    ->authorize('viewAuditFilters'),
             ])
+            ->defaultSort('created_at', 'desc')
+            ->defaultPaginationPageOption(12)
+            ->paginated([12, 24, 48])
+            ->recordUrl(fn (TransferRequisition $record) => $record->getUrl('view'))
             ->recordActions([
                 ViewAction::make(),
 
                 EditAction::make()
-                    ->visible(fn ($record) => $record->status === 'draft')
-                    ->modalWidth(\Filament\Support\Enums\Width::Large),
+                    ->icon(Heroicon::PencilSquare)
+                    ->visible(fn (TransferRequisition $record) => $record->status === TransferRequisitionStatus::Draft)
+                    ->modalWidth(Width::Large),
 
                 Action::make('submitRequest')
-                    ->label('SUBMIT REQUEST')
+                    ->label(__('resources.transfer_requisitions.actions.submit'))
                     ->icon(Heroicon::PaperAirplane)
                     ->color('primary')
-                    ->visible(fn ($record) => $record->status === 'draft')
-                    ->action(function ($record) {
-                        $record->update([
-                            'status' => 'requested',
-                            'requested_at' => now(),
-                            'requested_by' => auth()->id(),
-                        ]);
-                    })
-                    ->requiresConfirmation(),
+                    ->authorize('submitRequest')
+                    ->visible(fn (TransferRequisition $record) => $record->status === TransferRequisitionStatus::Draft)
+                    ->requiresConfirmation()
+                    ->action(fn (TransferRequisition $record) => app(\App\Services\NegotiationService::class)->submitRequest($record)),
 
                 Action::make('reviewNegotiate')
-                    ->label('REVIEW / NEGOTIATE')
+                    ->label(__('resources.transfer_requisitions.actions.review'))
                     ->icon(Heroicon::ChatBubbleLeftRight)
                     ->color('warning')
-                    ->visible(fn ($record) => in_array($record->status, ['requested', 'under_review_fulfiller', 'under_review_requestor']))
-                    ->url(fn ($record) => $record->getUrl('edit')),
-
-                Action::make('acceptRevision')
-                    ->label('ACCEPT REVISION')
-                    ->icon(Heroicon::CheckCircle)
-                    ->color('success')
-                    ->visible(fn ($record) => in_array($record->status, ['under_review_fulfiller', 'under_review_requestor'])),
-
-                Action::make('rejectRevision')
-                    ->label('REJECT REVISION')
-                    ->icon(Heroicon::XCircle)
-                    ->color('danger')
-                    ->visible(fn ($record) => in_array($record->status, ['under_review_fulfiller', 'under_review_requestor'])),
+                    ->visible(fn (TransferRequisition $record) => in_array($record->status, [
+                        TransferRequisitionStatus::Requested,
+                        TransferRequisitionStatus::UnderReviewFulfiller,
+                        TransferRequisitionStatus::UnderReviewRequestor,
+                    ], true))
+                    ->url(fn (TransferRequisition $record) => $record->getUrl('edit')),
 
                 Action::make('confirm')
-                    ->label('CONFIRM')
+                    ->label(__('resources.transfer_requisitions.actions.confirm'))
                     ->icon(Heroicon::CheckBadge)
                     ->color('primary')
                     ->authorize('confirm')
-                    ->visible(fn ($record) => in_array($record->status, ['requested', 'under_review_fulfiller', 'under_review_requestor']))
-                    ->action(function ($record) {
-                        // Only materialize requested for items that were never negotiated
-                        // (items with negotiated revisions already have approved_* fields set)
-                        app(\App\Services\NegotiationService::class)
-                            ->materializeRequestedAsApproved($record);
+                    ->visible(fn (TransferRequisition $record) => in_array($record->status, [
+                        TransferRequisitionStatus::Requested,
+                        TransferRequisitionStatus::UnderReviewFulfiller,
+                        TransferRequisitionStatus::UnderReviewRequestor,
+                    ], true))
+                    ->action(function (TransferRequisition $record) {
+                        app(\App\Services\NegotiationService::class)->materializeRequestedAsApproved($record);
                         $record->update([
-                            'status' => 'confirmed',
+                            'status' => TransferRequisitionStatus::Confirmed,
                             'approved_at' => now(),
                             'approved_by' => auth()->id(),
                         ]);
@@ -146,135 +153,48 @@ class TransferRequisitionsTable
                     ->requiresConfirmation(),
 
                 Action::make('dispatch')
-                    ->label('DISPATCH')
+                    ->label(__('resources.transfer_requisitions.actions.dispatch'))
                     ->icon(Heroicon::Truck)
                     ->color('primary')
                     ->authorize('dispatch')
-                    ->visible(fn ($record) => $record->status === 'confirmed'),
+                    ->visible(fn (TransferRequisition $record) => $record->status === TransferRequisitionStatus::Confirmed)
+                    ->action(fn (TransferRequisition $record) => app(\App\Services\InventoryService::class)->dispatchTransfer($record))
+                    ->requiresConfirmation(),
 
                 Action::make('scanToReceive')
-                    ->label('SCAN TO RECEIVE')
-                    ->name('scanToReceive')
+                    ->label(__('resources.transfer_requisitions.actions.receive'))
                     ->icon(Heroicon::QrCode)
                     ->color('success')
                     ->authorize('receive')
-                    ->visible(fn ($record) => in_array($record->status, [TransferRequisitionStatus::Dispatched, TransferRequisitionStatus::PartiallyReceived]))
-                    ->url(fn ($record) => route('stn.scan', ['transferRequisition' => $record->id])),
+                    ->visible(fn (TransferRequisition $record) => in_array($record->status, [
+                        TransferRequisitionStatus::Dispatched,
+                        TransferRequisitionStatus::PartiallyReceived,
+                    ], true))
+                    ->url(fn (TransferRequisition $record) => route('stn.scan', ['transferRequisition' => $record->id])),
 
-                Action::make('recordLoss')
-                    ->label('RECORD LOSS')
-                    ->name('recordLoss')
-                    ->icon(Heroicon::ExclamationTriangle)
-                    ->color('danger')
-                    ->authorize('recordLoss')
-                    ->visible(fn ($record) => in_array($record->status, [TransferRequisitionStatus::Dispatched, TransferRequisitionStatus::PartiallyReceived]))
-                    ->modalWidth(\Filament\Support\Enums\Width::Large)
-                    ->schema([
-                        \Filament\Forms\Components\Select::make('product_variant_id')
-                            ->label('Product Variant')
-                            ->options(fn ($record) => $record->items->pluck('productVariant.name', 'product_variant_id')->toArray())
-                            ->required()
-                            ->searchable()
-                            ->preload()
-                            ->live(onBlur: true)
-                            ->afterStateUpdated(fn ($set, $get) => $set('total_financial_loss', null)),
-                        \Filament\Forms\Components\Select::make('loss_category')
-                            ->label('Loss Category')
-                            ->options([
-                                'shortfall' => 'Shortfall',
-                                'damage' => 'Damage',
-                                'spoilage' => 'Spoilage',
-                                'theft' => 'Theft',
-                                'other' => 'Other',
-                            ])
-                            ->required(),
-                        \Filament\Forms\Components\TextInput::make('lost_base_qty')
-                            ->label('Lost Quantity (Base)')
-                            ->numeric()
-                            ->required()
-                            ->minValue(0)
-                            ->live(onBlur: true)
-                            ->afterStateUpdated(fn ($set, $get) => $set('total_financial_loss', null)),
-                        \Filament\Forms\Components\TextInput::make('damaged_base_qty')
-                            ->label('Damaged Quantity (Base)')
-                            ->numeric()
-                            ->default(0)
-                            ->minValue(0)
-                            ->live(onBlur: true)
-                            ->afterStateUpdated(fn ($set, $get) => $set('total_financial_loss', null)),
-                        \Filament\Forms\Components\TextInput::make('total_financial_loss')
-                            ->label('Total Financial Loss (Auto-calculated)')
-                            ->numeric()
-                            ->minValue(0)
-                            ->disabled()
-                            ->dehydrated(false),
-                        \Filament\Forms\Components\Textarea::make('notes')
-                            ->label('Notes')
-                            ->columnSpanFull(),
-                    ])
-                    ->action(function (array $data, $record) {
-                        $variant = \App\Models\ProductVariant::with('currentPrice')->find($data['product_variant_id']);
-                        $unitCost = \App\Models\LossLedger::snapshotUnitCostFrom($variant);
-                        $totalQty = (int) $data['lost_base_qty'] + (int) $data['damaged_base_qty'];
-                        $totalFinancialLoss = \App\Models\LossLedger::calculateTotalFinancialLoss($unitCost, $totalQty);
-                        $record->lossLedgers()->create([
-                            'transfer_requisition_item_id' => $record->items->where('product_variant_id', $data['product_variant_id'])->first()?->id,
-                            'product_variant_id' => $data['product_variant_id'],
-                            'warehouse_id' => $record->to_warehouse_id,
-                            'loss_category' => $data['loss_category'],
-                            'lost_base_qty' => $data['lost_base_qty'],
-                            'damaged_base_qty' => $data['damaged_base_qty'],
-                            'unit_cost_price' => $unitCost,
-                            'total_financial_loss' => $totalFinancialLoss,
-                            'notes' => $data['notes'],
-                            'recorded_by' => auth()->id(),
-                            'recorded_at' => now(),
-                        ]);
-                        \Filament\Notifications\Notification::make()
-                            ->title('Loss recorded')
-                            ->success()
-                            ->send();
-                    })
-                    ->requiresConfirmation(),
-
-                // Cancellation only pre-dispatch
                 Action::make('cancel')
-                    ->label('CANCEL')
+                    ->label(__('resources.transfer_requisitions.actions.cancel'))
                     ->icon(Heroicon::XMark)
                     ->color('danger')
                     ->authorize('cancel')
-                    ->visible(fn ($record) => in_array($record->status, [
-                        'draft',
-                        'requested',
-                        'under_review_fulfiller',
-                        'under_review_requestor',
-                        'confirmed',
-                    ])),
+                    ->visible(fn (TransferRequisition $record) => $record->canBeCancelled())
+                    ->action(fn (TransferRequisition $record) => app(\App\Services\TransferRequisitionService::class)->cancelRequisition($record))
+                    ->requiresConfirmation(),
 
                 DeleteAction::make()
+                    ->icon(Heroicon::Trash)
                     ->authorize('delete')
-                    ->visible(fn ($record) => in_array($record->status, [
-                        'draft',
-                        'cancelled',
-                    ])),
+                    ->visible(fn (TransferRequisition $record) => in_array($record->status, [
+                        TransferRequisitionStatus::Draft,
+                        TransferRequisitionStatus::Cancelled,
+                    ], true)),
 
-                RestoreAction::make()
-                    ->authorize('restore'),
+                RestoreAction::make()->icon(Heroicon::ArrowUturnLeft)->authorize('restore'),
 
                 ForceDeleteAction::make()
-                    ->authorize('forceDelete'),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make()
-                        ->authorize('deleteAny'),
-
-                    RestoreBulkAction::make()
-                        ->authorize('restoreAny'),
-
-                    ForceDeleteBulkAction::make()
-                        ->authorize('forceDeleteAny'),
-                ]),
+                    ->icon(Heroicon::Trash)
+                    ->authorize('forceDelete')
+                    ->visible(fn () => auth()->user()->isAdmin()),
             ]);
     }
 }

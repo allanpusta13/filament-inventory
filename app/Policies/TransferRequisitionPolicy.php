@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
-use App\Enums\TransferRequisitionStatus;
 use App\Models\TransferRequisition;
 use App\Models\User;
 
@@ -12,193 +11,107 @@ class TransferRequisitionPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->isAdmin() || $user->isAuditor() || $user->isBranchManager() || $user->isWarehouseStaff();
+        return true;
     }
 
-    public function view(User $user, TransferRequisition $requisition): bool
+    public function view(User $user, TransferRequisition $r): bool
     {
-        if ($user->isAdmin() || $user->isAuditor()) {
-            return true;
-        }
-
-        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
-            return $user->canAccessWarehouse($requisition->fromWarehouse)
-                || $user->canAccessWarehouse($requisition->toWarehouse);
-        }
-
-        return false;
+        return $user->isAdmin()
+            || $user->warehouses->contains($r->from_warehouse_id)
+            || $user->warehouses->contains($r->to_warehouse_id);
     }
 
     public function create(User $user): bool
     {
-        return $user->isAdmin() || $user->isBranchManager() || $user->isWarehouseStaff();
+        return $user->warehouses()->exists();
     }
 
-    public function update(User $user, TransferRequisition $requisition): bool
+    public function update(User $user, TransferRequisition $r): bool
     {
-        if ($user->isAdmin()) {
-            return true;
-        }
-
-        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
-            return ($user->canAccessWarehouse($requisition->fromWarehouse)
-                    || $user->canAccessWarehouse($requisition->toWarehouse))
-                && $requisition->status === TransferRequisitionStatus::Draft;
-        }
-
-        return false;
+        return $r->status === \App\Enums\TransferRequisitionStatus::Draft
+            && $user->warehouses->contains($r->from_warehouse_id);
     }
 
-    public function delete(User $user, TransferRequisition $requisition): bool
+    public function delete(User $user, TransferRequisition $r): bool
     {
-        if ($user->isAdmin()) {
-            return true;
-        }
-
-        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
-            return ($user->canAccessWarehouse($requisition->fromWarehouse)
-                    || $user->canAccessWarehouse($requisition->toWarehouse))
-                && in_array($requisition->status, [
-                    TransferRequisitionStatus::Draft,
-                    TransferRequisitionStatus::Cancelled,
-                ], true);
-        }
-
-        return false;
+        return $user->isAdmin()
+            && in_array($r->status, [
+                \App\Enums\TransferRequisitionStatus::Draft,
+                \App\Enums\TransferRequisitionStatus::Cancelled,
+            ], true);
     }
 
-    public function restore(User $user, TransferRequisition $requisition): bool
-    {
-        return $user->isAdmin() || $user->isAuditor();
-    }
-
-    public function forceDelete(User $user, TransferRequisition $requisition): bool
+    public function deleteAny(User $user): bool
     {
         return $user->isAdmin();
     }
 
-    public function confirm(User $user, TransferRequisition $requisition): bool
+    public function restore(User $user, TransferRequisition $r): bool
     {
-        if ($user->isAdmin() || $user->isAuditor()) {
-            return true;
-        }
-
-        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
-            return ($user->canAccessWarehouse($requisition->fromWarehouse)
-                    || $user->canAccessWarehouse($requisition->toWarehouse))
-                && in_array($requisition->status, [
-                    TransferRequisitionStatus::Requested,
-                    TransferRequisitionStatus::UnderReviewFulfiller,
-                    TransferRequisitionStatus::UnderReviewRequestor,
-                ], true);
-        }
-
-        return false;
+        return $user->isAdmin();
     }
 
-    public function dispatch(User $user, TransferRequisition $requisition): bool
+    public function restoreAny(User $user): bool
     {
-        if ($user->isAdmin() || $user->isAuditor()) {
-            return true;
-        }
-
-        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
-            return ($user->canAccessWarehouse($requisition->fromWarehouse)
-                    || $user->canAccessWarehouse($requisition->toWarehouse))
-                && $requisition->status === TransferRequisitionStatus::Confirmed;
-        }
-
-        return false;
+        return $user->isAdmin();
     }
 
-    public function receive(User $user, TransferRequisition $requisition): bool
+    public function forceDelete(User $user, TransferRequisition $r): bool
     {
-        if ($user->isAdmin() || $user->isAuditor()) {
-            return true;
-        }
-
-        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
-            return ($user->canAccessWarehouse($requisition->fromWarehouse)
-                    || $user->canAccessWarehouse($requisition->toWarehouse))
-                && in_array($requisition->status, [
-                    TransferRequisitionStatus::Dispatched,
-                    TransferRequisitionStatus::PartiallyReceived,
-                ], true);
-        }
-
-        return false;
+        return $user->isAdmin();
     }
 
-    public function cancel(User $user, TransferRequisition $requisition): bool
+    public function forceDeleteAny(User $user): bool
     {
-        $allowedStatuses = [
-            TransferRequisitionStatus::Draft,
-            TransferRequisitionStatus::Requested,
-            TransferRequisitionStatus::UnderReviewFulfiller,
-            TransferRequisitionStatus::UnderReviewRequestor,
-            TransferRequisitionStatus::Confirmed,
-        ];
-
-        if (! in_array($requisition->status, $allowedStatuses, true)) {
-            return false;
-        }
-
-        if ($user->isAdmin() || $user->isAuditor()) {
-            return true;
-        }
-
-        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
-            return $user->canAccessWarehouse($requisition->fromWarehouse)
-                || $user->canAccessWarehouse($requisition->toWarehouse);
-        }
-
-        return false;
+        return $user->isAdmin();
     }
 
-    public function negotiate(User $user, TransferRequisition $requisition): bool
+    public function submitRequest(User $user, TransferRequisition $r): bool
     {
-        if ($user->isAdmin()) {
-            return true;
-        }
-
-        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
-            return ($user->canAccessWarehouse($requisition->fromWarehouse)
-                    || $user->canAccessWarehouse($requisition->toWarehouse))
-                && in_array($requisition->status, [
-                    TransferRequisitionStatus::Requested,
-                    TransferRequisitionStatus::UnderReviewFulfiller,
-                    TransferRequisitionStatus::UnderReviewRequestor,
-                ], true);
-        }
-
-        return false;
+        return $r->status === \App\Enums\TransferRequisitionStatus::Draft
+            && $user->warehouses->contains($r->from_warehouse_id);
     }
 
-    public function recordLoss(User $user, TransferRequisition $requisition): bool
+    public function confirm(User $user, TransferRequisition $r): bool
     {
-        if ($user->isAdmin() || $user->isAuditor()) {
-            return true;
-        }
-
-        if ($user->isBranchManager() || $user->isWarehouseStaff()) {
-            return ($user->canAccessWarehouse($requisition->fromWarehouse)
-                    || $user->canAccessWarehouse($requisition->toWarehouse))
-                && in_array($requisition->status, [
-                    TransferRequisitionStatus::Dispatched,
-                    TransferRequisitionStatus::PartiallyReceived,
-                ], true);
-        }
-
-        return false;
+        return $user->isAdmin()
+            || $user->warehouses->contains($r->to_warehouse_id);
     }
 
-    /**
-     * [Phase 4 / Principle A8] Sole source of truth for admin/auditor-only
-     * review-surface visibility (cross-warehouse filters, StatsOverview).
-     * Relocated verbatim from Filament visible() closures. FROZEN except
-     * for a genuinely new ability or a demonstrated bug.
-     */
-    public function viewAdminReview(User $user): bool
+    public function dispatch(User $user, TransferRequisition $r): bool
+    {
+        return $user->warehouses->contains($r->from_warehouse_id);
+    }
+
+    public function receive(User $user, TransferRequisition $r): bool
+    {
+        return $user->warehouses->contains($r->to_warehouse_id);
+    }
+
+    public function recordLoss(User $user, TransferRequisition $r): bool
+    {
+        return $user->warehouses->contains($r->to_warehouse_id);
+    }
+
+    public function cancel(User $user, TransferRequisition $r): bool
+    {
+        return $r->canBeCancelled()
+            && ($user->isAdmin() || $user->warehouses->contains($r->from_warehouse_id));
+    }
+
+    public function negotiate(User $user, TransferRequisition $r): bool
+    {
+        return in_array($r->status, [
+            \App\Enums\TransferRequisitionStatus::Requested,
+            \App\Enums\TransferRequisitionStatus::UnderReviewFulfiller,
+            \App\Enums\TransferRequisitionStatus::UnderReviewRequestor,
+        ], true) && (
+            $user->warehouses->contains($r->from_warehouse_id)
+            || $user->warehouses->contains($r->to_warehouse_id)
+        );
+    }
+
+    public function viewAuditFilters(User $user): bool
     {
         return $user->isAdmin() || $user->isAuditor();
     }
