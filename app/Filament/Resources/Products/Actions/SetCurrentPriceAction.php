@@ -13,12 +13,21 @@ use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * §7A.4.1 canonical contract.
+ *
+ * No-op guard: identical cost + sale price produces no new row and no
+ * notification. Otherwise: rotate the current row inside a transaction
+ * under a variant lock, insert a new current row, notify.
+ */
 class SetCurrentPriceAction
 {
     public static function make(): Action
     {
         return Action::make('setCurrentPrice')
             ->label(__('resources.products.actions.set_current_price'))
+            ->modalHeading(__('resources.products.actions.set_current_price_heading'))
+            ->modalDescription(__('resources.products.actions.set_current_price_description'))
             ->icon(Heroicon::CurrencyDollar)
             ->color('primary')
             ->modalWidth(Width::Large)
@@ -54,11 +63,12 @@ class SetCurrentPriceAction
                     ->maxLength(500),
             ])
             ->action(function (array $data, ProductVariant $record) {
-                DB::transaction(function () use ($data, $record) {
+                $persisted = false;
+
+                DB::transaction(function () use ($data, $record, &$persisted) {
                     $variant = ProductVariant::lockForUpdate()->findOrFail($record->id);
                     $current = $variant->currentPrice;
 
-                    // No-op guard: identical cost and sale price produces no new row.
                     if ($current
                         && bccomp((string) $current->cost_price, (string) $data['cost_price'], 4) === 0
                         && bccomp((string) $current->sale_price, (string) $data['sale_price'], 4) === 0) {
@@ -78,7 +88,13 @@ class SetCurrentPriceAction
                         'set_by' => auth()->id(),
                         'notes' => $data['notes'] ?? null,
                     ]);
+
+                    $persisted = true;
                 });
+
+                if (! $persisted) {
+                    return;
+                }
 
                 Notification::make()
                     ->title(__('resources.products.notifications.price_updated'))

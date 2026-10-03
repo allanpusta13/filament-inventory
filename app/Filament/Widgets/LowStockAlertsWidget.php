@@ -5,14 +5,49 @@ declare(strict_types=1);
 namespace App\Filament\Widgets;
 
 use App\Models\ProductVariant;
+use App\Models\Warehouse;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\Cache;
 
+/**
+ * LowStockAlertsWidget — bar chart of variants at/below reorder point.
+ *
+ * Visibility: Admin, Auditor, WarehouseStaff.
+ * Cache: 300s.
+ * Column span: `['default' => 1, 'md' => 1, 'xl' => 1]`.
+ *
+ * [ACCEPTED RISK — KEEP] Data: variants where
+ * `availableQuantity <= reorder_point` — warehouse-scoped, 300s cache.
+ * The per-variant loop below is the intentional live implementation
+ * (see §10 "Widget Caching — [ACCEPTED RISK]"); do not replace it
+ * outside the recorded trigger (active variants > ~5,000 or cache-miss
+ * > ~1–2s).
+ */
 class LowStockAlertsWidget extends ChartWidget
 {
-    protected ?string $heading = 'Low Stock Alerts';
+    protected static ?int $sort = 2;
 
-    protected int|string|array $columnSpan = 1;
+    protected int|string|array $columnSpan = ['default' => 1, 'md' => 1, 'xl' => 1];
+
+    public static function canView(): bool
+    {
+        $user = auth()->user();
+
+        return $user !== null
+            && ($user->isAdmin() || $user->isAuditor() || $user->isWarehouseStaff());
+    }
+
+    public static function cacheTtl(): int
+    {
+        return 300;
+    }
+
+    public static function cacheKey(int $userId, array $warehouseIds): string
+    {
+        sort($warehouseIds);
+
+        return 'low_stock_alerts_chart_'.$userId.'_'.md5(implode(',', $warehouseIds));
+    }
 
     protected function getType(): string
     {
@@ -22,197 +57,55 @@ class LowStockAlertsWidget extends ChartWidget
     protected function getData(): array
     {
         $user = auth()->user();
+        $warehouseIds = $user->isAdmin() || $user->isAuditor()
+            ? Warehouse::query()->pluck('id')->all()
+            : $user->warehouses()->pluck('warehouses.id')->all();
 
-        if (! ($user?->can('viewLowStockAlerts', ProductVariant::class) ?? false)) {
-            return [
-                'labels' => [],
-                'datasets' => [
-                    [
-                        'label' => 'Current Stock',
-                        'data' => [],
-                        'backgroundColor' => 'rgba(34, 197, 94, 0.8)',
-                        'borderColor' => 'rgb(34, 197, 94)',
-                        'borderWidth' => 1,
-                    ],
-                    [
-                        'label' => 'Reorder Point',
-                        'data' => [],
-                        'backgroundColor' => 'rgba(239, 68, 68, 0.8)',
-                        'borderColor' => 'rgb(239, 68, 68)',
-                        'borderWidth' => 1,
-                    ],
-                ],
-            ];
-        }
-
-        $warehouseIds = $user->warehouses->pluck('id')->toArray();
-
-        if (empty($warehouseIds)) {
-            return [
-                'labels' => [],
-                'datasets' => [
-                    [
-                        'label' => 'Current Stock',
-                        'data' => [],
-                        'backgroundColor' => 'rgba(34, 197, 94, 0.8)',
-                        'borderColor' => 'rgb(34, 197, 94)',
-                        'borderWidth' => 1,
-                    ],
-                    [
-                        'label' => 'Reorder Point',
-                        'data' => [],
-                        'backgroundColor' => 'rgba(239, 68, 68, 0.8)',
-                        'borderColor' => 'rgb(239, 68, 68)',
-                        'borderWidth' => 1,
-                    ],
-                ],
-            ];
-        }
-
-        $firstWarehouseId = $user->warehouses->first()->id;
-        $cacheKey = 'low_stock_alerts_chart_'.$user->id.'_'.$firstWarehouseId;
-
-        return Cache::remember($cacheKey, 300, function () use ($user) {
-            return $this->computeChartData($user);
-        });
-    }
-
-    protected function getOptions(): array
-    {
-        return [
-            'responsive' => true,
-            'maintainAspectRatio' => false,
-            'plugins' => [
-                'legend' => [
-                    'display' => true,
-                    'position' => 'bottom',
-                ],
-                'tooltip' => [
-                    'callbacks' => [
-                        'label' => 'function(context) {
-                            return context.dataset.label + ": " + context.parsed.y;
-                        }',
-                    ],
-                ],
-            ],
-            'scales' => [
-                'y' => [
-                    'beginAtZero' => true,
-                    'title' => [
-                        'display' => true,
-                        'text' => 'Quantity (Base Units)',
-                    ],
-                ],
-                'x' => [
-                    'title' => [
-                        'display' => true,
-                        'text' => 'Product Variants (SKU - Name)',
-                    ],
-                    'ticks' => [
-                        'maxRotation' => 45,
-                        'minRotation' => 45,
-                    ],
-                ],
-            ],
-        ];
-    }
-
-    private function computeChartData($user): array
-    {
-        $warehouseIds = $user->warehouses->pluck('id')->toArray();
-
-        if (empty($warehouseIds)) {
-            return [
-                'labels' => [],
-                'datasets' => [
-                    [
-                        'label' => 'Current Stock',
-                        'data' => [],
-                        'backgroundColor' => 'rgba(34, 197, 94, 0.8)',
-                        'borderColor' => 'rgb(34, 197, 94)',
-                        'borderWidth' => 1,
-                    ],
-                    [
-                        'label' => 'Reorder Point',
-                        'data' => [],
-                        'backgroundColor' => 'rgba(239, 68, 68, 0.8)',
-                        'borderColor' => 'rgb(239, 68, 68)',
-                        'borderWidth' => 1,
-                    ],
-                ],
-            ];
-        }
-
-        // Single aggregate query: sum stock_movements across all accessible warehouses per variant
-        // Compare against reorder_point, return only variants at or below reorder point
-        $lowStockVariants = ProductVariant::where('reorder_point', '>', 0)
-            ->whereHas('stockMovements', function ($query) use ($warehouseIds) {
-                $query->whereIn('warehouse_id', $warehouseIds);
-            })
-            ->get()
-            ->map(function ($variant) use ($warehouseIds) {
-                $totalStock = 0;
-                foreach ($warehouseIds as $warehouseId) {
-                    $totalStock += $variant->onHandQuantity($warehouseId);
+        return Cache::remember(
+            static::cacheKey($user->id, $warehouseIds),
+            static::cacheTtl(),
+            function () use ($warehouseIds) {
+                if (empty($warehouseIds)) {
+                    return [
+                        'labels' => [],
+                        'datasets' => [
+                            [
+                                'label' => __('dashboard.charts.available'),
+                                'data' => [],
+                            ],
+                        ],
+                    ];
                 }
 
+                // Scan every active variant first, filter to low-stock, then cap the
+                // rendered chart at 20 rows — the limit applies after the filter,
+                // never before it.
+                $rows = ProductVariant::query()
+                    ->where('is_active', true)
+                    ->with('currentPrice')
+                    ->get()
+                    ->map(fn ($v) => [
+                        'sku' => $v->sku,
+                        'available' => array_sum(array_map(
+                            fn ($wid) => $v->availableQuantity($wid),
+                            $warehouseIds,
+                        )),
+                        'reorder' => (int) $v->reorder_point,
+                    ])
+                    ->filter(fn ($r) => $r['available'] <= $r['reorder'])
+                    ->take(20)
+                    ->values();
+
                 return [
-                    'variant' => $variant,
-                    'total_stock' => $totalStock,
-                    'reorder_point' => $variant->reorder_point,
+                    'labels' => $rows->pluck('sku')->all(),
+                    'datasets' => [
+                        [
+                            'label' => __('dashboard.charts.available'),
+                            'data' => $rows->pluck('available')->all(),
+                        ],
+                    ],
                 ];
-            })
-            ->filter(fn ($item) => $item['total_stock'] <= $item['reorder_point'])
-            ->sortBy('total_stock')
-            ->values();
-
-        if ($lowStockVariants->isEmpty()) {
-            return [
-                'labels' => [],
-                'datasets' => [
-                    [
-                        'label' => 'Current Stock',
-                        'data' => [],
-                        'backgroundColor' => 'rgba(34, 197, 94, 0.8)',
-                        'borderColor' => 'rgb(34, 197, 94)',
-                        'borderWidth' => 1,
-                    ],
-                    [
-                        'label' => 'Reorder Point',
-                        'data' => [],
-                        'backgroundColor' => 'rgba(239, 68, 68, 0.8)',
-                        'borderColor' => 'rgb(239, 68, 68)',
-                        'borderWidth' => 1,
-                    ],
-                ],
-            ];
-        }
-
-        $labels = $lowStockVariants->pluck(function ($item) {
-            return htmlspecialchars($item['variant']->sku.' - '.$item['variant']->name, ENT_QUOTES, 'UTF-8');
-        })->toArray();
-
-        $currentStockData = $lowStockVariants->pluck('total_stock')->toArray();
-        $reorderPointData = $lowStockVariants->pluck('reorder_point')->toArray();
-
-        return [
-            'labels' => $labels,
-            'datasets' => [
-                [
-                    'label' => 'Current Stock',
-                    'data' => $currentStockData,
-                    'backgroundColor' => 'rgba(34, 197, 94, 0.8)',
-                    'borderColor' => 'rgb(34, 197, 94)',
-                    'borderWidth' => 1,
-                ],
-                [
-                    'label' => 'Reorder Point',
-                    'data' => $reorderPointData,
-                    'backgroundColor' => 'rgba(239, 68, 68, 0.8)',
-                    'borderColor' => 'rgb(239, 68, 68)',
-                    'borderWidth' => 1,
-                ],
-            ],
-        ];
+            },
+        );
     }
 }

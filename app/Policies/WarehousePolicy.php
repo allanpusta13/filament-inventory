@@ -7,11 +7,23 @@ namespace App\Policies;
 use App\Models\User;
 use App\Models\Warehouse;
 
+/**
+ * Warehouse policy — §8.11. Admin-only management; warehouse-scoped read.
+ *
+ * ⚠ BranchManager: read access follows the same tier as WarehouseStaff
+ * (assigned warehouses only). Warehouse creation / update / deletion
+ * remain admin-only. The delete reference guards are admin-only.
+ */
 class WarehousePolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->isAdmin() || $user->isAuditor();
+        // Warehouse staff may list only their assigned warehouses — the
+        // database-level restriction lives in the resource query scope
+        // (§20.1). `viewAny` must therefore pass for staff with assignments.
+        return $user->isAdmin()
+            || $user->isAuditor()
+            || $user->warehouses()->exists();
     }
 
     public function view(User $user, Warehouse $w): bool
@@ -33,7 +45,8 @@ class WarehousePolicy
 
     /**
      * A warehouse may only be deleted when it has no ledger history and is
-     * not referenced by any document (PO, SO, TR, or direct transfer).
+     * not referenced by any document (PO, SO, TR, or direct transfer) and
+     * has no loss ledger rows.
      * This prevents raw FK violations from bubbling up as 500s.
      */
     public function delete(User $user, Warehouse $w): bool
@@ -67,6 +80,10 @@ class WarehousePolicy
         }
 
         if ($w->directTransfersTo()->exists()) {
+            return false;
+        }
+
+        if ($w->lossLedgers()->exists()) {
             return false;
         }
 

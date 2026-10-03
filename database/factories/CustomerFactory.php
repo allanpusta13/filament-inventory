@@ -8,7 +8,9 @@ use App\Models\Customer;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<Customer>
+ * Customer factory (§5.8).
+ *
+ * Symmetric to Supplier (§5.7): minimal master data, no code column.
  */
 class CustomerFactory extends Factory
 {
@@ -17,17 +19,12 @@ class CustomerFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->company(),
-            'contact_person' => fake()->name(),
-            'phone' => fake()->phoneNumber(),
-            'email' => fake()->unique()->safeEmail(),
-            'address' => fake()->address(),
+            'name' => $this->faker->company(),
+            'contact_person' => $this->faker->name(),
+            'phone' => $this->faker->phoneNumber(),
+            'email' => $this->faker->companyEmail(),
+            'address' => $this->faker->address(),
             'is_active' => true,
         ];
-    }
-
-    public function inactive(): static
-    {
-        return $this->state(fn () => ['is_active' => false]);
     }
 }

@@ -10,9 +10,4 @@ use Filament\Resources\Pages\ViewRecord;
 class ViewInTransit extends ViewRecord
 {
     protected static string $resource = InTransitResource::class;
-
-    protected function getHeaderActions(): array
-    {
-        return [];
-    }
 }

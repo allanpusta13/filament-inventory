@@ -7,6 +7,7 @@ namespace App\Filament\Resources\Warehouses\Pages;
 use App\Filament\Resources\Warehouses\WarehouseResource;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Support\Icons\Heroicon;
 
 class ListWarehouses extends ListRecords
 {
@@ -16,8 +17,8 @@ class ListWarehouses extends ListRecords
     {
         return [
             CreateAction::make()
-                ->slideOver()
-                ->modalWidth(\Filament\Support\Enums\Width::Large),
+                ->label(__('resources.warehouses.actions.create'))
+                ->icon(Heroicon::OutlinedBuildingOffice),
         ];
     }
 }

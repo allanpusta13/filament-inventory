@@ -6,13 +6,15 @@ namespace App\Filament\Resources\DirectTransfers\Pages;
 
 use App\Filament\Resources\DirectTransfers\DirectTransferResource;
 use App\Filament\Resources\DirectTransfers\Schemas\DirectTransferForm;
-use Filament\Forms\Components\Placeholder;
+use App\Support\GeneratesReferenceCodes;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Resources\Pages\CreateRecord\Concerns\HasWizard;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\View;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Support\Facades\Gate;
 
 class CreateDirectTransfer extends CreateRecord
 {
@@ -25,9 +27,7 @@ class CreateDirectTransfer extends CreateRecord
         return Width::SevenExtraLarge->value;
     }
 
-    /**
-     * @return array<Step>
-     */
+    /** @return array<Step> */
     protected function getSteps(): array
     {
         return [
@@ -45,19 +45,27 @@ class CreateDirectTransfer extends CreateRecord
                 ->description(__('resources.direct_transfers.steps.review_verify_description'))
                 ->icon(Heroicon::CheckCircle)
                 ->schema([
-                    Placeholder::make('review_summary')
-                        ->columnSpanFull()
-                        ->content(fn (Get $get) => view(
-                            'filament.wizards.direct-transfer-review',
-                            ['state' => $get()],
-                        )),
+                    View::make('filament.wizards.direct-transfer-review')
+                        ->viewData(fn (Get $get): array => [
+                            'state' => [
+                                'from_warehouse_id' => $get('from_warehouse_id'),
+                                'to_warehouse_id' => $get('to_warehouse_id'),
+                                'items' => $get('items') ?? [],
+                                'notes' => $get('notes'),
+                            ],
+                        ])
+                        ->columnSpanFull(),
                 ]),
+
         ];
     }
 
     protected function handleRecordCreation(array $data): \Illuminate\Database\Eloquent\Model
     {
-        $referenceCode = 'DT-'.now()->format('YmdHis').'-'.random_int(100, 999);
+        Gate::authorize('create', \App\Models\DirectTransfer::class);
+
+        $referenceCode = $data['reference_code']
+            ?? $this->generateReferenceCodeWithRetry('DT');
 
         return app(\App\Services\InventoryService::class)->directTransfer(
             fromWarehouseId: (int) $data['from_warehouse_id'],
@@ -66,5 +74,17 @@ class CreateDirectTransfer extends CreateRecord
             referenceCode: $referenceCode,
             notes: $data['notes'],
         );
+    }
+
+    protected function generateReferenceCodeWithRetry(string $prefix): string
+    {
+        $maxAttempts = 5;
+        for ($i = 0; $i < $maxAttempts; $i++) {
+            return GeneratesReferenceCodes::generateReferenceCode($prefix);
+        }
+        throw new \App\Exceptions\DomainRuleViolationException('errors.reference_code_exhausted', [
+            'prefix' => $prefix,
+            'attempts' => $maxAttempts,
+        ]);
     }
 }

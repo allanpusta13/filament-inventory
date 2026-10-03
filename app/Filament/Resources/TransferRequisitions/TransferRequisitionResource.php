@@ -23,6 +23,13 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use UnitEnum;
 
+/**
+ * TransferRequisition resource — §18.1a canonical class.
+ *
+ * Badge-bearing (§1B.3a). Uses `ScopesNavigationBadges` for the badge
+ * count and resolver. Both-endpoint OR-scope for non-admin/non-auditor
+ * users per §20.1.
+ */
 class TransferRequisitionResource extends Resource
 {
     use ScopesNavigationBadges;
@@ -31,13 +38,71 @@ class TransferRequisitionResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'OPERATIONS';
 
-    protected static BackedEnum|string|null $navigationIcon = Heroicon::OutlinedArrowsRightLeft;
-
-    protected static BackedEnum|string|null $activeNavigationIcon = Heroicon::ArrowsRightLeft;
+    protected static ?int $navigationSort = 1;
 
     protected static ?string $recordTitleAttribute = 'reference_code';
 
-    protected static ?int $navigationSort = 1;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowsRightLeft;
+
+    protected static string|BackedEnum|null $activeNavigationIcon = Heroicon::ArrowsRightLeft;
+
+    public static function getModelLabel(): string
+    {
+        return __('resources.transfer_requisitions.model.singular');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('resources.transfer_requisitions.model.plural');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('resources.transfer_requisitions.navigation.label');
+    }
+
+    public static function form(Schema $schema): Schema
+    {
+        return TransferRequisitionForm::configure($schema);
+    }
+
+    public static function table(Table $table): Table
+    {
+        return TransferRequisitionsTable::configure($table);
+    }
+
+    public static function infolist(Schema $schema): Schema
+    {
+        return TransferRequisitionInfolist::configure($schema);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with([
+                'fromWarehouse', 'toWarehouse',
+                'requestedBy', 'approvedBy', 'dispatchedBy', 'receivedBy',
+                'items.productVariant', 'items.substituteProductVariant',
+                'items.revisions', 'items.revisions.user',
+            ])
+            ->withCount('items')
+            ->when(
+                ! auth()->user()->isAdmin() && ! auth()->user()->isAuditor(),
+                function (Builder $q) {
+                    $ids = auth()->user()->warehouses()->pluck('id')->all();
+                    $q->where(function (Builder $qq) use ($ids) {
+                        $qq->whereIn('from_warehouse_id', $ids)
+                            ->orWhereIn('to_warehouse_id', $ids);
+                    });
+                }
+            );
+    }
+
+    public static function getRecordRouteBindingEloquentQuery(): Builder
+    {
+        return parent::getRecordRouteBindingEloquentQuery()
+            ->withoutGlobalScopes([SoftDeletingScope::class]);
+    }
 
     public static function getNavigationBadge(): ?string
     {
@@ -56,26 +121,6 @@ class TransferRequisitionResource extends Resource
         return __('resources.transfer_requisitions.badge_tooltip');
     }
 
-    public static function form(Schema $schema): Schema
-    {
-        return TransferRequisitionForm::configure($schema);
-    }
-
-    public static function infolist(Schema $schema): Schema
-    {
-        return TransferRequisitionInfolist::configure($schema);
-    }
-
-    public static function table(Table $table): Table
-    {
-        return TransferRequisitionsTable::configure($table);
-    }
-
-    public static function getRelations(): array
-    {
-        return [];
-    }
-
     public static function getPages(): array
     {
         return [
@@ -86,29 +131,9 @@ class TransferRequisitionResource extends Resource
         ];
     }
 
-    public static function getEloquentQuery(): Builder
-    {
-        return parent::getEloquentQuery()
-            ->with(['fromWarehouse', 'toWarehouse', 'items.productVariant', 'requestedBy', 'approvedBy', 'items'])
-            ->when(
-                ! auth()->user()?->can('viewAdminReview', TransferRequisition::class),
-                function (Builder $query) {
-                    $warehouseIds = auth()->user()?->warehouses()->pluck('warehouses.id')->toArray() ?? [];
-                    $query->where(function ($q) use ($warehouseIds) {
-                        $q->whereIn('from_warehouse_id', $warehouseIds)
-                            ->orWhereIn('to_warehouse_id', $warehouseIds);
-                    });
-                }
-            );
-    }
-
-    public static function getRecordRouteBindingEloquentQuery(): Builder
-    {
-        return parent::getRecordRouteBindingEloquentQuery()
-            ->withoutGlobalScopes([
-                SoftDeletingScope::class,
-            ]);
-    }
+    // ---------------------------------------------------------------------
+    // Badge (§1B.3a canonical implementation)
+    // ---------------------------------------------------------------------
 
     private static function getScopedBadgeCount(): int
     {

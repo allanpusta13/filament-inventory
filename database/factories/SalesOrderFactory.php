@@ -9,10 +9,14 @@ use App\Models\Customer;
 use App\Models\SalesOrder;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Support\GeneratesReferenceCodes;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<SalesOrder>
+ * SalesOrder factory (§5.15).
+ *
+ * Default state: Draft, `SO-*` reference code. Named state:
+ * `->confirmed()`.
  */
 class SalesOrderFactory extends Factory
 {
@@ -21,16 +25,11 @@ class SalesOrderFactory extends Factory
     public function definition(): array
     {
         return [
-            'reference_code' => 'SO-'.date('Ymd').'-'.mb_strtoupper(fake()->unique()->lexify('?????')),
+            'reference_code' => GeneratesReferenceCodes::generateReferenceCode('SO', $this->faker->unique()->numberBetween(100, 999)),
             'customer_id' => Customer::factory(),
             'warehouse_id' => Warehouse::factory(),
             'status' => SalesOrderStatus::Draft,
             'ordered_by' => User::factory(),
-            'ordered_at' => null,
-            'confirmed_at' => null,
-            'dispatched_at' => null,
-            'cancelled_at' => null,
-            'notes' => null,
         ];
     }
 
@@ -38,45 +37,7 @@ class SalesOrderFactory extends Factory
     {
         return $this->state(fn () => [
             'status' => SalesOrderStatus::Confirmed,
-            'ordered_at' => now(),
             'confirmed_at' => now(),
-        ]);
-    }
-
-    public function partiallyDispatched(): static
-    {
-        return $this->state(fn () => [
-            'status' => SalesOrderStatus::PartiallyDispatched,
-            'ordered_at' => now(),
-            'confirmed_at' => now(),
-        ]);
-    }
-
-    public function dispatched(): static
-    {
-        return $this->state(fn () => [
-            'status' => SalesOrderStatus::Dispatched,
-            'ordered_at' => now(),
-            'confirmed_at' => now(),
-            'dispatched_at' => now(),
-        ]);
-    }
-
-    public function completed(): static
-    {
-        return $this->state(fn () => [
-            'status' => SalesOrderStatus::Completed,
-            'ordered_at' => now(),
-            'confirmed_at' => now(),
-            'dispatched_at' => now(),
-        ]);
-    }
-
-    public function cancelled(): static
-    {
-        return $this->state(fn () => [
-            'status' => SalesOrderStatus::Cancelled,
-            'cancelled_at' => now(),
         ]);
     }
 }

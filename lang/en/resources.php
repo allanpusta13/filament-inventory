@@ -2,332 +2,762 @@
 
 declare(strict_types=1);
 
+/**
+ * Canonical domain translation catalogue (§0A.2a / §0A.3).
+ *
+ * Re-audit additions (this revision):
+ *   - Profile password change fields (users.fields.current_password,
+ *     new_password, password_confirmation)
+ *   - Empty-state keys per domain (table.empty_heading,
+ *     table.empty_description)
+ *   - Framework action labels per domain (actions.edit, actions.delete,
+ *     actions.view, actions.restore, actions.force_delete)
+ *   - users.help.password_leave_blank
+ *   - transfer_requisitions.fields.negotiation_reason_placeholder
+ *
+ * Every key referenced by the generated Filament layer resolves here.
+ */
 return [
-    // Product resource
+
+    // =====================================================================
+    // CATALOG — Products
+    // =====================================================================
     'products' => [
-        'model' => [
-            'singular' => 'Product',
-            'plural' => 'Products',
+        'model' => ['singular' => 'Product', 'plural' => 'Products'],
+        'navigation' => ['label' => 'Products'],
+        'sections' => ['inventory' => 'Inventory'],
+        'tabs' => [
+            'identity' => 'Identity',
+            'status' => 'Status',
+            'stock_pricing' => 'Stock & Pricing',
         ],
+        'wizard' => ['review' => 'Review product'],
         'fields' => [
             'sku' => 'SKU',
+            'family_name' => 'Family name',
+            'family_category' => 'Category',
+            'variant_name' => 'Variant name',
             'barcode' => 'Barcode',
-            'base_unit' => 'Base Unit',
-            'reorder_point' => 'Reorder Point',
+            'base_unit' => 'Base unit',
+            'base_unit_name' => 'Base unit',
+            'base_unit_ratio' => 'Base unit ratio',
+            'unit_name' => 'Unit',
+            'unit_conversions' => 'Unit conversions',
+            'reorder_point' => 'Reorder point',
+            'attributes' => 'Attributes',
+            'images' => 'Images',
+            'is_active' => 'Active',
+            'is_default_purchase' => 'Default purchase unit',
+            'is_default_transfer' => 'Default transfer unit',
+            'cost_price' => 'Cost price',
+            'sale_price' => 'Sale price',
+            'price_change_notes' => 'Price change notes',
+            'product_family' => 'Product family',
+            'warehouse' => 'Warehouse',
+            'signed_quantity_base' => 'Signed quantity (base units)',
+            'adjustment_notes' => 'Adjustment notes',
         ],
-        'sections' => [
-            'inventory' => 'Inventory',
+        'hints' => [
+            'signed_quantity' => 'Positive adds stock, negative removes stock.',
+        ],
+        'filters' => [
+            'is_active' => 'Active',
+            'product_family' => 'Product family',
+        ],
+        'table' => [
+            'sku' => 'SKU',
+            'name' => 'Name',
+            'family' => 'Family',
+            'base_unit' => 'Base unit',
+            'reorder_point' => 'Reorder point',
+            'sale_price' => 'Sale price',
+            'status' => 'Status',
+            'empty_heading' => 'No products found',
+            'empty_description' => 'Create your first product to get started.',
+        ],
+        'infolist' => [
+            'identity' => 'Identity',
             'pricing' => 'Pricing',
+            'unit_conversions' => 'Unit conversions',
         ],
         'actions' => [
-            'manage_units' => 'Manage Units',
-            'set_price' => 'Set Price',
-            'quick_adjustment' => 'Quick Adjustment',
+            'create' => 'New product',
+            'edit' => 'Edit',
+            'view' => 'View',
+            'delete' => 'Delete',
+            'restore' => 'Restore',
+            'force_delete' => 'Delete permanently',
+            'set_current_price' => 'Set current price',
+            'set_current_price_heading' => 'Set current price',
+            'set_current_price_description' => 'Replace the current price for this variant.',
+            'manage_units' => 'Manage units',
+            'manage_units_heading' => 'Manage units',
+            'manage_units_description' => 'Edit unit conversions for this variant.',
+            'edit_family' => 'Edit family',
+            'edit_family_heading' => 'Edit family',
+            'edit_family_description' => 'Edit the parent product family.',
+            'quick_adjustment' => 'Quick adjustment',
+            'quick_adjustment_heading' => 'Quick stock adjustment',
+            'quick_adjustment_description' => 'Record a manual stock adjustment.',
         ],
         'notifications' => [
-            'created' => 'Product created successfully.',
-            'updated' => 'Product updated successfully.',
-        ],
-        'wizard' => [
-            'review' => 'Review',
+            'created' => 'Product created.',
+            'updated' => 'Product updated.',
+            'price_updated' => 'Price updated.',
+            'adjustment_recorded' => 'Adjustment recorded.',
+            'family_updated' => 'Family updated.',
+            'family_missing' => 'Product family is missing.',
         ],
     ],
 
-    // Transfer Requisition resource
+    // =====================================================================
+    // OPERATIONS — Transfer Requisitions
+    // =====================================================================
     'transfer_requisitions' => [
-        'model' => [
-            'singular' => 'Transfer Requisition',
-            'plural' => 'Transfer Requisitions',
-        ],
-        'fields' => [
-            'from_warehouse' => 'From Warehouse',
-            'to_warehouse' => 'To Warehouse',
-        ],
+        'model' => ['singular' => 'Transfer requisition', 'plural' => 'Transfer requisitions'],
+        'navigation' => ['label' => 'Transfer Requisitions'],
+        'badge_tooltip' => 'Requisitions awaiting review',
+        'sections' => ['routing' => 'Routing'],
         'steps' => [
             'routing' => 'Routing',
-            'items' => 'Items',
+            'routing_description' => 'Choose source and destination warehouses.',
+            'manifest' => 'Manifest',
+            'manifest_description' => 'Add requested line items.',
             'review' => 'Review',
+            'review_description' => 'Verify before creating.',
+        ],
+        'fields' => [
+            'reference_code' => 'Reference',
+            'status' => 'Status',
+            'from_warehouse' => 'From warehouse',
+            'to_warehouse' => 'To warehouse',
+            'notes' => 'Notes',
+            'variant_sku' => 'Variant SKU',
+            'original_sku' => 'Original SKU',
+            'substitute_sku' => 'Substitute SKU',
+            'unit' => 'Unit',
+            'ratio_base' => 'Ratio (base)',
+            'qty' => 'Qty',
+            'requested' => 'Requested',
+            'approved' => 'Approved',
+            'proposed' => 'Proposed',
+            'requested_by' => 'Requested by',
+            'approved_by' => 'Approved by',
+            'dispatched_by' => 'Dispatched by',
+            'received_by' => 'Received by',
+            'shipped_base' => 'Shipped (base)',
+            'received_good_base' => 'Received good (base)',
+            'revision' => 'Revision',
+            'revisions' => 'Revisions',
+            'revision_item' => 'Revision item',
+            'negotiation_side' => 'Side',
+            'negotiation_reason' => 'Negotiation reason',
+            'negotiation_reason_placeholder' => 'Explain the reason for the proposed change.',
+            'proposed_by' => 'Proposed by',
+            'responds_to' => 'Responds to',
+            'responded_at' => 'Responded at',
+        ],
+        'hints' => ['ratio_auto' => 'Ratio is resolved automatically from the unit.'],
+        'filters' => [
+            'from_warehouse' => 'From warehouse',
+            'to_warehouse' => 'To warehouse',
+            'status' => 'Status',
+        ],
+        'table' => [
+            'reference' => 'Reference',
+            'from' => 'From',
+            'to' => 'To',
+            'items' => 'Items',
+            'requested_by' => 'Requested by',
+            'requested' => 'Requested',
+            'status' => 'Status',
+            'empty_heading' => 'No transfer requisitions found',
+            'empty_description' => 'Create your first requisition to get started.',
+        ],
+        'infolist' => [
+            'profile' => 'Profile',
+            'signoffs' => 'Sign-offs',
+            'manifest' => 'Manifest',
+            'negotiation_history' => 'Negotiation history',
+        ],
+        'placeholders' => [
+            'system_initialized' => 'System',
+            'pending_approval' => 'Pending approval',
+            'pending_dispatch' => 'Pending dispatch',
+            'pending_intake' => 'Pending intake',
         ],
         'actions' => [
-            'dispatch' => 'Dispatch',
-            'receive' => 'Receive',
+            'create' => 'New transfer requisition',
+            'edit' => 'Edit',
+            'view' => 'View',
+            'delete' => 'Delete',
+            'restore' => 'Restore',
+            'force_delete' => 'Delete permanently',
+            'submit' => 'Submit request',
+            'submit_heading' => 'Submit request',
+            'submit_description' => 'Send this requisition for review.',
+            'review' => 'Review / negotiate',
+            'propose_revision' => 'Propose revision',
+            'propose_revision_heading' => 'Propose revision',
+            'propose_revision_description' => 'Propose a substitute variant or quantity.',
+            'accept_revision' => 'Accept revision',
+            'accept_revision_heading' => 'Accept revision',
+            'accept_revision_description' => 'Accept the selected pending revision.',
+            'reject_revision' => 'Reject revision',
+            'reject_revision_heading' => 'Reject revision',
+            'reject_revision_description' => 'Reject the selected pending revision.',
             'confirm' => 'Confirm',
-            'negotiate' => 'Negotiate',
+            'confirm_heading' => 'Confirm requisition',
+            'confirm_description' => 'Confirm the negotiated manifest.',
+            'dispatch' => 'Dispatch',
+            'dispatch_heading' => 'Dispatch stock',
+            'dispatch_description' => 'Dispatch approved quantities.',
+            'receive' => 'Receive',
+            'record_loss' => 'Record loss',
+            'record_loss_heading' => 'Record loss',
+            'record_loss_description' => 'Record lost or damaged quantities.',
+            'cancel' => 'Cancel',
+            'cancel_heading' => 'Cancel requisition',
+            'cancel_description' => 'Cancel this requisition.',
         ],
         'notifications' => [
-            'created' => 'Transfer requisition created.',
-            'confirmed' => 'Transfer requisition confirmed.',
-            'dispatched' => 'Transfer requisition dispatched.',
-            'received' => 'Transfer requisition received.',
-            'completed' => 'Transfer requisition completed.',
-            'cancelled' => 'Transfer requisition cancelled.',
-        ],
-        'badge' => [
-            'tooltip' => 'Transfer requisitions ready to receive',
+            'dispatched' => 'Requisition dispatched.',
+            'loss_recorded' => 'Loss recorded.',
+            'revision_submitted' => 'Revision submitted.',
+            'revision_accepted' => 'Revision accepted.',
+            'revision_rejected' => 'Revision rejected.',
         ],
     ],
 
-    // Direct Transfers resource (from direct_transfers.php)
+    // =====================================================================
+    // OPERATIONS — Direct Transfers
+    // =====================================================================
     'direct_transfers' => [
-        'model' => [
-            'singular' => 'Direct Transfer',
-            'plural' => 'Direct Transfers',
+        'model' => ['singular' => 'Direct transfer', 'plural' => 'Direct transfers'],
+        'navigation' => ['label' => 'Direct Transfers'],
+        'sections' => [
+            'routing' => 'Routing',
+            'stock_allocation' => 'Stock allocation',
         ],
-        'page' => [
-            'create_heading' => 'Create Direct Transfer',
-            'create_description' => 'Execute multi-line direct transfer between warehouses',
-            'execute_transfer' => 'Execute Transfer',
+        'steps' => [
+            'location_mapping' => 'Locations',
+            'location_mapping_description' => 'Choose source and destination.',
+            'stock_allocation' => 'Stock allocation',
+            'stock_allocation_description' => 'Allocate line quantities.',
+            'review_verify' => 'Review',
+            'review_verify_description' => 'Verify before transferring.',
         ],
-        'form' => [
-            'step1_title' => 'Location Mapping',
-            'step1_desc' => 'Select origin and destination warehouses for transfer.',
-            'step2_title' => 'Stock Allocation',
-            'step2_desc' => 'Add product variants and quantities to transfer.',
-            'step3_title' => 'Review & Verify',
-            'step3_desc' => 'Review complete transfer summary before execution.',
-
-            'sections' => [
-                'routing' => 'Warehouse Routing',
-            ],
-
-            'fields' => [
-                'origin_warehouse' => 'Origin Warehouse',
-                'destination_warehouse' => 'Destination Warehouse',
-                'items' => 'Items',
-                'product_variant' => 'Product Variant',
-                'unit_name' => 'Unit',
-                'unit_ratio' => 'Ratio (to Base)',
-                'qty' => 'Quantity',
-                'base_qty' => 'Base Quantity (Computed)',
-                'line_notes' => 'Line Notes',
-                'line_notes_placeholder' => 'Optional notes for line',
-                'transfer_notes' => 'Transfer Notes',
-                'transfer_notes_placeholder' => 'Notes for entire transfer',
-            ],
-
-            'hints' => [
-                'ratio_auto' => 'Auto-filled based on selected unit',
-            ],
-
-            'add_line' => 'Add Line',
-
-            'review_verify' => 'Review & Verify',
-
-            'complete_previous_steps' => 'Complete previous steps to review summary.',
-            'origin' => 'Origin',
-            'destination' => 'Destination',
+        'fields' => [
+            'from_warehouse' => 'From warehouse',
+            'to_warehouse' => 'To warehouse',
+            'variant_sku' => 'Variant SKU',
             'sku' => 'SKU',
-            'variant' => 'Variant',
-            'qty_unit' => 'Qty / Unit',
-            'base_units' => 'Base Units',
-        ],
-
-        'table' => [
+            'unit' => 'Unit',
+            'ratio' => 'Ratio',
+            'ratio_base' => 'Ratio (base)',
+            'qty' => 'Qty',
+            'base_qty' => 'Base qty',
+            'notes' => 'Notes',
             'reference_code' => 'Reference',
+            'transferred_by' => 'Transferred by',
+            'transferred_at' => 'Transferred at',
+        ],
+        'hints' => ['ratio_auto' => 'Ratio is resolved automatically from the unit.'],
+        'filters' => [
+            'from_warehouse' => 'From warehouse',
+            'to_warehouse' => 'To warehouse',
+        ],
+        'table' => [
             'reference' => 'Reference',
-            'from_warehouse' => 'From',
-            'to_warehouse' => 'To',
-            'transferred_by' => 'Transferred By',
-            'items_count' => 'Lines',
-            'items' => 'Lines',
-            'transferred_at' => 'Transferred At',
-            'filter_from_warehouse' => 'From Warehouse',
-            'filter_to_warehouse' => 'To Warehouse',
+            'from' => 'From',
+            'to' => 'To',
+            'items' => 'Items',
+            'by' => 'By',
+            'transferred_at' => 'Transferred',
+            'empty_heading' => 'No direct transfers found',
+            'empty_description' => 'Create your first direct transfer to get started.',
         ],
-
-        'notifications' => [
-            'transfer_executed' => 'Direct Transfer Executed',
-            'transfer_completed' => 'Direct transfer :code has been completed successfully.',
+        'infolist' => [
+            'profile' => 'Profile',
+            'manifest' => 'Manifest',
+            'authorization' => 'Authorization',
         ],
+        'actions' => [
+            'create' => 'New direct transfer',
+            'view' => 'View',
+            'delete' => 'Delete',
+            'force_delete' => 'Delete permanently',
+        ],
+    ],
 
+    // =====================================================================
+    // OPERATIONS — In-Transit Cargo
+    // =====================================================================
+    'in_transits' => [
+        'model' => ['singular' => 'In-transit cargo', 'plural' => 'In-transit cargo'],
+        'navigation' => ['label' => 'In-Transit Cargo'],
+        'badge_tooltip' => 'Cargo currently in transit',
+        'fields' => [
+            'requisition' => 'Requisition',
+            'sku' => 'SKU',
+            'status' => 'Status',
+            'dispatched_base' => 'Dispatched (base)',
+            'dispatched_at' => 'Dispatched at',
+            'cleared_at' => 'Cleared at',
+        ],
+        'filters' => ['status' => 'Status'],
+        'table' => [
+            'requisition' => 'Requisition',
+            'sku' => 'SKU',
+            'status' => 'Status',
+            'dispatched' => 'Dispatched',
+            'dispatched_at' => 'Dispatched at',
+            'empty_heading' => 'No in-transit cargo',
+            'empty_description' => 'All dispatched cargo has been accounted for.',
+        ],
+        'infolist' => ['cargo' => 'Cargo'],
         'actions' => [
             'view' => 'View',
         ],
-
-        'fields' => [
-            'reference_code' => 'Reference Code',
-            'transferred_at' => 'Transferred At',
-            'from_warehouse' => 'Origin Warehouse',
-            'to_warehouse' => 'Destination Warehouse',
-            'transferred_by' => 'Transferred By',
-            'sku' => 'SKU',
-            'qty' => 'Quantity',
-            'ratio' => 'Ratio',
-            'base_qty' => 'Base Quantity',
-        ],
     ],
 
-    // InTransit resource
-    'in_transits' => [
-        'model' => [
-            'singular' => 'In-Transit',
-            'plural' => 'In-Transits',
-        ],
-        'fields' => [
-            'requisition' => 'Requisition',
-            'sku' => 'SKU',
-            'dispatched_base' => 'Dispatched Base Qty',
-            'dispatched_at' => 'Dispatched At',
-            'badge' => [
-                'tooltip' => 'In-transit movements in progress',
-            ],
-            'status' => 'Status',
-            'cleared_at' => 'Cleared At',
-        ],
-    ],
-
-    // Stock Movement resource
+    // =====================================================================
+    // AUDIT LEDGERS — Stock Movements
+    // =====================================================================
     'stock_movements' => [
-        'model' => [
-            'singular' => 'Stock Movement',
-            'plural' => 'Stock Movements',
-        ],
+        'model' => ['singular' => 'Stock movement', 'plural' => 'Stock movements'],
+        'navigation' => ['label' => 'Stock Movements'],
         'fields' => [
+            'sku' => 'SKU',
+            'warehouse' => 'Warehouse',
+            'unit' => 'Unit',
+            'by' => 'By',
+            'timestamp' => 'Timestamp',
+            'reference_code' => 'Reference',
             'type' => 'Type',
             'quantity' => 'Quantity',
+            'notes' => 'Notes',
+        ],
+        'filters' => [
             'warehouse' => 'Warehouse',
-            'product_variant' => 'Product Variant',
-            'reference' => 'Reference',
-            'related_movement' => 'Related Movement',
-            'created_at' => 'Created At',
+            'variant' => 'Variant',
+            'type' => 'Type',
+        ],
+        'table' => [
+            'sku' => 'SKU',
+            'warehouse' => 'Warehouse',
+            'type' => 'Type',
+            'qty' => 'Qty',
+            'unit' => 'Unit',
+            'by' => 'By',
+            'timestamp' => 'Timestamp',
+            'reference_code' => 'Reference',
+            'empty_heading' => 'No stock movements found',
+            'empty_description' => 'Adjust the filters to see more.',
+        ],
+        'infolist' => ['movement' => 'Movement'],
+        'actions' => [
+            'view' => 'View',
         ],
     ],
 
-    // Loss Ledger resource
+    // =====================================================================
+    // AUDIT LEDGERS — Loss Ledgers
+    // =====================================================================
     'loss_ledgers' => [
-        'model' => [
-            'singular' => 'Loss Ledger',
-            'plural' => 'Loss Ledgers',
-        ],
+        'model' => ['singular' => 'Loss ledger', 'plural' => 'Loss ledgers'],
+        'navigation' => ['label' => 'Loss Ledgers'],
         'fields' => [
             'requisition' => 'Requisition',
-            'variant' => 'Variant',
-            'lost_qty' => 'Lost Qty',
-            'unit_cost' => 'Unit Cost',
-            'total_loss' => 'Total Loss',
+            'sku' => 'SKU',
+            'warehouse' => 'Warehouse',
+            'lost_base' => 'Lost (base)',
+            'damaged_base' => 'Damaged (base)',
+            'notes' => 'Notes',
+            'transfer_requisition_item' => 'Requisition item',
+            'recorded_at' => 'Recorded at',
+            'loss_category' => 'Loss category',
+            'unit_cost_price' => 'Unit cost',
+            'total_financial_loss' => 'Total loss',
+        ],
+        'filters' => [
+            'warehouse' => 'Warehouse',
+            'loss_category' => 'Loss category',
+        ],
+        'table' => [
+            'requisition' => 'Requisition',
+            'sku' => 'SKU',
+            'warehouse' => 'Warehouse',
+            'lost' => 'Lost',
+            'damaged' => 'Damaged',
             'category' => 'Category',
-            'recorded_at' => 'Recorded At',
-            'recorded_by' => 'Recorded By',
+            'unit_cost' => 'Unit cost',
+            'total_loss' => 'Total loss',
+            'by' => 'By',
+            'recorded' => 'Recorded',
+            'empty_heading' => 'No losses recorded',
+            'empty_description' => 'Adjust the filters to see more.',
+        ],
+        'infolist' => [
+            'record' => 'Record',
+            'financial_impact' => 'Financial impact',
+        ],
+        'notes' => [
+            'cost_missing' => 'Cost price missing or zero at time of write-off.',
+        ],
+        'actions' => [
+            'view' => 'View',
         ],
     ],
 
-    // Warehouse resource
+    // =====================================================================
+    // SYSTEM ADMIN — Warehouses
+    // =====================================================================
     'warehouses' => [
-        'model' => [
-            'singular' => 'Warehouse',
-            'plural' => 'Warehouses',
-        ],
+        'model' => ['singular' => 'Warehouse', 'plural' => 'Warehouses'],
+        'navigation' => ['label' => 'Warehouses'],
         'fields' => [
             'code' => 'Code',
             'name' => 'Name',
             'location' => 'Location',
             'is_active' => 'Active',
+            'users' => 'Users',
+            'assigned_staff' => 'Assigned staff',
         ],
-        'sections' => [
-            'details' => 'Details',
+        'help' => [
+            'code' => 'Leave empty to derive from the name.',
+            'users_readonly' => 'Assignments are edited from the user record.',
+        ],
+        'placeholders' => ['code' => 'Auto-derived when empty'],
+        'filters' => ['is_active' => 'Active'],
+        'form' => [
+            'profile' => 'Profile',
+            'access_status' => 'Access & status',
+        ],
+        'table' => [
+            'code' => 'Code',
+            'name' => 'Name',
+            'location' => 'Location',
+            'status' => 'Status',
+            'staff' => 'Staff',
+            'ledger_entries' => 'Ledger entries',
+            'empty_heading' => 'No warehouses found',
+            'empty_description' => 'Create your first warehouse to get started.',
+        ],
+        'infolist' => [
+            'profile' => 'Profile',
+            'status' => 'Status',
+            'assigned_staff' => 'Assigned staff',
+        ],
+        'empty_staff' => 'No staff assigned.',
+        'delete_confirm_description' => 'Delete this warehouse. This action cannot be undone.',
+        'actions' => [
+            'create' => 'New warehouse',
+            'edit' => 'Edit',
+            'view' => 'View',
+            'delete' => 'Delete',
+            'force_delete' => 'Delete permanently',
         ],
     ],
 
-    // User resource
+    // =====================================================================
+    // SYSTEM ADMIN — Users
+    // =====================================================================
     'users' => [
-        'model' => [
-            'singular' => 'User',
-            'plural' => 'Users',
-        ],
+        'model' => ['singular' => 'User', 'plural' => 'Users'],
+        'navigation' => ['label' => 'Users'],
         'fields' => [
+            'name' => 'Name',
+            'email' => 'Email',
+            'password' => 'Password',
+            'current_password' => 'Current password',
+            'new_password' => 'New password',
+            'password_confirmation' => 'Confirm password',
+            'role' => 'Role',
+            'is_active' => 'Active',
+            'warehouses' => 'Warehouses',
+        ],
+        'help' => [
+            'warehouses' => 'Warehouses this user may operate in.',
+            'password_leave_blank' => 'Leave blank to keep the current password.',
+        ],
+        'filters' => [
+            'warehouse' => 'Warehouse',
+            'role' => 'Role',
+            'is_active' => 'Active',
+        ],
+        'table' => [
             'name' => 'Name',
             'email' => 'Email',
             'role' => 'Role',
+            'active' => 'Active',
             'warehouses' => 'Warehouses',
+            'created' => 'Created',
+            'empty_heading' => 'No users found',
+            'empty_description' => 'Invite your first team member to get started.',
+        ],
+        'actions' => [
+            'create' => 'New user',
+            'edit' => 'Edit',
+            'delete' => 'Delete',
+            'edit_profile' => 'Edit profile',
+            'logout' => 'Sign out',
         ],
     ],
 
-    // Purchase Order resource
+    // =====================================================================
+    // PURCHASING — Purchase Orders
+    // =====================================================================
     'purchase_orders' => [
-        'model' => [
-            'singular' => 'Purchase Order',
-            'plural' => 'Purchase Orders',
+        'model' => ['singular' => 'Purchase order', 'plural' => 'Purchase orders'],
+        'navigation' => ['label' => 'Purchase Orders'],
+        'badge_tooltip' => 'Orders awaiting receipt',
+        'form' => ['supplier_warehouse' => 'Supplier & warehouse'],
+        'steps' => [
+            'supplier_warehouse' => 'Supplier & warehouse',
+            'supplier_warehouse_description' => 'Choose supplier and receiving warehouse.',
+            'line_items' => 'Line items',
+            'line_items_description' => 'Add ordered line items.',
+            'review_verify' => 'Review',
+            'review_verify_description' => 'Verify before creating.',
         ],
         'fields' => [
             'supplier' => 'Supplier',
-            'warehouse' => 'Receiving Warehouse',
+            'receiving_warehouse' => 'Receiving warehouse',
+            'variant_sku' => 'Variant SKU',
+            'sku' => 'SKU',
+            'product' => 'Product',
+            'unit' => 'Unit',
+            'ratio_base' => 'Ratio (base)',
+            'qty' => 'Qty',
+            'ordered_base' => 'Ordered (base)',
+            'received_base' => 'Received (base)',
+            'unit_cost' => 'Unit cost',
+            'update_cost_price' => 'Update cost price',
+            'notes' => 'Notes',
+            'reference_code' => 'Reference',
+            'ordered_by' => 'Ordered by',
+            'received_by' => 'Received by',
+            'ordered_at' => 'Ordered at',
+            'received_at' => 'Received at',
+            'receive_line' => ':sku — outstanding :outstanding :unit (:base base)',
+            'status' => 'Status',
         ],
-        'steps' => [
-            'supplier_warehouse' => 'Supplier & Warehouse',
-            'line_items' => 'Line Items',
-            'review_verify' => 'Review & Notes',
+        'hints' => ['ratio_auto' => 'Ratio is resolved automatically from the unit.'],
+        'help' => [
+            'update_cost_price' => 'Update the variant cost price on receipt.',
+            'receive_display_equivalent' => ':display :unit',
+        ],
+        'filters' => [
+            'supplier' => 'Supplier',
+            'warehouse' => 'Warehouse',
+            'status' => 'Status',
+        ],
+        'table' => [
+            'reference' => 'Reference',
+            'supplier' => 'Supplier',
+            'warehouse' => 'Warehouse',
+            'items' => 'Items',
+            'ordered' => 'Ordered',
+            'received' => 'Received',
+            'status' => 'Status',
+            'empty_heading' => 'No purchase orders found',
+            'empty_description' => 'Create your first purchase order to get started.',
+        ],
+        'infolist' => [
+            'profile' => 'Profile',
+            'signoffs' => 'Sign-offs',
+            'line_items' => 'Line items',
         ],
         'actions' => [
+            'create' => 'New purchase order',
+            'edit' => 'Edit',
+            'view' => 'View',
+            'delete' => 'Delete',
+            'restore' => 'Restore',
+            'force_delete' => 'Delete permanently',
+            'order' => 'Order',
+            'order_heading' => 'Place order',
+            'order_description' => 'Send this purchase order to the supplier.',
             'receive' => 'Receive',
-            'update_cost' => 'Update Cost',
+            'receive_heading' => 'Receive purchase',
+            'receive_description' => 'Record received base quantities.',
+            'cancel' => 'Cancel',
+            'cancel_heading' => 'Cancel purchase order',
+            'cancel_description' => 'Cancel this purchase order.',
         ],
-        'notifications' => [
-            'created' => 'Purchase order created.',
-            'confirmed' => 'Purchase order confirmed.',
-            'received' => 'Purchase order received.',
-            'cancelled' => 'Purchase order cancelled.',
-        ],
-        'badge' => [
-            'tooltip' => 'Purchase orders awaiting receipt',
-        ],
+        'notifications' => ['received' => 'Purchase received.'],
     ],
 
-    // Supplier resource
+    // =====================================================================
+    // PURCHASING — Suppliers
+    // =====================================================================
     'suppliers' => [
-        'model' => [
-            'singular' => 'Supplier',
-            'plural' => 'Suppliers',
-        ],
+        'model' => ['singular' => 'Supplier', 'plural' => 'Suppliers'],
+        'navigation' => ['label' => 'Suppliers'],
         'fields' => [
             'name' => 'Name',
-            'contact_person' => 'Contact Person',
+            'contact_person' => 'Contact person',
+            'phone' => 'Phone',
+            'email' => 'Email',
+            'address' => 'Address',
+            'is_active' => 'Active',
+        ],
+        'filters' => ['is_active' => 'Active'],
+        'table' => [
+            'name' => 'Name',
+            'contact' => 'Contact',
             'email' => 'Email',
             'phone' => 'Phone',
-            'address' => 'Address',
+            'status' => 'Status',
+            'purchase_orders' => 'Purchase orders',
+            'empty_heading' => 'No suppliers found',
+            'empty_description' => 'Create your first supplier to get started.',
+        ],
+        'infolist' => [
+            'profile' => 'Supplier profile',
+            'purchase_orders' => 'Purchase orders',
+        ],
+        'actions' => [
+            'create' => 'New supplier',
+            'edit' => 'Edit',
+            'delete' => 'Delete',
+            'restore' => 'Restore',
+            'force_delete' => 'Delete permanently',
         ],
     ],
 
-    // Sales Order resource
+    // =====================================================================
+    // SALES — Sales Orders
+    // =====================================================================
     'sales_orders' => [
-        'model' => [
-            'singular' => 'Sales Order',
-            'plural' => 'Sales Orders',
+        'model' => ['singular' => 'Sales order', 'plural' => 'Sales orders'],
+        'navigation' => ['label' => 'Sales Orders'],
+        'badge_tooltip' => 'Orders awaiting dispatch',
+        'form' => ['customer_warehouse' => 'Customer & warehouse'],
+        'steps' => [
+            'customer_warehouse' => 'Customer & warehouse',
+            'customer_warehouse_description' => 'Choose customer and dispatching warehouse.',
+            'line_items' => 'Line items',
+            'line_items_description' => 'Add sold line items.',
+            'review_verify' => 'Review',
+            'review_verify_description' => 'Verify before creating.',
         ],
         'fields' => [
             'customer' => 'Customer',
-            'warehouse' => 'Dispatch Warehouse',
+            'dispatching_warehouse' => 'Dispatching warehouse',
+            'variant_sku' => 'Variant SKU',
+            'sku' => 'SKU',
+            'product' => 'Product',
+            'unit' => 'Unit',
+            'ratio_base' => 'Ratio (base)',
+            'qty' => 'Qty',
+            'ordered_base' => 'Ordered (base)',
+            'dispatched_base' => 'Dispatched (base)',
+            'snapshot_price' => 'Snapshot price',
+            'catalog_sale_price' => 'Catalog sale price',
+            'notes' => 'Notes',
+            'reference_code' => 'Reference',
+            'ordered_by' => 'Ordered by',
+            'ordered_at' => 'Ordered at',
+            'dispatched_by' => 'Dispatched by',
+            'confirmed_at' => 'Confirmed at',
+            'dispatched_at' => 'Dispatched at',
+            'status' => 'Status',
+            'line_item' => 'Line item',
+            'dispatch_line' => ':sku — outstanding :outstanding :unit (available :available)',
+            'return_option' => ':sku — dispatched :dispatched, returned :returned',
+            'returned_qty_base' => 'Returned qty (base)',
         ],
-        'steps' => [
-            'customer_warehouse' => 'Customer & Warehouse',
-            'line_items' => 'Line Items (Read-Only Sale Price Preview)',
-            'review_verify' => 'Review & Notes',
+        'hints' => ['ratio_auto' => 'Ratio is resolved automatically from the unit.'],
+        'help' => [
+            'reference_code' => 'Auto-generated when left empty.',
+            'no_stock' => 'No stock available for this line.',
+            'insufficient_stock' => 'Available stock is below the outstanding quantity.',
+        ],
+        'placeholders' => ['reference_code' => 'Auto-generated when empty'],
+        'filters' => [
+            'customer' => 'Customer',
+            'warehouse' => 'Warehouse',
+            'status' => 'Status',
+        ],
+        'table' => [
+            'reference' => 'Reference',
+            'customer' => 'Customer',
+            'warehouse' => 'Warehouse',
+            'items' => 'Items',
+            'confirmed' => 'Confirmed',
+            'dispatched' => 'Dispatched',
+            'status' => 'Status',
+            'empty_heading' => 'No sales orders found',
+            'empty_description' => 'Create your first sales order to get started.',
+        ],
+        'infolist' => [
+            'profile' => 'Profile',
+            'signoffs' => 'Sign-offs',
+            'line_items' => 'Line items',
         ],
         'actions' => [
+            'create' => 'New sales order',
+            'edit' => 'Edit',
+            'view' => 'View',
+            'delete' => 'Delete',
+            'restore' => 'Restore',
+            'force_delete' => 'Delete permanently',
+            'confirm' => 'Confirm',
+            'confirm_heading' => 'Confirm sales order',
+            'confirm_description' => 'Confirm and reserve stock for this order.',
             'dispatch' => 'Dispatch',
-            'record_return' => 'Record Return',
+            'dispatch_heading' => 'Dispatch sale',
+            'dispatch_description' => 'Dispatch quantities against reservations.',
+            'return' => 'Return',
+            'return_heading' => 'Record sales return',
+            'return_description' => 'Record returned base quantities.',
+            'cancel' => 'Cancel',
+            'cancel_heading' => 'Cancel sales order',
+            'cancel_description' => 'Cancel this sales order.',
         ],
         'notifications' => [
-            'created' => 'Sales order created.',
-            'confirmed' => 'Sales order confirmed.',
-            'dispatched' => 'Sales order dispatched.',
-        ],
-        'badge' => [
-            'tooltip' => 'Sales orders awaiting dispatch',
+            'dispatched' => 'Sale dispatched.',
+            'return_recorded' => 'Return recorded.',
         ],
     ],
 
-    // Customer resource
+    // =====================================================================
+    // SALES — Customers
+    // =====================================================================
     'customers' => [
-        'model' => [
-            'singular' => 'Customer',
-            'plural' => 'Customers',
-        ],
+        'model' => ['singular' => 'Customer', 'plural' => 'Customers'],
+        'navigation' => ['label' => 'Customers'],
         'fields' => [
             'name' => 'Name',
-            'contact_person' => 'Contact Person',
+            'contact_person' => 'Contact person',
+            'phone' => 'Phone',
+            'email' => 'Email',
+            'address' => 'Address',
+            'is_active' => 'Active',
+        ],
+        'filters' => ['is_active' => 'Active'],
+        'table' => [
+            'name' => 'Name',
+            'contact' => 'Contact',
             'email' => 'Email',
             'phone' => 'Phone',
-            'address' => 'Address',
+            'status' => 'Status',
+            'sales_orders' => 'Sales orders',
+            'empty_heading' => 'No customers found',
+            'empty_description' => 'Create your first customer to get started.',
+        ],
+        'infolist' => [
+            'profile' => 'Customer profile',
+            'sales_orders' => 'Sales orders',
+        ],
+        'actions' => [
+            'create' => 'New customer',
+            'edit' => 'Edit',
+            'delete' => 'Delete',
+            'restore' => 'Restore',
+            'force_delete' => 'Delete permanently',
         ],
     ],
 ];

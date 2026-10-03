@@ -7,6 +7,11 @@ namespace App\Policies;
 use App\Models\Supplier;
 use App\Models\User;
 
+/**
+ * Supplier policy — §8.9. Admin-only master data; universal read.
+ *
+ * ⚠ BranchManager is NOT granted supplier-management authority.
+ */
 class SupplierPolicy
 {
     public function viewAny(User $user): bool

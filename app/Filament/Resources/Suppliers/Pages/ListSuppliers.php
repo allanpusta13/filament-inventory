@@ -7,6 +7,7 @@ namespace App\Filament\Resources\Suppliers\Pages;
 use App\Filament\Resources\Suppliers\SupplierResource;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Support\Icons\Heroicon;
 
 class ListSuppliers extends ListRecords
 {
@@ -15,7 +16,9 @@ class ListSuppliers extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make(),
+            CreateAction::make()
+                ->label(__('resources.suppliers.actions.create'))
+                ->icon(Heroicon::OutlinedBuildingStorefront),
         ];
     }
 }

@@ -15,6 +15,12 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
+/**
+ * Direct transfers table — §7C.4 canonical contract.
+ *
+ * Card layout per §7N.4 (document-shaped record). No bulk actions
+ * (F30). Pagination at 12 (F29).
+ */
 class DirectTransfersTable
 {
     public static function configure(Table $table): Table
@@ -62,7 +68,7 @@ class DirectTransfersTable
                             ->label(__('resources.direct_transfers.table.by'))
                             ->icon(Heroicon::User)
                             ->iconColor('gray')
-                            ->placeholder('—')
+                            ->placeholder(__('common.empty'))
                             ->alignEnd(),
                     ])->from('lg'),
                 ])->space(3),
@@ -81,6 +87,9 @@ class DirectTransfersTable
                     ->label(__('resources.direct_transfers.filters.to_warehouse'))
                     ->relationship('toWarehouse', 'name')
                     ->searchable(),
+
+                \App\Filament\Support\Filters\AdminReviewFilters::period('transferred_at')
+                    ->visible(fn (): bool => auth()->user()?->can('viewAuditFilters', DirectTransfer::class) ?? false),
             ])
             ->defaultSort('transferred_at', 'desc')
             ->defaultPaginationPageOption(12)
@@ -89,7 +98,5 @@ class DirectTransfersTable
             ->recordActions([
                 ViewAction::make()->icon(Heroicon::Eye),
             ]);
-
-        // Bulk actions intentionally omitted (F30).
     }
 }

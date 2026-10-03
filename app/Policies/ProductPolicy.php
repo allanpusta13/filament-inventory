@@ -7,6 +7,13 @@ namespace App\Policies;
 use App\Models\Product;
 use App\Models\User;
 
+/**
+ * Product policy — §8.1. Admin-only catalog management; universal read.
+ *
+ * ⚠ BranchManager is not granted catalog-management authority. Product
+ * family creation, editing, and deletion remain admin-only until the
+ * owner decides otherwise. Read access is universal (viewAny / view).
+ */
 class ProductPolicy
 {
     public function viewAny(User $user): bool

@@ -6,13 +6,15 @@ namespace App\Filament\Resources\PurchaseOrders\Pages;
 
 use App\Filament\Resources\PurchaseOrders\PurchaseOrderResource;
 use App\Filament\Resources\PurchaseOrders\Schemas\PurchaseOrderForm;
-use Filament\Forms\Components\Placeholder;
+use App\Support\GeneratesReferenceCodes;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Resources\Pages\CreateRecord\Concerns\HasWizard;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\View;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Support\Facades\Gate;
 
 class CreatePurchaseOrder extends CreateRecord
 {
@@ -25,6 +27,7 @@ class CreatePurchaseOrder extends CreateRecord
         return Width::SevenExtraLarge->value;
     }
 
+    /** @return array<Step> */
     protected function getSteps(): array
     {
         return [
@@ -43,22 +46,35 @@ class CreatePurchaseOrder extends CreateRecord
                 ->icon(Heroicon::CheckCircle)
                 ->schema([
                     ...PurchaseOrderForm::getReviewFields(),
-                    Placeholder::make('review_summary')
-                        ->columnSpanFull()
-                        ->content(fn (Get $get) => view(
-                            'filament.wizards.purchase-order-review',
-                            ['state' => $get()],
-                        )),
+
+                    View::make('filament.wizards.purchase-order-review')
+                        ->viewData(fn (Get $get): array => [
+                            'state' => [
+                                'supplier_id' => $get('supplier_id'),
+                                'warehouse_id' => $get('warehouse_id'),
+                                'items' => $get('items') ?? [],
+                                'notes' => $get('notes'),
+                            ],
+                        ])
+                        ->columnSpanFull(),
                 ]),
+
         ];
     }
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $data['reference_code'] = $data['reference_code']
-            ?? 'PO-'.now()->format('YmdHis').'-'.random_int(100, 999);
+            ?? GeneratesReferenceCodes::generateReferenceCode('PO');
         $data['ordered_by'] = auth()->id();
 
         return $data;
+    }
+
+    protected function handleRecordCreation(array $data): \Illuminate\Database\Eloquent\Model
+    {
+        Gate::authorize('create', \App\Models\PurchaseOrder::class);
+
+        return parent::handleRecordCreation($data);
     }
 }

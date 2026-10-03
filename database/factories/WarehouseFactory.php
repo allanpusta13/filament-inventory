@@ -8,22 +8,22 @@ use App\Models\Warehouse;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<Warehouse>
+ * Warehouse factory (§5.5).
+ *
+ * Produces a unique `WH-####` code, a city-based name, a full address
+ * as location, and an active state.
  */
 class WarehouseFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
+    protected $model = Warehouse::class;
+
     public function definition(): array
     {
         return [
-            'code' => mb_strtoupper('WH-'.fake()->unique()->lexify('???')),
-            'name' => fake()->city().' Warehouse',
-            'location' => fake()->address(),
-            'is_active' => fake()->boolean(),
+            'code' => mb_strtoupper($this->faker->unique()->bothify('WH-####')),
+            'name' => $this->faker->city().' Warehouse',
+            'location' => $this->faker->address(),
+            'is_active' => true,
         ];
     }
 }

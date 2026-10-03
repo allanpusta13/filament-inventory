@@ -19,6 +19,11 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use UnitEnum;
 
+/**
+ * InTransit resource — §18.1a canonical class.
+ *
+ * Read-only monitor. Badge-bearing (§1B.3a). No create, no edit.
+ */
 class InTransitResource extends Resource
 {
     use ScopesNavigationBadges;
@@ -29,32 +34,25 @@ class InTransitResource extends Resource
 
     protected static ?int $navigationSort = 3;
 
+    protected static ?string $recordTitleAttribute = null;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTruck;
 
     protected static string|BackedEnum|null $activeNavigationIcon = Heroicon::Truck;
 
-    protected static ?string $recordTitleAttribute = 'id';
-
-    public static function getNavigationBadge(): ?string
+    public static function getModelLabel(): string
     {
-        $count = self::getScopedBadgeCount();
-
-        return $count > 0 ? (string) $count : null;
+        return __('resources.in_transits.model.singular');
     }
 
-    public static function getNavigationBadgeColor(): ?string
+    public static function getPluralModelLabel(): string
     {
-        return 'primary';
+        return __('resources.in_transits.model.plural');
     }
 
-    public static function getNavigationBadgeTooltip(): ?string
+    public static function getNavigationLabel(): string
     {
-        return __('resources.in_transits.badge_tooltip');
-    }
-
-    public static function form(Schema $schema): Schema
-    {
-        return $schema;
+        return __('resources.in_transits.navigation.label');
     }
 
     public static function table(Table $table): Table
@@ -70,7 +68,17 @@ class InTransitResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->with(['transferRequisition', 'item', 'productVariant']);
+            ->with(['transferRequisition', 'transferRequisitionItem', 'productVariant'])
+            ->when(
+                ! auth()->user()->isAdmin() && ! auth()->user()->isAuditor(),
+                function (Builder $q) {
+                    $ids = auth()->user()->warehouses()->pluck('id')->all();
+                    $q->whereHas('transferRequisition', function (Builder $qq) use ($ids) {
+                        $qq->whereIn('from_warehouse_id', $ids)
+                            ->orWhereIn('to_warehouse_id', $ids);
+                    });
+                }
+            );
     }
 
     public static function getPages(): array
@@ -80,6 +88,27 @@ class InTransitResource extends Resource
             'view' => ViewInTransit::route('/{record}'),
         ];
     }
+
+    public static function getNavigationBadge(): ?string
+    {
+        $count = self::getScopedBadgeCount();
+
+        return $count > 0 ? (string) $count : null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return self::getScopedBadgeCount() > 10 ? 'warning' : 'primary';
+    }
+
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        return __('resources.in_transits.badge_tooltip');
+    }
+
+    // ---------------------------------------------------------------------
+    // Badge (§1B.3a canonical implementation)
+    // ---------------------------------------------------------------------
 
     private static function getScopedBadgeCount(): int
     {
@@ -91,9 +120,6 @@ class InTransitResource extends Resource
             return self::$badgeCount = 0;
         }
 
-        // In-transit rows are scoped by the warehouses of their parent
-        // requisition. Both endpoints participate because the cargo is in
-        // motion between them.
         $warehouseIds = self::badgeScopedWarehouseIds();
 
         return self::$badgeCount = static::getModel()::query()

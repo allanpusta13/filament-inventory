@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\LossLedgers\Tables;
 
+use App\Enums\LossCategory;
+use App\Filament\Resources\LossLedgers\LossLedgerResource;
+use Filament\Actions\ViewAction;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -55,38 +59,39 @@ class LossLedgersTable
 
                 TextColumn::make('unit_cost_price')
                     ->label(__('resources.loss_ledgers.table.unit_cost'))
-                    ->money(config('app.currency'), decimals: 4)
+                    ->formatStateUsing(fn ($state): string => format_money($state))
                     ->visibleFrom('lg'),
 
                 TextColumn::make('total_financial_loss')
                     ->label(__('resources.loss_ledgers.table.total_loss'))
-                    ->money(config('app.currency'), decimals: 4)
+                    ->formatStateUsing(fn ($state): string => format_money($state))
                     ->weight('bold')
                     ->alignEnd()
-                    ->summarize(Sum::make()->money(config('app.currency'), decimals: 4)),
+                    ->summarize(
+                        Sum::make()
+                            ->formatStateUsing(fn ($state): string => format_money($state))
+                    ),
 
                 TextColumn::make('recordedBy.name')
                     ->label(__('resources.loss_ledgers.table.by'))
                     ->visibleFrom('xl'),
             ])
             ->filters([
-                SelectFilter::make('loss_category')->options([
-                    'shortfall' => __('enums.loss_category.shortfall'),
-                    'damage' => __('enums.loss_category.damage'),
-                    'spoilage' => __('enums.loss_category.spoilage'),
-                    'theft' => __('enums.loss_category.theft'),
-                    'other' => __('enums.loss_category.other'),
-                ]),
-                SelectFilter::make('warehouse_id')
-                    ->relationship('warehouse', 'name')
-                    ->label(__('resources.loss_ledgers.filters.warehouse'))
-                    ->searchable(),
+                SelectFilter::make('loss_category')
+                    ->label(__('resources.loss_ledgers.filters.loss_category'))
+                    ->options(LossCategory::class),
+                \App\Filament\Support\Filters\AdminReviewFilters::warehouse()
+                    ->label(__('resources.loss_ledgers.filters.warehouse')),
                 \App\Filament\Support\Filters\AdminReviewFilters::period('recorded_at')
-                    ->authorize('viewAuditFilters'),
+                    ->visible(fn (): bool => auth()->user()?->can('viewAuditFilters', \App\Models\LossLedger::class) ?? false),
             ])
             ->defaultSort('recorded_at', 'desc')
             ->stackedOnMobile()
             ->paginated([25, 50, 100])
-            ->defaultPaginationPageOption(50);
+            ->defaultPaginationPageOption(50)
+            ->recordUrl(fn ($record) => LossLedgerResource::getUrl('view', ['record' => $record]))
+            ->recordActions([
+                ViewAction::make()->icon(Heroicon::Eye),
+            ]);
     }
 }

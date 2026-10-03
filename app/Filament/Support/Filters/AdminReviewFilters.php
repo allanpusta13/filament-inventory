@@ -13,6 +13,19 @@ use Filament\Tables\Filters\Indicator;
 use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
 
+/**
+ * AdminReviewFilters — shared filter builders (§9).
+ *
+ * `warehouse()` — a relationship-based SelectFilter.
+ * `period()` — a preset + custom-range date filter.
+ *
+ * ⚠ The `period()` filter MUST be policy-gated at its call site via
+ * `->visible(fn (): bool => auth()->user()?->can('viewAuditFilters', Model::class) ?? false)`.
+ * `Filter` exposes no `authorize()` method (authorization is an action
+ * concern), so the gate is consulted through `visible()` — the
+ * `viewAuditFilters` policy ability remains the single home for the
+ * permission decision (A8).
+ */
 class AdminReviewFilters
 {
     public static function warehouse(string $relationshipName = 'warehouse'): SelectFilter
@@ -24,9 +37,6 @@ class AdminReviewFilters
             ->preload();
     }
 
-    /**
-     * Period filter. Must be policy-gated via ->authorize('viewAuditFilters') at call site.
-     */
     public static function period(string $dateColumn): Filter
     {
         return Filter::make('period')

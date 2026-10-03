@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Models\Customer;
+use App\Models\Warehouse;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -12,9 +14,9 @@ return new class() extends Migration
     {
         Schema::create('sales_orders', function (Blueprint $table) {
             $table->id();
-            $table->string('reference_code')->unique();
-            $table->foreignId('customer_id')->constrained('customers')->restrictOnDelete();
-            $table->foreignId('warehouse_id')->constrained('warehouses')->restrictOnDelete();
+            $table->string('reference_code', 32)->unique();
+            $table->foreignIdFor(Customer::class)->constrained()->restrictOnDelete();
+            $table->foreignIdFor(Warehouse::class)->constrained()->restrictOnDelete();
             $table->string('status')->default('draft');
             $table->foreignId('ordered_by')->constrained('users');
             $table->foreignId('dispatched_by')->nullable()->constrained('users')->nullOnDelete();
@@ -27,6 +29,7 @@ return new class() extends Migration
             $table->timestamps();
 
             $table->index('status');
+            $table->index('created_at');
             $table->index(['customer_id', 'warehouse_id']);
         });
     }

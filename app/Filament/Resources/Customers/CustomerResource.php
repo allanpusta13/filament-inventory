@@ -7,9 +7,7 @@ namespace App\Filament\Resources\Customers;
 use App\Filament\Resources\Customers\Pages\CreateCustomer;
 use App\Filament\Resources\Customers\Pages\EditCustomer;
 use App\Filament\Resources\Customers\Pages\ListCustomers;
-use App\Filament\Resources\Customers\Pages\ViewCustomer;
 use App\Filament\Resources\Customers\Schemas\CustomerForm;
-use App\Filament\Resources\Customers\Schemas\CustomerInfolist;
 use App\Filament\Resources\Customers\Tables\CustomersTable;
 use App\Models\Customer;
 use BackedEnum;
@@ -21,19 +19,39 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use UnitEnum;
 
+/**
+ * Customer resource — §18.1a canonical class.
+ *
+ * Symmetric to Supplier (§3.12 ↔ §3.13). Master data; card layout.
+ * No navigation badge (§1B.2). No warehouse scope.
+ */
 class CustomerResource extends Resource
 {
     protected static ?string $model = Customer::class;
 
     protected static string|UnitEnum|null $navigationGroup = 'SALES';
 
+    protected static ?int $navigationSort = 2;
+
+    protected static ?string $recordTitleAttribute = 'name';
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserGroup;
 
     protected static string|BackedEnum|null $activeNavigationIcon = Heroicon::UserGroup;
 
-    public static function getNavigationGroup(): string|UnitEnum|null
+    public static function getModelLabel(): string
     {
-        return __('SALES');
+        return __('resources.customers.model.singular');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('resources.customers.model.plural');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('resources.customers.navigation.label');
     }
 
     public static function form(Schema $schema): Schema
@@ -46,16 +64,16 @@ class CustomerResource extends Resource
         return CustomersTable::configure($table);
     }
 
-    public static function infolist(Schema $schema): Schema
+    public static function getEloquentQuery(): Builder
     {
-        return CustomerInfolist::configure($schema);
+        return parent::getEloquentQuery()
+            ->withCount('salesOrders');
     }
 
-    public static function getRelations(): array
+    public static function getRecordRouteBindingEloquentQuery(): Builder
     {
-        return [
-            //
-        ];
+        return parent::getRecordRouteBindingEloquentQuery()
+            ->withoutGlobalScopes([SoftDeletingScope::class]);
     }
 
     public static function getPages(): array
@@ -63,16 +81,7 @@ class CustomerResource extends Resource
         return [
             'index' => ListCustomers::route('/'),
             'create' => CreateCustomer::route('/create'),
-            'view' => ViewCustomer::route('/{record}'),
             'edit' => EditCustomer::route('/{record}/edit'),
         ];
-    }
-
-    public static function getRecordRouteBindingEloquentQuery(): Builder
-    {
-        return parent::getRecordRouteBindingEloquentQuery()
-            ->withoutGlobalScopes([
-                SoftDeletingScope::class,
-            ]);
     }
 }

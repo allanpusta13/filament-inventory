@@ -1,40 +1,45 @@
-<div class="rounded-xl bg-zinc-50 dark:bg-zinc-900 p-4 border border-zinc-200 dark:border-zinc-800">
-    <div class="grid grid-cols-2 gap-4 mb-4 pb-4 border-b border-zinc-200 dark:border-zinc-800">
+{{-- resources/views/filament/wizards/transfer-review.blade.php --}}
+@php
+// Wizard state carries foreign keys (§7B.1: `from_warehouse_id`,
+// `to_warehouse_id`, repeater `product_variant_id`). Display names
+// are resolved from those keys at render time — never stored in the
+// state.
+$fromName = isset($state['from_warehouse_id']) ? \App\Models\Warehouse::find($state['from_warehouse_id'])?->name : null;
+$toName = isset($state['to_warehouse_id']) ? \App\Models\Warehouse::find($state['to_warehouse_id'])?->name : null;
+@endphp
+<div class="space-y-4">
+    <h3 class="text-base font-semibold">{{ __('wizards.transfer_review.title') }}</h3>
+    <dl class="grid grid-cols-2 gap-3 text-sm">
         <div>
-            <span class="text-[10px] uppercase font-bold text-zinc-500">{{ __('resources.transfer_requisitions.review.origin') }}</span>
-            <p class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{{ $state['from_warehouse_id'] ? \App\Models\Warehouse::find($state['from_warehouse_id'])?->name : '—' }}</p>
+            <dt class="text-zinc-500">{{ __('wizards.transfer_review.from') }}</dt>
+            <dd class="font-medium">{{ $fromName ?? '—' }}</dd>
         </div>
         <div>
-            <span class="text-[10px] uppercase font-bold text-zinc-500">{{ __('resources.transfer_requisitions.review.destination') }}</span>
-            <p class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{{ $state['to_warehouse_id'] ? \App\Models\Warehouse::find($state['to_warehouse_id'])?->name : '—' }}</p>
+            <dt class="text-zinc-500">{{ __('wizards.transfer_review.to') }}</dt>
+            <dd class="font-medium">{{ $toName ?? '—' }}</dd>
         </div>
-    </div>
-
-    <div class="overflow-x-auto">
-        <table class="w-full text-left">
-            <thead>
-                <tr class="border-b border-zinc-300 dark:border-zinc-700">
-                    <th class="pb-2 font-bold text-zinc-500">{{ __('resources.transfer_requisitions.review.sku') }}</th>
-                    <th class="pb-2 font-bold text-zinc-500">{{ __('resources.transfer_requisitions.review.variant') }}</th>
-                    <th class="pb-2 font-bold text-zinc-500 text-right">{{ __('resources.transfer_requisitions.review.base_units') }}</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($state['items'] ?? [] as $item)
-                    <tr class="border-b border-zinc-200 dark:border-zinc-800">
-                        <td class="py-2 font-mono text-xs font-bold text-primary-600">{{ \App\Models\ProductVariant::find($item['product_variant_id'])?->sku ?? '—' }}</td>
-                        <td class="py-2 text-xs">{{ \App\Models\ProductVariant::find($item['product_variant_id'])?->name ?? '—' }}</td>
-                        <td class="py-2 text-xs text-right font-semibold text-zinc-900 dark:text-zinc-100">{{ $item['base_qty'] ?? 0 }} {{ \App\Models\ProductVariant::find($item['product_variant_id'])?->unit?->name ?? 'Pcs' }}</td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-    </div>
-
-    @if(!empty($state['notes']))
-    <div class="mt-4 p-3 rounded-lg bg-zinc-100 dark:bg-zinc-800">
-        <span class="text-[10px] uppercase font-bold text-zinc-500">{{ __('resources.transfer_requisitions.review.notes') }}</span>
-        <p class="text-sm text-zinc-700 dark:text-zinc-300">{{ $state['notes'] }}</p>
-    </div>
+    </dl>
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="text-left text-zinc-500">
+                <th>{{ __('wizards.transfer_review.sku') }}</th>
+                <th>{{ __('wizards.transfer_review.qty') }}</th>
+                <th>{{ __('wizards.transfer_review.unit') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (($state['items'] ?? []) as $item)
+            @php($sku = isset($item['product_variant_id']) ?
+            \App\Models\ProductVariant::find($item['product_variant_id'])?->sku : null)
+            <tr class="border-t border-zinc-200">
+                <td class="font-mono">{{ $sku ?? '—' }}</td>
+                <td>{{ $item['requested_qty'] ?? 0 }}</td>
+                <td>{{ $item['requested_unit_name'] ?? '—' }}</td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+    @if (! empty($state['notes']))
+    <p class="text-sm text-zinc-500">{{ $state['notes'] }}</p>
     @endif
 </div>

@@ -33,7 +33,7 @@ final class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => self::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
-            'role' => UserRole::WAREHOUSE_STAFF->value,
+            'role' => UserRole::WarehouseStaff->value,
             'is_active' => true,
         ];
     }
@@ -54,7 +54,7 @@ final class UserFactory extends Factory
     public function warehouseStaff(): static
     {
         return $this->state(fn (array $attributes): array => [
-            'role' => UserRole::WAREHOUSE_STAFF->value,
+            'role' => UserRole::WarehouseStaff->value,
         ])->afterCreating(function (\App\Models\User $user) {
             $user->warehouses()->attach(Warehouse::factory()->create());
         });
@@ -66,7 +66,7 @@ final class UserFactory extends Factory
     public function admin(): static
     {
         return $this->state(fn (array $attributes): array => [
-            'role' => UserRole::ADMIN->value,
+            'role' => UserRole::Admin->value,
         ])->afterCreating(function (\App\Models\User $user) {
             $user->warehouses()->attach(Warehouse::factory()->create());
         });
@@ -78,7 +78,7 @@ final class UserFactory extends Factory
     public function auditor(): static
     {
         return $this->state(fn (array $attributes): array => [
-            'role' => UserRole::AUDITOR->value,
+            'role' => UserRole::Auditor->value,
         ]);
     }
 
@@ -88,7 +88,7 @@ final class UserFactory extends Factory
     public function branchManager(): static
     {
         return $this->state(fn (array $attributes): array => [
-            'role' => UserRole::BRANCH_MANAGER->value,
+            'role' => UserRole::BranchManager->value,
         ]);
     }
 }

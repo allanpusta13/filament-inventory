@@ -4,89 +4,99 @@ declare(strict_types=1);
 
 namespace App\Filament\Widgets;
 
+use App\Enums\PurchaseOrderStatus;
+use App\Enums\SalesOrderStatus;
+use App\Models\PurchaseOrder;
 use App\Models\SalesOrder;
+use App\Models\Warehouse;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
+use Illuminate\Support\Facades\Cache;
 
+/**
+ * PendingFulfillmentWidget — per-warehouse pending SO/PO counts.
+ *
+ * Visibility: all authenticated users (scoped).
+ * Cache: 60s.
+ * Column span: `['default' => 1, 'md' => 1, 'xl' => 1]`.
+ */
 class PendingFulfillmentWidget extends TableWidget
 {
-    protected static ?string $heading = 'Pending Fulfillment';
+    protected static ?int $sort = 8;
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = ['default' => 1, 'md' => 1, 'xl' => 1];
 
-    protected function getTableQuery(): \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Eloquent\Relations\Relation|null
+    public static function canView(): bool
     {
-        $user = auth()->user();
-
-        if (! ($user?->can('viewAny', SalesOrder::class) ?? false)) {
-            return SalesOrder::query()->whereRaw('1 = 0');
-        }
-
-        $warehouseIds = $user->warehouses->pluck('id')->toArray();
-
-        if (empty($warehouseIds)) {
-            return SalesOrder::query()->whereRaw('1 = 0');
-        }
-
-        return SalesOrder::whereIn('warehouse_id', $warehouseIds)
-            ->whereIn('status', [
-                'confirmed',
-                'partially_dispatched',
-            ])
-            ->with(['customer', 'warehouse', 'items.productVariant'])
-            ->latest('ordered_at');
+        return auth()->user() !== null;
     }
 
-    protected function getTableColumns(): array
+    public static function cacheTtl(): int
     {
-        return [
-            TextColumn::make('reference_code')
-                ->label('REFERENCE')
-                ->searchable()
-                ->sortable()
-                ->copyable()
-                ->weight(\Filament\Support\Enums\FontWeight::Bold)
-                ->color('primary'),
+        return 60;
+    }
 
-            TextColumn::make('customer.name')
-                ->label('CUSTOMER')
-                ->searchable()
-                ->sortable(),
+    public static function cacheKey(int $userId, array $warehouseIds): string
+    {
+        sort($warehouseIds);
 
-            TextColumn::make('warehouse.name')
-                ->label('WAREHOUSE')
-                ->searchable()
-                ->sortable(),
+        return 'pending_fulfillment_'.$userId.'_'.md5(implode(',', $warehouseIds));
+    }
 
-            TextColumn::make('status')
-                ->label('STATUS')
-                ->badge()
-                ->color(fn ($state): string => match ($state) {
-                    'confirmed' => 'primary',
-                    'partially_dispatched' => 'warning',
-                    default => 'gray',
-                }),
+    public function table(Table $table): Table
+    {
+        $user = auth()->user();
+        $warehouseIds = $user->isAdmin() || $user->isAuditor()
+            ? Warehouse::query()->pluck('id')->all()
+            : $user->warehouses()->pluck('warehouses.id')->all();
 
-            TextColumn::make('items_count')
-                ->label('ITEMS')
-                ->getStateUsing(fn (SalesOrder $record): int => $record->items->count())
-                ->sortable(),
+        // Rows: one per in-scope warehouse with pending SO/PO counts (60s cache).
+        $counts = Cache::remember(
+            static::cacheKey($user->id, $warehouseIds),
+            static::cacheTtl(),
+            fn () => [
+                'sales' => SalesOrder::query()
+                    ->selectRaw('warehouse_id, COUNT(*) as total')
+                    ->whereIn('warehouse_id', $warehouseIds)
+                    ->whereIn('status', [
+                        SalesOrderStatus::Confirmed->value,
+                        SalesOrderStatus::PartiallyDispatched->value,
+                    ])
+                    ->groupBy('warehouse_id')
+                    ->pluck('total', 'warehouse_id')
+                    ->map(fn ($v) => (int) $v)
+                    ->all(),
+                'purchases' => PurchaseOrder::query()
+                    ->selectRaw('warehouse_id, COUNT(*) as total')
+                    ->whereIn('warehouse_id', $warehouseIds)
+                    ->whereIn('status', [
+                        PurchaseOrderStatus::Ordered->value,
+                        PurchaseOrderStatus::PartiallyReceived->value,
+                    ])
+                    ->groupBy('warehouse_id')
+                    ->pluck('total', 'warehouse_id')
+                    ->map(fn ($v) => (int) $v)
+                    ->all(),
+            ],
+        );
 
-            TextColumn::make('total_base_qty')
-                ->label('TOTAL BASE QTY')
-                ->getStateUsing(fn (SalesOrder $record): int => $record->items->sum('base_qty'))
-                ->sortable(),
+        return $table
+            ->query(Warehouse::query()->whereIn('warehouses.id', $warehouseIds))
+            ->columns([
+                TextColumn::make('name')
+                    ->label(__('dashboard.pending.warehouse')),
 
-            TextColumn::make('outstanding_base_qty')
-                ->label('OUTSTANDING BASE QTY')
-                ->getStateUsing(fn (SalesOrder $record): int => $record->items->sum('outstandingBaseQty'))
-                ->sortable()
-                ->color('danger'),
+                TextColumn::make('pending_sales')
+                    ->label(__('dashboard.pending.sales'))
+                    ->state(fn (Warehouse $record) => $counts['sales'][$record->id] ?? 0)
+                    ->numeric(),
 
-            TextColumn::make('ordered_at')
-                ->label('ORDERED AT')
-                ->dateTime()
-                ->sortable(),
-        ];
+                TextColumn::make('pending_purchases')
+                    ->label(__('dashboard.pending.purchases'))
+                    ->state(fn (Warehouse $record) => $counts['purchases'][$record->id] ?? 0)
+                    ->numeric(),
+            ])
+            ->paginated(false);
     }
 }

@@ -4,17 +4,42 @@ declare(strict_types=1);
 
 namespace App\Filament\Widgets;
 
-use App\Models\PurchaseOrder;
-use App\Models\SalesOrder;
+use App\Models\Warehouse;
 use Filament\Widgets\ChartWidget;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
+/**
+ * SalesVsPurchasesWidget — grouped bar chart, 6-month window.
+ *
+ * Visibility: Admin, Auditor.
+ * Cache: 300s.
+ * Column span: `['default' => 1, 'md' => 2, 'xl' => 2]`.
+ */
 class SalesVsPurchasesWidget extends ChartWidget
 {
-    protected ?string $heading = 'Sales vs Purchases (Last 30 Days)';
+    protected static ?int $sort = 6;
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = ['default' => 1, 'md' => 2, 'xl' => 2];
+
+    public static function canView(): bool
+    {
+        $user = auth()->user();
+
+        return $user !== null && ($user->isAdmin() || $user->isAuditor());
+    }
+
+    public static function cacheTtl(): int
+    {
+        return 300;
+    }
+
+    public static function cacheKey(int $userId, array $warehouseIds): string
+    {
+        sort($warehouseIds);
+
+        return 'sales_vs_purchases_'.$userId.'_'.md5(implode(',', $warehouseIds));
+    }
 
     protected function getType(): string
     {
@@ -24,164 +49,65 @@ class SalesVsPurchasesWidget extends ChartWidget
     protected function getData(): array
     {
         $user = auth()->user();
+        $warehouseIds = $user->isAdmin() || $user->isAuditor()
+            ? Warehouse::query()->pluck('id')->all()
+            : $user->warehouses()->pluck('warehouses.id')->all();
 
-        if (! ($user?->can('viewAny', SalesOrder::class) ?? false)) {
-            return $this->emptyData();
-        }
+        return Cache::remember(
+            static::cacheKey($user->id, $warehouseIds),
+            static::cacheTtl(),
+            function () use ($warehouseIds) {
+                $months = collect(range(5, 0))->map(fn ($i) => now()->subMonths($i)->format('Y-m'));
 
-        $firstWarehouseId = optional($user->warehouses->first())?->id;
-        $cacheKey = 'sales_vs_purchases_'.$user->id.'_'.$firstWarehouseId;
+                // Portable day buckets (`CAST(... AS DATE)` is supported by
+                // both MySQL and PostgreSQL); rolled up to months in PHP.
+                $rollUp = function ($rows) {
+                    $out = [];
+                    foreach ($rows as $day => $total) {
+                        $month = mb_substr((string) $day, 0, 7);
+                        $out[$month] = ($out[$month] ?? 0) + (float) $total;
+                    }
 
-        return Cache::remember($cacheKey, 300, function () use ($user) {
-            return $this->computeChartData($user);
-        });
-    }
+                    return $out;
+                };
 
-    protected function getOptions(): array
-    {
-        return [
-            'responsive' => true,
-            'maintainAspectRatio' => false,
-            'plugins' => [
-                'legend' => [
-                    'display' => true,
-                    'position' => 'bottom',
-                ],
-                'tooltip' => [
-                    'callbacks' => [
-                        'label' => 'function(context) {
-                            return context.dataset.label + ": ₱" + context.parsed.y.toFixed(4);
-                        }',
+                // `unit_cost_price` is per ordered unit (§2.17:
+                // `ordered_qty` × `ordered_unit_ratio` = `ordered_base_qty`),
+                // so the per-base-unit value divides by `ordered_unit_ratio`.
+                $purchases = $rollUp(DB::table('purchase_order_items')
+                    ->join('purchase_orders', 'purchase_orders.id', '=', 'purchase_order_items.purchase_order_id')
+                    ->whereIn('purchase_orders.warehouse_id', $warehouseIds)
+                    ->whereNotNull('purchase_orders.received_at')
+                    ->where('purchase_orders.received_at', '>=', now()->subMonths(6))
+                    ->selectRaw('CAST(purchase_orders.received_at AS DATE) as day, SUM(purchase_order_items.received_base_qty * purchase_order_items.unit_cost_price / NULLIF(purchase_order_items.ordered_unit_ratio, 0)) as total')
+                    ->groupBy('day')
+                    ->pluck('total', 'day'));
+
+                // `unit_sale_price_snapshot` is per ordered unit (§2.19) —
+                // same per-base-unit normalization as `SalesRevenueTrendWidget`.
+                $sales = $rollUp(DB::table('sales_order_items')
+                    ->join('sales_orders', 'sales_orders.id', '=', 'sales_order_items.sales_order_id')
+                    ->whereIn('sales_orders.warehouse_id', $warehouseIds)
+                    ->whereNotNull('sales_orders.dispatched_at')
+                    ->where('sales_orders.dispatched_at', '>=', now()->subMonths(6))
+                    ->selectRaw('CAST(sales_orders.dispatched_at AS DATE) as day, SUM(sales_order_items.dispatched_base_qty * sales_order_items.unit_sale_price_snapshot / NULLIF(sales_order_items.unit_ratio, 0)) as total')
+                    ->groupBy('day')
+                    ->pluck('total', 'day'));
+
+                return [
+                    'labels' => $months->all(),
+                    'datasets' => [
+                        [
+                            'label' => __('dashboard.charts.purchases'),
+                            'data' => $months->map(fn ($m) => (float) ($purchases[$m] ?? 0))->all(),
+                        ],
+                        [
+                            'label' => __('dashboard.charts.sales'),
+                            'data' => $months->map(fn ($m) => (float) ($sales[$m] ?? 0))->all(),
+                        ],
                     ],
-                ],
-            ],
-            'scales' => [
-                'y' => [
-                    'beginAtZero' => true,
-                    'title' => [
-                        'display' => true,
-                        'text' => 'Value (₱)',
-                    ],
-                ],
-                'x' => [
-                    'title' => [
-                        'display' => true,
-                        'text' => 'Last 30 Days',
-                    ],
-                ],
-            ],
-        ];
-    }
-
-    private function computeChartData($user): array
-    {
-        $warehouseIds = $user->warehouses->pluck('id')->toArray();
-
-        if (empty($warehouseIds)) {
-            return $this->emptyData();
-        }
-
-        $days = 30;
-        $startDate = Carbon::now()->subDays($days - 1)->startOfDay();
-
-        $salesOrders = SalesOrder::whereIn('warehouse_id', $warehouseIds)
-            ->whereIn('status', ['dispatched', 'completed'])
-            ->where('dispatched_at', '>=', $startDate)
-            ->with('items')
-            ->get();
-
-        $purchaseOrders = PurchaseOrder::whereIn('warehouse_id', $warehouseIds)
-            ->whereIn('status', ['completed', 'partially_received'])
-            ->where('received_at', '>=', $startDate)
-            ->with('items')
-            ->get();
-
-        $salesBuckets = [];
-        $purchaseBuckets = [];
-        for ($i = 0; $i < $days; $i++) {
-            $date = Carbon::now()->subDays($days - 1 - $i)->startOfDay();
-            $key = $date->format('Y-m-d');
-            $salesBuckets[$key] = '0.0000';
-            $purchaseBuckets[$key] = '0.0000';
-        }
-
-        foreach ($salesOrders as $order) {
-            $dayKey = Carbon::parse($order->dispatched_at)->format('Y-m-d');
-            if (! isset($salesBuckets[$dayKey])) {
-                continue;
-            }
-
-            $dailyRevenue = '0.0000';
-            foreach ($order->items as $item) {
-                if ($item->dispatched_base_qty > 0 && $item->unit_sale_price_snapshot) {
-                    $lineTotal = bcmul((string) $item->dispatched_base_qty, (string) $item->unit_sale_price_snapshot, 4);
-                    $dailyRevenue = bcadd($dailyRevenue, $lineTotal, 4);
-                }
-            }
-            $salesBuckets[$dayKey] = bcadd($salesBuckets[$dayKey], $dailyRevenue, 4);
-        }
-
-        foreach ($purchaseOrders as $order) {
-            $dayKey = Carbon::parse($order->received_at)->format('Y-m-d');
-            if (! isset($purchaseBuckets[$dayKey])) {
-                continue;
-            }
-
-            $dailyCost = '0.0000';
-            foreach ($order->items as $item) {
-                if ($item->received_base_qty > 0 && $item->unit_cost_price) {
-                    $lineTotal = bcmul((string) $item->received_base_qty, (string) $item->unit_cost_price, 4);
-                    $dailyCost = bcadd($dailyCost, $lineTotal, 4);
-                }
-            }
-            $purchaseBuckets[$dayKey] = bcadd($purchaseBuckets[$dayKey], $dailyCost, 4);
-        }
-
-        $labels = array_map(function ($dateStr) {
-            return Carbon::parse($dateStr)->format('M j');
-        }, array_keys($salesBuckets));
-
-        return [
-            'labels' => $labels,
-            'datasets' => [
-                [
-                    'label' => 'Sales Revenue',
-                    'data' => array_values($salesBuckets),
-                    'backgroundColor' => 'rgba(34, 197, 94, 0.8)',
-                    'borderColor' => 'rgb(34, 197, 94)',
-                    'borderWidth' => 1,
-                ],
-                [
-                    'label' => 'Purchase Cost',
-                    'data' => array_values($purchaseBuckets),
-                    'backgroundColor' => 'rgba(239, 68, 68, 0.8)',
-                    'borderColor' => 'rgb(239, 68, 68)',
-                    'borderWidth' => 1,
-                ],
-            ],
-        ];
-    }
-
-    private function emptyData(): array
-    {
-        return [
-            'labels' => [],
-            'datasets' => [
-                [
-                    'label' => 'Sales Revenue',
-                    'data' => [],
-                    'backgroundColor' => 'rgba(34, 197, 94, 0.8)',
-                    'borderColor' => 'rgb(34, 197, 94)',
-                    'borderWidth' => 1,
-                ],
-                [
-                    'label' => 'Purchase Cost',
-                    'data' => [],
-                    'backgroundColor' => 'rgba(239, 68, 68, 0.8)',
-                    'borderColor' => 'rgb(239, 68, 68)',
-                    'borderWidth' => 1,
-                ],
-            ],
-        ];
+                ];
+            },
+        );
     }
 }

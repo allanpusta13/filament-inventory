@@ -9,62 +9,36 @@ use App\Models\ProductVariantUnitConversion;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<ProductVariantUnitConversion>
+ * ProductVariantUnitConversion factory (§5.4).
+ *
+ * Default state: a non-base unit row (`box`/`case`/`pallet`) with a
+ * ratio from `{6, 12, 24, 48}`. The `->baseUnit()` state produces the
+ * `pc` self-conversion row for tests that bypass the observer.
+ *
+ * NOTE: `ProductVariantObserver` (§3.19) materializes the base-unit
+ * row automatically on variant create. Seed the base row via this
+ * factory only when the observer was intentionally bypassed.
  */
 class ProductVariantUnitConversionFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
+    protected $model = ProductVariantUnitConversion::class;
+
     public function definition(): array
     {
         return [
             'product_variant_id' => ProductVariant::factory(),
-            'unit_name' => 'Box',
-            'base_unit_ratio' => 24,
+            'unit_name' => $this->faker->randomElement(['box', 'case', 'pallet']),
+            'base_unit_ratio' => $this->faker->randomElement([6, 12, 24, 48]),
             'is_default_purchase' => false,
             'is_default_transfer' => false,
         ];
     }
 
-    public function piece(): static
+    public function baseUnit(): static
     {
         return $this->state(fn () => [
-            'unit_name' => 'Piece',
+            'unit_name' => 'pc',
             'base_unit_ratio' => 1,
-        ]);
-    }
-
-    public function box(): static
-    {
-        return $this->state(fn () => [
-            'unit_name' => 'Box',
-            'base_unit_ratio' => 24,
-        ]);
-    }
-
-    public function case(): static
-    {
-        return $this->state(fn () => [
-            'unit_name' => 'Case',
-            'base_unit_ratio' => 12,
-        ]);
-    }
-
-    public function pallet(): static
-    {
-        return $this->state(fn () => [
-            'unit_name' => 'Pallet',
-            'base_unit_ratio' => 48,
-        ]);
-    }
-
-    public function forVariant(ProductVariant $variant): static
-    {
-        return $this->state(fn () => [
-            'product_variant_id' => $variant->id,
         ]);
     }
 }

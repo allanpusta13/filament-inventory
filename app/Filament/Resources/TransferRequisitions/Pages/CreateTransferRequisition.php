@@ -6,13 +6,15 @@ namespace App\Filament\Resources\TransferRequisitions\Pages;
 
 use App\Filament\Resources\TransferRequisitions\Schemas\TransferRequisitionForm;
 use App\Filament\Resources\TransferRequisitions\TransferRequisitionResource;
-use Filament\Forms\Components\Placeholder;
+use App\Support\GeneratesReferenceCodes;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Resources\Pages\CreateRecord\Concerns\HasWizard;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\View;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Support\Facades\Gate;
 
 class CreateTransferRequisition extends CreateRecord
 {
@@ -25,9 +27,7 @@ class CreateTransferRequisition extends CreateRecord
         return Width::SevenExtraLarge->value;
     }
 
-    /**
-     * @return array<Step>
-     */
+    /** @return array<Step> */
     protected function getSteps(): array
     {
         return [
@@ -45,23 +45,35 @@ class CreateTransferRequisition extends CreateRecord
                 ->description(__('resources.transfer_requisitions.steps.review_description'))
                 ->icon(Heroicon::CheckCircle)
                 ->schema([
-                    Placeholder::make('review_summary')
-                        ->columnSpanFull()
-                        ->content(fn (Get $get) => view(
-                            'filament.wizards.transfer-review',
-                            ['state' => $get()],
-                        )),
+                    View::make('filament.wizards.transfer-review')
+                        ->viewData(fn (Get $get): array => [
+                            'state' => [
+                                'from_warehouse_id' => $get('from_warehouse_id'),
+                                'to_warehouse_id' => $get('to_warehouse_id'),
+                                'items' => $get('items') ?? [],
+                                'notes' => $get('notes'),
+                            ],
+                        ])
+                        ->columnSpanFull(),
                 ]),
+
         ];
     }
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $data['reference_code'] = $data['reference_code']
-            ?? 'TR-'.now()->format('YmdHis').'-'.random_int(100, 999);
+            ?? GeneratesReferenceCodes::generateReferenceCode('TR');
         $data['requested_by'] = auth()->id();
         $data['status'] = \App\Enums\TransferRequisitionStatus::Draft->value;
 
         return $data;
+    }
+
+    protected function handleRecordCreation(array $data): \Illuminate\Database\Eloquent\Model
+    {
+        Gate::authorize('create', \App\Models\TransferRequisition::class);
+
+        return parent::handleRecordCreation($data);
     }
 }

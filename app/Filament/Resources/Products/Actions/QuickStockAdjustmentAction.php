@@ -14,22 +14,34 @@ use Filament\Notifications\Notification;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 
+/**
+ * §7A.4.3 canonical contract.
+ *
+ * Operational ability — `ProductVariantPolicy::adjustStock`. The
+ * warehouse select is scoped to assigned warehouses for non-admins
+ * (auditors are read-only and denied by the policy). The service
+ * re-verifies the actor scope at the boundary (§6.2 `adjustment()`).
+ */
 class QuickStockAdjustmentAction
 {
     public static function make(): Action
     {
         return Action::make('quickStockAdjustment')
             ->label(__('resources.products.actions.quick_adjustment'))
+            ->modalHeading(__('resources.products.actions.quick_adjustment_heading'))
+            ->modalDescription(__('resources.products.actions.quick_adjustment_description'))
             ->icon(Heroicon::AdjustmentsHorizontal)
             ->color('warning')
             ->modalWidth(Width::Large)
-            ->authorize('update')
+            ->authorize('adjustStock')
             ->schema(fn (ProductVariant $record) => [
                 Select::make('warehouse_id')
                     ->label(__('resources.products.fields.warehouse'))
-                    ->prefixIcon(Heroicon::BuildingOffice)
+                    ->prefixIcon(Heroicon::BuildingOffice2)
                     ->columnSpanFull()
-                    ->options(fn () => auth()->user()->warehouses()->pluck('name', 'id'))
+                    ->options(fn () => auth()->user()->isAdmin()
+                        ? \App\Models\Warehouse::query()->pluck('name', 'id')
+                        : auth()->user()->warehouses()->pluck('name', 'id'))
                     ->default(fn () => auth()->user()->warehouses()->count() === 1
                         ? auth()->user()->warehouses()->first()->id
                         : null)
@@ -46,7 +58,7 @@ class QuickStockAdjustmentAction
 
                 Textarea::make('notes')
                     ->label(__('resources.products.fields.adjustment_notes'))
-                    ->prefixIcon(Heroicon::ChatBubbleBottomCenterText)
+                    // ->prefixIcon(Heroicon::ChatBubbleBottomCenterText)
                     ->columnSpanFull()
                     ->required()
                     ->minLength(15),

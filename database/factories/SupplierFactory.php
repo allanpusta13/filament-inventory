@@ -8,7 +8,10 @@ use App\Models\Supplier;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<Supplier>
+ * Supplier factory (§5.7).
+ *
+ * Suppliers are minimal master data (A3): no `code` column, identified
+ * by name. All four optional fields are populated.
  */
 class SupplierFactory extends Factory
 {
@@ -17,17 +20,12 @@ class SupplierFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->company(),
-            'contact_person' => fake()->name(),
-            'phone' => fake()->phoneNumber(),
-            'email' => fake()->unique()->safeEmail(),
-            'address' => fake()->address(),
+            'name' => $this->faker->company(),
+            'contact_person' => $this->faker->name(),
+            'phone' => $this->faker->phoneNumber(),
+            'email' => $this->faker->companyEmail(),
+            'address' => $this->faker->address(),
             'is_active' => true,
         ];
-    }
-
-    public function inactive(): static
-    {
-        return $this->state(fn () => ['is_active' => false]);
     }
 }

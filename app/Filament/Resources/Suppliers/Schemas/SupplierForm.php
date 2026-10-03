@@ -10,6 +10,9 @@ use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 
+/**
+ * Supplier form — §7I.1 canonical contract.
+ */
 class SupplierForm
 {
     public static function configure(Schema $schema): Schema
@@ -19,7 +22,8 @@ class SupplierForm
                 ->label(__('resources.suppliers.fields.name'))
                 ->prefixIcon(Heroicon::BuildingStorefront)
                 ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2])
-                ->required()->maxLength(255),
+                ->required()
+                ->maxLength(255),
 
             TextInput::make('contact_person')
                 ->label(__('resources.suppliers.fields.contact_person'))
@@ -41,7 +45,7 @@ class SupplierForm
 
             Textarea::make('address')
                 ->label(__('resources.suppliers.fields.address'))
-                ->prefixIcon(Heroicon::MapPin)
+                // ->prefixIcon(Heroicon::MapPin)
                 ->columnSpanFull(),
 
             Toggle::make('is_active')

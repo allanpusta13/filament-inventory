@@ -11,8 +11,8 @@ class EditProduct extends EditRecord
 {
     protected static string $resource = ProductResource::class;
 
-    public function getModalWidth(): string
+    protected function getUpdatedNotificationTitle(): ?string
     {
-        return 'large';
+        return __('resources.products.notifications.updated');
     }
 }

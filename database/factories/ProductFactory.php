@@ -8,20 +8,21 @@ use App\Models\Product;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<Product>
+ * Product factory (§5.1).
+ *
+ * Produces a family container with a random word-based name and a
+ * category from the small fixed set. Variants are created separately
+ * via `ProductVariantFactory` (§5.2) and attach through `product_id`.
  */
 class ProductFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
+    protected $model = Product::class;
+
     public function definition(): array
     {
         return [
-            'name' => fake()->words(3, true),
-            'category' => fake()->randomElement(['Beverages', 'Snacks', 'Office Supplies']),
+            'name' => $this->faker->words(3, true),
+            'category' => $this->faker->randomElement(['Electronics', 'Hardware', 'Consumables']),
         ];
     }
 }

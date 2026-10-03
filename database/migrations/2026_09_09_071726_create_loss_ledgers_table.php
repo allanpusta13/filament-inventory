@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Models\ProductVariant;
+use App\Models\TransferRequisition;
+use App\Models\TransferRequisitionItem;
+use App\Models\Warehouse;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -12,19 +16,17 @@ return new class() extends Migration
     {
         Schema::create('loss_ledgers', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('transfer_requisition_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('transfer_requisition_item_id')->nullable()->constrained()->cascadeOnDelete();
-            $table->foreignId('product_variant_id')->constrained()->restrictOnDelete();
-            $table->foreignId('warehouse_id')->constrained()->restrictOnDelete();
-
+            $table->foreignIdFor(TransferRequisition::class)->nullable()->constrained()->cascadeOnDelete();
+            $table->foreignIdFor(TransferRequisitionItem::class)->nullable()->constrained()->cascadeOnDelete();
+            $table->foreignIdFor(ProductVariant::class)->constrained()->restrictOnDelete();
+            $table->foreignIdFor(Warehouse::class)->constrained()->restrictOnDelete();
             $table->integer('lost_base_qty')->default(0);
             $table->integer('damaged_base_qty')->default(0);
-            $table->decimal('unit_cost_price', 15, 4);      // Snapshot of variant unit cost at incident time
-            $table->decimal('total_financial_loss', 15, 4); // Total financial write-off
-
+            $table->decimal('unit_cost_price', 15, 4);
+            $table->decimal('total_financial_loss', 15, 4);
             $table->string('loss_category')->default('shortfall');
             $table->text('notes')->nullable();
-            $table->foreignId('recorded_by')->nullable()->constrained('users');
+            $table->foreignId('recorded_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('recorded_at')->useCurrent();
             $table->timestamps();
 

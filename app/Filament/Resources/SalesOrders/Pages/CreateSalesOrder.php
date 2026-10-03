@@ -6,13 +6,16 @@ namespace App\Filament\Resources\SalesOrders\Pages;
 
 use App\Filament\Resources\SalesOrders\SalesOrderResource;
 use App\Filament\Resources\SalesOrders\Schemas\SalesOrderForm;
-use Filament\Forms\Components\Placeholder;
+use App\Livewire\Wizards\WizardReviewSummary;
+use App\Support\GeneratesReferenceCodes;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Resources\Pages\CreateRecord\Concerns\HasWizard;
+use Filament\Schemas\Components\Livewire;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Support\Facades\Gate;
 
 class CreateSalesOrder extends CreateRecord
 {
@@ -25,6 +28,7 @@ class CreateSalesOrder extends CreateRecord
         return Width::SevenExtraLarge->value;
     }
 
+    /** @return array<Step> */
     protected function getSteps(): array
     {
         return [
@@ -42,12 +46,10 @@ class CreateSalesOrder extends CreateRecord
                 ->description(__('resources.sales_orders.steps.review_verify_description'))
                 ->icon(Heroicon::CheckCircle)
                 ->schema([
-                    Placeholder::make('review_summary')
-                        ->columnSpanFull()
-                        ->content(fn (Get $get) => view(
-                            'filament.wizards.sales-order-review',
-                            ['state' => $get()],
-                        )),
+                    Livewire::make(WizardReviewSummary::class, fn (Get $get): array => [
+                        'view' => 'filament.wizards.sales-order-review',
+                        'state' => $get(),
+                    ])->columnSpanFull(),
                 ]),
         ];
     }
@@ -55,9 +57,16 @@ class CreateSalesOrder extends CreateRecord
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $data['reference_code'] = $data['reference_code']
-            ?? 'SO-'.now()->format('YmdHis').'-'.random_int(100, 999);
+            ?? GeneratesReferenceCodes::generateReferenceCode('SO');
         $data['ordered_by'] = auth()->id();
 
         return $data;
+    }
+
+    protected function handleRecordCreation(array $data): \Illuminate\Database\Eloquent\Model
+    {
+        Gate::authorize('create', \App\Models\SalesOrder::class);
+
+        return parent::handleRecordCreation($data);
     }
 }

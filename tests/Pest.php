@@ -51,7 +51,7 @@ beforeEach(function () {
 |
 */
 
-require __DIR__.'/Datasets/SharedDatasets.php';
+// require __DIR__.'/Datasets/SharedDatasets.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -66,7 +66,7 @@ require __DIR__.'/Datasets/SharedDatasets.php';
 function actingAsAdmin(array $attributes = []): User
 {
     $user = User::factory()->create(array_merge([
-        'role' => UserRole::ADMIN->value,
+        'role' => UserRole::Admin->value,
     ], $attributes));
 
     actingAs($user);
@@ -77,7 +77,7 @@ function actingAsAdmin(array $attributes = []): User
 function actingAsAuditor(array $attributes = []): User
 {
     $user = User::factory()->create(array_merge([
-        'role' => UserRole::AUDITOR->value,
+        'role' => UserRole::Auditor->value,
     ], $attributes));
 
     actingAs($user);
@@ -88,7 +88,7 @@ function actingAsAuditor(array $attributes = []): User
 function actingAsBranchManager(array $attributes = []): User
 {
     $user = User::factory()->create(array_merge([
-        'role' => UserRole::BRANCH_MANAGER->value,
+        'role' => UserRole::BranchManager->value,
     ], $attributes));
 
     actingAs($user);
@@ -99,7 +99,7 @@ function actingAsBranchManager(array $attributes = []): User
 function actingAsWarehouseStaff(array $attributes = []): User
 {
     $user = User::factory()->create(array_merge([
-        'role' => UserRole::WAREHOUSE_STAFF->value,
+        'role' => UserRole::WarehouseStaff->value,
     ], $attributes));
 
     actingAs($user);

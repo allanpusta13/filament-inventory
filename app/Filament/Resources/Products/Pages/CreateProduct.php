@@ -11,8 +11,8 @@ class CreateProduct extends CreateRecord
 {
     protected static string $resource = ProductResource::class;
 
-    public function getModalWidth(): string
+    protected function getCreatedNotificationTitle(): ?string
     {
-        return 'large';
+        return __('resources.products.notifications.created');
     }
 }

@@ -10,78 +10,28 @@ use App\Models\TransferRequisitionItem;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<TransferRequisitionItem>
+ * TransferRequisitionItem factory (§5.10).
+ *
+ * Default state: `pc` unit with ratio 1, requested qty in `[1, 20]`,
+ * `requested_base_qty = requested_qty`. The approved leg is left null
+ * — it is materialized at confirm time by
+ * `NegotiationService::materializeRequestedAsApproved()` (§6.3).
  */
 class TransferRequisitionItemFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
+    protected $model = TransferRequisitionItem::class;
+
     public function definition(): array
     {
-        $qty = fake()->numberBetween(1, 20);
+        $qty = $this->faker->numberBetween(1, 20);
 
         return [
             'transfer_requisition_id' => TransferRequisition::factory(),
             'product_variant_id' => ProductVariant::factory(),
-            'requested_unit_name' => 'Box',
-            'requested_unit_ratio' => 24,
+            'requested_unit_name' => 'pc',
+            'requested_unit_ratio' => 1,
             'requested_qty' => $qty,
-            'requested_base_qty' => $qty * 24,
-            'shipped_base_qty' => 0,
-            'received_good_base_qty' => 0,
-            'received_damaged_base_qty' => 0,
+            'requested_base_qty' => $qty,
         ];
-    }
-
-    public function configure(): static
-    {
-        return $this->afterCreating(function (TransferRequisitionItem $item) {
-            $variant = $item->productVariant;
-            $unitConversion = $variant->unitConversions()->first();
-
-            if ($unitConversion && $unitConversion->unit_name !== 'Box') {
-                // Create Box unit conversion for the variant
-                \App\Models\ProductVariantUnitConversion::factory()
-                    ->forVariant($variant)
-                    ->box()
-                    ->create();
-            }
-        });
-    }
-
-    public function approved(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'approved_unit_name' => $attributes['requested_unit_name'],
-            'approved_unit_ratio' => $attributes['requested_unit_ratio'],
-            'approved_qty' => $attributes['requested_qty'],
-            'approved_base_qty' => $attributes['requested_base_qty'],
-        ]);
-    }
-
-    public function dispatched(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'approved_unit_name' => $attributes['requested_unit_name'],
-            'approved_unit_ratio' => $attributes['requested_unit_ratio'],
-            'approved_qty' => $attributes['requested_qty'],
-            'approved_base_qty' => $attributes['requested_base_qty'],
-            'shipped_base_qty' => $attributes['requested_base_qty'],
-        ]);
-    }
-
-    public function received(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'approved_unit_name' => $attributes['requested_unit_name'],
-            'approved_unit_ratio' => $attributes['requested_unit_ratio'],
-            'approved_qty' => $attributes['requested_qty'],
-            'approved_base_qty' => $attributes['requested_base_qty'],
-            'shipped_base_qty' => $attributes['requested_base_qty'],
-            'received_good_base_qty' => $attributes['requested_base_qty'],
-        ]);
     }
 }

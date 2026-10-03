@@ -4,135 +4,160 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\TransferRequisitions\Pages;
 
+use App\Enums\NegotiationSide;
+use App\Enums\RevisionStatus;
 use App\Enums\TransferRequisitionStatus;
+use App\Filament\Resources\TransferRequisitions\Schemas\TransferRequisitionForm;
 use App\Filament\Resources\TransferRequisitions\TransferRequisitionResource;
-use App\Services\InventoryService;
-use App\Services\NegotiationService;
+use App\Models\TransferRequisition;
+use App\Models\TransferRequisitionItemRevision;
 use Filament\Actions\Action;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\RestoreAction;
+use Filament\Forms\Components\Select;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
-use Illuminate\Support\Facades\URL;
 
+/**
+ * ViewTransferRequisition — §18.2a canonical contract.
+ *
+ * Negotiation states are NOT editable (TransferRequisitionPolicy::update
+ * permits Draft only), so `submitRevision` / `acceptRevision` /
+ * `rejectRevision` modals live here as header actions. The table's
+ * `openReview` action links to this view page for negotiation states.
+ */
 class ViewTransferRequisition extends ViewRecord
 {
     protected static string $resource = TransferRequisitionResource::class;
 
+    /** @return array<int, Action> */
     protected function getHeaderActions(): array
     {
         return [
-            EditAction::make()
-                ->modalWidth(Width::Large),
-
-            Action::make('confirm')
-                ->label('CONFIRM')
-                ->icon(Heroicon::CheckBadge)
-                ->color('primary')
-                ->authorize('confirm')
-                ->visible(fn ($record) => in_array($record->status?->value, [
-                    TransferRequisitionStatus::Requested->value,
-                    TransferRequisitionStatus::UnderReviewFulfiller->value,
-                    TransferRequisitionStatus::UnderReviewRequestor->value,
+            Action::make('submitRevision')
+                ->label(__('resources.transfer_requisitions.actions.propose_revision'))
+                ->modalHeading(__('resources.transfer_requisitions.actions.propose_revision_heading'))
+                ->modalDescription(__('resources.transfer_requisitions.actions.propose_revision_description'))
+                ->icon(Heroicon::ChatBubbleLeftRight)
+                ->color('warning')
+                ->authorize('negotiate')
+                ->visible(fn (TransferRequisition $record) => in_array($record->status, [
+                    TransferRequisitionStatus::Requested,
+                    TransferRequisitionStatus::UnderReviewFulfiller,
+                    TransferRequisitionStatus::UnderReviewRequestor,
                 ], true))
-                ->action(function ($record) {
-                    app(NegotiationService::class)
-                        ->materializeRequestedAsApproved($record);
-                    $record->update([
-                        'status' => TransferRequisitionStatus::Confirmed->value,
-                        'approved_at' => now(),
-                        'approved_by' => auth()->id(),
-                    ]);
-                })
-                ->requiresConfirmation()
-                ->modalWidth(Width::Large),
+                ->modalWidth(Width::FourExtraLarge)
+                ->schema(fn (TransferRequisition $record) => TransferRequisitionForm::getRevisionFields($record))
+                ->action(function (array $data, TransferRequisition $record) {
+                    $item = $record->items()->findOrFail((int) $data['transfer_requisition_item_id']);
 
-            Action::make('dispatch')
-                ->label('DISPATCH')
-                ->icon(Heroicon::Truck)
-                ->color('primary')
-                ->authorize('dispatch')
-                ->visible(fn ($record) => $record->status?->value === TransferRequisitionStatus::Confirmed->value)
-                ->action(function ($record) {
-                    app(InventoryService::class)
-                        ->dispatchTransfer($record->id);
-                    $record->update([
-                        'status' => TransferRequisitionStatus::Dispatched->value,
-                        'dispatched_at' => now(),
-                        'dispatched_by' => auth()->id(),
-                    ]);
-                })
-                ->requiresConfirmation()
-                ->modalWidth(Width::Large),
+                    app(\App\Services\NegotiationService::class)->submitRevision(
+                        item: $item,
+                        substituteVariantId: $data['substitute_product_variant_id'] ?? null,
+                        side: NegotiationSide::from($data['side']),
+                        proposedUnitName: (string) $data['proposed_unit_name'],
+                        proposedQty: (int) $data['proposed_qty'],
+                        negotiationReason: $data['negotiation_reason'] ?? null,
+                        respondsToRevisionId: $data['responds_to_revision_id'] ?? null,
+                    );
 
-            Action::make('scanToReceive')
-                ->label(__('resources.transfer_requisitions.actions.receive'))
-                ->name('scanToReceive')
-                ->icon(Heroicon::QrCode)
+                    Notification::make()
+                        ->title(__('resources.transfer_requisitions.notifications.revision_submitted'))
+                        ->success()
+                        ->send();
+                }),
+
+            Action::make('acceptRevision')
+                ->label(__('resources.transfer_requisitions.actions.accept_revision'))
+                ->modalHeading(__('resources.transfer_requisitions.actions.accept_revision_heading'))
+                ->modalDescription(__('resources.transfer_requisitions.actions.accept_revision_description'))
+                ->modalSubmitActionLabel(__('actions.confirm'))
+                ->icon(Heroicon::CheckCircle)
                 ->color('success')
-                ->authorize('receive')
-                ->visible(fn ($record) => in_array($record->status?->value, [
-                    TransferRequisitionStatus::Dispatched->value,
-                    TransferRequisitionStatus::PartiallyReceived->value,
-                ], true))
-                ->url(fn ($record) => URL::temporarySignedRoute(
-                    'stn.scan',
-                    now()->addDays(7),
-                    ['transferRequisition' => $record->id]
-                )),
-
-            Action::make('recordLoss')
-                ->label('RECORD LOSS')
-                ->name('recordLoss')
-                ->icon(Heroicon::ExclamationTriangle)
-                ->color('danger')
-                ->authorize('recordLoss')
-                ->visible(fn ($record) => in_array($record->status?->value, [
-                    TransferRequisitionStatus::Dispatched->value,
-                    TransferRequisitionStatus::PartiallyReceived->value,
-                ], true))
-                ->modalWidth(Width::Large)
-                ->schema([
-                    \Filament\Forms\Components\Select::make('product_variant_id')
-                        ->label('Product Variant')
-                        ->options(fn ($record) => $record->items->pluck('productVariant.name', 'product_variant_id')->toArray())
-                        ->required()
-                        ->searchable(),
-                    \Filament\Forms\Components\TextInput::make('lost_base_qty')
-                        ->label('Lost Quantity (Base Units)')
-                        ->numeric()
-                        ->minValue(0)
+                ->authorize('acceptRevision')
+                ->visible(fn (TransferRequisition $record) => in_array($record->status, [
+                    TransferRequisitionStatus::Requested,
+                    TransferRequisitionStatus::UnderReviewFulfiller,
+                    TransferRequisitionStatus::UnderReviewRequestor,
+                ], true) && $record->items->flatMap(fn ($item) => $item->revisions)
+                    ->contains(fn ($revision) => $revision->status === RevisionStatus::Pending))
+                ->schema(fn (TransferRequisition $record) => [
+                    Select::make('revision_id')
+                        ->label(__('resources.transfer_requisitions.fields.revision'))
+                        ->prefixIcon(Heroicon::CheckCircle)
+                        ->columnSpanFull()
+                        ->options(fn () => $record->items
+                            ->flatMap(fn ($item) => $item->revisions
+                                ->where('status', RevisionStatus::Pending)
+                                ->mapWithKeys(fn ($revision) => [
+                                    $revision->id => "{$item->productVariant->sku}: {$revision->proposed_qty} {$revision->proposed_unit_name}",
+                                ]))
+                            ->toArray())
                         ->required(),
-                    \Filament\Forms\Components\TextInput::make('damaged_base_qty')
-                        ->label('Damaged Quantity (Base Units)')
-                        ->numeric()
-                        ->default(0)
-                        ->minValue(0),
-                    \Filament\Forms\Components\TextInput::make('total_financial_loss')
-                        ->label('Total Financial Loss')
-                        ->numeric()
-                        ->minValue(0)
-                        ->placeholder('Auto-calculated')
-                        ->dehydrated(false),
                 ])
-                ->action(function (array $data, $record) {
-                    $variant = \App\Models\ProductVariant::with('currentPrice')->find($data['product_variant_id']);
-                    $unitCost = \App\Models\LossLedger::snapshotUnitCostFrom($variant);
-                    $data['total_financial_loss'] = \App\Models\LossLedger::calculateTotalFinancialLoss($unitCost, $data['lost_base_qty'], $data['damaged_base_qty']);
-                    \App\Models\LossLedger::create([
-                        'transfer_requisition_id' => $record->id,
-                        'product_variant_id' => $data['product_variant_id'],
-                        'lost_base_qty' => $data['lost_base_qty'],
-                        'damaged_base_qty' => $data['damaged_base_qty'],
-                        'total_financial_loss' => $data['total_financial_loss'],
-                    ]);
+                ->action(function (array $data, TransferRequisition $record) {
+                    $revision = TransferRequisitionItemRevision::query()
+                        ->findOrFail((int) $data['revision_id']);
+
+                    abort_unless(
+                        (int) $revision->item->transfer_requisition_id === (int) $record->id,
+                        403,
+                    );
+
+                    app(\App\Services\NegotiationService::class)->accept($revision);
+
+                    Notification::make()
+                        ->title(__('resources.transfer_requisitions.notifications.revision_accepted'))
+                        ->success()
+                        ->send();
                 })
                 ->requiresConfirmation(),
 
-            DeleteAction::make(),
-            RestoreAction::make(),
+            Action::make('rejectRevision')
+                ->label(__('resources.transfer_requisitions.actions.reject_revision'))
+                ->modalHeading(__('resources.transfer_requisitions.actions.reject_revision_heading'))
+                ->modalDescription(__('resources.transfer_requisitions.actions.reject_revision_description'))
+                ->modalSubmitActionLabel(__('actions.confirm'))
+                ->icon(Heroicon::XCircle)
+                ->color('danger')
+                ->authorize('rejectRevision')
+                ->visible(fn (TransferRequisition $record) => in_array($record->status, [
+                    TransferRequisitionStatus::Requested,
+                    TransferRequisitionStatus::UnderReviewFulfiller,
+                    TransferRequisitionStatus::UnderReviewRequestor,
+                ], true) && $record->items->flatMap(fn ($item) => $item->revisions)
+                    ->contains(fn ($revision) => $revision->status === RevisionStatus::Pending))
+                ->schema(fn (TransferRequisition $record) => [
+                    Select::make('revision_id')
+                        ->label(__('resources.transfer_requisitions.fields.revision'))
+                        ->prefixIcon(Heroicon::XCircle)
+                        ->columnSpanFull()
+                        ->options(fn () => $record->items
+                            ->flatMap(fn ($item) => $item->revisions
+                                ->where('status', RevisionStatus::Pending)
+                                ->mapWithKeys(fn ($revision) => [
+                                    $revision->id => "{$item->productVariant->sku}: {$revision->proposed_qty} {$revision->proposed_unit_name}",
+                                ]))
+                            ->toArray())
+                        ->required(),
+                ])
+                ->action(function (array $data, TransferRequisition $record) {
+                    $revision = TransferRequisitionItemRevision::query()
+                        ->findOrFail((int) $data['revision_id']);
+
+                    abort_unless(
+                        (int) $revision->item->transfer_requisition_id === (int) $record->id,
+                        403,
+                    );
+
+                    app(\App\Services\NegotiationService::class)->reject($revision);
+
+                    Notification::make()
+                        ->title(__('resources.transfer_requisitions.notifications.revision_rejected'))
+                        ->success()
+                        ->send();
+                })
+                ->requiresConfirmation(),
         ];
     }
 }

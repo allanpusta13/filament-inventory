@@ -12,49 +12,72 @@ use Filament\Schemas\Schema;
 use Filament\Support\Enums\FontWeight;
 use Filament\Support\Icons\Heroicon;
 
+/**
+ * Warehouse infolist — §7K.3 canonical contract.
+ */
 class WarehouseInfolist
 {
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
             Grid::make(['default' => 1, 'md' => 3, 'xl' => 3])->schema([
-                Section::make('WAREHOUSE PROFILE')
+                Section::make(__('resources.warehouses.infolist.profile'))
                     ->icon(Heroicon::BuildingOffice)
                     ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2])
                     ->columns(['default' => 1, 'md' => 2, 'xl' => 2])
                     ->schema([
-                        TextEntry::make('code')->label(__('resources.warehouses.fields.code'))
-                            ->weight(FontWeight::Bold)->size('lg')->copyable()->color('primary')
+                        TextEntry::make('code')
+                            ->label(__('resources.warehouses.fields.code'))
+                            ->weight(FontWeight::Bold)
+                            ->size('lg')
+                            ->copyable()
+                            ->color('primary')
                             ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
-                        TextEntry::make('name')->label(__('resources.warehouses.fields.name'))
+
+                        TextEntry::make('name')
+                            ->label(__('resources.warehouses.fields.name'))
                             ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
-                        TextEntry::make('location')->label(__('resources.warehouses.fields.location'))->placeholder('—')
+
+                        TextEntry::make('location')
+                            ->label(__('resources.warehouses.fields.location'))
+                            ->placeholder(__('common.empty'))
                             ->columnSpanFull(),
                     ]),
 
-                Section::make('STATUS')
+                Section::make(__('resources.warehouses.infolist.status'))
                     ->icon(Heroicon::ShieldCheck)
                     ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                     ->schema([
                         TextEntry::make('is_active')
-                            ->label(__('resources.warehouses.fields.is_active'))->badge()
+                            ->label(__('resources.warehouses.fields.is_active'))
+                            ->badge()
                             ->color(fn (bool $state) => $state ? 'success' : 'danger')
                             ->formatStateUsing(fn (bool $state) => $state ? __('common.active') : __('common.inactive')),
+
                         TextEntry::make('users_count')
                             ->label(__('resources.warehouses.fields.assigned_staff'))
                             ->state(fn ($record) => $record->users()->count()),
                     ]),
 
-                Section::make('ASSIGNED STAFF')
+                Section::make(__('resources.warehouses.infolist.assigned_staff'))
                     ->icon(Heroicon::UserGroup)
                     ->columnSpanFull()
                     ->schema([
                         RepeatableEntry::make('users')
                             ->schema([
                                 Grid::make(['default' => 1, 'md' => 3, 'xl' => 3])->schema([
-                                    TextEntry::make('name')->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
-                                    TextEntry::make('email')->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
-                                    TextEntry::make('role')->badge()->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+                                    TextEntry::make('name')
+                                        ->label(__('resources.users.fields.name'))
+                                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+
+                                    TextEntry::make('email')
+                                        ->label(__('resources.users.fields.email'))
+                                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+
+                                    TextEntry::make('role')
+                                        ->label(__('resources.users.fields.role'))
+                                        ->badge()
+                                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
                                 ]),
                             ])
                             ->placeholder(__('resources.warehouses.empty_staff')),

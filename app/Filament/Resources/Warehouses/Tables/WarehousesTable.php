@@ -16,6 +16,11 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 
+/**
+ * Warehouses table — §7K.2 canonical contract.
+ *
+ * Card layout (§7N.4). No bulk actions (F30). Pagination at 12 (F29).
+ */
 class WarehousesTable
 {
     public static function configure(Table $table): Table
@@ -25,34 +30,50 @@ class WarehousesTable
                 Stack::make([
                     Split::make([
                         TextColumn::make('code')
+                            ->label(__('resources.warehouses.table.code'))
                             ->fontFamily('mono')
                             ->weight(FontWeight::Bold)
-                            ->searchable()->sortable()->copyable()->copyMessage(__('common.copied')),
+                            ->searchable()
+                            ->sortable()
+                            ->copyable()
+                            ->copyMessage(__('common.copied')),
 
                         TextColumn::make('is_active')
                             ->label(__('resources.warehouses.table.status'))
-                            ->badge()->alignEnd()
+                            ->badge()
+                            ->alignEnd()
                             ->formatStateUsing(fn (bool $state) => $state ? __('common.active') : __('common.inactive'))
                             ->color(fn (bool $state) => $state ? 'success' : 'danger'),
                     ])->from('md'),
 
                     TextColumn::make('name')
-                        ->searchable()->sortable()->weight(FontWeight::SemiBold),
+                        ->label(__('resources.warehouses.table.name'))
+                        ->searchable()
+                        ->sortable()
+                        ->weight(FontWeight::SemiBold),
 
                     TextColumn::make('location')
-                        ->icon(Heroicon::MapPin)->iconColor('gray')
-                        ->searchable()->limit(60)->placeholder('—'),
+                        ->label(__('resources.warehouses.table.location'))
+                        ->icon(Heroicon::MapPin)
+                        ->iconColor('gray')
+                        ->searchable()
+                        ->limit(60)
+                        ->placeholder(__('common.empty')),
 
                     Split::make([
                         TextColumn::make('users_count')
                             ->label(__('resources.warehouses.table.staff'))
                             ->counts('users')
-                            ->badge()->color('primary')->numeric(),
+                            ->badge()
+                            ->color('primary')
+                            ->numeric(),
 
                         TextColumn::make('stock_movements_count')
                             ->label(__('resources.warehouses.table.ledger_entries'))
                             ->counts('stockMovements')
-                            ->badge()->color('gray')->numeric(),
+                            ->badge()
+                            ->color('gray')
+                            ->numeric(),
                     ])->from('md'),
                 ])->space(3),
             ])
@@ -61,7 +82,8 @@ class WarehousesTable
                 'xl' => 3,
             ])
             ->filters([
-                TernaryFilter::make('is_active'),
+                TernaryFilter::make('is_active')
+                    ->label(__('resources.warehouses.filters.is_active')),
             ])
             ->defaultSort('code')
             ->defaultPaginationPageOption(12)
@@ -70,13 +92,14 @@ class WarehousesTable
             ->recordActions([
                 EditAction::make()
                     ->icon(Heroicon::PencilSquare)
+                    ->authorize('update')
                     ->modalWidth(Width::Large),
 
                 DeleteAction::make()
                     ->icon(Heroicon::Trash)
                     ->authorize('delete')
                     ->requiresConfirmation()
-                    ->modalDescription(__('resources.warehouses.delete_blocked_description')),
+                    ->modalDescription(__('resources.warehouses.delete_confirm_description')),
             ]);
     }
 }

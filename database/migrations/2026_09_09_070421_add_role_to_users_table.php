@@ -12,7 +12,8 @@ return new class() extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('role')->default(UserRole::WAREHOUSE_STAFF->value)->after('password');
+            $table->string('role')->default(UserRole::WarehouseStaff->value)->after('password');
+            $table->boolean('is_active')->default(true);
         });
     }
 
@@ -20,6 +21,7 @@ return new class() extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             $table->dropColumn('role');
+            $table->dropColumn('is_active');
         });
     }
 };

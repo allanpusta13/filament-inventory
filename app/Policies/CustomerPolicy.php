@@ -7,6 +7,11 @@ namespace App\Policies;
 use App\Models\Customer;
 use App\Models\User;
 
+/**
+ * Customer policy — §8.10. Admin-only master data; universal read.
+ *
+ * ⚠ BranchManager is NOT granted customer-management authority.
+ */
 class CustomerPolicy
 {
     public function viewAny(User $user): bool

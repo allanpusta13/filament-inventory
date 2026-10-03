@@ -18,6 +18,11 @@ use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
+/**
+ * Suppliers table — §7I.2 canonical contract.
+ *
+ * Card layout (§7N.4). No bulk actions (F30). Pagination at 12 (F29).
+ */
 class SuppliersTable
 {
     public static function configure(Table $table): Table
@@ -27,35 +32,48 @@ class SuppliersTable
                 Stack::make([
                     Split::make([
                         TextColumn::make('name')
+                            ->label(__('resources.suppliers.table.name'))
                             ->weight(FontWeight::Bold)
-                            ->searchable()->sortable(),
+                            ->searchable()
+                            ->sortable(),
 
                         TextColumn::make('is_active')
                             ->label(__('resources.suppliers.table.status'))
-                            ->badge()->alignEnd()
+                            ->badge()
+                            ->alignEnd()
                             ->formatStateUsing(fn (bool $state) => $state ? __('common.active') : __('common.inactive'))
                             ->color(fn (bool $state) => $state ? 'success' : 'danger'),
                     ])->from('md'),
 
                     TextColumn::make('contact_person')
                         ->label(__('resources.suppliers.table.contact'))
-                        ->icon(Heroicon::User)->iconColor('gray')
-                        ->searchable()->placeholder('—'),
+                        ->icon(Heroicon::User)
+                        ->iconColor('gray')
+                        ->searchable()
+                        ->placeholder(__('common.empty')),
 
                     Split::make([
                         TextColumn::make('phone')
-                            ->icon(Heroicon::Phone)->iconColor('gray')
-                            ->copyable()->placeholder('—'),
+                            ->label(__('resources.suppliers.table.phone'))
+                            ->icon(Heroicon::Phone)
+                            ->iconColor('gray')
+                            ->copyable()
+                            ->placeholder(__('common.empty')),
 
                         TextColumn::make('email')
-                            ->icon(Heroicon::Envelope)->iconColor('gray')
-                            ->copyable()->placeholder('—'),
+                            ->label(__('resources.suppliers.table.email'))
+                            ->icon(Heroicon::Envelope)
+                            ->iconColor('gray')
+                            ->copyable()
+                            ->placeholder(__('common.empty')),
                     ])->from('md'),
 
                     TextColumn::make('purchase_orders_count')
                         ->label(__('resources.suppliers.table.purchase_orders'))
                         ->counts('purchaseOrders')
-                        ->badge()->color('primary')->numeric(),
+                        ->badge()
+                        ->color('primary')
+                        ->numeric(),
                 ])->space(3),
             ])
             ->contentGrid([
@@ -63,7 +81,8 @@ class SuppliersTable
                 'xl' => 3,
             ])
             ->filters([
-                TernaryFilter::make('is_active'),
+                TernaryFilter::make('is_active')
+                    ->label(__('resources.suppliers.filters.is_active')),
                 TrashedFilter::make(),
             ])
             ->defaultSort('name')
@@ -72,6 +91,7 @@ class SuppliersTable
             ->recordActions([
                 EditAction::make()
                     ->icon(Heroicon::PencilSquare)
+                    ->authorize('update')
                     ->modalWidth(Width::Large),
 
                 DeleteAction::make()

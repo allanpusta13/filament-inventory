@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\Product;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -12,14 +13,13 @@ return new class() extends Migration
     {
         Schema::create('product_variants', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('product_id')->constrained('products')->cascadeOnDelete();
-            $table->string('sku')->unique();               // Unique SKU (e.g. 'PROD-COF-500G')
-            $table->string('barcode')->nullable()->unique(); // Scanner GTIN
-            $table->string('name');                          // Variant identifier (e.g. "500g Whole Bean")
-            $table->string('base_unit_name');                // Lowest non-divisible unit (e.g. 'gram', 'piece')
-            // cost_price / sale_price moved to product_variant_prices (history table)
-            $table->integer('reorder_point')->default(0);    // Safety threshold in base units
-            $table->json('attributes')->nullable();          // e.g. {"roast": "Medium"}
+            $table->foreignIdFor(Product::class)->constrained()->cascadeOnDelete();
+            $table->string('sku', 64)->unique();
+            $table->string('barcode', 32)->nullable()->unique();
+            $table->string('name');
+            $table->string('base_unit_name');
+            $table->integer('reorder_point')->default(0);
+            $table->json('attributes')->nullable();
             $table->json('images')->nullable();
             $table->boolean('is_active')->default(true);
             $table->softDeletes();

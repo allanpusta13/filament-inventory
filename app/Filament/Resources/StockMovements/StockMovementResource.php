@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\StockMovements;
 
 use App\Filament\Resources\StockMovements\Pages\ListStockMovements;
+use App\Filament\Resources\StockMovements\Pages\ViewStockMovement;
 use App\Filament\Resources\StockMovements\Schemas\StockMovementInfolist;
 use App\Filament\Resources\StockMovements\Tables\StockMovementsTable;
 use App\Models\StockMovement;
@@ -14,31 +15,39 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use UnitEnum;
 
+/**
+ * StockMovement resource — §18.1a canonical class.
+ *
+ * Read-only append-only ledger. No navigation badge. Warehouse scope
+ * applied at query level per §20.1.
+ */
 class StockMovementResource extends Resource
 {
     protected static ?string $model = StockMovement::class;
 
     protected static string|UnitEnum|null $navigationGroup = 'AUDIT LEDGERS';
 
-    protected static BackedEnum|string|null $navigationIcon = Heroicon::OutlinedQueueList;
+    protected static ?int $navigationSort = 1;
 
-    protected static BackedEnum|string|null $activeNavigationIcon = Heroicon::QueueList;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedQueueList;
 
-    protected static ?int $navigationSort = 2;
+    protected static string|BackedEnum|null $activeNavigationIcon = Heroicon::QueueList;
 
-    protected static ?string $recordTitleAttribute = 'reference_code';
-
-    public static function form(Schema $schema): Schema
+    public static function getModelLabel(): string
     {
-        return $schema;
+        return __('resources.stock_movements.model.singular');
     }
 
-    public static function infolist(Schema $schema): Schema
+    public static function getPluralModelLabel(): string
     {
-        return StockMovementInfolist::configure($schema);
+        return __('resources.stock_movements.model.plural');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('resources.stock_movements.navigation.label');
     }
 
     public static function table(Table $table): Table
@@ -46,28 +55,29 @@ class StockMovementResource extends Resource
         return StockMovementsTable::configure($table);
     }
 
-    public static function getRelations(): array
+    public static function infolist(Schema $schema): Schema
     {
-        return [];
+        return StockMovementInfolist::configure($schema);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with(['productVariant', 'warehouse', 'createdBy'])
+            ->when(
+                ! auth()->user()->isAdmin() && ! auth()->user()->isAuditor(),
+                function (Builder $q) {
+                    $ids = auth()->user()->warehouses()->pluck('id')->all();
+                    $q->whereIn('warehouse_id', $ids);
+                }
+            );
     }
 
     public static function getPages(): array
     {
         return [
             'index' => ListStockMovements::route('/'),
-            'view' => Pages\ViewStockMovement::route('/{record}'),
+            'view' => ViewStockMovement::route('/{record}'),
         ];
-    }
-
-    public static function getEloquentQuery(): Builder
-    {
-        return parent::getEloquentQuery()
-            ->with(['productVariant', 'warehouse', 'relatedMovement', 'createdBy']);
-    }
-
-    public static function getRecordRouteBindingEloquentQuery(): Builder
-    {
-        return parent::getRecordRouteBindingEloquentQuery()
-            ->withoutGlobalScopes([SoftDeletingScope::class]);
     }
 }

@@ -2,188 +2,88 @@
 
 declare(strict_types=1);
 
+/**
+ * Backed enum labels (§4.x / §0A.2a).
+ *
+ * Every enum case routes its human-readable label through these keys
+ * (§0A.9). Enum backing values (the keys below) remain stable and
+ * untranslated (§0A.1).
+ *
+ * `user_role.branch_manager` is an owner-direction extension — see the
+ * UserRole enum docblock for the open-semantics warning.
+ */
 return [
-    /*
-    |--------------------------------------------------------------------------
-    | Enum Translations
-    |--------------------------------------------------------------------------
-    */
+    'transfer_requisition_status' => [
+        'draft' => 'Draft',
+        'requested' => 'Requested',
+        'under_review_fulfiller' => 'Under review (fulfiller)',
+        'under_review_requestor' => 'Under review (requestor)',
+        'confirmed' => 'Confirmed',
+        'dispatched' => 'Dispatched',
+        'partially_received' => 'Partially received',
+        'completed' => 'Completed',
+        'closed_with_loss' => 'Closed with loss',
+        'cancelled' => 'Cancelled',
+    ],
 
-    // TransferRequisitionStatus
-    'transfer_requisition_status.draft' => 'Draft',
-    'transfer_requisition_status.requested' => 'Requested',
-    'transfer_requisition_status.under_review_fulfiller' => 'Under review (fulfiller)',
-    'transfer_requisition_status.under_review_requestor' => 'Under review (requestor)',
-    'transfer_requisition_status.confirmed' => 'Confirmed',
-    'transfer_requisition_status.dispatched' => 'Dispatched',
-    'transfer_requisition_status.partially_received' => 'Partially received',
-    'transfer_requisition_status.completed' => 'Completed',
-    'transfer_requisition_status.closed_with_loss' => 'Closed with loss',
-    'transfer_requisition_status.cancelled' => 'Cancelled',
+    'purchase_order_status' => [
+        'draft' => 'Draft',
+        'ordered' => 'Ordered',
+        'partially_received' => 'Partially received',
+        'received' => 'Received',
+        'cancelled' => 'Cancelled',
+    ],
 
-    // InTransitStatus
-    'in_transit_status.in_transit' => 'In transit',
-    'in_transit_status.partially_received' => 'Partially received',
-    'in_transit_status.cleared' => 'Cleared',
+    'sales_order_status' => [
+        'draft' => 'Draft',
+        'confirmed' => 'Confirmed',
+        'partially_dispatched' => 'Partially dispatched',
+        'dispatched' => 'Dispatched',
+        'cancelled' => 'Cancelled',
+    ],
 
-    // LossLedger loss_category
-    'enums.loss_ledger.loss_category.shortfall' => 'Shortfall',
-    'enums.loss_ledger.loss_category.damage' => 'Damage',
-    'enums.loss_ledger.loss_category.theft' => 'Theft',
-    'enums.loss_ledger.loss_category.spoilage' => 'Spoilage',
-    'enums.loss_ledger.loss_category.omitted_from_intake' => 'Omitted from intake',
+    'stock_movement_type' => [
+        'transfer_in' => 'Transfer in',
+        'transfer_out' => 'Transfer out',
+        'purchase' => 'Purchase',
+        'purchase_return' => 'Purchase return',
+        'sale' => 'Sale',
+        'sale_return' => 'Sale return',
+        'adjustment' => 'Adjustment',
+        'loss' => 'Loss',
+        'damage' => 'Damage',
+    ],
 
-    // MovementType
-    'Receive' => 'Receive',
-    'Ship' => 'Ship',
-    'Transfer Out' => 'Transfer Out',
-    'Transfer In' => 'Transfer In',
-    'Transit Out' => 'Transit Out',
-    'Transit In' => 'Transit In',
-    'Adjustment' => 'Adjustment',
-    'Loss' => 'Loss',
+    'revision_status' => [
+        'pending' => 'Pending',
+        'accepted' => 'Accepted',
+        'rejected' => 'Rejected',
+    ],
 
-    // StockMovementType
-    // Same as MovementType - reuses labels
+    'negotiation_side' => [
+        'requestor' => 'Requestor',
+        'fulfiller' => 'Fulfiller',
+    ],
 
-    // NegotiationSide
-    'Fulfiller' => 'Fulfiller',
-    'Requestor' => 'Requestor',
+    'in_transit_status' => [
+        'in_transit' => 'In transit',
+        'cleared' => 'Cleared',
+        'lost' => 'Lost',
+    ],
 
-    // PriceType
-    'Cost' => 'Cost',
-    'Sale' => 'Sale',
+    'loss_category' => [
+        'shortfall' => 'Shortfall',
+        'damage' => 'Damage',
+        'spoilage' => 'Spoilage',
+        'theft' => 'Theft',
+        'other' => 'Other',
+    ],
 
-    // RevisionStatus
-    'Pending' => 'Pending',
-    'Accepted' => 'Accepted',
-    'Rejected' => 'Rejected',
-    'Superseded' => 'Superseded',
-
-    // UserRole
-    'Administrator' => 'Administrator',
-    'Logistics Auditor' => 'Logistics Auditor',
-    'Branch Manager' => 'Branch Manager',
-    'Warehouse Staff' => 'Warehouse Staff',
-
-    // Purchases & Sales (v11.1) — new enum labels
-    'Ordered' => 'Ordered',
-    'Partially dispatched' => 'Partially dispatched',
-    'Purchase' => 'Purchase',
-    'Sale return' => 'Sale return',
-    'Purchase return' => 'Purchase return',
-    'Transfer out' => 'Transfer out',
-    'Transfer in' => 'Transfer in',
-    'Transit out' => 'Transit out',
-    'Transit in' => 'Transit in',
-
-    // Purchases & Sales (v11.1) — new resource-facing strings
-    'Active' => 'Active',
-    'Inactive' => 'Inactive',
-    'ADD LINE' => 'ADD LINE',
-    'ADD RECEIPT LINE' => 'ADD RECEIPT LINE',
-    'ADD RETURN LINE' => 'ADD RETURN LINE',
-    'ADDRESS' => 'ADDRESS',
-    'ACTIVE' => 'ACTIVE',
-    'AUTHORIZATION SIGN-OFFS' => 'AUTHORIZATION SIGN-OFFS',
-    'BASE UNITS' => 'BASE UNITS',
-    'BASE UNITS (COMPUTED)' => 'BASE UNITS (COMPUTED)',
-    'CANCEL' => 'CANCEL',
-    'CANCELLED AT' => 'CANCELLED AT',
-    'CONFIRM' => 'CONFIRM',
-    'CONFIRMED AT' => 'CONFIRMED AT',
-    'CONFIRMED BY' => 'CONFIRMED BY',
-    'CONTACT PERSON' => 'CONTACT PERSON',
-    'CUSTOMER' => 'CUSTOMER',
-    'CUSTOMER PROFILE' => 'CUSTOMER PROFILE',
-    'Date' => 'Date',
-    'DISPATCH' => 'DISPATCH',
-    'DISPATCH WAREHOUSE' => 'DISPATCH WAREHOUSE',
-    'DISPATCHED AT' => 'DISPATCHED AT',
-    'DISPATCHED BY' => 'DISPATCHED BY',
-    'EMAIL' => 'EMAIL',
-    'Email address' => 'Email address',
-    'From' => 'From',
-    'LINE' => 'LINE',
-    'LINE NOTES' => 'LINE NOTES',
-    'LINE TOTAL' => 'LINE TOTAL',
-    'NAME' => 'NAME',
-    'NOTES' => 'NOTES',
-    'Not provided' => 'Not provided',
-    'OPERATIONAL STATUS' => 'OPERATIONAL STATUS',
-    'ORDER' => 'ORDER',
-    'ORDER LINE ITEMS' => 'ORDER LINE ITEMS',
-    'ORDER NOTES' => 'ORDER NOTES',
-    'ORDER QTY' => 'ORDER QTY',
-    'ORDER UNIT' => 'ORDER UNIT',
-    'ORDERED AT' => 'ORDERED AT',
-    'ORDERED BY' => 'ORDERED BY',
-    'Pending Dispatch' => 'Pending Dispatch',
-    'Pending Receipt' => 'Pending Receipt',
-    'Period' => 'Period',
-    'PHONE' => 'PHONE',
-    'Price snapped from current variant price at confirm time' => 'Price snapped from current variant price at confirm time',
-    'If enabled, receiving this PO will set each variant\'s current cost price to this order\'s unit cost, if different.' => 'If enabled, receiving this PO will set each variant\'s current cost price to this order\'s unit cost, if different.',
-    'Insufficient stock for full dispatch — partial dispatch only.' => 'Insufficient stock for full dispatch — partial dispatch only.',
-    'PRODUCT VARIANT (SKU)' => 'PRODUCT VARIANT (SKU)',
-    'PURCHASE ORDER LINES' => 'PURCHASE ORDER LINES',
-    'PURCHASE ORDER PROFILE' => 'PURCHASE ORDER PROFILE',
-    'PURCHASE ORDERS' => 'PURCHASE ORDERS',
-    'PURCHASING' => 'PURCHASING',
-    'QTY' => 'QTY',
-    'RATIO' => 'RATIO',
-    'RECEIVE' => 'RECEIVE',
-    'RECEIVED AT' => 'RECEIVED AT',
-    'RECEIVED BASE QTY' => 'RECEIVED BASE QTY',
-    'RECEIVED BY' => 'RECEIVED BY',
-    'RECEIPT LINES' => 'RECEIPT LINES',
-    'RECEIVING WAREHOUSE' => 'RECEIVING WAREHOUSE',
-    'RECORD RETURN' => 'RECORD RETURN',
-    'REFERENCE' => 'REFERENCE',
-    'REFERENCE CODE' => 'REFERENCE CODE',
-    'RETURN BASE QTY' => 'RETURN BASE QTY',
-    'RETURN LINES' => 'RETURN LINES',
-    'SALE PRICE' => 'SALE PRICE',
-    'SALE PRICE (PREVIEW)' => 'SALE PRICE (PREVIEW)',
-    'SALES' => 'SALES',
-    'SALES ORDER LINES' => 'SALES ORDER LINES',
-    'SALES ORDER PROFILE' => 'SALES ORDER PROFILE',
-    'SALES ORDERS' => 'SALES ORDERS',
-    'STATUS' => 'STATUS',
-    'STEP 1: CUSTOMER & WAREHOUSE' => 'STEP 1: CUSTOMER & WAREHOUSE',
-    'STEP 2: LINE ITEMS (READ-ONLY SALE PRICE PREVIEW)' => 'STEP 2: LINE ITEMS (READ-ONLY SALE PRICE PREVIEW)',
-    'STEP 3: REVIEW & NOTES' => 'STEP 3: REVIEW & NOTES',
-    'SUPPLIER' => 'SUPPLIER',
-    'SUPPLIER PROFILE' => 'SUPPLIER PROFILE',
-    'System Initialized' => 'System Initialized',
-    'This Month' => 'This Month',
-    'This Week' => 'This Week',
-    'This month' => 'This month',
-    'This week' => 'This week',
-    'This Year' => 'This Year',
-    'This year' => 'This year',
-    'Today' => 'Today',
-    'TOTAL' => 'TOTAL',
-    'UNIT' => 'UNIT',
-    'UNIT COST PRICE' => 'UNIT COST PRICE',
-    'UNIT RATIO' => 'UNIT RATIO',
-    'UNIT RATIO (TO BASE)' => 'UNIT RATIO (TO BASE)',
-    'Until' => 'Until',
-    'UPDATE COST' => 'UPDATE COST',
-    'UPDATE PRODUCT VARIANT COST PRICES ON RECEIPT' => 'UPDATE PRODUCT VARIANT COST PRICES ON RECEIPT',
-    'WAREHOUSE' => 'WAREHOUSE',
-    'Warehouse' => 'Warehouse',
-    'Purchase order placed' => 'Purchase order placed',
-    'Purchase received' => 'Purchase received',
-    'Purchase order cancelled' => 'Purchase order cancelled',
-    'Sales order confirmed' => 'Sales order confirmed',
-    'Sales order dispatched' => 'Sales order dispatched',
-    'Sales return recorded' => 'Sales return recorded',
-    'Sales order cancelled' => 'Sales order cancelled',
-    'Specific Date' => 'Specific Date',
-    'Custom Range' => 'Custom Range',
-    ':sku — outstanding :outstanding :unit (available: :available)' => ':sku — outstanding :outstanding :unit (available: :available)',
-    'On :date' => 'On :date',
-    'From :date' => 'From :date',
-    'Until :date' => 'Until :date',
+    'user_role' => [
+        'admin' => 'Admin',
+        'auditor' => 'Auditor',
+        'warehouse_staff' => 'Warehouse staff',
+        // Owner-direction extension — capability matrix pending.
+        'branch_manager' => 'Branch manager',
+    ],
 ];

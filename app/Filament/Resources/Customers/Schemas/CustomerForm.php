@@ -10,6 +10,9 @@ use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 
+/**
+ * Customer form — §7J.1 canonical contract.
+ */
 class CustomerForm
 {
     public static function configure(Schema $schema): Schema
@@ -19,7 +22,8 @@ class CustomerForm
                 ->label(__('resources.customers.fields.name'))
                 ->prefixIcon(Heroicon::UserGroup)
                 ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2])
-                ->required()->maxLength(255),
+                ->required()
+                ->maxLength(255),
 
             TextInput::make('contact_person')
                 ->label(__('resources.customers.fields.contact_person'))
@@ -41,7 +45,7 @@ class CustomerForm
 
             Textarea::make('address')
                 ->label(__('resources.customers.fields.address'))
-                ->prefixIcon(Heroicon::MapPin)
+                // ->prefixIcon(Heroicon::MapPin)
                 ->columnSpanFull(),
 
             Toggle::make('is_active')

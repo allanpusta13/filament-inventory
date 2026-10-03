@@ -7,8 +7,9 @@ namespace App\Filament\Resources\Users\Pages;
 use App\Filament\Resources\Users\UserResource;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Support\Icons\Heroicon;
 
-final class ListUsers extends ListRecords
+class ListUsers extends ListRecords
 {
     protected static string $resource = UserResource::class;
 
@@ -16,7 +17,8 @@ final class ListUsers extends ListRecords
     {
         return [
             CreateAction::make()
-                ->modalWidth(\Filament\Support\Enums\Width::Large),
+                ->label(__('resources.users.actions.create'))
+                ->icon(Heroicon::OutlinedUsers),
         ];
     }
 }

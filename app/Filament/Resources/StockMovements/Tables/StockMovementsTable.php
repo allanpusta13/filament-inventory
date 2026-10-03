@@ -5,10 +5,19 @@ declare(strict_types=1);
 namespace App\Filament\Resources\StockMovements\Tables;
 
 use App\Enums\StockMovementType;
+use App\Filament\Resources\StockMovements\StockMovementResource;
+use Filament\Actions\ViewAction;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
+/**
+ * Stock movements table — §7E.2 canonical contract.
+ *
+ * Dense standard table (F26), `stackedOnMobile()`, pagination ≥ 25.
+ * Column-level signed-quantity color coding.
+ */
 class StockMovementsTable
 {
     public static function configure(Table $table): Table
@@ -34,6 +43,7 @@ class StockMovementsTable
                     ->visibleFrom('md'),
 
                 TextColumn::make('type')
+                    ->label(__('resources.stock_movements.table.type'))
                     ->badge()
                     ->sortable(),
 
@@ -53,7 +63,7 @@ class StockMovementsTable
                     ->visibleFrom('lg'),
 
                 TextColumn::make('reference_code')
-                    ->label(__('resources.stock_movements.table.reference'))
+                    ->label(__('resources.stock_movements.table.reference_code'))
                     ->fontFamily('mono')
                     ->copyable()
                     ->searchable()
@@ -64,21 +74,28 @@ class StockMovementsTable
                     ->visibleFrom('xl'),
             ])
             ->filters([
-                SelectFilter::make('type')->options(StockMovementType::class),
-                SelectFilter::make('warehouse_id')
-                    ->relationship('warehouse', 'name')
-                    ->label(__('resources.stock_movements.filters.warehouse'))
-                    ->searchable(),
+                SelectFilter::make('type')
+                    ->label(__('resources.stock_movements.filters.type'))
+                    ->options(StockMovementType::class),
+
+                \App\Filament\Support\Filters\AdminReviewFilters::warehouse()
+                    ->label(__('resources.stock_movements.filters.warehouse')),
+
                 SelectFilter::make('product_variant_id')
                     ->label(__('resources.stock_movements.filters.variant'))
                     ->relationship('productVariant', 'sku')
                     ->searchable(),
+
                 \App\Filament\Support\Filters\AdminReviewFilters::period('created_at')
-                    ->authorize('viewAuditFilters'),
+                    ->visible(fn (): bool => auth()->user()?->can('viewAuditFilters', \App\Models\StockMovement::class) ?? false),
             ])
             ->defaultSort('created_at', 'desc')
             ->stackedOnMobile()
             ->paginated([25, 50, 100])
-            ->defaultPaginationPageOption(50);
+            ->defaultPaginationPageOption(50)
+            ->recordUrl(fn ($record) => StockMovementResource::getUrl('view', ['record' => $record]))
+            ->recordActions([
+                ViewAction::make()->icon(Heroicon::Eye),
+            ]);
     }
 }

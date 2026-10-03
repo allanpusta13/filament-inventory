@@ -9,10 +9,14 @@ use App\Models\PurchaseOrder;
 use App\Models\Supplier;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Support\GeneratesReferenceCodes;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<PurchaseOrder>
+ * PurchaseOrder factory (§5.13).
+ *
+ * Default state: Draft, `PO-*` reference code. Named state:
+ * `->ordered()`.
  */
 class PurchaseOrderFactory extends Factory
 {
@@ -21,16 +25,11 @@ class PurchaseOrderFactory extends Factory
     public function definition(): array
     {
         return [
-            'reference_code' => 'PO-'.date('Ymd').'-'.mb_strtoupper(fake()->unique()->lexify('?????')),
+            'reference_code' => GeneratesReferenceCodes::generateReferenceCode('PO', $this->faker->unique()->numberBetween(100, 999)),
             'supplier_id' => Supplier::factory(),
             'warehouse_id' => Warehouse::factory(),
             'status' => PurchaseOrderStatus::Draft,
-            'update_cost_price' => false,
             'ordered_by' => User::factory(),
-            'ordered_at' => null,
-            'received_at' => null,
-            'cancelled_at' => null,
-            'notes' => null,
         ];
     }
 
@@ -40,35 +39,5 @@ class PurchaseOrderFactory extends Factory
             'status' => PurchaseOrderStatus::Ordered,
             'ordered_at' => now(),
         ]);
-    }
-
-    public function partiallyReceived(): static
-    {
-        return $this->state(fn () => [
-            'status' => PurchaseOrderStatus::PartiallyReceived,
-            'ordered_at' => now(),
-        ]);
-    }
-
-    public function completed(): static
-    {
-        return $this->state(fn () => [
-            'status' => PurchaseOrderStatus::Completed,
-            'ordered_at' => now(),
-            'received_at' => now(),
-        ]);
-    }
-
-    public function cancelled(): static
-    {
-        return $this->state(fn () => [
-            'status' => PurchaseOrderStatus::Cancelled,
-            'cancelled_at' => now(),
-        ]);
-    }
-
-    public function withCostUpdate(): static
-    {
-        return $this->state(fn () => ['update_cost_price' => true]);
     }
 }

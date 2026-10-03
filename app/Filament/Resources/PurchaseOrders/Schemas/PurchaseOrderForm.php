@@ -6,7 +6,9 @@ namespace App\Filament\Resources\PurchaseOrders\Schemas;
 
 use App\Models\ProductVariantUnitConversion;
 use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
@@ -14,6 +16,12 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 
+/**
+ * Purchase order form — §7G.1 canonical contract.
+ *
+ * Line-item repeater uses `->table([...])` for a compact row layout
+ * (deviation from §7O.2's `->columns(...)` — see class docblock).
+ */
 class PurchaseOrderForm
 {
     public static function configure(Schema $schema): Schema
@@ -28,7 +36,7 @@ class PurchaseOrderForm
     public static function getSupplierWarehouseFields(): array
     {
         return [
-            Section::make('SUPPLIER & WAREHOUSE')
+            Section::make(__('resources.purchase_orders.form.supplier_warehouse'))
                 ->icon(Heroicon::BuildingStorefront)
                 ->columnSpanFull()
                 ->columns(['default' => 1, 'md' => 2, 'xl' => 2])
@@ -47,11 +55,18 @@ class PurchaseOrderForm
                         ->label(__('resources.purchase_orders.fields.receiving_warehouse'))
                         ->prefixIcon(Heroicon::BuildingOffice2)
                         ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
-                        ->options(fn () => auth()->user()->warehouses()->pluck('name', 'id'))
+                        ->options(fn () => auth()->user()->isAdmin() || auth()->user()->isAuditor()
+                            ? \App\Models\Warehouse::query()->pluck('name', 'id')
+                            : auth()->user()->warehouses()->pluck('name', 'id'))
                         ->default(fn () => auth()->user()->warehouses()->count() === 1
                             ? auth()->user()->warehouses()->first()->id
                             : null)
                         ->required(),
+
+                    Textarea::make('notes')
+                        ->label(__('resources.purchase_orders.fields.notes'))
+                        // ->prefixIcon(Heroicon::ChatBubbleBottomCenterText)
+                        ->columnSpanFull(),
                 ]),
         ];
     }
@@ -62,13 +77,18 @@ class PurchaseOrderForm
             Repeater::make('items')
                 ->relationship()
                 ->columnSpanFull()
-                ->columns(['default' => 1, 'md' => 2, 'xl' => 4])
+                ->table([
+                    TableColumn::make(__('resources.purchase_orders.fields.variant_sku')),
+                    TableColumn::make(__('resources.purchase_orders.fields.unit')),
+                    TableColumn::make(__('resources.purchase_orders.fields.ratio_base')),
+                    TableColumn::make(__('resources.purchase_orders.fields.qty')),
+                    TableColumn::make(__('resources.purchase_orders.fields.unit_cost')),
+                ])
                 ->schema([
                     Select::make('product_variant_id')
-                        ->label(__('resources.purchase_orders.fields.variant_sku'))
+                        ->hiddenLabel()
                         ->relationship('productVariant', 'sku')
                         ->prefixIcon(Heroicon::Tag)
-                        ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2])
                         ->searchable()
                         ->preload()
                         ->required()
@@ -80,9 +100,8 @@ class PurchaseOrderForm
                         }),
 
                     Select::make('ordered_unit_name')
-                        ->label(__('resources.purchase_orders.fields.unit'))
+                        ->hiddenLabel()
                         ->prefixIcon(Heroicon::Scale)
-                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                         ->options(function (Get $get) {
                             $variantId = $get('product_variant_id');
                             if (! $variantId) {
@@ -111,27 +130,24 @@ class PurchaseOrderForm
                         }),
 
                     TextInput::make('ordered_unit_ratio')
-                        ->label(__('resources.purchase_orders.fields.ratio_base'))
+                        ->hiddenLabel()
                         ->hintIcon(Heroicon::InformationCircle)
                         ->hint(__('resources.purchase_orders.hints.ratio_auto'))
-                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                         ->numeric()
                         ->disabled()
                         ->dehydrated()
                         ->required(),
 
                     TextInput::make('ordered_qty')
-                        ->label(__('resources.purchase_orders.fields.qty'))
+                        ->hiddenLabel()
                         ->prefixIcon(Heroicon::Hashtag)
-                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                         ->numeric()
                         ->minValue(1)
                         ->required(),
 
                     TextInput::make('unit_cost_price')
-                        ->label(__('resources.purchase_orders.fields.unit_cost'))
+                        ->hiddenLabel()
                         ->prefixIcon(Heroicon::CurrencyDollar)
-                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                         ->numeric()
                         ->step(0.0001)
                         ->minValue(0)
@@ -139,7 +155,6 @@ class PurchaseOrderForm
                 ])
                 ->minItems(1)
                 ->required()
-                ->dehydrated()
                 ->mutateRelationshipDataBeforeCreateUsing(function (array $data): array {
                     $data['ordered_base_qty'] = (int) $data['ordered_qty'] * (int) $data['ordered_unit_ratio'];
 

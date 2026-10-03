@@ -11,15 +11,29 @@ use Filament\Notifications\Notification;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 
+/**
+ * §7A.4.2 canonical contract.
+ *
+ * Mutates the parent `Product` — so the `ProductPolicy::update` ability
+ * governs the authorize check, not `ProductVariantPolicy::update`.
+ */
 class EditProductFamilyAction
 {
     public static function make(): Action
     {
         return Action::make('editProductFamily')
             ->label(__('resources.products.actions.edit_family'))
+            ->modalHeading(__('resources.products.actions.edit_family_heading'))
+            ->modalDescription(__('resources.products.actions.edit_family_description'))
             ->icon(Heroicon::FolderOpen)
             ->modalWidth(Width::Large)
-            ->authorize('update')
+            ->authorize(function (ProductVariant $record): bool {
+                $product = $record->product;
+
+                return $product
+                    ? auth()->user()->can('update', $product)
+                    : auth()->user()->can('update', $record);
+            })
             ->fillForm(fn (ProductVariant $record) => [
                 'family_name' => $record->product?->name,
                 'family_category' => $record->product?->category,
@@ -49,6 +63,8 @@ class EditProductFamilyAction
 
                     return;
                 }
+
+                \Illuminate\Support\Facades\Gate::authorize('update', $product);
 
                 $product->update([
                     'name' => $data['family_name'],

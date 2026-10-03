@@ -4,12 +4,25 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-use BackedEnum;
 use Filament\Support\Contracts\HasColor;
 use Filament\Support\Contracts\HasIcon;
 use Filament\Support\Contracts\HasLabel;
 use Filament\Support\Icons\Heroicon;
 
+/**
+ * Purchase order lifecycle status.
+ *
+ * Blueprint §4.2 — implements HasLabel + HasColor.
+ *
+ * Extension (authorized per standing instruction): also implements
+ * HasIcon so the enum's rendered state carries a semantic Heroicon
+ * alongside its translated label and color. Icons are code-level
+ * presentation metadata (untranslated), mirroring the existing color
+ * contract (§0A.1 item 19).
+ *
+ * Lifecycle (§0 core principle 5 / A2):
+ *   draft → ordered → partially_received → received / cancelled
+ */
 enum PurchaseOrderStatus: string implements HasColor, HasIcon, HasLabel
 {
     case Draft = 'draft';
@@ -29,7 +42,7 @@ enum PurchaseOrderStatus: string implements HasColor, HasIcon, HasLabel
         };
     }
 
-    public function getColor(): string|array|null
+    public function getColor(): string
     {
         return match ($this) {
             self::Draft => 'gray',
@@ -40,14 +53,14 @@ enum PurchaseOrderStatus: string implements HasColor, HasIcon, HasLabel
         };
     }
 
-    public function getIcon(): string|BackedEnum|null
+    public function getIcon(): Heroicon
     {
         return match ($this) {
-            self::Draft => Heroicon::DocumentText,
-            self::Ordered => Heroicon::PaperAirplane,
-            self::PartiallyReceived => Heroicon::ArchiveBoxArrowDown,
-            self::Received => Heroicon::CheckBadge,
-            self::Cancelled => Heroicon::XCircle,
+            self::Draft => Heroicon::OutlinedPencilSquare,
+            self::Ordered => Heroicon::OutlinedPaperAirplane,
+            self::PartiallyReceived => Heroicon::OutlinedArchiveBoxArrowDown,
+            self::Received => Heroicon::OutlinedCheckCircle,
+            self::Cancelled => Heroicon::OutlinedXMark,
         };
     }
 }

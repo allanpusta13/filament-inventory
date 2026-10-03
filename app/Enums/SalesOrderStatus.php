@@ -4,19 +4,31 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-use BackedEnum;
 use Filament\Support\Contracts\HasColor;
 use Filament\Support\Contracts\HasIcon;
 use Filament\Support\Contracts\HasLabel;
 use Filament\Support\Icons\Heroicon;
 
+/**
+ * Sales order lifecycle status.
+ *
+ * Blueprint §4.3 — implements HasLabel + HasColor.
+ *
+ * Extension (authorized per standing instruction): also implements
+ * HasIcon so the enum's rendered state carries a semantic Heroicon
+ * alongside its translated label and color. Icons are code-level
+ * presentation metadata (untranslated), mirroring the existing color
+ * contract (§0A.1 item 19).
+ *
+ * Lifecycle (§0 core principle 5 / A2):
+ *   draft → confirmed → partially_dispatched → dispatched / cancelled
+ */
 enum SalesOrderStatus: string implements HasColor, HasIcon, HasLabel
 {
     case Draft = 'draft';
     case Confirmed = 'confirmed';
     case PartiallyDispatched = 'partially_dispatched';
     case Dispatched = 'dispatched';
-    case Completed = 'completed';
     case Cancelled = 'cancelled';
 
     public function getLabel(): string
@@ -30,7 +42,7 @@ enum SalesOrderStatus: string implements HasColor, HasIcon, HasLabel
         };
     }
 
-    public function getColor(): string|array|null
+    public function getColor(): string
     {
         return match ($this) {
             self::Draft => 'gray',
@@ -41,15 +53,14 @@ enum SalesOrderStatus: string implements HasColor, HasIcon, HasLabel
         };
     }
 
-    public function getIcon(): string|BackedEnum|null
+    public function getIcon(): Heroicon
     {
         return match ($this) {
-            self::Draft => Heroicon::DocumentText,
-            self::Confirmed => Heroicon::CheckCircle,
-            self::PartiallyDispatched => Heroicon::ArchiveBoxArrowDown,
-            self::Dispatched => Heroicon::Truck,
-            self::Completed => Heroicon::CheckBadge,
-            self::Cancelled => Heroicon::XCircle,
+            self::Draft => Heroicon::OutlinedPencilSquare,
+            self::Confirmed => Heroicon::OutlinedCheckCircle,
+            self::PartiallyDispatched => Heroicon::OutlinedTruck,
+            self::Dispatched => Heroicon::OutlinedCheckBadge,
+            self::Cancelled => Heroicon::OutlinedXMark,
         };
     }
 }

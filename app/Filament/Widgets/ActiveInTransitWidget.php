@@ -6,113 +6,93 @@ namespace App\Filament\Widgets;
 
 use App\Enums\InTransitStatus;
 use App\Models\InTransit;
+use App\Models\Warehouse;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
 use Illuminate\Support\Facades\Cache;
 
+/**
+ * ActiveInTransitWidget — table of in-flight cargo rows.
+ *
+ * Visibility: Admin, Auditor, WarehouseStaff.
+ * Cache: 300s (ID set only; table rehydrates each render).
+ * Column span: `['default' => 1, 'md' => 2, 'xl' => 2]`.
+ */
 class ActiveInTransitWidget extends TableWidget
 {
-    protected static ?string $heading = 'Active In-Transit';
+    protected static ?int $sort = 5;
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = ['default' => 1, 'md' => 2, 'xl' => 2];
 
-    protected int|string|array $columnSpanFull = 'full';
-
-    public function getActiveInTransits(bool $bypassCache = false)
+    public static function canView(): bool
     {
         $user = auth()->user();
-        $firstWarehouseId = optional($user->warehouses->first())?->id;
-        $cacheKey = 'active_in_transit_'.$user->id.'_'.$firstWarehouseId;
 
-        if ($bypassCache) {
-            Cache::forget($cacheKey);
-        }
+        return $user !== null
+            && ($user->isAdmin() || $user->isAuditor() || $user->isWarehouseStaff());
+    }
 
-        return Cache::remember($cacheKey, 300, function () use ($user) {
-            $warehouseIds = $user->warehouses->pluck('id')->toArray();
+    public static function cacheTtl(): int
+    {
+        return 300;
+    }
 
-            $query = InTransit::whereIn('transfer_requisition_id', function ($query) use ($warehouseIds) {
-                $query->from('transfer_requisitions')
-                    ->select('id')
-                    ->whereIn('from_warehouse_id', $warehouseIds)
-                    ->orWhereIn('to_warehouse_id', $warehouseIds);
-            })
-                ->where('status', '!=', InTransitStatus::Cleared->value)
-                ->with(['transferRequisition.fromWarehouse', 'transferRequisition.toWarehouse', 'productVariant'])
-                ->latest('dispatched_at');
+    public static function cacheKey(int $userId, array $warehouseIds): string
+    {
+        sort($warehouseIds);
 
-            $results = $query->get();
-
-            return $results->map(function ($inTransit) {
-                $requisition = $inTransit->transferRequisition;
-
-                return [
-                    'id' => $inTransit->id,
-                    'requisition_ref' => $requisition?->reference_code ?? 'N/A',
-                    'variant_sku' => $inTransit->productVariant?->sku ?? 'N/A',
-                    'variant_name' => $inTransit->productVariant?->name ?? 'N/A',
-                    'from_warehouse' => $requisition?->fromWarehouse?->name ?? 'N/A',
-                    'to_warehouse' => $requisition?->toWarehouse?->name ?? 'N/A',
-                    'dispatched_base_qty' => $inTransit->dispatched_base_qty,
-                    'status' => $inTransit->status,
-                    'dispatched_at' => $inTransit->dispatched_at,
-                ];
-            });
-        });
+        return 'active_in_transit_'.$userId.'_'.md5(implode(',', $warehouseIds));
     }
 
     public function table(Table $table): Table
     {
-        $inTransits = $this->getActiveInTransits();
+        $user = auth()->user();
+        $warehouseIds = $user->isAdmin() || $user->isAuditor()
+            ? Warehouse::query()->pluck('id')->all()
+            : $user->warehouses()->pluck('warehouses.id')->all();
+
+        // Rows: active in-transit only (`status = in_transit`, §4.7) — warehouse-scoped through the parent requisition.
+        // `Cleared` and `Lost` are terminal states and never appear here.
+        // The ID set is read through Cache::remember (300s); the table query re-hydrates
+        // from the cached IDs so sorting and eager-loads still apply on every render.
+        $ids = Cache::remember(
+            static::cacheKey($user->id, $warehouseIds),
+            static::cacheTtl(),
+            fn () => InTransit::query()
+                ->where('status', InTransitStatus::InTransit->value)
+                ->whereHas('transferRequisition', fn ($q) => $q
+                    ->whereIn('from_warehouse_id', $warehouseIds)
+                    ->orWhereIn('to_warehouse_id', $warehouseIds))
+                ->latest('dispatched_at')
+                ->pluck('id')
+                ->all(),
+        );
 
         return $table
             ->query(
-                InTransit::whereIn('id', $inTransits->pluck('id'))
-                    ->with(['transferRequisition.fromWarehouse', 'transferRequisition.toWarehouse', 'productVariant'])
+                InTransit::query()
+                    ->whereIn('id', $ids)
+                    ->with(['transferRequisition', 'productVariant'])
+                    ->latest('dispatched_at')
             )
             ->columns([
                 TextColumn::make('transferRequisition.reference_code')
-                    ->label('REQUISITION')
-                    ->fontFamily('mono')
-                    ->copyable()
-                    ->searchable(),
+                    ->label(__('dashboard.active_in_transit.requisition'))
+                    ->fontFamily('mono'),
 
                 TextColumn::make('productVariant.sku')
-                    ->label('SKU')
-                    ->fontFamily('mono')
-                    ->copyable()
-                    ->searchable(),
-
-                TextColumn::make('productVariant.name')
-                    ->label('VARIANT')
-                    ->searchable()
-                    ->limit(30),
-
-                TextColumn::make('from_warehouse')
-                    ->label('FROM')
-                    ->badge()
-                    ->color('info'),
-
-                TextColumn::make('to_warehouse')
-                    ->label('TO')
-                    ->badge()
-                    ->color('success'),
+                    ->label(__('dashboard.active_in_transit.sku'))
+                    ->fontFamily('mono'),
 
                 TextColumn::make('dispatched_base_qty')
-                    ->label('QTY (BASE)')
-                    ->numeric()
-                    ->sortable(),
+                    ->label(__('dashboard.active_in_transit.qty'))
+                    ->numeric(),
 
                 TextColumn::make('status')
-                    ->label('STATUS')
+                    ->label(__('dashboard.active_in_transit.status'))
                     ->badge(),
-
-                TextColumn::make('dispatched_at')
-                    ->label('DISPATCHED')
-                    ->since(),
             ])
-            ->paginated(false)
-            ->defaultSort('dispatched_at', 'desc');
+            ->paginated([5, 10]);
     }
 }

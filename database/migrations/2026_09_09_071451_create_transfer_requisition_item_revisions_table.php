@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Models\ProductVariant;
+use App\Models\TransferRequisitionItem;
+use App\Models\User;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -12,39 +15,24 @@ return new class() extends Migration
     {
         Schema::create('transfer_requisition_item_revisions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('transfer_requisition_item_id');
-            $table->foreign('transfer_requisition_item_id', 'tri_rev_item_fk')->references('id')->on('transfer_requisition_items')->onDelete('cascade');
-            $table->foreignId('user_id');
-            $table->foreign('user_id', 'tri_rev_user_fk')->references('id')->on('users')->onDelete('cascade');
-            $table->foreignId('product_variant_id');
-            $table->foreign('product_variant_id', 'tri_rev_variant_fk')->references('id')->on('product_variants')->onDelete('restrict');
-            $table->foreignId('substitute_product_variant_id')->nullable();
-            $table->foreign('substitute_product_variant_id', 'tri_rev_sub_variant_fk')->references('id')->on('product_variants')->onDelete('restrict');
-
+            $table->foreignIdFor(TransferRequisitionItem::class)->constrained(indexName: 'tri_revisions_tri_id_foreign')->cascadeOnDelete();
+            $table->foreignIdFor(User::class)->constrained();
+            $table->foreignIdFor(ProductVariant::class)->constrained(indexName: 'trirs_pv_id_foreign')->restrictOnDelete();
+            $table->foreignId('substitute_product_variant_id')->nullable()->constrained('product_variants', indexName: 'trirs_substitute_pv_id_foreign')->restrictOnDelete();
             $table->string('proposed_unit_name');
-            $table->integer('proposed_unit_ratio')->default(1);
+            $table->integer('proposed_unit_ratio');
             $table->integer('proposed_qty');
             $table->integer('proposed_base_qty');
             $table->text('negotiation_reason')->nullable();
-
-            // Negotiation tracking
-            // String + PHP backed enum (App\Enums\NegotiationSide) - which party proposed this revision.
             $table->string('side');
-
-            // String + PHP backed enum (App\Enums\RevisionStatus) - outcome of this specific proposal.
             $table->string('status')->default('pending');
-
-            // Self-reference: the revision this one is countering/responding to, if any.
-            // Null means this is the opening proposal in the thread for this item.
-            $table->foreignId('responds_to_revision_id')->nullable();
-            $table->foreign('responds_to_revision_id', 'tri_rev_parent_fk')->references('id')->on('transfer_requisition_item_revisions')->onDelete('set null');
-
-            $table->timestamp('responded_at')->nullable(); // When status moved out of pending
-
+            // Self-referential chain — keeps foreignId().
+            $table->foreignId('responds_to_revision_id')->nullable()->constrained('transfer_requisition_item_revisions', indexName: 'trirr_to_id_foreign')->nullOnDelete();
+            $table->timestamp('responded_at')->nullable();
             $table->timestamps();
 
-            $table->index('transfer_requisition_item_id', 'tri_rev_item_idx');
-            $table->index(['transfer_requisition_item_id', 'status'], 'tri_rev_item_status_idx');
+            $table->index('transfer_requisition_item_id', 'trid');
+            $table->index(['transfer_requisition_item_id', 'status'], 'trid_status');
         });
     }
 

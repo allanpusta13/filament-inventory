@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\DirectTransfers\Schemas;
 
 use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\RepeatableEntry\TableColumn;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
@@ -18,7 +19,7 @@ class DirectTransferInfolist
     {
         return $schema->components([
             Grid::make(['default' => 1, 'md' => 3, 'xl' => 3])->schema([
-                Section::make('DIRECT TRANSFER PROFILE')
+                Section::make(__('resources.direct_transfers.infolist.profile'))
                     ->icon(Heroicon::ArrowPath)
                     ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2])
                     ->columns(['default' => 1, 'md' => 2, 'xl' => 2])
@@ -43,45 +44,50 @@ class DirectTransferInfolist
                             ->icon(Heroicon::BuildingOffice2),
 
                         TextEntry::make('notes')
+                            ->label(__('resources.direct_transfers.fields.notes'))
                             ->columnSpanFull()
-                            ->placeholder('—'),
+                            ->placeholder(__('common.empty')),
                     ]),
 
-                Section::make('AUTHORIZATION')
+                Section::make(__('resources.direct_transfers.infolist.authorization'))
                     ->icon(Heroicon::ShieldCheck)
                     ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                     ->schema([
                         TextEntry::make('transferredBy.name')
                             ->label(__('resources.direct_transfers.fields.transferred_by'))
                             ->icon(Heroicon::User)
-                            ->placeholder('—'),
+                            ->placeholder(__('common.empty')),
                     ]),
 
-                Section::make('MATERIAL MANIFEST')
+                Section::make(__('resources.direct_transfers.infolist.manifest'))
                     ->icon(Heroicon::ClipboardDocumentList)
                     ->columnSpanFull()
                     ->schema([
                         RepeatableEntry::make('items')
+                            ->table([
+                                TableColumn::make(__('resources.direct_transfers.fields.sku')),
+                                TableColumn::make(__('resources.direct_transfers.fields.qty')),
+                                TableColumn::make(__('resources.direct_transfers.fields.ratio')),
+                                TableColumn::make(__('resources.direct_transfers.fields.base_qty')),
+                                TableColumn::make(__('resources.direct_transfers.fields.notes')),
+                            ])
                             ->schema([
-                                Grid::make(['default' => 1, 'md' => 3, 'xl' => 5])->schema([
-                                    TextEntry::make('productVariant.sku')
-                                        ->label(__('resources.direct_transfers.fields.sku'))
-                                        ->weight(FontWeight::Bold),
+                                TextEntry::make('productVariant.sku')
+                                    ->weight(FontWeight::Bold),
 
-                                    TextEntry::make('qty')
-                                        ->label(__('resources.direct_transfers.fields.qty'))
-                                        ->state(fn ($record) => "{$record->qty} {$record->unit_name}"),
+                                TextEntry::make('qty')
+                                    ->state(fn ($record) => "{$record->qty} {$record->unit_name}"),
 
-                                    TextEntry::make('unit_ratio')
-                                        ->label(__('resources.direct_transfers.fields.ratio')),
+                                TextEntry::make('unit_ratio')
+                                    ->numeric()
+                                    ->alignEnd(),
 
-                                    TextEntry::make('base_qty')
-                                        ->label(__('resources.direct_transfers.fields.base_qty'))
-                                        ->numeric(),
+                                TextEntry::make('base_qty')
+                                    ->numeric()
+                                    ->alignEnd(),
 
-                                    TextEntry::make('notes')
-                                        ->placeholder('—'),
-                                ]),
+                                TextEntry::make('notes')
+                                    ->placeholder(__('common.empty')),
                             ]),
                     ]),
             ]),

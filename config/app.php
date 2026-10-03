@@ -22,6 +22,16 @@ return [
         'password' => env('DEFAULT_USER_PASSWORD', 'password'),
     ],
 
+    'locale' => env('APP_LOCALE', 'en'),
+    'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
+    'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),
+
+    // Add this line:
+    'currency' => env('APP_CURRENCY', 'PHP'),
+
+    'timezone' => 'UTC',
+    // ... rest of the config
+
     /*
     |--------------------------------------------------------------------------
     | Application Service Providers

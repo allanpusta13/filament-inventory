@@ -7,6 +7,7 @@ namespace App\Filament\Resources\Products\Pages;
 use App\Filament\Resources\Products\ProductResource;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Support\Icons\Heroicon;
 
 class ListProducts extends ListRecords
 {
@@ -16,17 +17,8 @@ class ListProducts extends ListRecords
     {
         return [
             CreateAction::make()
-                ->modalWidth(\Filament\Support\Enums\Width::Large),
-        ];
-    }
-
-    protected function getTableBulkActions(): array
-    {
-        return [
-            \Filament\Actions\DeleteBulkAction::make()
-                ->authorize('deleteAny'),
-            \Filament\Actions\RestoreBulkAction::make()
-                ->authorize('restoreAny'),
+                ->label(__('resources.products.actions.create'))
+                ->icon(Heroicon::OutlinedCube),
         ];
     }
 }

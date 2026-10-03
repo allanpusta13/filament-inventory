@@ -11,8 +11,5 @@ class ListInTransits extends ListRecords
 {
     protected static string $resource = InTransitResource::class;
 
-    protected function getHeaderActions(): array
-    {
-        return [];
-    }
+    // No getHeaderActions() — read-only monitor, no create route.
 }

@@ -19,6 +19,16 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use UnitEnum;
 
+/**
+ * DirectTransfer resource — §7C.6 canonical class.
+ *
+ * Bound to `DirectTransfer` (the header), not `StockMovement`. Fire-
+ * and-forget: no edit page (A11). Both-endpoint warehouse scope for
+ * non-admin/non-auditor users.
+ *
+ * No navigation badge — §1B.2 declares badges only for the four
+ * badge-bearing resources.
+ */
 class DirectTransferResource extends Resource
 {
     protected static ?string $model = DirectTransfer::class;
@@ -32,6 +42,21 @@ class DirectTransferResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowPath;
 
     protected static string|BackedEnum|null $activeNavigationIcon = Heroicon::ArrowPath;
+
+    public static function getModelLabel(): string
+    {
+        return __('resources.direct_transfers.model.singular');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('resources.direct_transfers.model.plural');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('resources.direct_transfers.navigation.label');
+    }
 
     public static function form(Schema $schema): Schema
     {
@@ -52,9 +77,15 @@ class DirectTransferResource extends Resource
     {
         return parent::getEloquentQuery()
             ->with(['fromWarehouse', 'toWarehouse', 'transferredBy', 'items.productVariant'])
+            ->withCount('items')
             ->when(
                 ! auth()->user()->isAdmin() && ! auth()->user()->isAuditor(),
                 function (Builder $q) {
+                    // Intentional AND-scope (§20.1): a direct transfer moves
+                    // stock between two warehouses, so a non-privileged user
+                    // must be assigned to BOTH endpoints to list it. A
+                    // single-warehouse user therefore sees zero direct
+                    // transfers by design — not a bug.
                     $ids = auth()->user()->warehouses()->pluck('id')->all();
                     $q->whereIn('from_warehouse_id', $ids)
                         ->whereIn('to_warehouse_id', $ids);

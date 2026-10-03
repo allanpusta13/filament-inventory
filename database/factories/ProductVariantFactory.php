@@ -6,42 +6,30 @@ namespace Database\Factories;
 
 use App\Models\Product;
 use App\Models\ProductVariant;
-use App\Models\ProductVariantPrice;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<ProductVariant>
+ * ProductVariant factory (§5.2).
+ *
+ * Produces a variant with a unique `SKU-####-??` sku, a unique
+ * EAN-13 barcode, a `pc` base unit, and an active state. The base-unit
+ * self-conversion row is materialized by `ProductVariantObserver`
+ * (§3.19) on create — the factory does NOT seed it.
  */
 class ProductVariantFactory extends Factory
 {
-    /**
-     * Define model's default state.
-     *
-     * @return array<string, mixed>
-     */
+    protected $model = ProductVariant::class;
+
     public function definition(): array
     {
         return [
             'product_id' => Product::factory(),
-            'sku' => mb_strtoupper(fake()->unique()->bothify('PROD-???-###')),
-            'barcode' => fake()->unique()->ean13(),
-            'name' => fake()->words(2, true),
-            'base_unit_name' => fake()->randomElement(['piece', 'gram', 'ml']),
-            'reorder_point' => fake()->numberBetween(0, 100),
-            'attributes' => ['roast' => fake()->randomElement(['Light', 'Medium', 'Dark'])],
-            'images' => [],
+            'sku' => mb_strtoupper($this->faker->unique()->bothify('SKU-####-??')),
+            'barcode' => $this->faker->unique()->ean13(),
+            'name' => $this->faker->words(2, true),
+            'base_unit_name' => 'pc',
+            'reorder_point' => $this->faker->numberBetween(0, 50),
+            'is_active' => true,
         ];
-    }
-
-    public function withPrice(): static
-    {
-        return $this->state([])->afterCreating(function (ProductVariant $variant) {
-            ProductVariantPrice::factory()->forVariant($variant)->create();
-        });
-    }
-
-    public function withoutPrice(): static
-    {
-        return $this->state([]);
     }
 }

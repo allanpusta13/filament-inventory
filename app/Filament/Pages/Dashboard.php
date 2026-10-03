@@ -8,7 +8,7 @@ use App\Enums\UserRole;
 use App\Filament\Widgets\ActiveInTransitWidget;
 use App\Filament\Widgets\LowStockAlertsWidget;
 use App\Filament\Widgets\RecentMovementsWidget;
-use App\Filament\Widgets\StatsOverview;
+use App\Filament\Widgets\StatsOverviewWidget;
 use Filament\Pages\Dashboard as BaseDashboard;
 
 final class Dashboard extends BaseDashboard
@@ -22,10 +22,10 @@ final class Dashboard extends BaseDashboard
         }
 
         return in_array($user->role, [
-            UserRole::ADMIN,
-            UserRole::BRANCH_MANAGER,
-            UserRole::WAREHOUSE_STAFF,
-            UserRole::AUDITOR,
+            UserRole::Admin,
+            UserRole::BranchManager,
+            UserRole::WarehouseStaff,
+            UserRole::Auditor,
         ], true);
     }
 
@@ -50,7 +50,7 @@ final class Dashboard extends BaseDashboard
     public function getWidgets(): array
     {
         return [
-            StatsOverview::class,
+            StatsOverviewWidget::class,
             LowStockAlertsWidget::class,
             RecentMovementsWidget::class,
             ActiveInTransitWidget::class,

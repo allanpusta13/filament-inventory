@@ -5,15 +5,26 @@ declare(strict_types=1);
 namespace App\Filament\Resources\SalesOrders\Schemas;
 
 use App\Models\ProductVariantUnitConversion;
-use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 
+/**
+ * Sales order form — §7H.1 canonical contract.
+ *
+ * Line-item repeater uses `->table([...])` for a compact row layout
+ * (deviation from §7O.2's `->columns(...)` — see class docblock).
+ *
+ * The catalog-price preview is a disabled TextInput whose state is
+ * written by the variant select's `afterStateUpdated()` hook — no
+ * Livewire component or Placeholder required.
+ */
 class SalesOrderForm
 {
     public static function configure(Schema $schema): Schema
@@ -27,7 +38,7 @@ class SalesOrderForm
     public static function getCustomerWarehouseFields(): array
     {
         return [
-            Section::make('CUSTOMER & WAREHOUSE')
+            Section::make(__('resources.sales_orders.form.customer_warehouse'))
                 ->icon(Heroicon::UserGroup)
                 ->columnSpanFull()
                 ->columns(['default' => 1, 'md' => 2, 'xl' => 2])
@@ -37,18 +48,27 @@ class SalesOrderForm
                         ->relationship('customer', 'name')
                         ->prefixIcon(Heroicon::UserGroup)
                         ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
-                        ->searchable()->preload()->required()
+                        ->searchable()
+                        ->preload()
+                        ->required()
                         ->createOptionForm(fn (Schema $schema) => \App\Filament\Resources\Customers\Schemas\CustomerForm::configure($schema)),
 
                     Select::make('warehouse_id')
                         ->label(__('resources.sales_orders.fields.dispatching_warehouse'))
                         ->prefixIcon(Heroicon::BuildingOffice2)
                         ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
-                        ->options(fn () => auth()->user()->warehouses()->pluck('name', 'id'))
+                        ->options(fn () => auth()->user()->isAdmin() || auth()->user()->isAuditor()
+                            ? \App\Models\Warehouse::query()->pluck('name', 'id')
+                            : auth()->user()->warehouses()->pluck('name', 'id'))
                         ->default(fn () => auth()->user()->warehouses()->count() === 1
                             ? auth()->user()->warehouses()->first()->id
                             : null)
                         ->required(),
+
+                    Textarea::make('notes')
+                        ->label(__('resources.sales_orders.fields.notes'))
+                        // ->prefixIcon(Heroicon::ChatBubbleBottomCenterText)
+                        ->columnSpanFull(),
                 ]),
         ];
     }
@@ -59,27 +79,33 @@ class SalesOrderForm
             Repeater::make('items')
                 ->relationship()
                 ->columnSpanFull()
-                ->columns(['default' => 1, 'md' => 2, 'xl' => 4])
+                ->table([
+                    TableColumn::make(__('resources.sales_orders.fields.variant_sku')),
+                    TableColumn::make(__('resources.sales_orders.fields.unit')),
+                    TableColumn::make(__('resources.sales_orders.fields.ratio_base')),
+                    TableColumn::make(__('resources.sales_orders.fields.qty')),
+                    TableColumn::make(__('resources.sales_orders.fields.catalog_sale_price')),
+                ])
                 ->schema([
                     Select::make('product_variant_id')
-                        ->label(__('resources.sales_orders.fields.variant_sku'))
+                        ->hiddenLabel()
                         ->relationship('productVariant', 'sku')
                         ->prefixIcon(Heroicon::Tag)
-                        ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2])
-                        ->searchable()->preload()->required()
+                        ->searchable()
+                        ->preload()
+                        ->required()
                         ->disableOptionsWhenSelectedInSiblingRepeaterItems()
                         ->live()
                         ->afterStateUpdated(function (Get $get, $set, $state) {
                             $set('unit_name', null);
                             $set('unit_ratio', null);
                             $variant = \App\Models\ProductVariant::with('currentPrice')->find($state);
-                            $set('_current_sale_price_preview', $variant?->currentPrice?->sale_price ?? '0.0000');
+                            $set('current_sale_price_preview', $variant?->currentPrice?->sale_price ?? '0.0000');
                         }),
 
                     Select::make('unit_name')
-                        ->label(__('resources.sales_orders.fields.unit'))
+                        ->hiddenLabel()
                         ->prefixIcon(Heroicon::Scale)
-                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                         ->options(function (Get $get) {
                             $variantId = $get('product_variant_id');
                             if (! $variantId) {
@@ -101,24 +127,30 @@ class SalesOrderForm
                         }),
 
                     TextInput::make('unit_ratio')
-                        ->label(__('resources.sales_orders.fields.ratio_base'))
+                        ->hiddenLabel()
                         ->hintIcon(Heroicon::InformationCircle)
                         ->hint(__('resources.sales_orders.hints.ratio_auto'))
-                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
-                        ->numeric()->disabled()->dehydrated()->required(),
+                        ->numeric()
+                        ->disabled()
+                        ->dehydrated()
+                        ->required(),
 
                     TextInput::make('qty')
-                        ->label(__('resources.sales_orders.fields.qty'))
+                        ->hiddenLabel()
                         ->prefixIcon(Heroicon::Hashtag)
-                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
-                        ->numeric()->minValue(1)->required(),
+                        ->numeric()
+                        ->minValue(1)
+                        ->required(),
 
-                    Placeholder::make('_current_sale_price_preview')
-                        ->label(__('resources.sales_orders.fields.catalog_sale_price'))
-                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
-                        ->content(fn (Get $get) => $get('_current_sale_price_preview') ?? '—'),
+                    TextInput::make('current_sale_price_preview')
+                        ->hiddenLabel()
+                        ->prefixIcon(Heroicon::CurrencyDollar)
+                        ->disabled()
+                        ->dehydrated(false)
+                        ->default('0.0000'),
                 ])
-                ->minItems(1)->required()->dehydrated()
+                ->minItems(1)
+                ->required()
                 ->mutateRelationshipDataBeforeCreateUsing(function (array $data): array {
                     $data['base_qty'] = (int) $data['qty'] * (int) $data['unit_ratio'];
 

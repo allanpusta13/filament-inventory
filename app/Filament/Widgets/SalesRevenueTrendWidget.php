@@ -4,16 +4,42 @@ declare(strict_types=1);
 
 namespace App\Filament\Widgets;
 
-use App\Models\SalesOrder;
+use App\Models\Warehouse;
 use Filament\Widgets\ChartWidget;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
+/**
+ * SalesRevenueTrendWidget — line chart of daily sale value over 30 days.
+ *
+ * Visibility: Admin, Auditor.
+ * Cache: 300s.
+ * Column span: `['default' => 1, 'md' => 2, 'xl' => 2]`.
+ */
 class SalesRevenueTrendWidget extends ChartWidget
 {
-    protected ?string $heading = 'Sales Revenue Trend (Last 30 Days)';
+    protected static ?int $sort = 4;
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = ['default' => 1, 'md' => 2, 'xl' => 2];
+
+    public static function canView(): bool
+    {
+        $user = auth()->user();
+
+        return $user !== null && ($user->isAdmin() || $user->isAuditor());
+    }
+
+    public static function cacheTtl(): int
+    {
+        return 300;
+    }
+
+    public static function cacheKey(int $userId, array $warehouseIds): string
+    {
+        sort($warehouseIds);
+
+        return 'sales_revenue_trend_'.$userId.'_'.md5(implode(',', $warehouseIds));
+    }
 
     protected function getType(): string
     {
@@ -23,137 +49,37 @@ class SalesRevenueTrendWidget extends ChartWidget
     protected function getData(): array
     {
         $user = auth()->user();
+        $warehouseIds = $user->isAdmin() || $user->isAuditor()
+            ? Warehouse::query()->pluck('id')->all()
+            : $user->warehouses()->pluck('warehouses.id')->all();
 
-        if (! ($user?->can('viewAny', SalesOrder::class) ?? false)) {
-            return $this->emptyData();
-        }
+        return Cache::remember(
+            static::cacheKey($user->id, $warehouseIds),
+            static::cacheTtl(),
+            function () use ($warehouseIds) {
+                // `unit_sale_price_snapshot` is per ordered unit (§2.19:
+                // `qty` × `unit_ratio` = `base_qty`), so the per-base-unit
+                // value divides by `unit_ratio` (`NULLIF` guards a zero ratio).
+                $buckets = DB::table('sales_order_items')
+                    ->join('sales_orders', 'sales_orders.id', '=', 'sales_order_items.sales_order_id')
+                    ->whereIn('sales_orders.warehouse_id', $warehouseIds)
+                    ->whereNotNull('sales_orders.dispatched_at')
+                    ->where('sales_orders.dispatched_at', '>=', now()->subDays(30))
+                    ->selectRaw('CAST(sales_orders.dispatched_at AS DATE) as day, SUM(sales_order_items.dispatched_base_qty * sales_order_items.unit_sale_price_snapshot / NULLIF(sales_order_items.unit_ratio, 0)) as total')
+                    ->groupBy('day')
+                    ->orderBy('day')
+                    ->pluck('total', 'day');
 
-        $firstWarehouseId = optional($user->warehouses->first())?->id;
-        $cacheKey = 'sales_revenue_trend_'.$user->id.'_'.$firstWarehouseId;
-
-        return Cache::remember($cacheKey, 300, function () use ($user) {
-            return $this->computeChartData($user);
-        });
-    }
-
-    protected function getOptions(): array
-    {
-        return [
-            'responsive' => true,
-            'maintainAspectRatio' => false,
-            'plugins' => [
-                'legend' => [
-                    'display' => true,
-                    'position' => 'bottom',
-                ],
-                'tooltip' => [
-                    'callbacks' => [
-                        'label' => 'function(context) {
-                            return "Revenue: ₱" + context.parsed.y.toFixed(4);
-                        }',
+                return [
+                    'labels' => $buckets->keys()->all(),
+                    'datasets' => [
+                        [
+                            'label' => __('dashboard.charts.revenue'),
+                            'data' => $buckets->map(fn ($v) => (float) $v)->values()->all(),
+                        ],
                     ],
-                ],
-            ],
-            'scales' => [
-                'y' => [
-                    'beginAtZero' => true,
-                    'title' => [
-                        'display' => true,
-                        'text' => 'Revenue (₱)',
-                    ],
-                ],
-                'x' => [
-                    'title' => [
-                        'display' => true,
-                        'text' => 'Last 30 Days',
-                    ],
-                ],
-            ],
-        ];
-    }
-
-    private function computeChartData($user): array
-    {
-        $warehouseIds = $user->warehouses->pluck('id')->toArray();
-
-        if (empty($warehouseIds)) {
-            return $this->emptyData();
-        }
-
-        $days = 30;
-        $startDate = Carbon::now()->subDays($days - 1)->startOfDay();
-
-        $salesOrders = SalesOrder::whereIn('warehouse_id', $warehouseIds)
-            ->whereIn('status', [
-                'dispatched',
-                'completed',
-            ])
-            ->where('dispatched_at', '>=', $startDate)
-            ->with('items')
-            ->get();
-
-        $buckets = [];
-        for ($i = 0; $i < $days; $i++) {
-            $date = Carbon::now()->subDays($days - 1 - $i)->startOfDay();
-            $buckets[$date->format('Y-m-d')] = '0.0000';
-        }
-
-        foreach ($salesOrders as $order) {
-            $dayKey = Carbon::parse($order->dispatched_at)->format('Y-m-d');
-            if (! isset($buckets[$dayKey])) {
-                continue;
-            }
-
-            $dailyRevenue = '0.0000';
-            foreach ($order->items as $item) {
-                if ($item->dispatched_base_qty > 0 && $item->unit_sale_price_snapshot) {
-                    $lineTotal = bcmul((string) $item->dispatched_base_qty, (string) $item->unit_sale_price_snapshot, 4);
-                    $dailyRevenue = bcadd($dailyRevenue, $lineTotal, 4);
-                }
-            }
-
-            $buckets[$dayKey] = bcadd($buckets[$dayKey], $dailyRevenue, 4);
-        }
-
-        $labels = array_map(function ($dateStr) {
-            return Carbon::parse($dateStr)->format('M j');
-        }, array_keys($buckets));
-
-        $data = array_values($buckets);
-
-        return [
-            'labels' => $labels,
-            'datasets' => [
-                [
-                    'label' => 'Daily Revenue',
-                    'data' => $data,
-                    'borderColor' => 'rgb(34, 197, 94)',
-                    'backgroundColor' => 'rgba(34, 197, 94, 0.1)',
-                    'fill' => true,
-                    'tension' => 0.3,
-                    'pointBackgroundColor' => 'rgb(34, 197, 94)',
-                    'pointBorderColor' => '#ffffff',
-                    'pointBorderWidth' => 2,
-                    'pointRadius' => 4,
-                ],
-            ],
-        ];
-    }
-
-    private function emptyData(): array
-    {
-        return [
-            'labels' => [],
-            'datasets' => [
-                [
-                    'label' => 'Daily Revenue',
-                    'data' => [],
-                    'borderColor' => 'rgb(34, 197, 94)',
-                    'backgroundColor' => 'rgba(34, 197, 94, 0.1)',
-                    'fill' => true,
-                    'tension' => 0.3,
-                ],
-            ],
-        ];
+                ];
+            },
+        );
     }
 }

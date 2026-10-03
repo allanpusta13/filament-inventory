@@ -9,48 +9,25 @@ use App\Models\ProductVariantPrice;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<ProductVariantPrice>
+ * ProductVariantPrice factory (§5.3).
+ *
+ * Produces a current price row with a random cost and a 40% markup
+ * sale price. `is_current = true` by default.
  */
 class ProductVariantPriceFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
+    protected $model = ProductVariantPrice::class;
+
     public function definition(): array
     {
+        $cost = $this->faker->randomFloat(4, 1, 500);
+
         return [
             'product_variant_id' => ProductVariant::factory(),
-            'cost_price' => fake()->randomFloat(4, 10, 500),
-            'sale_price' => fake()->randomFloat(4, 20, 1000),
+            'cost_price' => $cost,
+            'sale_price' => $cost * 1.4,
             'effective_from' => now(),
             'is_current' => true,
-            'set_by' => null,
-            'notes' => null,
         ];
-    }
-
-    public function notCurrent(): static
-    {
-        return $this->state(fn () => ['is_current' => false]);
-    }
-
-    public function forVariant(ProductVariant $variant): static
-    {
-        // [FIX v10] Ensure at-most-one is_current=true per variant by
-        // demoting any existing current price for this variant before
-        // creating the new one. This satisfies the DB constraint from
-        // the migration (partial unique index / generated column).
-        return $this->state(fn () => [
-            'product_variant_id' => $variant->id,
-        ])->afterCreating(function (ProductVariantPrice $price) use ($variant) {
-            if ($price->is_current) {
-                ProductVariantPrice::where('product_variant_id', $variant->id)
-                    ->where('id', '!=', $price->id)
-                    ->where('is_current', true)
-                    ->update(['is_current' => false]);
-            }
-        });
     }
 }

@@ -13,53 +13,30 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<TransferRequisitionItemRevision>
+ * TransferRequisitionItemRevision factory (§5.20).
+ *
+ * Default state: Fulfiller-authored, Pending, `pc` unit with ratio 1,
+ * proposed qty in `[1, 20]`. Optional `substitute_product_variant_id`
+ * and `responds_to_revision_id` remain null by default.
  */
 class TransferRequisitionItemRevisionFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
+    protected $model = TransferRequisitionItemRevision::class;
+
     public function definition(): array
     {
-        $unitRatio = fake()->numberBetween(1, 12);
-        $qty = fake()->numberBetween(1, 10);
+        $qty = $this->faker->numberBetween(1, 20);
 
         return [
             'transfer_requisition_item_id' => TransferRequisitionItem::factory(),
             'user_id' => User::factory(),
             'product_variant_id' => ProductVariant::factory(),
-            'substitute_product_variant_id' => null,
-            'proposed_unit_name' => 'Box',
-            'proposed_unit_ratio' => $unitRatio,
+            'proposed_unit_name' => 'pc',
+            'proposed_unit_ratio' => 1,
             'proposed_qty' => $qty,
-            'proposed_base_qty' => $qty * $unitRatio,
-            'negotiation_reason' => fake()->sentence(),
-            'side' => fake()->randomElement(NegotiationSide::cases()),
+            'proposed_base_qty' => $qty,
+            'side' => NegotiationSide::Fulfiller,
             'status' => RevisionStatus::Pending,
-            'responds_to_revision_id' => null,
         ];
-    }
-
-    public function fromRequestor(): static
-    {
-        return $this->state(fn () => ['side' => NegotiationSide::Requestor]);
-    }
-
-    public function fromFulfiller(): static
-    {
-        return $this->state(fn () => ['side' => NegotiationSide::Fulfiller]);
-    }
-
-    public function accepted(): static
-    {
-        return $this->state(fn () => ['status' => RevisionStatus::Accepted]);
-    }
-
-    public function rejected(): static
-    {
-        return $this->state(fn () => ['status' => RevisionStatus::Rejected]);
     }
 }

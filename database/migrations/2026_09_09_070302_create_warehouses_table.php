@@ -12,7 +12,7 @@ return new class() extends Migration
     {
         Schema::create('warehouses', function (Blueprint $table) {
             $table->id();
-            $table->string('code')->unique();   // Branch short code (e.g. 'WH-MNL')
+            $table->string('code', 50)->unique();
             $table->string('name');
             $table->string('location')->nullable();
             $table->boolean('is_active')->default(true);

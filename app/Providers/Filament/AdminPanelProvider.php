@@ -17,6 +17,7 @@ use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Support\Enums\Platform;
 use Filament\Support\Enums\Width;
+use Filament\Support\Icons\Heroicon;
 use Filament\Widgets\AccountWidget;
 use Filament\Widgets\FilamentInfoWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -41,6 +42,10 @@ final class AdminPanelProvider extends PanelProvider
                 AppAuthentication::make()
                     ->recoverable(),
             )
+            ->colors([
+                // Primary maps to the §10 dashboard palette token (#3b82f6).
+                'primary' => Color::hex('#3b82f6'),
+            ])
             ->sidebarCollapsibleOnDesktop()
             ->maxContentWidth(Width::Full)
             ->sidebarWidth('280px')
@@ -51,12 +56,35 @@ final class AdminPanelProvider extends PanelProvider
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->navigationGroups([
-                NavigationGroup::make('CATALOG')->label(__('navigation.groups.catalog')),
-                NavigationGroup::make('OPERATIONS')->label(__('navigation.groups.operations')),
-                NavigationGroup::make('PURCHASING')->label(__('navigation.groups.purchasing')),
-                NavigationGroup::make('SALES')->label(__('navigation.groups.sales')),
-                NavigationGroup::make('AUDIT LEDGERS')->label(__('navigation.groups.audit_ledgers')),
-                NavigationGroup::make('SYSTEM ADMIN')->label(__('navigation.groups.system_admin')),
+                NavigationGroup::make('CATALOG')
+                    ->label(__('navigation.groups.catalog'))
+                    ->icon(Heroicon::CubeTransparent)
+                    ->collapsible(),
+
+                NavigationGroup::make('OPERATIONS')
+                    ->label(__('navigation.groups.operations'))
+                    ->icon(Heroicon::OutlinedRectangleStack)
+                    ->collapsible(),
+
+                NavigationGroup::make('PURCHASING')
+                    ->label(__('navigation.groups.purchasing'))
+                    ->icon(Heroicon::OutlinedShoppingCart)
+                    ->collapsible(),
+
+                NavigationGroup::make('SALES')
+                    ->label(__('navigation.groups.sales'))
+                    ->icon(Heroicon::OutlinedBanknotes)
+                    ->collapsible(),
+
+                NavigationGroup::make('AUDIT LEDGERS')
+                    ->label(__('navigation.groups.audit_ledgers'))
+                    ->icon(Heroicon::QueueList)
+                    ->collapsible(),
+
+                NavigationGroup::make('SYSTEM ADMIN')
+                    ->label(__('navigation.groups.system_admin'))
+                    ->icon(Heroicon::BuildingOffice)
+                    ->collapsible(false),
             ])
 
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
@@ -84,6 +112,7 @@ final class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
+            ->strictAuthorization()
             ->databaseTransactions()
             ->collapsibleNavigationGroups(false)
             ->databaseNotifications()
