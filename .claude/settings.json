@@ -48,6 +48,9 @@
         "command": "./vendor/bin/phpstan analyse \"$FILE_PATH\" --level=6 --no-progress",
         "description": "Run PHPStan on edited PHP files"
       }
+    ],
+    "Stop": [
+      { "hooks": [ { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/scripts/notify-secretary.sh" } ] }
     ]
   },
   "env": {

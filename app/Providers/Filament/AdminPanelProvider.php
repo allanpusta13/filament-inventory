@@ -112,6 +112,7 @@ final class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
+            ->maxContentWidth(Width::Full)
             ->strictAuthorization()
             ->databaseTransactions()
             ->collapsibleNavigationGroups(false)
