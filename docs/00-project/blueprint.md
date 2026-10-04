@@ -15082,6 +15082,8 @@ The Council may implement technical integrity fixes without further product clar
 | LowStockAlertsWidget scaling risk documented as accepted | ✅ |
 | All Actions use `->schema()`, zero `->form()` calls | ✅ |
 | Wizard review steps use `View::make()->viewData()` / `Livewire::make()` (not `Placeholder`) | ✅ |
+| Tables with many record actions use a divider-separated `ActionGroup` dropdown (F31) | ✅ |
+| Record-action alignment is set globally via `configureTable()`, never per resource | ✅ |
 | `createOptionForm` auto-selects new option after save | ✅ |
 | PurchaseOrderPolicy, SalesOrderPolicy, SupplierPolicy, CustomerPolicy, **ProductPolicy**, WarehousePolicy, UserPolicy, **DirectTransferPolicy** exist | ✅ |
 | No `->visible()` closure re-derives a permission decision | ✅ |
