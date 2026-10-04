@@ -132,3 +132,4 @@ docs/audit_artifacts/
 docs/audit_artifacts/
 docs/00-project/ai/references/
 tests/playwright/
+.devswarm-temp/

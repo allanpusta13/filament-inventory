@@ -134,6 +134,7 @@ Every `__()` key referenced by this blueprint MUST resolve. The canonical `en` c
 return [
     'confirm' => 'Confirm',
     'cancel'  => 'Cancel',
+    'more'    => 'More',
 ];
 ```
 
@@ -451,6 +452,7 @@ return [
             'quick_adjustment' => 'Quick adjustment',
             'quick_adjustment_heading' => 'Quick stock adjustment',
             'quick_adjustment_description' => 'Record a manual stock adjustment.',
+            'more_actions' => 'More actions',
         ],
         'notifications' => [
             'created' => 'Product created.', 'updated' => 'Product updated.',
@@ -518,6 +520,7 @@ return [
             'record_loss_description' => 'Record lost or damaged quantities.',
             'cancel' => 'Cancel', 'cancel_heading' => 'Cancel requisition',
             'cancel_description' => 'Cancel this requisition.',
+            'more_actions' => 'More actions',
         ],
         'notifications' => [
             'dispatched' => 'Requisition dispatched.', 'loss_recorded' => 'Loss recorded.',
@@ -683,6 +686,7 @@ return [
             'receive_description' => 'Record received base quantities.',
             'cancel' => 'Cancel', 'cancel_heading' => 'Cancel purchase order',
             'cancel_description' => 'Cancel this purchase order.',
+            'more_actions' => 'More actions',
         ],
         'notifications' => ['received' => 'Purchase received.'],
     ],
@@ -735,6 +739,7 @@ return [
             'return_description' => 'Record returned base quantities.',
             'cancel' => 'Cancel', 'cancel_heading' => 'Cancel sales order',
             'cancel_description' => 'Cancel this sales order.',
+            'more_actions' => 'More actions',
         ],
         'notifications' => [
             'dispatched' => 'Sale dispatched.', 'return_recorded' => 'Return recorded.',
@@ -1014,7 +1019,7 @@ Requirements:
 
 1. Never translate or localize stored numeric values in the database.
 2. Use locale-aware formatting at presentation time.
-3. Continue to pass `config('app.currency')` to Filament money columns as already mandated.
+3. Render `decimal(15,4)` money fields through the global `format_money(mixed $state, int $precision = 4): string` helper (`app/Helpers.php`), which wraps `\Illuminate\Support\Number::currency()` and applies the project's fixed 4-decimal display precision. Plain `->money(config('app.currency'))` remains valid where the locale-default precision (2) is intended (e.g. `ProductInfolist` cost/sale prices). Filament v5's `->money()` no longer accepts a `decimals:` argument — passing one was invalid and has been removed.
 4. Do not concatenate currency symbols manually into translated strings when a locale-aware formatter is available.
 5. Keep reference codes and identifiers machine-stable regardless of locale.
 
@@ -1120,7 +1125,7 @@ The same applies to model/resource metadata: resources currently define navigati
 
 9. **Modal-First UI (< 8 Inputs Rule).** Compact operations use inline slide-over Drawers or Dialog Modals. Multi-step wizards use `modalWidth(Width::SevenExtraLarge)`.
 
-10. **Strongly-Typed Icons, Multi-Language i18n & Currency.** All backed enums route `getLabel()` through `__()`. All `->money()` calls pass `config('app.currency')`. Every Action, resource, and navigation item uses a strongly-typed `Heroicon` enum.
+10. **Strongly-Typed Icons, Multi-Language i18n & Currency.** All backed enums route `getLabel()` through `__()`. Currency display routes through the global `format_money()` helper (`app/Helpers.php`) for `decimal(15,4)` fields at 4-decimal precision; plain `->money(config('app.currency'))` remains valid where locale-default precision (2) is intended. Filament v5's `->money()` does not accept a `decimals:` argument. Every Action, resource, and navigation item uses a strongly-typed `Heroicon` enum.
 
 11. **Ledger FK Immutability.** Every `product_variant_id` foreign key on a ledger table uses `restrictOnDelete`.
 
@@ -1170,7 +1175,7 @@ The same applies to model/resource metadata: resources currently define navigati
 
 **F16.** Wizard-Based Create Pages Use `HasWizard` Trait.
 
-**F17.** Relationship-Bound Repeaters Require `->dehydrated()` + Mutation Hooks.
+**F17.** Relationship-Bound Repeaters Must NOT Declare `->dehydrated()`; Use Mutation Hooks. `Repeater::make('items')->relationship(...)->dehydrated()` triggers `SQLSTATE[42S22] Column not found: items` — Filament already dehydrates relationship repeaters. Declare `->dehydrated()` only on individual fields (`*_unit_ratio`); use `mutateRelationshipDataBeforeCreateUsing()` / `mutateRelationshipDataBeforeSaveUsing()` for per-item transformation.
 
 **F18.** Units Are Variant-Scoped and Never Free-Text.
 
@@ -1197,6 +1202,8 @@ The same applies to model/resource metadata: resources currently define navigati
 **F29.** Card Layout Requires Bounded Pagination. Any table with `->contentGrid()` declares `->defaultPaginationPageOption(12)` and `->paginated([12, 24, 48])`.
 
 **F30.** **Card Tables Declare No Bulk Actions Until `mkdev-grid-card-layout` Is Installed.** The native renderer does not render per-card checkboxes; declaring bulk actions without the plugin produces inaccessible UI.
+
+**F31.** **Record Actions Use a Divider-Separated `ActionGroup` Dropdown.** Tables with more than a handful of record actions wrap the secondary actions in an outer `ActionGroup::make([...])` whose trigger is `->icon(Heroicon::EllipsisVertical)->iconButton()->size(Size::Small)->color('gray')->tooltip(...)->dropdownAutoPlacement()->dropdownWidth(Width::Large)`. Related actions are partitioned into nested `ActionGroup::make([...])->dropdown(false)` sub-groups; the nested group renders its children inline and Filament's native divider separates one sub-group from the next. Primary inline actions (`ViewAction`, `EditAction`) stay outside the outer group. Requires `Filament\Actions\ActionGroup`, `Filament\Support\Enums\Size`, and `Filament\Support\Enums\Width` imports. Rationale (v13.7): tables with many record actions (Products, TransferRequisitions, PurchaseOrders, SalesOrders) were flat lists that overflowed the row; the grouped dropdown keeps `View`/`Edit` one click away and tucks the rest behind an ellipsis trigger with named sections. Applied by: `ProductsTable`, `TransferRequisitionsTable`, `PurchaseOrdersTable`, `SalesOrdersTable`. Tables with few actions (`SuppliersTable`, `CustomersTable`) remain flat and are NOT required to adopt F31.
 
 ---
 
@@ -7776,11 +7783,13 @@ use App\Filament\Resources\Products\Actions\QuickStockAdjustmentAction;
 use App\Filament\Resources\Products\Actions\SetCurrentPriceAction;
 use App\Filament\Resources\Products\ProductResource;
 use App\Models\ProductVariantPrice;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\RestoreAction;
 use Filament\Actions\ViewAction;
 use Filament\Support\Enums\FontWeight;
+use Filament\Support\Enums\Size;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
@@ -7812,7 +7821,7 @@ class ProductsTable
 
                         TextColumn::make('currentPrice.sale_price')
                             ->label(__('resources.products.table.sale_price'))
-                            ->money(config('app.currency'))
+                            ->formatStateUsing(fn ($state): string => format_money($state, 2))
                             ->weight(FontWeight::Bold)
                             ->alignEnd()
                             ->sortable(query: function (Builder $query, string $direction): Builder {
@@ -7891,23 +7900,38 @@ class ProductsTable
                     ->authorize('update')
                     ->modalWidth(Width::Large),
 
-                SetCurrentPriceAction::make(),
+                ActionGroup::make([
+                    // ── Section: Catalog operations ───────────────────────────
+                    ActionGroup::make([
+                        SetCurrentPriceAction::make(),
 
-                EditProductFamilyAction::make()
-                    ->icon(Heroicon::FolderOpen),
+                        EditProductFamilyAction::make()
+                            ->icon(Heroicon::FolderOpen),
 
-                ManageUnitConversionsAction::make()
-                    ->icon(Heroicon::Scale),
+                        ManageUnitConversionsAction::make()
+                            ->icon(Heroicon::Scale),
 
-                QuickStockAdjustmentAction::make(),
+                        QuickStockAdjustmentAction::make(),
+                    ])->dropdown(false),
 
-                DeleteAction::make()
-                    ->icon(Heroicon::Trash)
-                    ->authorize('delete'),
+                    // ── Section: Destructive ──────────────────────────────────
+                    ActionGroup::make([
+                        DeleteAction::make()
+                            ->icon(Heroicon::Trash)
+                            ->authorize('delete'),
 
-                RestoreAction::make()
-                    ->icon(Heroicon::ArrowUturnLeft)
-                    ->authorize('restore'),
+                        RestoreAction::make()
+                            ->icon(Heroicon::ArrowUturnLeft)
+                            ->authorize('restore'),
+                    ])->dropdown(false),
+                ])
+                    ->icon(Heroicon::EllipsisVertical)
+                    ->iconButton()
+                    ->size(Size::Small)
+                    ->color('gray')
+                    ->tooltip(__('resources.products.actions.more_actions'))
+                    ->dropdownAutoPlacement()
+                    ->dropdownWidth(Width::Large),
             ]);
     }
 }
@@ -8518,7 +8542,6 @@ class TransferRequisitionForm
                 ])
                 ->minItems(1)
                 ->required()
-                ->dehydrated()
                 ->mutateRelationshipDataBeforeCreateUsing(function (array $data): array {
                     $data['requested_base_qty'] = (int) $data['requested_qty'] * (int) $data['requested_unit_ratio'];
                     return $data;
@@ -8676,10 +8699,10 @@ namespace App\Filament\Resources\TransferRequisitions\Pages;
 use App\Filament\Resources\TransferRequisitions\TransferRequisitionResource;
 use App\Filament\Resources\TransferRequisitions\Schemas\TransferRequisitionForm;
 use App\Support\GeneratesReferenceCodes;
-use Filament\Schemas\Components\Placeholder;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Resources\Pages\CreateRecord\Concerns\HasWizard;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\View;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
@@ -8711,12 +8734,16 @@ class CreateTransferRequisition extends CreateRecord
                 ->description(__('resources.transfer_requisitions.steps.review_description'))
                 ->icon(Heroicon::CheckCircle)
                 ->schema([
-                    Placeholder::make('review_summary')
-                        ->columnSpanFull()
-                        ->content(fn (Get $get) => \App\Filament\Support\Wizards\WizardReviewStep::renderSummary(
-                            'filament.wizards.transfer-review',
-                            $get(),
-                        )),
+                    View::make('filament.wizards.transfer-review')
+                        ->viewData(fn (Get $get): array => [
+                            'state' => [
+                                'from_warehouse_id' => $get('from_warehouse_id'),
+                                'to_warehouse_id' => $get('to_warehouse_id'),
+                                'items' => $get('items') ?? [],
+                                'notes' => $get('notes'),
+                            ],
+                        ])
+                        ->columnSpanFull(),
                 ]),
         ];
     }
@@ -8779,6 +8806,7 @@ use App\Filament\Resources\TransferRequisitions\TransferRequisitionResource;
 use App\Models\TransferRequisition;
 use App\Models\TransferRequisitionItemRevision;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteAction;
@@ -8789,6 +8817,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Support\Enums\FontWeight;
+use Filament\Support\Enums\Size;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\Layout\Split;
@@ -8893,302 +8922,332 @@ class TransferRequisitionsTable
                     ->visible(fn (TransferRequisition $record) => $record->status === TransferRequisitionStatus::Draft)
                     ->modalWidth(Width::Large),
 
-                Action::make('submitRequest')
-                    ->label(__('resources.transfer_requisitions.actions.submit'))
-                    ->modalHeading(__('resources.transfer_requisitions.actions.submit_heading'))
-                    ->modalDescription(__('resources.transfer_requisitions.actions.submit_description'))
-                    ->modalSubmitActionLabel(__('actions.confirm'))
-                    ->icon(Heroicon::PaperAirplane)
-                    ->color('primary')
-                    ->authorize('submitRequest')
-                    ->visible(fn (TransferRequisition $record) => $record->status === TransferRequisitionStatus::Draft)
-                    ->requiresConfirmation()
-                    ->action(fn (TransferRequisition $record) => app(\App\Services\NegotiationService::class)->submitRequest($record)),
+                ActionGroup::make([
+                    // ── Section: Submission ───────────────────────────────────
+                    ActionGroup::make([
+                        Action::make('submitRequest')
+                            ->label(__('resources.transfer_requisitions.actions.submit'))
+                            ->modalHeading(__('resources.transfer_requisitions.actions.submit_heading'))
+                            ->modalDescription(__('resources.transfer_requisitions.actions.submit_description'))
+                            ->modalSubmitActionLabel(__('actions.confirm'))
+                            ->icon(Heroicon::PaperAirplane)
+                            ->color('primary')
+                            ->authorize('submitRequest')
+                            ->visible(fn (TransferRequisition $record) => $record->status === TransferRequisitionStatus::Draft)
+                            ->requiresConfirmation()
+                            ->action(fn (TransferRequisition $record) => app(\App\Services\NegotiationService::class)->submitRequest($record)),
+                    ])->dropdown(false),
 
-                Action::make('openReview')
-                    ->label(__('resources.transfer_requisitions.actions.review'))
-                    ->icon(Heroicon::ChatBubbleLeftRight)
-                    ->color('warning')
-                    ->authorize('negotiate')
-                    ->visible(fn (TransferRequisition $record) => in_array($record->status, [
-                        TransferRequisitionStatus::Requested,
-                        TransferRequisitionStatus::UnderReviewFulfiller,
-                        TransferRequisitionStatus::UnderReviewRequestor,
-                    ], true))
-                    // Negotiation states are NOT editable: TransferRequisitionPolicy::update
-                    // permits Draft only, so this links to the view page (authorized via
-                    // ::view for warehouse members) where the submitRevision / acceptRevision /
-                    // rejectRevision modals live as ViewTransferRequisition::getHeaderActions()
-                    // header actions (§18.2a) — never to the edit route, which would 403
-                    // for these states.
-                    ->url(fn (TransferRequisition $record) => TransferRequisitionResource::getUrl('view', ['record' => $record])),
+                    // ── Section: Review & negotiation ─────────────────────────
+                    ActionGroup::make([
+                        Action::make('openReview')
+                            ->label(__('resources.transfer_requisitions.actions.review'))
+                            ->icon(Heroicon::ChatBubbleLeftRight)
+                            ->color('warning')
+                            ->authorize('negotiate')
+                            ->visible(fn (TransferRequisition $record) => in_array($record->status, [
+                                TransferRequisitionStatus::Requested,
+                                TransferRequisitionStatus::UnderReviewFulfiller,
+                                TransferRequisitionStatus::UnderReviewRequestor,
+                            ], true))
+                            // Negotiation states are NOT editable: TransferRequisitionPolicy::update
+                            // permits Draft only, so this links to the view page (authorized via
+                            // ::view for warehouse members) where the submitRevision / acceptRevision /
+                            // rejectRevision modals live as ViewTransferRequisition::getHeaderActions()
+                            // header actions (§18.2a) — never to the edit route, which would 403
+                            // for these states.
+                            ->url(fn (TransferRequisition $record) => TransferRequisitionResource::getUrl('view', ['record' => $record])),
 
-                Action::make('submitRevision')
-                    ->label(__('resources.transfer_requisitions.actions.propose_revision'))
-                    ->modalHeading(__('resources.transfer_requisitions.actions.propose_revision_heading'))
-                    ->modalDescription(__('resources.transfer_requisitions.actions.propose_revision_description'))
-                    ->icon(Heroicon::ChatBubbleLeftRight)
-                    ->color('warning')
-                    ->authorize('negotiate')
-                    ->visible(fn (TransferRequisition $record) => in_array($record->status, [
-                        TransferRequisitionStatus::Requested,
-                        TransferRequisitionStatus::UnderReviewFulfiller,
-                        TransferRequisitionStatus::UnderReviewRequestor,
-                    ], true))
-                    ->modalWidth(Width::FourExtraLarge)
-                    ->schema(fn (TransferRequisition $record) => TransferRequisitionForm::getRevisionFields($record))
-                    ->action(function (array $data, TransferRequisition $record) {
-                        $item = $record->items()->findOrFail((int) $data['transfer_requisition_item_id']);
+                        Action::make('submitRevision')
+                            ->label(__('resources.transfer_requisitions.actions.propose_revision'))
+                            ->modalHeading(__('resources.transfer_requisitions.actions.propose_revision_heading'))
+                            ->modalDescription(__('resources.transfer_requisitions.actions.propose_revision_description'))
+                            ->icon(Heroicon::ChatBubbleLeftRight)
+                            ->color('warning')
+                            ->authorize('negotiate')
+                            ->visible(fn (TransferRequisition $record) => in_array($record->status, [
+                                TransferRequisitionStatus::Requested,
+                                TransferRequisitionStatus::UnderReviewFulfiller,
+                                TransferRequisitionStatus::UnderReviewRequestor,
+                            ], true))
+                            ->modalWidth(Width::FourExtraLarge)
+                            ->schema(fn (TransferRequisition $record) => TransferRequisitionForm::getRevisionFields($record))
+                            ->action(function (array $data, TransferRequisition $record) {
+                                $item = $record->items()->findOrFail((int) $data['transfer_requisition_item_id']);
 
-                        app(\App\Services\NegotiationService::class)->submitRevision(
-                            item: $item,
-                            substituteVariantId: $data['substitute_product_variant_id'] ?? null,
-                            side: NegotiationSide::from($data['side']),
-                            proposedUnitName: (string) $data['proposed_unit_name'],
-                            proposedQty: (int) $data['proposed_qty'],
-                            negotiationReason: $data['negotiation_reason'] ?? null,
-                            respondsToRevisionId: $data['responds_to_revision_id'] ?? null,
-                        );
+                                app(\App\Services\NegotiationService::class)->submitRevision(
+                                    item: $item,
+                                    substituteVariantId: $data['substitute_product_variant_id'] ?? null,
+                                    side: NegotiationSide::from($data['side']),
+                                    proposedUnitName: (string) $data['proposed_unit_name'],
+                                    proposedQty: (int) $data['proposed_qty'],
+                                    negotiationReason: $data['negotiation_reason'] ?? null,
+                                    respondsToRevisionId: $data['responds_to_revision_id'] ?? null,
+                                );
 
-                        Notification::make()
-                            ->title(__('resources.transfer_requisitions.notifications.revision_submitted'))
-                            ->success()
-                            ->send();
-                    }),
+                                Notification::make()
+                                    ->title(__('resources.transfer_requisitions.notifications.revision_submitted'))
+                                    ->success()
+                                    ->send();
+                            }),
 
-                Action::make('acceptRevision')
-                    ->label(__('resources.transfer_requisitions.actions.accept_revision'))
-                    ->modalHeading(__('resources.transfer_requisitions.actions.accept_revision_heading'))
-                    ->modalDescription(__('resources.transfer_requisitions.actions.accept_revision_description'))
-                    ->modalSubmitActionLabel(__('actions.confirm'))
-                    ->icon(Heroicon::CheckCircle)
-                    ->color('success')
-                    ->authorize('acceptRevision')
-                    ->visible(fn (TransferRequisition $record) => in_array($record->status, [
-                        TransferRequisitionStatus::Requested,
-                        TransferRequisitionStatus::UnderReviewFulfiller,
-                        TransferRequisitionStatus::UnderReviewRequestor,
-                    ], true) && $record->items->flatMap(fn ($item) => $item->revisions)
-                        ->contains(fn ($revision) => $revision->status === RevisionStatus::Pending))
-                    ->schema(fn (TransferRequisition $record) => [
-                        Select::make('revision_id')
-                            ->label(__('resources.transfer_requisitions.fields.revision'))
-                            ->prefixIcon(Heroicon::CheckCircle)
-                            ->columnSpanFull()
-                            ->options(fn () => $record->items
-                                ->flatMap(fn ($item) => $item->revisions
-                                    ->where('status', RevisionStatus::Pending)
-                                    ->mapWithKeys(fn ($revision) => [
-                                        $revision->id => "{$item->productVariant->sku}: {$revision->proposed_qty} {$revision->proposed_unit_name}",
-                                    ]))
-                                ->toArray())
-                            ->required(),
-                    ])
-                    ->action(function (array $data, TransferRequisition $record) {
-                        $revision = TransferRequisitionItemRevision::query()
-                            ->findOrFail((int) $data['revision_id']);
+                        Action::make('acceptRevision')
+                            ->label(__('resources.transfer_requisitions.actions.accept_revision'))
+                            ->modalHeading(__('resources.transfer_requisitions.actions.accept_revision_heading'))
+                            ->modalDescription(__('resources.transfer_requisitions.actions.accept_revision_description'))
+                            ->modalSubmitActionLabel(__('actions.confirm'))
+                            ->icon(Heroicon::CheckCircle)
+                            ->color('success')
+                            ->authorize('acceptRevision')
+                            ->visible(fn (TransferRequisition $record) => in_array($record->status, [
+                                TransferRequisitionStatus::Requested,
+                                TransferRequisitionStatus::UnderReviewFulfiller,
+                                TransferRequisitionStatus::UnderReviewRequestor,
+                            ], true) && $record->items->flatMap(fn ($item) => $item->revisions)
+                                ->contains(fn ($revision) => $revision->status === RevisionStatus::Pending))
+                            ->schema(fn (TransferRequisition $record) => [
+                                Select::make('revision_id')
+                                    ->label(__('resources.transfer_requisitions.fields.revision'))
+                                    ->prefixIcon(Heroicon::CheckCircle)
+                                    ->columnSpanFull()
+                                    ->options(fn () => $record->items
+                                        ->flatMap(fn ($item) => $item->revisions
+                                            ->where('status', RevisionStatus::Pending)
+                                            ->mapWithKeys(fn ($revision) => [
+                                                $revision->id => "{$item->productVariant->sku}: {$revision->proposed_qty} {$revision->proposed_unit_name}",
+                                            ]))
+                                        ->toArray())
+                                    ->required(),
+                            ])
+                            ->action(function (array $data, TransferRequisition $record) {
+                                $revision = TransferRequisitionItemRevision::query()
+                                    ->findOrFail((int) $data['revision_id']);
 
-                        abort_unless(
-                            (int) $revision->item->transfer_requisition_id === (int) $record->id,
-                            403,
-                        );
+                                abort_unless(
+                                    (int) $revision->item->transfer_requisition_id === (int) $record->id,
+                                    403,
+                                );
 
-                        app(\App\Services\NegotiationService::class)->accept($revision);
+                                app(\App\Services\NegotiationService::class)->accept($revision);
 
-                        Notification::make()
-                            ->title(__('resources.transfer_requisitions.notifications.revision_accepted'))
-                            ->success()
-                            ->send();
-                    })
-                    ->requiresConfirmation(),
+                                Notification::make()
+                                    ->title(__('resources.transfer_requisitions.notifications.revision_accepted'))
+                                    ->success()
+                                    ->send();
+                            })
+                            ->requiresConfirmation(),
 
-                Action::make('rejectRevision')
-                    ->label(__('resources.transfer_requisitions.actions.reject_revision'))
-                    ->modalHeading(__('resources.transfer_requisitions.actions.reject_revision_heading'))
-                    ->modalDescription(__('resources.transfer_requisitions.actions.reject_revision_description'))
-                    ->modalSubmitActionLabel(__('actions.confirm'))
-                    ->icon(Heroicon::XCircle)
-                    ->color('danger')
-                    ->authorize('rejectRevision')
-                    ->visible(fn (TransferRequisition $record) => in_array($record->status, [
-                        TransferRequisitionStatus::Requested,
-                        TransferRequisitionStatus::UnderReviewFulfiller,
-                        TransferRequisitionStatus::UnderReviewRequestor,
-                    ], true) && $record->items->flatMap(fn ($item) => $item->revisions)
-                        ->contains(fn ($revision) => $revision->status === RevisionStatus::Pending))
-                    ->schema(fn (TransferRequisition $record) => [
-                        Select::make('revision_id')
-                            ->label(__('resources.transfer_requisitions.fields.revision'))
-                            ->prefixIcon(Heroicon::XCircle)
-                            ->columnSpanFull()
-                            ->options(fn () => $record->items
-                                ->flatMap(fn ($item) => $item->revisions
-                                    ->where('status', RevisionStatus::Pending)
-                                    ->mapWithKeys(fn ($revision) => [
-                                        $revision->id => "{$item->productVariant->sku}: {$revision->proposed_qty} {$revision->proposed_unit_name}",
-                                    ]))
-                                ->toArray())
-                            ->required(),
-                    ])
-                    ->action(function (array $data, TransferRequisition $record) {
-                        $revision = TransferRequisitionItemRevision::query()
-                            ->findOrFail((int) $data['revision_id']);
+                        Action::make('rejectRevision')
+                            ->label(__('resources.transfer_requisitions.actions.reject_revision'))
+                            ->modalHeading(__('resources.transfer_requisitions.actions.reject_revision_heading'))
+                            ->modalDescription(__('resources.transfer_requisitions.actions.reject_revision_description'))
+                            ->modalSubmitActionLabel(__('actions.confirm'))
+                            ->icon(Heroicon::XCircle)
+                            ->color('danger')
+                            ->authorize('rejectRevision')
+                            ->visible(fn (TransferRequisition $record) => in_array($record->status, [
+                                TransferRequisitionStatus::Requested,
+                                TransferRequisitionStatus::UnderReviewFulfiller,
+                                TransferRequisitionStatus::UnderReviewRequestor,
+                            ], true) && $record->items->flatMap(fn ($item) => $item->revisions)
+                                ->contains(fn ($revision) => $revision->status === RevisionStatus::Pending))
+                            ->schema(fn (TransferRequisition $record) => [
+                                Select::make('revision_id')
+                                    ->label(__('resources.transfer_requisitions.fields.revision'))
+                                    ->prefixIcon(Heroicon::XCircle)
+                                    ->columnSpanFull()
+                                    ->options(fn () => $record->items
+                                        ->flatMap(fn ($item) => $item->revisions
+                                            ->where('status', RevisionStatus::Pending)
+                                            ->mapWithKeys(fn ($revision) => [
+                                                $revision->id => "{$item->productVariant->sku}: {$revision->proposed_qty} {$revision->proposed_unit_name}",
+                                            ]))
+                                        ->toArray())
+                                    ->required(),
+                            ])
+                            ->action(function (array $data, TransferRequisition $record) {
+                                $revision = TransferRequisitionItemRevision::query()
+                                    ->findOrFail((int) $data['revision_id']);
 
-                        abort_unless(
-                            (int) $revision->item->transfer_requisition_id === (int) $record->id,
-                            403,
-                        );
+                                abort_unless(
+                                    (int) $revision->item->transfer_requisition_id === (int) $record->id,
+                                    403,
+                                );
 
-                        app(\App\Services\NegotiationService::class)->reject($revision);
+                                app(\App\Services\NegotiationService::class)->reject($revision);
 
-                        Notification::make()
-                            ->title(__('resources.transfer_requisitions.notifications.revision_rejected'))
-                            ->success()
-                            ->send();
-                    })
-                    ->requiresConfirmation(),
+                                Notification::make()
+                                    ->title(__('resources.transfer_requisitions.notifications.revision_rejected'))
+                                    ->success()
+                                    ->send();
+                            })
+                            ->requiresConfirmation(),
+                    ])->dropdown(false),
 
-                Action::make('confirm')
-                    ->label(__('resources.transfer_requisitions.actions.confirm'))
-                    ->modalHeading(__('resources.transfer_requisitions.actions.confirm_heading'))
-                    ->modalDescription(__('resources.transfer_requisitions.actions.confirm_description'))
-                    ->modalSubmitActionLabel(__('actions.confirm'))
-                    ->icon(Heroicon::CheckBadge)
-                    ->color('primary')
-                    ->authorize('confirm')
-                    ->visible(fn (TransferRequisition $record) => in_array($record->status, [
-                        TransferRequisitionStatus::Requested,
-                        TransferRequisitionStatus::UnderReviewFulfiller,
-                        TransferRequisitionStatus::UnderReviewRequestor,
-                    ], true))
-                    ->action(fn (TransferRequisition $record) => app(\App\Services\TransferRequisitionService::class)->confirm($record))
-                    ->requiresConfirmation(),
+                    // ── Section: Fulfillment ──────────────────────────────────
+                    ActionGroup::make([
+                        Action::make('confirm')
+                            ->label(__('resources.transfer_requisitions.actions.confirm'))
+                            ->modalHeading(__('resources.transfer_requisitions.actions.confirm_heading'))
+                            ->modalDescription(__('resources.transfer_requisitions.actions.confirm_description'))
+                            ->modalSubmitActionLabel(__('actions.confirm'))
+                            ->icon(Heroicon::CheckBadge)
+                            ->color('primary')
+                            ->authorize('confirm')
+                            ->visible(fn (TransferRequisition $record) => in_array($record->status, [
+                                TransferRequisitionStatus::Requested,
+                                TransferRequisitionStatus::UnderReviewFulfiller,
+                                TransferRequisitionStatus::UnderReviewRequestor,
+                            ], true))
+                            ->action(fn (TransferRequisition $record) => app(\App\Services\TransferRequisitionService::class)->confirm($record))
+                            ->requiresConfirmation(),
 
-                Action::make('dispatch')
-                    ->label(__('resources.transfer_requisitions.actions.dispatch'))
-                    ->modalHeading(__('resources.transfer_requisitions.actions.dispatch_heading'))
-                    ->modalDescription(__('resources.transfer_requisitions.actions.dispatch_description'))
-                    ->modalSubmitActionLabel(__('actions.confirm'))
-                    ->icon(Heroicon::Truck)
-                    ->color('primary')
-                    ->authorize('dispatch')
-                    ->visible(fn (TransferRequisition $record) => $record->status === TransferRequisitionStatus::Confirmed)
-                    ->action(fn (TransferRequisition $record) => app(\App\Services\InventoryService::class)->dispatchTransfer($record))
-                    ->requiresConfirmation(),
+                        Action::make('dispatch')
+                            ->label(__('resources.transfer_requisitions.actions.dispatch'))
+                            ->modalHeading(__('resources.transfer_requisitions.actions.dispatch_heading'))
+                            ->modalDescription(__('resources.transfer_requisitions.actions.dispatch_description'))
+                            ->modalSubmitActionLabel(__('actions.confirm'))
+                            ->icon(Heroicon::Truck)
+                            ->color('primary')
+                            ->authorize('dispatch')
+                            ->visible(fn (TransferRequisition $record) => $record->status === TransferRequisitionStatus::Confirmed)
+                            ->action(fn (TransferRequisition $record) => app(\App\Services\InventoryService::class)->dispatchTransfer($record))
+                            ->requiresConfirmation(),
 
-                Action::make('scanToReceive')
-                    ->label(__('resources.transfer_requisitions.actions.receive'))
-                    ->icon(Heroicon::QrCode)
-                    ->color('success')
-                    ->authorize('receive')
-                    ->visible(fn (TransferRequisition $record) => in_array($record->status, [
-                        TransferRequisitionStatus::Dispatched,
-                        TransferRequisitionStatus::PartiallyReceived,
-                    ], true))
-                    ->url(fn (TransferRequisition $record) => \Illuminate\Support\Facades\URL::temporarySignedRoute('stn.scan', now()->addDays(7), ['transferRequisition' => $record->getKey()])),
+                        Action::make('scanToReceive')
+                            ->label(__('resources.transfer_requisitions.actions.receive'))
+                            ->icon(Heroicon::QrCode)
+                            ->color('success')
+                            ->authorize('receive')
+                            ->visible(fn (TransferRequisition $record) => in_array($record->status, [
+                                TransferRequisitionStatus::Dispatched,
+                                TransferRequisitionStatus::PartiallyReceived,
+                            ], true))
+                            ->url(fn (TransferRequisition $record) => \Illuminate\Support\Facades\URL::temporarySignedRoute(
+                                'stn.scan',
+                                now()->addDays(7),
+                                ['transferRequisition' => $record->getKey()],
+                            )),
+                    ])->dropdown(false),
 
-                Action::make('recordLoss')
-                    ->label(__('resources.transfer_requisitions.actions.record_loss'))
-                    ->modalHeading(__('resources.transfer_requisitions.actions.record_loss_heading'))
-                    ->modalDescription(__('resources.transfer_requisitions.actions.record_loss_description'))
-                    ->modalSubmitActionLabel(__('actions.confirm'))
-                    ->icon(Heroicon::ExclamationTriangle)
-                    ->color('danger')
-                    ->authorize('recordLoss')
-                    ->visible(fn (TransferRequisition $record) => in_array($record->status, [
-                        TransferRequisitionStatus::Dispatched,
-                        TransferRequisitionStatus::PartiallyReceived,
-                    ], true))
-                    ->modalWidth(Width::Large)
-                    ->schema(fn (TransferRequisition $record) => [
-                        Select::make('transfer_requisition_item_id')
-                            // Loss-modal item picker — loss/ledger label namespace,
-                            // never the revision-negotiation `revision_item` key.
-                            // Requires `resources.loss_ledgers.fields.transfer_requisition_item`
-                            // in the translation catalog (§0A.2a).
-                            ->label(__('resources.loss_ledgers.fields.transfer_requisition_item'))
-                            ->prefixIcon(Heroicon::ClipboardDocumentList)
-                            ->columnSpanFull()
-                            ->options(fn () => $record->items
-                                ->mapWithKeys(fn ($item) => [
-                                    $item->id => $item->productVariant->sku,
-                                ])
-                                ->toArray())
-                            ->required(),
+                    // ── Section: Loss & cancellation ──────────────────────────
+                    ActionGroup::make([
+                        Action::make('recordLoss')
+                            ->label(__('resources.transfer_requisitions.actions.record_loss'))
+                            ->modalHeading(__('resources.transfer_requisitions.actions.record_loss_heading'))
+                            ->modalDescription(__('resources.transfer_requisitions.actions.record_loss_description'))
+                            ->modalSubmitActionLabel(__('actions.confirm'))
+                            ->icon(Heroicon::ExclamationTriangle)
+                            ->color('danger')
+                            ->authorize('recordLoss')
+                            ->visible(fn (TransferRequisition $record) => in_array($record->status, [
+                                TransferRequisitionStatus::Dispatched,
+                                TransferRequisitionStatus::PartiallyReceived,
+                            ], true))
+                            ->modalWidth(Width::Large)
+                            ->schema(fn (TransferRequisition $record) => [
+                                Select::make('transfer_requisition_item_id')
+                                    // Loss-modal item picker — loss/ledger label namespace,
+                                    // never the revision-negotiation `revision_item` key.
+                                    // Requires `resources.loss_ledgers.fields.transfer_requisition_item`
+                                    // in the translation catalog (§0A.2a).
+                                    ->label(__('resources.loss_ledgers.fields.transfer_requisition_item'))
+                                    ->prefixIcon(Heroicon::ClipboardDocumentList)
+                                    ->columnSpanFull()
+                                    ->options(fn () => $record->items
+                                        ->mapWithKeys(fn ($item) => [
+                                            $item->id => $item->productVariant->sku,
+                                        ])
+                                        ->toArray())
+                                    ->required(),
 
-                        TextInput::make('lost_base_qty')
-                            ->label(__('resources.loss_ledgers.fields.lost_base'))
-                            ->prefixIcon(Heroicon::Hashtag)
-                            ->columnSpan(['default' => 1, 'md' => 1])
-                            ->numeric()
-                            ->minValue(0)
-                            ->default(0)
-                            ->required(),
+                                TextInput::make('lost_base_qty')
+                                    ->label(__('resources.loss_ledgers.fields.lost_base'))
+                                    ->prefixIcon(Heroicon::Hashtag)
+                                    ->columnSpan(['default' => 1, 'md' => 1])
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->default(0)
+                                    ->required(),
 
-                        TextInput::make('damaged_base_qty')
-                            ->label(__('resources.loss_ledgers.fields.damaged_base'))
-                            ->prefixIcon(Heroicon::Hashtag)
-                            ->columnSpan(['default' => 1, 'md' => 1])
-                            ->numeric()
-                            ->minValue(0)
-                            ->default(0)
-                            ->required(),
+                                TextInput::make('damaged_base_qty')
+                                    ->label(__('resources.loss_ledgers.fields.damaged_base'))
+                                    ->prefixIcon(Heroicon::Hashtag)
+                                    ->columnSpan(['default' => 1, 'md' => 1])
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->default(0)
+                                    ->required(),
 
-                        Select::make('loss_category')
-                            ->label(__('resources.loss_ledgers.fields.loss_category'))
-                            ->prefixIcon(Heroicon::ExclamationTriangle)
-                            ->columnSpanFull()
-                            ->options(LossCategory::class)
-                            ->required(),
+                                Select::make('loss_category')
+                                    ->label(__('resources.loss_ledgers.fields.loss_category'))
+                                    ->prefixIcon(Heroicon::ExclamationTriangle)
+                                    ->columnSpanFull()
+                                    ->options(LossCategory::class)
+                                    ->required(),
 
-                        Textarea::make('notes')
-                            ->label(__('resources.loss_ledgers.fields.notes'))
-                            // ->prefixIcon(Heroicon::ChatBubbleBottomCenterText)
-                            ->columnSpanFull(),
-                    ])
-                    ->action(function (array $data, TransferRequisition $record) {
-                        app(\App\Services\InventoryService::class)->recordLoss(
-                            $record,
-                            $record->items()->findOrFail((int) $data['transfer_requisition_item_id']),
-                            (int) $data['lost_base_qty'],
-                            (int) $data['damaged_base_qty'],
-                            (string) $data['loss_category'],
-                            $data['notes'] ?? null,
-                        );
+                                Textarea::make('notes')
+                                    ->label(__('resources.loss_ledgers.fields.notes'))
+                                    // ->prefixIcon(Heroicon::ChatBubbleBottomCenterText)
+                                    ->columnSpanFull(),
+                            ])
+                            ->action(function (array $data, TransferRequisition $record) {
+                                app(\App\Services\InventoryService::class)->recordLoss(
+                                    $record,
+                                    $record->items()->findOrFail((int) $data['transfer_requisition_item_id']),
+                                    (int) $data['lost_base_qty'],
+                                    (int) $data['damaged_base_qty'],
+                                    (string) $data['loss_category'],
+                                    $data['notes'] ?? null,
+                                );
 
-                        Notification::make()
-                            ->title(__('resources.transfer_requisitions.notifications.loss_recorded'))
-                            ->success()
-                            ->send();
-                    })
-                    ->requiresConfirmation(),
+                                Notification::make()
+                                    ->title(__('resources.transfer_requisitions.notifications.loss_recorded'))
+                                    ->success()
+                                    ->send();
+                            })
+                            ->requiresConfirmation(),
 
-                Action::make('cancel')
-                    ->label(__('resources.transfer_requisitions.actions.cancel'))
-                    ->modalHeading(__('resources.transfer_requisitions.actions.cancel_heading'))
-                    ->modalDescription(__('resources.transfer_requisitions.actions.cancel_description'))
-                    ->modalSubmitActionLabel(__('actions.confirm'))
-                    ->icon(Heroicon::XMark)
-                    ->color('danger')
-                    ->authorize('cancel')
-                    ->visible(fn (TransferRequisition $record) => $record->canBeCancelled())
-                    ->action(fn (TransferRequisition $record) => app(\App\Services\TransferRequisitionService::class)->cancelRequisition($record))
-                    ->requiresConfirmation(),
+                        Action::make('cancel')
+                            ->label(__('resources.transfer_requisitions.actions.cancel'))
+                            ->modalHeading(__('resources.transfer_requisitions.actions.cancel_heading'))
+                            ->modalDescription(__('resources.transfer_requisitions.actions.cancel_description'))
+                            ->modalSubmitActionLabel(__('actions.confirm'))
+                            ->icon(Heroicon::XMark)
+                            ->color('danger')
+                            ->authorize('cancel')
+                            ->visible(fn (TransferRequisition $record) => $record->canBeCancelled())
+                            ->action(fn (TransferRequisition $record) => app(\App\Services\TransferRequisitionService::class)->cancelRequisition($record))
+                            ->requiresConfirmation(),
+                    ])->dropdown(false),
 
-                DeleteAction::make()
-                    ->icon(Heroicon::Trash)
-                    ->authorize('delete')
-                    ->visible(fn (TransferRequisition $record) => in_array($record->status, [
-                        TransferRequisitionStatus::Draft,
-                        TransferRequisitionStatus::Cancelled,
-                    ], true)),
+                    // ── Section: Destructive ──────────────────────────────────
+                    ActionGroup::make([
+                        DeleteAction::make()
+                            ->icon(Heroicon::Trash)
+                            ->authorize('delete')
+                            ->visible(fn (TransferRequisition $record) => in_array($record->status, [
+                                TransferRequisitionStatus::Draft,
+                                TransferRequisitionStatus::Cancelled,
+                            ], true)),
 
-                RestoreAction::make()->icon(Heroicon::ArrowUturnLeft)->authorize('restore'),
+                        RestoreAction::make()
+                            ->icon(Heroicon::ArrowUturnLeft)
+                            ->authorize('restore'),
 
-                ForceDeleteAction::make()
-                    ->icon(Heroicon::Trash)
-                    ->authorize('forceDelete')
-                    ->visible(fn () => auth()->user()->isAdmin()),
+                        ForceDeleteAction::make()
+                            ->icon(Heroicon::Trash)
+                            ->authorize('forceDelete')
+                            ->visible(fn () => auth()->user()->isAdmin()),
+                    ])->dropdown(false),
+                ])
+                    ->icon(Heroicon::EllipsisVertical)
+                    ->iconButton()
+                    ->size(Size::Small)
+                    ->color('gray')
+                    ->tooltip(__('resources.transfer_requisitions.actions.more_actions'))
+                    ->dropdownAutoPlacement()
+                    ->dropdownWidth(Width::Large),
             ]);
     }
 }
@@ -9200,6 +9259,7 @@ class TransferRequisitionsTable
 namespace App\Filament\Resources\TransferRequisitions\Schemas;
 
 use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\RepeatableEntry\TableColumn;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
@@ -9262,42 +9322,38 @@ class TransferRequisitionInfolist
                     ->columnSpanFull()
                     ->schema([
                         RepeatableEntry::make('items')
+                            ->table([
+                                TableColumn::make(__('resources.transfer_requisitions.fields.original_sku')),
+                                TableColumn::make(__('resources.transfer_requisitions.fields.substitute_sku')),
+                                TableColumn::make(__('resources.transfer_requisitions.fields.requested')),
+                                TableColumn::make(__('resources.transfer_requisitions.fields.approved')),
+                                TableColumn::make(__('resources.transfer_requisitions.fields.shipped_base')),
+                                TableColumn::make(__('resources.transfer_requisitions.fields.received_good_base')),
+                            ])
                             ->schema([
-                                Grid::make(['default' => 1, 'md' => 3, 'xl' => 6])->schema([
-                                    TextEntry::make('productVariant.sku')
-                                        ->label(__('resources.transfer_requisitions.fields.original_sku'))
-                                        ->weight(FontWeight::Bold)
-                                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+                                TextEntry::make('productVariant.sku')
+                                    ->weight(FontWeight::Bold),
 
-                                    TextEntry::make('substituteProductVariant.sku')
-                                        ->label(__('resources.transfer_requisitions.fields.substitute_sku'))
-                                        ->badge()
-                                        ->color('warning')
-                                        ->placeholder(__('common.empty'))
-                                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+                                TextEntry::make('substituteProductVariant.sku')
+                                    ->badge()
+                                    ->color('warning')
+                                    ->placeholder(__('common.empty')),
 
-                                    TextEntry::make('requested_qty')
-                                        ->label(__('resources.transfer_requisitions.fields.requested'))
-                                        ->state(fn ($record) => "{$record->requested_qty} {$record->requested_unit_name}")
-                                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+                                TextEntry::make('requested_qty')
+                                    ->state(fn ($record) => "{$record->requested_qty} {$record->requested_unit_name}"),
 
-                                    TextEntry::make('approved_qty')
-                                        ->label(__('resources.transfer_requisitions.fields.approved'))
-                                        ->state(fn ($record) => $record->approved_qty
-                                            ? "{$record->approved_qty} {$record->approved_unit_name}"
-                                            : __('common.empty'))
-                                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+                                TextEntry::make('approved_qty')
+                                    ->state(fn ($record) => $record->approved_qty
+                                        ? "{$record->approved_qty} {$record->approved_unit_name}"
+                                        : __('common.empty')),
 
-                                    TextEntry::make('shipped_base_qty')
-                                        ->label(__('resources.transfer_requisitions.fields.shipped_base'))
-                                        ->numeric()
-                                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+                                TextEntry::make('shipped_base_qty')
+                                    ->numeric()
+                                    ->alignEnd(),
 
-                                    TextEntry::make('received_good_base_qty')
-                                        ->label(__('resources.transfer_requisitions.fields.received_good_base'))
-                                        ->numeric()
-                                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
-                                ]),
+                                TextEntry::make('received_good_base_qty')
+                                    ->numeric()
+                                    ->alignEnd(),
                             ]),
                     ]),
 
@@ -9308,17 +9364,15 @@ class TransferRequisitionInfolist
                         ->flatMap(fn ($item) => $item->revisions)
                         ->isNotEmpty())
                     ->schema([
-                        // Intentionally nested RepeatableEntry: one entry per
-                        // item, each rendering its HasMany `revisions`
-                        // (`items.revisions` and `items.revisions.user` are
-                        // eager-loaded in
+                        // Nested RepeatableEntry: one entry per item, each
+                        // rendering its HasMany `revisions` (`items.revisions`
+                        // and `items.revisions.user` are eager-loaded in
                         // `TransferRequisitionResource::getEloquentQuery()`).
-                        // Both levels use `RepeatableEntry` per the §14
-                        // convention (never `RepeatEntry`); the single-level
-                        // `RepeatableEntry` + `Grid` line-item pattern used in
-                        // the manifest above and in the DirectTransfer /
-                        // PurchaseOrder / SalesOrder infolists applies to flat
-                        // line items, not to this item → revisions one-to-many.
+                        // The outer `items` level stays a bare `->schema([...])`
+                        // (its cell embeds the nested `revisions` table, which
+                        // does not size well inside a table cell); the inner
+                        // `revisions` level uses `->table([...])->schema([...])`
+                        // like the flat line-item tables.
                         RepeatableEntry::make('items')
                             ->schema([
                                 TextEntry::make('productVariant.sku')
@@ -9327,40 +9381,27 @@ class TransferRequisitionInfolist
 
                                 RepeatableEntry::make('revisions')
                                     ->label(__('resources.transfer_requisitions.fields.revisions'))
+                                    ->table([
+                                        TableColumn::make(__('resources.transfer_requisitions.fields.negotiation_side')),
+                                        TableColumn::make(__('resources.transfer_requisitions.fields.status')),
+                                        TableColumn::make(__('resources.transfer_requisitions.fields.proposed')),
+                                        TableColumn::make(__('resources.transfer_requisitions.fields.proposed_by')),
+                                        TableColumn::make(__('resources.transfer_requisitions.fields.responded_at')),
+                                        TableColumn::make(__('resources.transfer_requisitions.fields.negotiation_reason')),
+                                    ])
                                     ->schema([
-                                        Grid::make(['default' => 1, 'md' => 3, 'xl' => 5])->schema([
-                                            TextEntry::make('side')
-                                                ->label(__('resources.transfer_requisitions.fields.negotiation_side'))
-                                                ->badge()
-                                                ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
-
-                                            TextEntry::make('status')
-                                                ->label(__('resources.transfer_requisitions.fields.status'))
-                                                ->badge()
-                                                ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
-
-                                            TextEntry::make('proposed_qty')
-                                                ->label(__('resources.transfer_requisitions.fields.proposed'))
-                                                ->state(fn ($record) => "{$record->proposed_qty} {$record->proposed_unit_name}")
-                                                ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
-
-                                            TextEntry::make('user.name')
-                                                ->label(__('resources.transfer_requisitions.fields.proposed_by'))
-                                                ->icon(Heroicon::User)
-                                                ->placeholder(__('common.empty'))
-                                                ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
-
-                                            TextEntry::make('responded_at')
-                                                ->label(__('resources.transfer_requisitions.fields.responded_at'))
-                                                ->dateTime('M j, Y H:i')
-                                                ->placeholder(__('resources.transfer_requisitions.placeholders.pending_approval'))
-                                                ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
-
-                                            TextEntry::make('negotiation_reason')
-                                                ->label(__('resources.transfer_requisitions.fields.negotiation_reason'))
-                                                ->placeholder(__('common.empty'))
-                                                ->columnSpanFull(),
-                                        ]),
+                                        TextEntry::make('side')->badge(),
+                                        TextEntry::make('status')->badge(),
+                                        TextEntry::make('proposed_qty')
+                                            ->state(fn ($record) => "{$record->proposed_qty} {$record->proposed_unit_name}"),
+                                        TextEntry::make('user.name')
+                                            ->icon(Heroicon::User)
+                                            ->placeholder(__('common.empty')),
+                                        TextEntry::make('responded_at')
+                                            ->dateTime('M j, Y H:i')
+                                            ->placeholder(__('resources.transfer_requisitions.placeholders.pending_approval')),
+                                        TextEntry::make('negotiation_reason')
+                                            ->placeholder(__('common.empty')),
                                     ]),
                             ]),
                     ]),
@@ -9508,8 +9549,7 @@ class DirectTransferForm
                                 ->required(),
                         ])
                         ->minItems(1)
-                        ->required()
-                        ->dehydrated(),
+                        ->required(),
 
                     Textarea::make('notes')
                         ->label(__('resources.direct_transfers.fields.notes'))
@@ -9533,10 +9573,10 @@ namespace App\Filament\Resources\DirectTransfers\Pages;
 use App\Filament\Resources\DirectTransfers\DirectTransferResource;
 use App\Filament\Resources\DirectTransfers\Schemas\DirectTransferForm;
 use App\Support\GeneratesReferenceCodes;
-use Filament\Schemas\Components\Placeholder;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Resources\Pages\CreateRecord\Concerns\HasWizard;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\View;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
@@ -9568,12 +9608,16 @@ class CreateDirectTransfer extends CreateRecord
                 ->description(__('resources.direct_transfers.steps.review_verify_description'))
                 ->icon(Heroicon::CheckCircle)
                 ->schema([
-                    Placeholder::make('review_summary')
-                        ->columnSpanFull()
-                        ->content(fn (Get $get) => \App\Filament\Support\Wizards\WizardReviewStep::renderSummary(
-                            'filament.wizards.direct-transfer-review',
-                            $get(),
-                        )),
+                    View::make('filament.wizards.direct-transfer-review')
+                        ->viewData(fn (Get $get): array => [
+                            'state' => [
+                                'from_warehouse_id' => $get('from_warehouse_id'),
+                                'to_warehouse_id' => $get('to_warehouse_id'),
+                                'items' => $get('items') ?? [],
+                                'notes' => $get('notes'),
+                            ],
+                        ])
+                        ->columnSpanFull(),
                 ]),
         ];
     }
@@ -9738,6 +9782,7 @@ class DirectTransfersTable
 namespace App\Filament\Resources\DirectTransfers\Schemas;
 
 use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\RepeatableEntry\TableColumn;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
@@ -9796,27 +9841,30 @@ class DirectTransferInfolist
                     ->columnSpanFull()
                     ->schema([
                         RepeatableEntry::make('items')
+                            ->table([
+                                TableColumn::make(__('resources.direct_transfers.fields.sku')),
+                                TableColumn::make(__('resources.direct_transfers.fields.qty')),
+                                TableColumn::make(__('resources.direct_transfers.fields.ratio')),
+                                TableColumn::make(__('resources.direct_transfers.fields.base_qty')),
+                                TableColumn::make(__('resources.direct_transfers.fields.notes')),
+                            ])
                             ->schema([
-                                Grid::make(['default' => 1, 'md' => 3, 'xl' => 5])->schema([
-                                    TextEntry::make('productVariant.sku')
-                                        ->label(__('resources.direct_transfers.fields.sku'))
-                                        ->weight(FontWeight::Bold),
+                                TextEntry::make('productVariant.sku')
+                                    ->weight(FontWeight::Bold),
 
-                                    TextEntry::make('qty')
-                                        ->label(__('resources.direct_transfers.fields.qty'))
-                                        ->state(fn ($record) => "{$record->qty} {$record->unit_name}"),
+                                TextEntry::make('qty')
+                                    ->state(fn ($record) => "{$record->qty} {$record->unit_name}"),
 
-                                    TextEntry::make('unit_ratio')
-                                        ->label(__('resources.direct_transfers.fields.ratio')),
+                                TextEntry::make('unit_ratio')
+                                    ->numeric()
+                                    ->alignEnd(),
 
-                                    TextEntry::make('base_qty')
-                                        ->label(__('resources.direct_transfers.fields.base_qty'))
-                                        ->numeric(),
+                                TextEntry::make('base_qty')
+                                    ->numeric()
+                                    ->alignEnd(),
 
-                                    TextEntry::make('notes')
-                                        ->label(__('resources.direct_transfers.fields.notes'))
-                                        ->placeholder(__('common.empty')),
-                                ]),
+                                TextEntry::make('notes')
+                                    ->placeholder(__('common.empty')),
                             ]),
                     ]),
             ]),
@@ -10241,10 +10289,10 @@ class LossLedgerInfolist
                         TextEntry::make('damaged_base_qty')->label(__('resources.loss_ledgers.fields.damaged_base'))->numeric()->columnSpanFull(),
                         TextEntry::make('unit_cost_price')
                             ->label(__('resources.loss_ledgers.fields.unit_cost_price'))
-                            ->money(config('app.currency'), decimals: 4)->columnSpanFull(),
+                            ->formatStateUsing(fn ($state): string => format_money($state))->columnSpanFull(),
                         TextEntry::make('total_financial_loss')
                             ->label(__('resources.loss_ledgers.fields.total_financial_loss'))
-                            ->money(config('app.currency'), decimals: 4)
+                            ->formatStateUsing(fn ($state): string => format_money($state))
                             ->weight('bold')->columnSpanFull(),
                     ]),
             ]),
@@ -10313,15 +10361,18 @@ class LossLedgersTable
 
                 TextColumn::make('unit_cost_price')
                     ->label(__('resources.loss_ledgers.table.unit_cost'))
-                    ->money(config('app.currency'), decimals: 4)
+                    ->formatStateUsing(fn ($state): string => format_money($state))
                     ->visibleFrom('lg'),
 
                 TextColumn::make('total_financial_loss')
                     ->label(__('resources.loss_ledgers.table.total_loss'))
-                    ->money(config('app.currency'), decimals: 4)
+                    ->formatStateUsing(fn ($state): string => format_money($state))
                     ->weight('bold')
                     ->alignEnd()
-                    ->summarize(Sum::make()->money(config('app.currency'), decimals: 4)),
+                    ->summarize(
+                        Sum::make()
+                            ->formatStateUsing(fn ($state): string => format_money($state))
+                    ),
 
                 TextColumn::make('recordedBy.name')
                     ->label(__('resources.loss_ledgers.table.by'))
@@ -10509,7 +10560,6 @@ class PurchaseOrderForm
                 ])
                 ->minItems(1)
                 ->required()
-                ->dehydrated()
                 ->mutateRelationshipDataBeforeCreateUsing(function (array $data): array {
                     $data['ordered_base_qty'] = (int) $data['ordered_qty'] * (int) $data['ordered_unit_ratio'];
                     return $data;
@@ -10545,10 +10595,10 @@ namespace App\Filament\Resources\PurchaseOrders\Pages;
 use App\Filament\Resources\PurchaseOrders\PurchaseOrderResource;
 use App\Filament\Resources\PurchaseOrders\Schemas\PurchaseOrderForm;
 use App\Support\GeneratesReferenceCodes;
-use Filament\Schemas\Components\Placeholder;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Resources\Pages\CreateRecord\Concerns\HasWizard;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\View;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
@@ -10578,12 +10628,17 @@ class CreatePurchaseOrder extends CreateRecord
                 ->icon(Heroicon::CheckCircle)
                 ->schema([
                     ...PurchaseOrderForm::getReviewFields(),
-                    Placeholder::make('review_summary')
-                        ->columnSpanFull()
-                        ->content(fn (Get $get) => \App\Filament\Support\Wizards\WizardReviewStep::renderSummary(
-                            'filament.wizards.purchase-order-review',
-                            $get(),
-                        )),
+
+                    View::make('filament.wizards.purchase-order-review')
+                        ->viewData(fn (Get $get): array => [
+                            'state' => [
+                                'supplier_id' => $get('supplier_id'),
+                                'warehouse_id' => $get('warehouse_id'),
+                                'items' => $get('items') ?? [],
+                                'notes' => $get('notes'),
+                            ],
+                        ])
+                        ->columnSpanFull(),
                 ]),
         ];
     }
@@ -10623,6 +10678,7 @@ use App\Enums\PurchaseOrderStatus;
 use App\Filament\Resources\PurchaseOrders\PurchaseOrderResource;
 use App\Models\PurchaseOrder;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteAction;
@@ -10631,6 +10687,7 @@ use Filament\Actions\ViewAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Support\Enums\FontWeight;
+use Filament\Support\Enums\Size;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\Layout\Split;
@@ -10729,100 +10786,123 @@ class PurchaseOrdersTable
                     ->visible(fn (PurchaseOrder $record) => $record->status === PurchaseOrderStatus::Draft)
                     ->modalWidth(Width::Large),
 
-                Action::make('orderPurchase')
-                    ->label(__('resources.purchase_orders.actions.order'))
-                    ->modalHeading(__('resources.purchase_orders.actions.order_heading'))
-                    ->modalDescription(__('resources.purchase_orders.actions.order_description'))
-                    ->modalSubmitActionLabel(__('actions.confirm'))
-                    ->icon(Heroicon::PaperAirplane)
-                    ->color('primary')
-                    ->authorize('orderPurchase')
-                    ->visible(fn (PurchaseOrder $record) => $record->status === PurchaseOrderStatus::Draft)
-                    ->requiresConfirmation()
-                    ->action(fn (PurchaseOrder $record) => app(\App\Services\PurchaseService::class)->orderPurchase($record)),
+                ActionGroup::make([
+                    // ── Section: Lifecycle ────────────────────────────────────
+                    ActionGroup::make([
+                        Action::make('orderPurchase')
+                            ->label(__('resources.purchase_orders.actions.order'))
+                            ->modalHeading(__('resources.purchase_orders.actions.order_heading'))
+                            ->modalDescription(__('resources.purchase_orders.actions.order_description'))
+                            ->modalSubmitActionLabel(__('actions.confirm'))
+                            ->icon(Heroicon::PaperAirplane)
+                            ->color('primary')
+                            ->authorize('orderPurchase')
+                            ->visible(fn (PurchaseOrder $record) => $record->status === PurchaseOrderStatus::Draft)
+                            ->requiresConfirmation()
+                            ->action(fn (PurchaseOrder $record) => app(\App\Services\PurchaseService::class)->orderPurchase($record)),
 
-                Action::make('receivePurchase')
-                    ->label(__('resources.purchase_orders.actions.receive'))
-                    ->modalHeading(__('resources.purchase_orders.actions.receive_heading'))
-                    ->modalDescription(__('resources.purchase_orders.actions.receive_description'))
-                    ->modalSubmitActionLabel(__('actions.confirm'))
-                    ->icon(Heroicon::ArchiveBoxArrowDown)
-                    ->color('success')
-                    ->authorize('receivePurchase')
-                    ->visible(fn (PurchaseOrder $record) => in_array($record->status, [
-                        PurchaseOrderStatus::Ordered,
-                        PurchaseOrderStatus::PartiallyReceived,
-                    ], true))
-                    ->modalWidth(Width::FourExtraLarge)
-                    ->schema(fn (PurchaseOrder $record) => collect($record->items)
-                        ->map(function ($item) {
-                            $outstandingBase = $item->outstandingBaseQty();
-                            $outstandingDisplay = $item->ordered_unit_ratio > 1
-                                ? round($outstandingBase / $item->ordered_unit_ratio, 2)
-                                : $outstandingBase;
-                            return TextInput::make("received.{$item->id}")
-                                // Base-unit contract: `PurchaseService::receivePurchase()`
-                                // consumes base quantities, and `default()` /
-                                // `maxValue()` below are base units — so the
-                                // label MUST also render the outstanding in
-                                // base units (never display units) to avoid a
-                                // display→base mismatch at submit time. The
-                                // display-unit equivalent is informational
-                                // helper text only.
-                                ->label(__('resources.purchase_orders.fields.receive_line', [
-                                    'sku'         => $item->productVariant->sku,
-                                    'outstanding' => $outstandingBase,
-                                    'unit'        => $item->productVariant->base_unit_name,
-                                    'base'        => $outstandingBase,
-                                ]))
-                                ->helperText(__('resources.purchase_orders.help.receive_display_equivalent', [
-                                    'display' => $outstandingDisplay,
-                                    'unit'    => $item->ordered_unit_name,
-                                ]))
-                                ->prefixIcon(Heroicon::ArchiveBoxArrowDown)
-                                ->columnSpan(['default' => 1, 'md' => 1])
-                                ->numeric()
-                                ->minValue(0)
-                                ->maxValue($outstandingBase)
-                                ->default($outstandingBase);
-                        })
-                        ->all())
-                    ->action(function (array $data, PurchaseOrder $record) {
-                        $received = collect($data['received'] ?? [])
-                            ->filter(fn ($qty) => (int) $qty > 0)
-                            ->mapWithKeys(fn ($qty, $itemId) => [(int) $itemId => (int) $qty])
-                            ->all();
-                        app(\App\Services\PurchaseService::class)->receivePurchase($record->id, $received);
-                        Notification::make()->title(__('resources.purchase_orders.notifications.received'))->success()->send();
-                    })
-                    ->requiresConfirmation(),
+                        Action::make('receivePurchase')
+                            ->label(__('resources.purchase_orders.actions.receive'))
+                            ->modalHeading(__('resources.purchase_orders.actions.receive_heading'))
+                            ->modalDescription(__('resources.purchase_orders.actions.receive_description'))
+                            ->modalSubmitActionLabel(__('actions.confirm'))
+                            ->icon(Heroicon::ArchiveBoxArrowDown)
+                            ->color('success')
+                            ->authorize('receivePurchase')
+                            ->visible(fn (PurchaseOrder $record) => in_array($record->status, [
+                                PurchaseOrderStatus::Ordered,
+                                PurchaseOrderStatus::PartiallyReceived,
+                            ], true))
+                            ->modalWidth(Width::FourExtraLarge)
+                            ->schema(fn (PurchaseOrder $record) => collect($record->items)
+                                ->map(function ($item) {
+                                    $outstandingBase = $item->outstandingBaseQty();
+                                    $outstandingDisplay = $item->ordered_unit_ratio > 1
+                                        ? round($outstandingBase / $item->ordered_unit_ratio, 2)
+                                        : $outstandingBase;
 
-                Action::make('cancelPurchase')
-                    ->label(__('resources.purchase_orders.actions.cancel'))
-                    ->modalHeading(__('resources.purchase_orders.actions.cancel_heading'))
-                    ->modalDescription(__('resources.purchase_orders.actions.cancel_description'))
-                    ->modalSubmitActionLabel(__('actions.confirm'))
-                    ->icon(Heroicon::XMark)
-                    ->color('danger')
-                    ->authorize('cancelPurchase')
-                    ->visible(fn (PurchaseOrder $record) => $record->canBeCancelled())
-                    ->requiresConfirmation()
-                    ->action(fn (PurchaseOrder $record) => app(\App\Services\PurchaseService::class)->cancelPurchaseOrder($record)),
+                                    return TextInput::make("received.{$item->id}")
+                                        // Base-unit contract: `PurchaseService::receivePurchase()`
+                                        // consumes base quantities, and `default()` /
+                                        // `maxValue()` below are base units — so the
+                                        // label MUST also render the outstanding in
+                                        // base units (never display units) to avoid a
+                                        // display→base mismatch at submit time. The
+                                        // display-unit equivalent is informational
+                                        // helper text only.
+                                        ->label(__('resources.purchase_orders.fields.receive_line', [
+                                            'sku'         => $item->productVariant->sku,
+                                            'outstanding' => $outstandingBase,
+                                            'unit'        => $item->productVariant->base_unit_name,
+                                            'base'        => $outstandingBase,
+                                        ]))
+                                        ->helperText(__('resources.purchase_orders.help.receive_display_equivalent', [
+                                            'display' => $outstandingDisplay,
+                                            'unit'    => $item->ordered_unit_name,
+                                        ]))
+                                        ->prefixIcon(Heroicon::ArchiveBoxArrowDown)
+                                        ->columnSpan(['default' => 1, 'md' => 1])
+                                        ->numeric()
+                                        ->minValue(0)
+                                        ->maxValue($outstandingBase)
+                                        ->default($outstandingBase);
+                                })
+                                ->all())
+                            ->action(function (array $data, PurchaseOrder $record) {
+                                $received = collect($data['received'] ?? [])
+                                    ->filter(fn ($qty) => (int) $qty > 0)
+                                    ->mapWithKeys(fn ($qty, $itemId) => [(int) $itemId => (int) $qty])
+                                    ->all();
 
-                DeleteAction::make()
-                    ->icon(Heroicon::Trash)
-                    ->authorize('delete')
-                    ->visible(fn (PurchaseOrder $record) => in_array($record->status, [
-                        PurchaseOrderStatus::Draft,
-                        PurchaseOrderStatus::Cancelled,
-                    ], true)),
+                                app(\App\Services\PurchaseService::class)->receivePurchase($record->id, $received);
 
-                RestoreAction::make()->icon(Heroicon::ArrowUturnLeft)->authorize('restore'),
+                                Notification::make()
+                                    ->title(__('resources.purchase_orders.notifications.received'))
+                                    ->success()
+                                    ->send();
+                            })
+                            ->requiresConfirmation(),
 
-                ForceDeleteAction::make()
-                    ->icon(Heroicon::Trash)
-                    ->authorize('forceDelete')
-                    ->visible(fn () => auth()->user()->isAdmin()),
+                        Action::make('cancelPurchase')
+                            ->label(__('resources.purchase_orders.actions.cancel'))
+                            ->modalHeading(__('resources.purchase_orders.actions.cancel_heading'))
+                            ->modalDescription(__('resources.purchase_orders.actions.cancel_description'))
+                            ->modalSubmitActionLabel(__('actions.confirm'))
+                            ->icon(Heroicon::XMark)
+                            ->color('danger')
+                            ->authorize('cancelPurchase')
+                            ->visible(fn (PurchaseOrder $record) => $record->canBeCancelled())
+                            ->requiresConfirmation()
+                            ->action(fn (PurchaseOrder $record) => app(\App\Services\PurchaseService::class)->cancelPurchaseOrder($record)),
+                    ])->dropdown(false),
+
+                    // ── Section: Destructive ──────────────────────────────────
+                    ActionGroup::make([
+                        DeleteAction::make()
+                            ->icon(Heroicon::Trash)
+                            ->authorize('delete')
+                            ->visible(fn (PurchaseOrder $record) => in_array($record->status, [
+                                PurchaseOrderStatus::Draft,
+                                PurchaseOrderStatus::Cancelled,
+                            ], true)),
+
+                        RestoreAction::make()
+                            ->icon(Heroicon::ArrowUturnLeft)
+                            ->authorize('restore'),
+
+                        ForceDeleteAction::make()
+                            ->icon(Heroicon::Trash)
+                            ->authorize('forceDelete')
+                            ->visible(fn () => auth()->user()->isAdmin()),
+                    ])->dropdown(false),
+                ])
+                    ->icon(Heroicon::EllipsisVertical)
+                    ->iconButton()
+                    ->size(Size::Small)
+                    ->color('gray')
+                    ->tooltip(__('resources.purchase_orders.actions.more_actions'))
+                    ->dropdownAutoPlacement()
+                    ->dropdownWidth(Width::Large),
             ]);
     }
 }
@@ -10834,6 +10914,7 @@ class PurchaseOrdersTable
 namespace App\Filament\Resources\PurchaseOrders\Schemas;
 
 use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\RepeatableEntry\TableColumn;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
@@ -10891,20 +10972,30 @@ class PurchaseOrderInfolist
                     ->columnSpanFull()
                     ->schema([
                         RepeatableEntry::make('items')
+                            ->table([
+                                TableColumn::make(__('resources.purchase_orders.fields.sku')),
+                                TableColumn::make(__('resources.purchase_orders.fields.product')),
+                                TableColumn::make(__('resources.purchase_orders.fields.ordered_base')),
+                                TableColumn::make(__('resources.purchase_orders.fields.received_base')),
+                                TableColumn::make(__('resources.purchase_orders.fields.unit_cost')),
+                            ])
                             ->schema([
-                                Grid::make(['default' => 1, 'md' => 3, 'xl' => 6])->schema([
-                                    TextEntry::make('productVariant.sku')->label(__('resources.purchase_orders.fields.sku'))->weight(FontWeight::Bold)
-                                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
-                                    TextEntry::make('productVariant.name')->label(__('resources.purchase_orders.fields.product'))
-                                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 2]),
-                                    TextEntry::make('ordered_base_qty')->label(__('resources.purchase_orders.fields.ordered_base'))->numeric()
-                                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
-                                    TextEntry::make('received_base_qty')->label(__('resources.purchase_orders.fields.received_base'))->numeric()
-                                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
-                                    TextEntry::make('unit_cost_price')->money(config('app.currency'), decimals: 4)
-                                        ->label(__('resources.purchase_orders.fields.unit_cost'))
-                                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
-                                ]),
+                                TextEntry::make('productVariant.sku')
+                                    ->weight(FontWeight::Bold),
+
+                                TextEntry::make('productVariant.name'),
+
+                                TextEntry::make('ordered_base_qty')
+                                    ->numeric()
+                                    ->alignEnd(),
+
+                                TextEntry::make('received_base_qty')
+                                    ->numeric()
+                                    ->alignEnd(),
+
+                                TextEntry::make('unit_cost_price')
+                                    ->formatStateUsing(fn ($state): string => format_money($state))
+                                    ->alignEnd(),
                             ]),
                     ]),
             ]),
@@ -11060,7 +11151,7 @@ class SalesOrderForm
                         ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                         ->content(fn (Get $get) => $get('_current_sale_price_preview') ?? __('common.empty')),
                 ])
-                ->minItems(1)->required()->dehydrated()
+                ->minItems(1)->required()
                 ->mutateRelationshipDataBeforeCreateUsing(function (array $data): array {
                     $data['base_qty'] = (int) $data['qty'] * (int) $data['unit_ratio'];
                     return $data;
@@ -11083,10 +11174,11 @@ namespace App\Filament\Resources\SalesOrders\Pages;
 
 use App\Filament\Resources\SalesOrders\SalesOrderResource;
 use App\Filament\Resources\SalesOrders\Schemas\SalesOrderForm;
+use App\Livewire\Wizards\WizardReviewSummary;
 use App\Support\GeneratesReferenceCodes;
-use Filament\Schemas\Components\Placeholder;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Resources\Pages\CreateRecord\Concerns\HasWizard;
+use Filament\Schemas\Components\Livewire;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Support\Enums\Width;
@@ -11116,12 +11208,10 @@ class CreateSalesOrder extends CreateRecord
                 ->description(__('resources.sales_orders.steps.review_verify_description'))
                 ->icon(Heroicon::CheckCircle)
                 ->schema([
-                    Placeholder::make('review_summary')
-                        ->columnSpanFull()
-                        ->content(fn (Get $get) => \App\Filament\Support\Wizards\WizardReviewStep::renderSummary(
-                            'filament.wizards.sales-order-review',
-                            $get(),
-                        )),
+                    Livewire::make(WizardReviewSummary::class, fn (Get $get): array => [
+                        'view' => 'filament.wizards.sales-order-review',
+                        'state' => $get(),
+                    ])->columnSpanFull(),
                 ]),
         ];
     }
@@ -11161,14 +11251,18 @@ use App\Enums\SalesOrderStatus;
 use App\Filament\Resources\SalesOrders\SalesOrderResource;
 use App\Models\SalesOrder;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
+use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\RestoreAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Support\Enums\FontWeight;
+use Filament\Support\Enums\Size;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\Layout\Split;
@@ -11240,174 +11334,199 @@ class SalesOrdersTable
             ->paginated([12, 24, 48])
             ->recordUrl(fn (SalesOrder $record) => SalesOrderResource::getUrl('view', ['record' => $record]))
             ->recordActions([
-                \Filament\Actions\ViewAction::make()
+                ViewAction::make()
                     ->icon(Heroicon::Eye),
 
-                \Filament\Actions\EditAction::make()
+                EditAction::make()
                     ->icon(Heroicon::PencilSquare)
                     ->authorize('update')
                     ->visible(fn (SalesOrder $record) => $record->status === SalesOrderStatus::Draft)
                     ->modalWidth(Width::Large),
 
-                Action::make('confirmSalesOrder')
-                    ->label(__('resources.sales_orders.actions.confirm'))
-                    ->modalHeading(__('resources.sales_orders.actions.confirm_heading'))
-                    ->modalDescription(__('resources.sales_orders.actions.confirm_description'))
-                    ->modalSubmitActionLabel(__('actions.confirm'))
-                    ->icon(Heroicon::CheckCircle)
-                    ->color('primary')
-                    ->authorize('confirmSalesOrder')
-                    ->visible(fn (SalesOrder $record) => $record->status === SalesOrderStatus::Draft)
-                    ->requiresConfirmation()
-                    ->action(fn (SalesOrder $record) => app(\App\Services\SalesService::class)->confirmSalesOrder($record)),
+                ActionGroup::make([
+                    // ── Section: Lifecycle ────────────────────────────────────
+                    ActionGroup::make([
+                        Action::make('confirmSalesOrder')
+                            ->label(__('resources.sales_orders.actions.confirm'))
+                            ->modalHeading(__('resources.sales_orders.actions.confirm_heading'))
+                            ->modalDescription(__('resources.sales_orders.actions.confirm_description'))
+                            ->modalSubmitActionLabel(__('actions.confirm'))
+                            ->icon(Heroicon::CheckCircle)
+                            ->color('primary')
+                            ->authorize('confirmSalesOrder')
+                            ->visible(fn (SalesOrder $record) => $record->status === SalesOrderStatus::Draft)
+                            ->requiresConfirmation()
+                            ->action(fn (SalesOrder $record) => app(\App\Services\SalesService::class)->confirmSalesOrder($record)),
 
-                Action::make('dispatchSale')
-                    ->label(__('resources.sales_orders.actions.dispatch'))
-                    ->modalHeading(__('resources.sales_orders.actions.dispatch_heading'))
-                    ->modalDescription(__('resources.sales_orders.actions.dispatch_description'))
-                    ->modalSubmitActionLabel(__('actions.confirm'))
-                    ->icon(Heroicon::Truck)
-                    ->color('success')
-                    ->authorize('dispatchSale')
-                    ->visible(fn (SalesOrder $record) => in_array($record->status, [
-                        SalesOrderStatus::Confirmed,
-                        SalesOrderStatus::PartiallyDispatched,
-                    ], true))
-                    ->modalWidth(Width::FourExtraLarge)
-                    ->schema(function (SalesOrder $record) {
-                        $variantIds = $record->items->pluck('product_variant_id')->unique()->all();
+                        Action::make('dispatchSale')
+                            ->label(__('resources.sales_orders.actions.dispatch'))
+                            ->modalHeading(__('resources.sales_orders.actions.dispatch_heading'))
+                            ->modalDescription(__('resources.sales_orders.actions.dispatch_description'))
+                            ->modalSubmitActionLabel(__('actions.confirm'))
+                            ->icon(Heroicon::Truck)
+                            ->color('success')
+                            ->authorize('dispatchSale')
+                            ->visible(fn (SalesOrder $record) => in_array($record->status, [
+                                SalesOrderStatus::Confirmed,
+                                SalesOrderStatus::PartiallyDispatched,
+                            ], true))
+                            ->modalWidth(Width::FourExtraLarge)
+                            ->schema(function (SalesOrder $record) {
+                                $variantIds = $record->items->pluck('product_variant_id')->unique()->all();
 
-                        // Exclude this order's own reservation.
-                        $availableByVariant = \App\Models\ProductVariant::batchAvailableQuantity(
-                            $variantIds,
-                            $record->warehouse_id,
-                            $record->id,
-                        );
+                                // Exclude this order's own reservation.
+                                $availableByVariant = \App\Models\ProductVariant::batchAvailableQuantity(
+                                    $variantIds,
+                                    $record->warehouse_id,
+                                    $record->id,
+                                );
 
-                        return collect($record->items)
-                            ->map(function ($item) use ($availableByVariant) {
-                                $available = $availableByVariant[$item->product_variant_id] ?? 0;
-                                $safeMax = min($item->outstandingBaseQty(), max(0, $available));
+                                return collect($record->items)
+                                    ->map(function ($item) use ($availableByVariant) {
+                                        $available = $availableByVariant[$item->product_variant_id] ?? 0;
+                                        $safeMax = min($item->outstandingBaseQty(), max(0, $available));
 
-                                $helperText = null;
-                                if ($available === 0) {
-                                    $helperText = __('resources.sales_orders.help.no_stock');
-                                } elseif ($available < $item->outstandingBaseQty()) {
-                                    $helperText = __('resources.sales_orders.help.insufficient_stock');
-                                }
+                                        $helperText = null;
+                                        if ($available === 0) {
+                                            $helperText = __('resources.sales_orders.help.no_stock');
+                                        } elseif ($available < $item->outstandingBaseQty()) {
+                                            $helperText = __('resources.sales_orders.help.insufficient_stock');
+                                        }
 
-                                return TextInput::make("dispatch.{$item->id}")
-                                    ->label(__('resources.sales_orders.fields.dispatch_line', [
-                                        'sku'         => $item->productVariant->sku,
-                                        'outstanding' => $item->outstandingBaseQty(),
-                                        'unit'        => $item->unit_name,
-                                        'available'   => $available,
-                                    ]))
-                                    ->prefixIcon(Heroicon::Truck)
+                                        return TextInput::make("dispatch.{$item->id}")
+                                            ->label(__('resources.sales_orders.fields.dispatch_line', [
+                                                'sku'         => $item->productVariant->sku,
+                                                'outstanding' => $item->outstandingBaseQty(),
+                                                'unit'        => $item->unit_name,
+                                                'available'   => $available,
+                                            ]))
+                                            ->prefixIcon(Heroicon::Truck)
+                                            ->columnSpan(['default' => 1, 'md' => 1])
+                                            ->numeric()
+                                            ->minValue(0)
+                                            ->maxValue($safeMax)
+                                            ->default($safeMax)
+                                            ->helperText($helperText);
+                                    })
+                                    ->all();
+                            })
+                            ->action(function (array $data, SalesOrder $record) {
+                                $dispatch = collect($data['dispatch'] ?? [])
+                                    ->filter(fn ($qty) => (int) $qty > 0)
+                                    ->mapWithKeys(fn ($qty, $itemId) => [(int) $itemId => (int) $qty])
+                                    ->all();
+
+                                app(\App\Services\SalesService::class)->dispatchSale($record->id, $dispatch);
+
+                                Notification::make()
+                                    ->title(__('resources.sales_orders.notifications.dispatched'))
+                                    ->success()
+                                    ->send();
+                            })
+                            ->requiresConfirmation(),
+
+                        Action::make('recordReturn')
+                            ->label(__('resources.sales_orders.actions.return'))
+                            ->modalHeading(__('resources.sales_orders.actions.return_heading'))
+                            ->modalDescription(__('resources.sales_orders.actions.return_description'))
+                            ->modalSubmitActionLabel(__('actions.confirm'))
+                            ->icon(Heroicon::ArrowUturnLeft)
+                            ->color('warning')
+                            ->authorize('recordSalesReturn')
+                            ->visible(fn (SalesOrder $record) => $record->items->contains(fn ($item) => $item->dispatched_base_qty > 0))
+                            ->modalWidth(Width::Large)
+                            ->schema([
+                                Select::make('sales_order_item_id')
+                                    ->label(__('resources.sales_orders.fields.line_item'))
+                                    ->prefixIcon(Heroicon::ClipboardDocumentList)
+                                    ->columnSpan(['default' => 1, 'md' => 1])
+                                    ->options(fn (SalesOrder $record) => $record->items
+                                        ->where('dispatched_base_qty', '>', 0)
+                                        ->mapWithKeys(fn ($item) => [
+                                            $item->id => __('resources.sales_orders.fields.return_option', [
+                                                'sku'        => $item->productVariant->sku,
+                                                'dispatched' => $item->dispatched_base_qty,
+                                                'returned'   => $item->alreadyReturnedBaseQty(),
+                                            ]),
+                                        ]))
+                                    ->required()
+                                    ->live(),
+
+                                TextInput::make('returned_base_qty')
+                                    ->label(__('resources.sales_orders.fields.returned_qty_base'))
+                                    ->prefixIcon(Heroicon::Hashtag)
                                     ->columnSpan(['default' => 1, 'md' => 1])
                                     ->numeric()
-                                    ->minValue(0)
-                                    ->maxValue($safeMax)
-                                    ->default($safeMax)
-                                    ->helperText($helperText);
+                                    ->minValue(1)
+                                    ->maxValue(function (\Filament\Schemas\Components\Utilities\Get $get, SalesOrder $record) {
+                                        $itemId = $get('sales_order_item_id');
+                                        if (! $itemId) {
+                                            return null;
+                                        }
+                                        $item = $record->items->firstWhere('id', (int) $itemId);
+                                        return $item ? ($item->dispatched_base_qty - $item->alreadyReturnedBaseQty()) : null;
+                                    })
+                                    ->required(),
+
+                                Textarea::make('notes')
+                                    ->label(__('resources.sales_orders.fields.notes'))
+                                    // ->prefixIcon(Heroicon::ChatBubbleBottomCenterText)
+                                    ->columnSpanFull(),
+                            ])
+                            ->action(function (array $data) {
+                                app(\App\Services\SalesService::class)->recordSalesReturn(
+                                    (int) $data['sales_order_item_id'],
+                                    (int) $data['returned_base_qty'],
+                                    $data['notes'] ?? null,
+                                );
+
+                                Notification::make()
+                                    ->title(__('resources.sales_orders.notifications.return_recorded'))
+                                    ->success()
+                                    ->send();
                             })
-                            ->all();
-                    })
-                    ->action(function (array $data, SalesOrder $record) {
-                        $dispatch = collect($data['dispatch'] ?? [])
-                            ->filter(fn ($qty) => (int) $qty > 0)
-                            ->mapWithKeys(fn ($qty, $itemId) => [(int) $itemId => (int) $qty])
-                            ->all();
+                            ->requiresConfirmation(),
 
-                        app(\App\Services\SalesService::class)->dispatchSale($record->id, $dispatch);
-                        Notification::make()->title(__('resources.sales_orders.notifications.dispatched'))->success()->send();
-                    })
-                    ->requiresConfirmation(),
+                        Action::make('cancelSalesOrder')
+                            ->label(__('resources.sales_orders.actions.cancel'))
+                            ->modalHeading(__('resources.sales_orders.actions.cancel_heading'))
+                            ->modalDescription(__('resources.sales_orders.actions.cancel_description'))
+                            ->modalSubmitActionLabel(__('actions.confirm'))
+                            ->icon(Heroicon::XMark)
+                            ->color('danger')
+                            ->authorize('cancelSalesOrder')
+                            ->visible(fn (SalesOrder $record) => $record->canBeCancelled())
+                            ->requiresConfirmation()
+                            ->action(fn (SalesOrder $record) => app(\App\Services\SalesService::class)->cancelSalesOrder($record)),
+                    ])->dropdown(false),
 
-                Action::make('recordReturn')
-                    ->label(__('resources.sales_orders.actions.return'))
-                    ->modalHeading(__('resources.sales_orders.actions.return_heading'))
-                    ->modalDescription(__('resources.sales_orders.actions.return_description'))
-                    ->modalSubmitActionLabel(__('actions.confirm'))
-                    ->icon(Heroicon::ArrowUturnLeft)
-                    ->color('warning')
-                    ->authorize('recordSalesReturn')
-                    ->visible(fn (SalesOrder $record) => $record->items->contains(fn ($item) => $item->dispatched_base_qty > 0))
-                    ->modalWidth(Width::Large)
-                    ->schema([
-                        Select::make('sales_order_item_id')
-                            ->label(__('resources.sales_orders.fields.line_item'))
-                            ->prefixIcon(Heroicon::ClipboardDocumentList)
-                            ->columnSpan(['default' => 1, 'md' => 1])
-                            ->options(fn (SalesOrder $record) => $record->items
-                                ->where('dispatched_base_qty', '>', 0)
-                                ->mapWithKeys(fn ($item) => [
-                                    $item->id => __('resources.sales_orders.fields.return_option', [
-                                        'sku'        => $item->productVariant->sku,
-                                        'dispatched' => $item->dispatched_base_qty,
-                                        'returned'   => $item->alreadyReturnedBaseQty(),
-                                    ]),
-                                ]))
-                            ->required()
-                            ->live(),
+                    // ── Section: Destructive ──────────────────────────────────
+                    ActionGroup::make([
+                        DeleteAction::make()
+                            ->icon(Heroicon::Trash)
+                            ->authorize('delete')
+                            ->visible(fn (SalesOrder $record) => in_array($record->status, [
+                                SalesOrderStatus::Draft,
+                                SalesOrderStatus::Cancelled,
+                            ], true)),
 
-                        TextInput::make('returned_base_qty')
-                            ->label(__('resources.sales_orders.fields.returned_qty_base'))
-                            ->prefixIcon(Heroicon::Hashtag)
-                            ->columnSpan(['default' => 1, 'md' => 1])
-                            ->numeric()
-                            ->minValue(1)
-                            ->maxValue(function (\Filament\Schemas\Components\Utilities\Get $get, SalesOrder $record) {
-                                $itemId = $get('sales_order_item_id');
-                                if (! $itemId) {
-                                    return null;
-                                }
-                                $item = $record->items->firstWhere('id', (int) $itemId);
-                                return $item ? ($item->dispatched_base_qty - $item->alreadyReturnedBaseQty()) : null;
-                            })
-                            ->required(),
+                        RestoreAction::make()
+                            ->icon(Heroicon::ArrowUturnLeft)
+                            ->authorize('restore'),
 
-                        Textarea::make('notes')
-                            ->label(__('resources.sales_orders.fields.notes'))
-                            // ->prefixIcon(Heroicon::ChatBubbleBottomCenterText)
-                            ->columnSpanFull(),
-                    ])
-                    ->action(function (array $data) {
-                        app(\App\Services\SalesService::class)->recordSalesReturn(
-                            (int) $data['sales_order_item_id'],
-                            (int) $data['returned_base_qty'],
-                            $data['notes'] ?? null,
-                        );
-                        Notification::make()->title(__('resources.sales_orders.notifications.return_recorded'))->success()->send();
-                    })
-                    ->requiresConfirmation(),
-
-                Action::make('cancelSalesOrder')
-                    ->label(__('resources.sales_orders.actions.cancel'))
-                    ->modalHeading(__('resources.sales_orders.actions.cancel_heading'))
-                    ->modalDescription(__('resources.sales_orders.actions.cancel_description'))
-                    ->modalSubmitActionLabel(__('actions.confirm'))
-                    ->icon(Heroicon::XMark)
-                    ->color('danger')
-                    ->authorize('cancelSalesOrder')
-                    ->visible(fn (SalesOrder $record) => $record->canBeCancelled())
-                    ->requiresConfirmation()
-                    ->action(fn (SalesOrder $record) => app(\App\Services\SalesService::class)->cancelSalesOrder($record)),
-
-                DeleteAction::make()
-                    ->icon(Heroicon::Trash)
-                    ->authorize('delete')
-                    ->visible(fn (SalesOrder $record) => in_array($record->status, [
-                        SalesOrderStatus::Draft,
-                        SalesOrderStatus::Cancelled,
-                    ], true)),
-
-                RestoreAction::make()->icon(Heroicon::ArrowUturnLeft)->authorize('restore'),
-
-                ForceDeleteAction::make()
-                    ->icon(Heroicon::Trash)
-                    ->authorize('forceDelete')
-                    ->visible(fn () => auth()->user()->isAdmin()),
+                        ForceDeleteAction::make()
+                            ->icon(Heroicon::Trash)
+                            ->authorize('forceDelete')
+                            ->visible(fn () => auth()->user()->isAdmin()),
+                    ])->dropdown(false),
+                ])
+                    ->icon(Heroicon::EllipsisVertical)
+                    ->iconButton()
+                    ->size(Size::Small)
+                    ->color('gray')
+                    ->tooltip(__('resources.sales_orders.actions.more_actions'))
+                    ->dropdownAutoPlacement()
+                    ->dropdownWidth(Width::Large),
             ]);
     }
 }
@@ -11419,6 +11538,7 @@ class SalesOrdersTable
 namespace App\Filament\Resources\SalesOrders\Schemas;
 
 use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\RepeatableEntry\TableColumn;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
@@ -11471,20 +11591,30 @@ class SalesOrderInfolist
                     ->columnSpanFull()
                     ->schema([
                         RepeatableEntry::make('items')
+                            ->table([
+                                TableColumn::make(__('resources.sales_orders.fields.sku')),
+                                TableColumn::make(__('resources.sales_orders.fields.product')),
+                                TableColumn::make(__('resources.sales_orders.fields.ordered_base')),
+                                TableColumn::make(__('resources.sales_orders.fields.dispatched_base')),
+                                TableColumn::make(__('resources.sales_orders.fields.snapshot_price')),
+                            ])
                             ->schema([
-                                Grid::make(['default' => 1, 'md' => 3, 'xl' => 6])->schema([
-                                    TextEntry::make('productVariant.sku')->label(__('resources.sales_orders.fields.sku'))->weight(FontWeight::Bold)
-                                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
-                                    TextEntry::make('productVariant.name')->label(__('resources.sales_orders.fields.product'))
-                                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 2]),
-                                    TextEntry::make('base_qty')->label(__('resources.sales_orders.fields.ordered_base'))->numeric()
-                                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
-                                    TextEntry::make('dispatched_base_qty')->label(__('resources.sales_orders.fields.dispatched_base'))->numeric()
-                                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
-                                    TextEntry::make('unit_sale_price_snapshot')->label(__('resources.sales_orders.fields.snapshot_price'))
-                                        ->money(config('app.currency'), decimals: 4)
-                                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
-                                ]),
+                                TextEntry::make('productVariant.sku')
+                                    ->weight(FontWeight::Bold),
+
+                                TextEntry::make('productVariant.name'),
+
+                                TextEntry::make('base_qty')
+                                    ->numeric()
+                                    ->alignEnd(),
+
+                                TextEntry::make('dispatched_base_qty')
+                                    ->numeric()
+                                    ->alignEnd(),
+
+                                TextEntry::make('unit_sale_price_snapshot')
+                                    ->formatStateUsing(fn ($state): string => format_money($state))
+                                    ->alignEnd(),
                             ]),
                     ]),
             ]),
@@ -12552,6 +12682,7 @@ Split::make([...])->from('md')    // side-by-side within a Stack, stacks on mobi
 5. **Card tables declare no bulk actions** (F30). The native renderer does not render per-card checkboxes. To enable bulk selection on card tables, install `mkdev-grid-card-layout` and add the corresponding `BulkActionGroup` per resource.
 6. **Signed quantity columns are color-coded** (`success` for positive, `danger` for negative).
 7. **Audit filters are policy-gated, never visibility-gated.**
+8. **Record-action alignment is global, not per-resource.** `Table::configureUsing()` in `AppServiceProvider::configureTable()` (§17.2) sets `->recordActionsAlignment('end')` for every table. No table sets it individually. `RecordActionsPosition::BeforeColumns` is NOT used anywhere.
 
 ### 7N.6 Plugin Option
 
@@ -12595,7 +12726,7 @@ Every form field declares `->columnSpan(['default' => X, 'md' => Y, 'xl' => Z])`
 
 ### 7O.4 Infolists
 
-Infolists use `Grid::make(['default' => 1, 'md' => 3, 'xl' => 3])` as outer wrapper. Document profile sections occupy `columnSpan=2`; sign-off sections occupy `columnSpan=1`. Line-item repeatable entries use `Grid::make(['default' => 1, 'md' => 3, 'xl' => 6])` (or `xl=5` for direct transfers).
+Infolists use `Grid::make(['default' => 1, 'md' => 3, 'xl' => 3])` as outer wrapper. Document profile sections occupy `columnSpan=2`; sign-off sections occupy `columnSpan=1`. Line-item repeatable entries use `RepeatableEntry::make(...)->table([TableColumn::make(...), ...])->schema([TextEntry::make(...), ...])` (flat line items); numeric entries carry `->alignEnd()`. Nested item→revisions repeatables likewise use `->table([...])` for the inner level.
 
 ### 7O.5 Dashboard Widgets
 
@@ -14917,7 +15048,7 @@ The Council may implement technical integrity fixes without further product clar
 | **`InTransit` rows transition to `Cleared` / `Lost`** | ✅ |
 | **First-scan detection uses idempotency table, not `cleared_at` on `in_transits`** | ✅ |
 | ScanToReceiveAction named `scanToReceive` (camelCase) | ✅ |
-| All wizard review steps use `WizardReviewStep` | ✅ |
+| Wizard review steps render `filament.wizards.*` via `View::make()->viewData()` (3 pages) or `Livewire::make(WizardReviewSummary::class)` (SalesOrder) — no `WizardReviewStep` renderer | ✅ |
 | `RepeatableEntry` (not `RepeatEntry`) in all infolists | ✅ |
 | `SoftDeletingScope` imported in `getEloquentQuery()` | ✅ |
 | Enums route `getLabel()` through `__()` | ✅ |
@@ -14933,7 +15064,7 @@ The Council may implement technical integrity fixes without further product clar
 | **Bulk actions omitted from all card tables (F30)** | ✅ |
 | Section/Grid/Wizard from `Filament\Schemas\Components\*` | ✅ |
 | `Get` from `Filament\Schemas\Components\Utilities\Get` | ✅ |
-| `->money(config('app.currency'))` on all money columns | ✅ |
+| Money columns use `format_money($state)` for `decimal(15,4)` fields (4-decimal); plain `->money(config('app.currency'))` (locale-default 2) where intended; no `decimals:` argument | ✅ |
 | `$navigationGroup` / `$navigationSort` specified per resource | ✅ |
 | `->strictAuthorization()` mandated in panel provider | ✅ |
 | Resource classes use thin delegation pattern | ✅ |
@@ -14950,7 +15081,7 @@ The Council may implement technical integrity fixes without further product clar
 | `ext-bcmath` declared as required PHP extension | ✅ |
 | LowStockAlertsWidget scaling risk documented as accepted | ✅ |
 | All Actions use `->schema()`, zero `->form()` calls | ✅ |
-| Wizard review steps use `Placeholder` component | ✅ |
+| Wizard review steps use `View::make()->viewData()` / `Livewire::make()` (not `Placeholder`) | ✅ |
 | `createOptionForm` auto-selects new option after save | ✅ |
 | PurchaseOrderPolicy, SalesOrderPolicy, SupplierPolicy, CustomerPolicy, **ProductPolicy**, WarehousePolicy, UserPolicy, **DirectTransferPolicy** exist | ✅ |
 | No `->visible()` closure re-derives a permission decision | ✅ |
@@ -14963,7 +15094,7 @@ The Council may implement technical integrity fixes without further product clar
 | `getSteps()` returns `array<Step>` on all wizard pages | ✅ |
 | Resource `form()` provides flat fields for Edit page | ✅ |
 | Public static field helpers extracted on all wizard form classes | ✅ |
-| Relationship-bound repeaters marked `->dehydrated()` | ✅ |
+| Relationship-bound repeaters do NOT declare `->dehydrated()` (F17) | ✅ |
 | `mutateRelationshipDataBeforeCreateUsing()` fires per item | ✅ |
 | `mutateRelationshipDataBeforeSaveUsing()` fires per item on Edit | ✅ |
 | `unit_sale_price_snapshot` remains at default until confirm-time | ✅ |
@@ -14979,7 +15110,7 @@ The Council may implement technical integrity fixes without further product clar
 | Changing variant resets unit + ratio fields | ✅ |
 | Layout components used per Section 7M rules | ✅ |
 | Wizard steps use Section with icon where >2 fields | ✅ |
-| Infolists use Grid::make(3) outer wrapper | ✅ |
+| Infolists use Grid::make(3) outer wrapper; line-item `RepeatableEntry` uses `->table([TableColumn...])->schema([...])` with `->alignEnd()` on numeric entries | ✅ |
 | Tabs use `->persistTabInQueryString()` for 3+ tab resources | ✅ |
 | Navigation groups registered in `->navigationGroups()` with icons and collapsibility | ✅ |
 | Every resource declares `$navigationGroup` matching a registered group | ✅ |
@@ -15093,7 +15224,7 @@ This section is authoritative. Where an older section says that a surface exists
 
 ### 16.3 P1 Gaps Closed
 
-1. Wizard review placeholders become a reusable `WizardReviewStep` static renderer (not a Livewire component — it is never mounted as `<livewire:…>` and owns no state, per §18.3).
+1. Wizard review steps render the shipped `filament.wizards.*` views via `View::make()->viewData()` (three pages) or `Livewire::make(WizardReviewSummary::class)` (SalesOrder); the retired `WizardReviewStep::renderSummary()` static renderer is not used (per §18.3).
 2. Inline Product-family creation must auto-select the newly created family via native `createOptionForm` auto-select (see §7A.1 `product_id` — no custom callback required; "variant" in earlier drafts meant the family record behind `product_id`).
 3. All resource `getEloquentQuery()` implementations must eager-load referenced relationships.
 4. All operational resources must apply warehouse data scoping before filters, sorting, pagination, or card rendering.
@@ -15160,7 +15291,7 @@ return [
 
 The test suite must prove each provider is loaded.
 
-Complete `AppServiceProvider` — owns observer registration (§17.3) and the badge-scope flush call site (§1B.3):
+Complete `AppServiceProvider` — owns observer registration (§17.3), global table configuration (§7N.5 `configureTable()`), and the badge-scope flush call site (§1B.3):
 
 ```php
 namespace App\Providers;
@@ -15173,6 +15304,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Observers\ProductObserver;
 use App\Observers\ProductVariantObserver;
+use Filament\Tables\Table;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Support\Facades\Event;
@@ -15184,6 +15316,8 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->configureTable();
+
         // Observer registration — must run before seeders or factories
         // create variants so the base-unit conversion always exists.
         Product::observe(ProductObserver::class);
@@ -15211,6 +15345,20 @@ class AppServiceProvider extends ServiceProvider
             PurchaseOrderResource::flushBadgeScope();
             SalesOrderResource::flushBadgeScope();
             InTransitResource::flushBadgeScope();
+        });
+    }
+
+    /**
+     * Global table defaults. `recordActionsAlignment('end')` applies to
+     * every table (card and standard) — it is deliberately NOT set per
+     * resource (§7N.5). `striped()` + `deferLoading()` are project-wide.
+     */
+    private function configureTable(): void
+    {
+        Table::configureUsing(function (Table $table): void {
+            $table->striped()
+                ->deferLoading();
+            $table->recordActionsAlignment('end');
         });
     }
 }
@@ -17048,34 +17196,15 @@ A Resource route is not considered implemented until the referenced Page class c
 
 ### 18.3 Wizard Review Component
 
-Render the four `review_summary` `Placeholder` implementations through:
+Each wizard `Create*` page renders its read-only review step directly from the shipped blade review view. There is **no** static renderer class and **no** `Placeholder::make('review_summary')` wiring.
 
-```text
-app/Filament/Support/Wizards/WizardReviewStep.php
-```
+Three pages (§7B.2 TransferRequisition, §7C.2 DirectTransfer, §7G.2 PurchaseOrder) render the review via `Filament\Schemas\Components\View::make('filament.wizards.<name>-review')->viewData(fn (Get $get): array => ['state' => [...]])->columnSpanFull()`, passing a narrow, form-field-derived `state` array (not the whole `$get()`).
 
-```php
-namespace App\Filament\Support\Wizards;
+The fourth page (§7H.2 SalesOrder) mounts the Livewire component `App\Livewire\Wizards\WizardReviewSummary` via `Filament\Schemas\Components\Livewire::make(WizardReviewSummary::class, fn (Get $get): array => ['view' => 'filament.wizards.sales-order-review', 'state' => $get()])->columnSpanFull()`. `WizardReviewSummary` (app/Livewire/Wizards/WizardReviewSummary.php) receives `view` + `state`, unwraps a `Closure` state if given, and returns `view($this->view, ['state' => $state])`.
 
-use Illuminate\Contracts\View\View;
+> **Runtime:** there is no `App\Filament\Support\Wizards\WizardReviewStep` class on disk and none should be created. The former `renderSummary()` static contract is retired.
 
-final class WizardReviewStep
-{
-    /**
-     * Single canonical review renderer. The four wizard `Create*`
-     * pages (§7B.2, §7C.2, §7G.2, §7H.2) call this from their
-     * `review_summary` Placeholder. There is no instance API: the
-     * former `forView()`/`render()` instance methods were removed as
-     * dead code — no call site ever instantiated this class.
-     */
-    public static function renderSummary(string $view, array $state): View
-    {
-        return view($view, ['state' => $state]);
-    }
-}
-```
-
-This is a plain static renderer, not a Livewire component — it is never mounted as `<livewire:…>` and owns no state. The renderer receives the current wizard state and returns a read-only summary view. It must never mutate inventory or call a domain service. It renders the existing blade review views (`transfer-review`, `purchase-order-review`, `sales-order-review`, `direct-transfer-review`).
+> **⚠ Flagged inconsistency (code, not blueprint):** SalesOrder uses a `Livewire`-mounted component while the other three use inline `View::make`. `app/Filament/Components/WizardReviewStep.php` also exists but has zero call sites (dead). Both are code-level consistency questions, not blueprint drift — flagged for owner decision, not resolved here.
 
 Review views live under `resources/views/filament/wizards/` (§0A.11) and render the raw wizard `$state` array (keys mirror the form field names). All strings resolve through `__()`:
 
@@ -19081,10 +19210,8 @@ app/
 │   ├── Support/
 │   │   ├── Concerns/
 │   │   │   └── ScopesNavigationBadges.php   # namespace App\Filament\Support\Concerns (§1B.3)
-│   │   ├── Filters/
-│   │   │   └── AdminReviewFilters.php   # namespace App\Filament\Support\Filters (§9)
-│   │   └── Wizards/
-│   │       └── WizardReviewStep.php   # namespace App\Filament\Support\Wizards (§18.3)
+│   │   └── Filters/
+│   │       └── AdminReviewFilters.php   # namespace App\Filament\Support\Filters (§9)
 │   ├── Widgets/
 │   │   ├── StatsOverviewWidget.php
 │   │   ├── LowStockAlertsWidget.php
@@ -19099,8 +19226,10 @@ app/
 │   └── Controllers/
 │       └── StnController.php
 ├── Livewire/
-│   └── Stn/
-│       └── ScanForm.php
+│   ├── Stn/
+│   │   └── ScanForm.php
+│   └── Wizards/
+│       └── WizardReviewSummary.php   # namespace App\Livewire\Wizards (§18.3)
 ├── Models/
 │   ├── Product.php
 │   ├── ProductVariant.php
@@ -19183,6 +19312,7 @@ app/
 │   ├── NotifyPurchaseOrderReceived.php
 │   ├── NotifySalesOrderDispatched.php
 │   └── NotifyInventoryBelowReorderPoint.php
+├── Helpers.php   # global format_money(mixed $state, int $precision = 4): string — decimal(15,4) display contract (§0A.14)
 
 database/
 ├── factories/
@@ -19365,6 +19495,23 @@ All criteria below are binding. The following consolidated list supersedes any e
 ---
 
 ## 📊 Section 27: Council Change Summary
+
+### v13.7 Change Table (Blueprint ↔ Code Reconciliation)
+
+| # | Area | Resolution | Severity |
+|---|---|---|---|
+| 1 | Wizard review step (§7B.2, §7C.2, §7G.2, §7H.2, §18.3) | Replaced retired `Placeholder` + `WizardReviewStep::renderSummary()` contract with shipped shape — 3 pages use `View::make('filament.wizards.*')->viewData(...)`, SalesOrder uses `Livewire::make(WizardReviewSummary::class, ...)` | P1 |
+| 2 | Money formatting (§7A.2, §7F.1, §7F.2, §7G.4, §7H.4, §0A.14, Principle 10) | Removed invalid `->money(config('app.currency'), decimals: 4)` (Filament v5 rejects `decimals:`); documented global `format_money()` helper. ProductsTable uses `format_money($state, 2)`; other `decimal(15,4)` sites default precision 4 | P1 |
+| 3 | Relationship-bound repeaters (F17, §7B.3, §14) | Inverted F17: relationship repeaters must NOT declare `->dehydrated()` (SQL error `Column not found: items`); only field-level `*_unit_ratio` keeps it. Removed repeater-level `->dehydrated()` from §7 code samples | Governance |
+| 4 | Line-item infolists (§7B.4, §7C.5, §7G.4, §7H.4, §7O.4, §14) | Converted `Grid::make([...])->schema([...])` line-item composition to `RepeatableEntry::make(...)->table([TableColumn...])->schema([...])` with `->alignEnd()` on numeric entries; added `TableColumn` import | P1 |
+| 5 | Record actions grouping (§7A.2, §7B.3, §7G.3, §7H.3) + new F31 | Documented `ActionGroup::make([...])` with nested `->dropdown(false)` sections and `EllipsisVertical` trigger styling; added Principle F31. (Suppliers/Customers tables intentionally stay flat.) | Governance |
+| 6 | Record-action alignment (§17.2, §7N.5) | Documented global `Table::configureUsing()->recordActionsAlignment('end')` via `AppServiceProvider::configureTable()`; no per-table `BeforeColumns`/alignment exists | Governance |
+| 7 | Removed non-existent API `->maxHeight()` | Confirmed absent from blueprint and authored code (only in vendored Filament JS) | Governance |
+| 8 | Translation keys (§0A.2a) | Added `actions.more` and `resources.{products,transfer_requisitions,purchase_orders,sales_orders}.actions.more_actions` to the canonical catalogue. ⚠ These keys are referenced by F31 tooltips but are NOT yet present in `lang/{en,es,tl}` — a code-side gap requiring a separate fix (see Unverified list) | P1 |
+| 9 | New file `app/Helpers.php` | Added to §25 file map with `format_money()` role note | Governance |
+| 10 | Wizard files in §25 | Removed non-existent `app/Filament/Support/Wizards/WizardReviewStep.php` entry; added shipped `app/Livewire/Wizards/WizardReviewSummary.php`. `app/Filament/Components/WizardReviewStep.php` is dead-but-present — deletion is a separate owner decision | Governance |
+
+> **Council note:** items 6 and 8 were reconciled to the *shipped* code, which itself diverges from the original scope description. Item 8's translation keys are a genuine code gap (unresolved `__()` references), not a blueprint error; item 1's SalesOrder-vs-others wizard inconsistency and the dead `Components/WizardReviewStep.php` are code-level questions flagged for owner decision. No application code was modified.
 
 ### v13.6 Change Table
 
