@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use App\Filament\Support\Filters\AdminReviewFilters;
-use App\Filament\Support\Wizards\WizardReviewStep;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 
@@ -16,7 +15,6 @@ use Filament\Tables\Filters\SelectFilter;
  *
  * Blueprint anchors exercised:
  *   - §9 AdminReviewFilters::warehouse() / period() shape.
- *   - §18.3 WizardReviewStep::renderSummary() static contract.
  *   - §0A.7 every heading resolves through the translation catalogue.
  *   - §0A.8 every action label resolves.
  */
@@ -85,33 +83,5 @@ describe('AdminReviewFilters::period()', function () {
             expect($label)->toBeString()->not->toBe('');
             expect($label)->not->toBe("common.periods.{$key}");
         }
-    });
-});
-
-// ===========================================================================
-// WizardReviewStep
-// ===========================================================================
-
-describe('WizardReviewSummary Livewire component', function () {
-    it('renders the target view with the given state', function () {
-        Livewire\Livewire::test(App\Livewire\Wizards\WizardReviewSummary::class, [
-            'view' => 'filament.wizards.transfer-review',
-            'state' => [
-                'from_warehouse_id' => null,
-                'to_warehouse_id' => null,
-                'items' => [],
-            ],
-        ])->assertSuccessful();
-    });
-
-    it('re-renders when the state changes', function () {
-        $component = Livewire\Livewire::test(App\Livewire\Wizards\WizardReviewSummary::class, [
-            'view' => 'filament.wizards.transfer-review',
-            'state' => ['items' => []],
-        ]);
-
-        $component->set('state', [
-            'items' => [['product_variant_id' => null, 'requested_qty' => 5, 'requested_unit_name' => 'pc']],
-        ])->assertSee('5');
     });
 });

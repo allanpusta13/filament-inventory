@@ -6,12 +6,11 @@ namespace App\Filament\Resources\SalesOrders\Pages;
 
 use App\Filament\Resources\SalesOrders\SalesOrderResource;
 use App\Filament\Resources\SalesOrders\Schemas\SalesOrderForm;
-use App\Livewire\Wizards\WizardReviewSummary;
 use App\Support\GeneratesReferenceCodes;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Resources\Pages\CreateRecord\Concerns\HasWizard;
-use Filament\Schemas\Components\Livewire;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\View;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
@@ -46,10 +45,16 @@ class CreateSalesOrder extends CreateRecord
                 ->description(__('resources.sales_orders.steps.review_verify_description'))
                 ->icon(Heroicon::CheckCircle)
                 ->schema([
-                    Livewire::make(WizardReviewSummary::class, fn (Get $get): array => [
-                        'view' => 'filament.wizards.sales-order-review',
-                        'state' => $get(),
-                    ])->columnSpanFull(),
+                    View::make('filament.wizards.sales-order-review')
+                        ->viewData(fn (Get $get): array => [
+                            'state' => [
+                                'customer_id' => $get('customer_id'),
+                                'warehouse_id' => $get('warehouse_id'),
+                                'items' => $get('items') ?? [],
+                                'notes' => $get('notes'),
+                            ],
+                        ])
+                        ->columnSpanFull(),
                 ]),
         ];
     }

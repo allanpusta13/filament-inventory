@@ -11174,12 +11174,11 @@ namespace App\Filament\Resources\SalesOrders\Pages;
 
 use App\Filament\Resources\SalesOrders\SalesOrderResource;
 use App\Filament\Resources\SalesOrders\Schemas\SalesOrderForm;
-use App\Livewire\Wizards\WizardReviewSummary;
 use App\Support\GeneratesReferenceCodes;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Resources\Pages\CreateRecord\Concerns\HasWizard;
-use Filament\Schemas\Components\Livewire;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\View;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
@@ -11208,10 +11207,16 @@ class CreateSalesOrder extends CreateRecord
                 ->description(__('resources.sales_orders.steps.review_verify_description'))
                 ->icon(Heroicon::CheckCircle)
                 ->schema([
-                    Livewire::make(WizardReviewSummary::class, fn (Get $get): array => [
-                        'view' => 'filament.wizards.sales-order-review',
-                        'state' => $get(),
-                    ])->columnSpanFull(),
+                    View::make('filament.wizards.sales-order-review')
+                        ->viewData(fn (Get $get): array => [
+                            'state' => [
+                                'customer_id' => $get('customer_id'),
+                                'warehouse_id' => $get('warehouse_id'),
+                                'items' => $get('items') ?? [],
+                                'notes' => $get('notes'),
+                            ],
+                        ])
+                        ->columnSpanFull(),
                 ]),
         ];
     }
@@ -15048,7 +15053,7 @@ The Council may implement technical integrity fixes without further product clar
 | **`InTransit` rows transition to `Cleared` / `Lost`** | ✅ |
 | **First-scan detection uses idempotency table, not `cleared_at` on `in_transits`** | ✅ |
 | ScanToReceiveAction named `scanToReceive` (camelCase) | ✅ |
-| Wizard review steps render `filament.wizards.*` via `View::make()->viewData()` (3 pages) or `Livewire::make(WizardReviewSummary::class)` (SalesOrder) — no `WizardReviewStep` renderer | ✅ |
+| Wizard review steps render `filament.wizards.*` via `View::make()->viewData()` on all 4 pages — no `WizardReviewStep` renderer, no Livewire review component | ✅ |
 | `RepeatableEntry` (not `RepeatEntry`) in all infolists | ✅ |
 | `SoftDeletingScope` imported in `getEloquentQuery()` | ✅ |
 | Enums route `getLabel()` through `__()` | ✅ |
@@ -15081,7 +15086,7 @@ The Council may implement technical integrity fixes without further product clar
 | `ext-bcmath` declared as required PHP extension | ✅ |
 | LowStockAlertsWidget scaling risk documented as accepted | ✅ |
 | All Actions use `->schema()`, zero `->form()` calls | ✅ |
-| Wizard review steps use `View::make()->viewData()` / `Livewire::make()` (not `Placeholder`) | ✅ |
+| Wizard review steps use `View::make()->viewData()` (not `Placeholder`, not Livewire) | ✅ |
 | Tables with many record actions use a divider-separated `ActionGroup` dropdown (F31) | ✅ |
 | Record-action alignment is set globally via `configureTable()`, never per resource | ✅ |
 | `createOptionForm` auto-selects new option after save | ✅ |
@@ -15226,7 +15231,7 @@ This section is authoritative. Where an older section says that a surface exists
 
 ### 16.3 P1 Gaps Closed
 
-1. Wizard review steps render the shipped `filament.wizards.*` views via `View::make()->viewData()` (three pages) or `Livewire::make(WizardReviewSummary::class)` (SalesOrder); the retired `WizardReviewStep::renderSummary()` static renderer is not used (per §18.3).
+1. Wizard review steps render the shipped `filament.wizards.*` views via `View::make()->viewData()` on all four pages; neither the retired `WizardReviewStep::renderSummary()` static renderer nor the removed `WizardReviewSummary` Livewire component is used (per §18.3).
 2. Inline Product-family creation must auto-select the newly created family via native `createOptionForm` auto-select (see §7A.1 `product_id` — no custom callback required; "variant" in earlier drafts meant the family record behind `product_id`).
 3. All resource `getEloquentQuery()` implementations must eager-load referenced relationships.
 4. All operational resources must apply warehouse data scoping before filters, sorting, pagination, or card rendering.
@@ -17198,15 +17203,11 @@ A Resource route is not considered implemented until the referenced Page class c
 
 ### 18.3 Wizard Review Component
 
-Each wizard `Create*` page renders its read-only review step directly from the shipped blade review view. There is **no** static renderer class and **no** `Placeholder::make('review_summary')` wiring.
+Each wizard `Create*` page renders its read-only review step directly from the shipped blade review view. There is **no** static renderer class, **no** `Placeholder::make('review_summary')` wiring, and **no** Livewire review component.
 
-Three pages (§7B.2 TransferRequisition, §7C.2 DirectTransfer, §7G.2 PurchaseOrder) render the review via `Filament\Schemas\Components\View::make('filament.wizards.<name>-review')->viewData(fn (Get $get): array => ['state' => [...]])->columnSpanFull()`, passing a narrow, form-field-derived `state` array (not the whole `$get()`).
+All four pages (§7B.2 TransferRequisition, §7C.2 DirectTransfer, §7G.2 PurchaseOrder, §7H.2 SalesOrder) render the review via `Filament\Schemas\Components\View::make('filament.wizards.<name>-review')->viewData(fn (Get $get): array => ['state' => [...]])->columnSpanFull()`, passing a narrow, form-field-derived `state` array (not the whole `$get()`).
 
-The fourth page (§7H.2 SalesOrder) mounts the Livewire component `App\Livewire\Wizards\WizardReviewSummary` via `Filament\Schemas\Components\Livewire::make(WizardReviewSummary::class, fn (Get $get): array => ['view' => 'filament.wizards.sales-order-review', 'state' => $get()])->columnSpanFull()`. `WizardReviewSummary` (app/Livewire/Wizards/WizardReviewSummary.php) receives `view` + `state`, unwraps a `Closure` state if given, and returns `view($this->view, ['state' => $state])`.
-
-> **Runtime:** there is no `App\Filament\Support\Wizards\WizardReviewStep` class on disk and none should be created. The former `renderSummary()` static contract is retired.
-
-> **⚠ Flagged inconsistency (code, not blueprint):** SalesOrder uses a `Livewire`-mounted component while the other three use inline `View::make`. `app/Filament/Components/WizardReviewStep.php` also exists but has zero call sites (dead). Both are code-level consistency questions, not blueprint drift — flagged for owner decision, not resolved here.
+> **Runtime:** there is no `App\Filament\Support\Wizards\WizardReviewStep` class on disk and none should be created. The former `renderSummary()` static contract is retired. `App\Livewire\Wizards\WizardReviewSummary` and `app/Filament/Components/WizardReviewStep.php` were both deleted — the inline `View::make()` approach made them redundant (all four pages now share one pattern).
 
 Review views live under `resources/views/filament/wizards/` (§0A.11) and render the raw wizard `$state` array (keys mirror the form field names). All strings resolve through `__()`:
 
@@ -19228,10 +19229,8 @@ app/
 │   └── Controllers/
 │       └── StnController.php
 ├── Livewire/
-│   ├── Stn/
-│   │   └── ScanForm.php
-│   └── Wizards/
-│       └── WizardReviewSummary.php   # namespace App\Livewire\Wizards (§18.3)
+│   └── Stn/
+│       └── ScanForm.php
 ├── Models/
 │   ├── Product.php
 │   ├── ProductVariant.php
@@ -19502,7 +19501,7 @@ All criteria below are binding. The following consolidated list supersedes any e
 
 | # | Area | Resolution | Severity |
 |---|---|---|---|
-| 1 | Wizard review step (§7B.2, §7C.2, §7G.2, §7H.2, §18.3) | Replaced retired `Placeholder` + `WizardReviewStep::renderSummary()` contract with shipped shape — 3 pages use `View::make('filament.wizards.*')->viewData(...)`, SalesOrder uses `Livewire::make(WizardReviewSummary::class, ...)` | P1 |
+| 1 | Wizard review step (§7B.2, §7C.2, §7G.2, §7H.2, §18.3) | Replaced retired `Placeholder` + `WizardReviewStep::renderSummary()` contract with shipped shape — all 4 pages use `View::make('filament.wizards.*')->viewData(...)`. SalesOrder conformed from `Livewire::make` to `View::make`; `WizardReviewSummary` Livewire component removed | P1 |
 | 2 | Money formatting (§7A.2, §7F.1, §7F.2, §7G.4, §7H.4, §0A.14, Principle 10) | Removed invalid `->money(config('app.currency'), decimals: 4)` (Filament v5 rejects `decimals:`); documented global `format_money()` helper. ProductsTable uses `format_money($state, 2)`; other `decimal(15,4)` sites default precision 4 | P1 |
 | 3 | Relationship-bound repeaters (F17, §7B.3, §14) | Inverted F17: relationship repeaters must NOT declare `->dehydrated()` (SQL error `Column not found: items`); only field-level `*_unit_ratio` keeps it. Removed repeater-level `->dehydrated()` from §7 code samples | Governance |
 | 4 | Line-item infolists (§7B.4, §7C.5, §7G.4, §7H.4, §7O.4, §14) | Converted `Grid::make([...])->schema([...])` line-item composition to `RepeatableEntry::make(...)->table([TableColumn...])->schema([...])` with `->alignEnd()` on numeric entries; added `TableColumn` import | P1 |
@@ -19511,9 +19510,9 @@ All criteria below are binding. The following consolidated list supersedes any e
 | 7 | Removed non-existent API `->maxHeight()` | Confirmed absent from blueprint and authored code (only in vendored Filament JS) | Governance |
 | 8 | Translation keys (§0A.2a) | Added `actions.more` and `resources.{products,transfer_requisitions,purchase_orders,sales_orders}.actions.more_actions` to the canonical catalogue. ⚠ These keys are referenced by F31 tooltips but are NOT yet present in `lang/{en,es,tl}` — a code-side gap requiring a separate fix (see Unverified list) | P1 |
 | 9 | New file `app/Helpers.php` | Added to §25 file map with `format_money()` role note | Governance |
-| 10 | Wizard files in §25 | Removed non-existent `app/Filament/Support/Wizards/WizardReviewStep.php` entry; added shipped `app/Livewire/Wizards/WizardReviewSummary.php`. `app/Filament/Components/WizardReviewStep.php` is dead-but-present — deletion is a separate owner decision | Governance |
+| 10 | Wizard files removal | Removed non-existent `app/Filament/Support/Wizards/WizardReviewStep.php` from §25. Deleted dead `app/Filament/Components/WizardReviewStep.php` + its blade, and the now-unused `app/Livewire/Wizards/WizardReviewSummary.php` + its tests (all zero-call-site after item 1) | Governance |
 
-> **Council note:** items 6 and 8 were reconciled to the *shipped* code, which itself diverges from the original scope description. Item 8's translation keys are a genuine code gap (unresolved `__()` references), not a blueprint error; item 1's SalesOrder-vs-others wizard inconsistency and the dead `Components/WizardReviewStep.php` are code-level questions flagged for owner decision. No application code was modified.
+> **Council note:** items 6 and 8 were reconciled to the *shipped* code, which itself diverges from the original scope description. Item 8's translation keys are a genuine code gap (unresolved `__()` references). Item 1's SalesOrder-vs-others wizard inconsistency and the dead wizard classes were resolved by owner direction: SalesOrder conformed to `View::make`, and `Components/WizardReviewStep.php` + `Livewire/Wizards/WizardReviewSummary.php` (with its tests) were deleted. Application code changed in those two areas only.
 
 ### v13.6 Change Table
 
