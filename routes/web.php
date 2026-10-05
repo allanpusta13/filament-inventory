@@ -9,16 +9,6 @@ use Illuminate\Support\Facades\Route;
 Route::view('/', 'welcome');
 
 Route::middleware(['auth'])->group(function () {
-    Route::get('/transfers/scan/{transferRequisition}', [ScanReceiptController::class, 'show'])
-        ->name('stn.scan')
-        ->middleware(['throttle:scans', 'signed'])
-        ->where('transferRequisition', '[0-9]+');
-
-    Route::post('/transfers/scan/{transferRequisition}/receive', [ScanReceiptController::class, 'receive'])
-        ->name('stn.scan.receive')
-        ->middleware(['throttle:scans', 'signed'])
-        ->where('transferRequisition', '[0-9]+');
-
     Route::get('/stn/print/{transferRequisition}', [STNManifestController::class, 'print'])
         ->name('stn.print');
 
