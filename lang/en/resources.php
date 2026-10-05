@@ -99,6 +99,7 @@ return [
             'quick_adjustment' => 'Quick adjustment',
             'quick_adjustment_heading' => 'Quick stock adjustment',
             'quick_adjustment_description' => 'Record a manual stock adjustment.',
+            'more_actions' => 'More actions',
         ],
         'notifications' => [
             'created' => 'Product created.',
@@ -219,6 +220,7 @@ return [
             'cancel' => 'Cancel',
             'cancel_heading' => 'Cancel requisition',
             'cancel_description' => 'Cancel this requisition.',
+            'more_actions' => 'More actions',
         ],
         'notifications' => [
             'dispatched' => 'Requisition dispatched.',
@@ -585,6 +587,7 @@ return [
             'cancel' => 'Cancel',
             'cancel_heading' => 'Cancel purchase order',
             'cancel_description' => 'Cancel this purchase order.',
+            'more_actions' => 'More actions',
         ],
         'notifications' => ['received' => 'Purchase received.'],
     ],
@@ -716,6 +719,7 @@ return [
             'cancel' => 'Cancel',
             'cancel_heading' => 'Cancel sales order',
             'cancel_description' => 'Cancel this sales order.',
+            'more_actions' => 'More actions',
         ],
         'notifications' => [
             'dispatched' => 'Sale dispatched.',
