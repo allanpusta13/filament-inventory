@@ -13,6 +13,8 @@ return [
     'copied' => 'Copied',
     'active' => 'Active',
     'inactive' => 'Inactive',
+    'yes' => 'Yes',
+    'no' => 'No',
     'date' => 'Date',
     'from' => 'From',
     'until' => 'Until',

@@ -37,9 +37,13 @@ class PurchaseOrderInfolist
                         TextEntry::make('warehouse.name')->icon(Heroicon::BuildingOffice2)
                             ->label(__('resources.purchase_orders.fields.receiving_warehouse'))
                             ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
+                        // boolean() is scoped to Filament's icon components only.
+                        // Text components render booleans via formatStateUsing() + color().
                         TextEntry::make('update_cost_price')
                             ->label(__('resources.purchase_orders.fields.update_cost_price'))
-                            ->badge()->boolean()
+                            ->badge()
+                            ->formatStateUsing(fn (bool $state): string => $state ? __('common.yes') : __('common.no'))
+                            ->color(fn (bool $state): string => $state ? 'success' : 'danger')
                             ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2]),
 
                         TextEntry::make('notes')
