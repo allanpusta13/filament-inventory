@@ -148,6 +148,8 @@ return [
     'copied'  => 'Copied',
     'active'  => 'Active',
     'inactive' => 'Inactive',
+    'yes'     => 'Yes',
+    'no'      => 'No',
     'date'    => 'Date',
     'from'    => 'From',
     'until'   => 'Until',
@@ -8011,7 +8013,9 @@ class ProductInfolist
                                         ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
                                     TextEntry::make('is_default_purchase')
                                         ->label(__('resources.products.fields.is_default_purchase'))
-                                        ->badge()->boolean()
+                                        ->badge()
+                                        ->formatStateUsing(fn (bool $state): string => $state ? __('common.yes') : __('common.no'))
+                                        ->color(fn (bool $state): string => $state ? 'success' : 'danger')
                                         ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
                                 ]),
                             ]),
@@ -10948,7 +10952,9 @@ class PurchaseOrderInfolist
                             ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1]),
                         TextEntry::make('update_cost_price')
                             ->label(__('resources.purchase_orders.fields.update_cost_price'))
-                            ->badge()->boolean()
+                            ->badge()
+                            ->formatStateUsing(fn (bool $state): string => $state ? __('common.yes') : __('common.no'))
+                            ->color(fn (bool $state): string => $state ? 'success' : 'danger')
                             ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2]),
 
                         TextEntry::make('notes')
@@ -12774,6 +12780,7 @@ public function getColumns(): int | string | array
 8. Tables use `visibleFrom()` for mobile hiding.
 9. Repeaters declare `->columns()` plus per-field `columnSpan()`.
 10. `columnStart()` and `columnOrder()` reserved for advanced asymmetric layouts.
+11. Boolean display: `->boolean()` is defined on `IconEntry` and `IconColumn` only. On a `TextEntry` / `TextColumn`, render booleans via `->badge()->formatStateUsing(fn (bool $state) => $state ? __('common.yes') : __('common.no'))->color(fn (bool $state) => $state ? 'success' : 'danger')`. Calling `->boolean()` on a text component throws `BadMethodCallException` at render time. Guarded by `TextBooleanScopeTest`.
 
 ---
 
@@ -14847,6 +14854,7 @@ class DatabaseSeeder extends Seeder
 - `LossLedger::snapshotUnitCostFrom()` logs a warning when cost is missing or zero.
 - All policies return expected booleans for each role.
 - `WarehousePolicy::delete()` blocks warehouses with stock movements, POs, SOs, TRs, or direct transfers.
+- `TextBooleanScopeTest`: no `TextEntry` / `TextColumn` chain carries `boolean()` (scoped to icon components in Filament v5).
 - QR lifetime = 7 days.
 
 ### Badge Scope Pest Coverage (v13.6)
