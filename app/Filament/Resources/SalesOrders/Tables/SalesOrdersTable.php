@@ -105,7 +105,7 @@ class SalesOrdersTable
                     ->label(__('resources.sales_orders.filters.warehouse')),
                 \Filament\Tables\Filters\TrashedFilter::make(),
                 \App\Filament\Support\Filters\AdminReviewFilters::period('confirmed_at')
-                    ->visible(fn (): bool => auth()->user()?->can('viewAuditFilters', \App\Models\SalesOrder::class) ?? false),
+                    ->visible(fn (): bool => auth()->user()?->can('viewAuditFilters', SalesOrder::class) ?? false),
             ])
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(12)
@@ -172,10 +172,10 @@ class SalesOrdersTable
 
                                         return TextInput::make("dispatch.{$item->id}")
                                             ->label(__('resources.sales_orders.fields.dispatch_line', [
-                                                'sku'         => $item->productVariant->sku,
+                                                'sku' => $item->productVariant->sku,
                                                 'outstanding' => $item->outstandingBaseQty(),
-                                                'unit'        => $item->unit_name,
-                                                'available'   => $available,
+                                                'unit' => $item->unit_name,
+                                                'available' => $available,
                                             ]))
                                             ->prefixIcon(Heroicon::Truck)
                                             ->columnSpan(['default' => 1, 'md' => 1])
@@ -221,9 +221,9 @@ class SalesOrdersTable
                                         ->where('dispatched_base_qty', '>', 0)
                                         ->mapWithKeys(fn ($item) => [
                                             $item->id => __('resources.sales_orders.fields.return_option', [
-                                                'sku'        => $item->productVariant->sku,
+                                                'sku' => $item->productVariant->sku,
                                                 'dispatched' => $item->dispatched_base_qty,
-                                                'returned'   => $item->alreadyReturnedBaseQty(),
+                                                'returned' => $item->alreadyReturnedBaseQty(),
                                             ]),
                                         ]))
                                     ->required()
@@ -241,6 +241,7 @@ class SalesOrdersTable
                                             return null;
                                         }
                                         $item = $record->items->firstWhere('id', (int) $itemId);
+
                                         return $item ? ($item->dispatched_base_qty - $item->alreadyReturnedBaseQty()) : null;
                                     })
                                     ->required(),

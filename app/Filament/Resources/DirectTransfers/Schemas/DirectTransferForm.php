@@ -11,6 +11,7 @@ use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Icon;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
@@ -123,8 +124,9 @@ class DirectTransferForm
 
                             TextInput::make('unit_ratio')
                                 ->hiddenLabel()
-                                ->hintIcon(Heroicon::InformationCircle)
-                                ->hint(__('resources.direct_transfers.hints.ratio_auto'))
+                                ->afterContent(Icon::make(Heroicon::InformationCircle)->tooltip(__('resources.direct_transfers.hints.ratio_auto')))
+                                ->extraAttributes(['aria-label' => __('resources.direct_transfers.fields.ratio_base')])
+                                ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                                 ->numeric()
                                 ->disabled()
                                 ->dehydrated()

@@ -113,7 +113,7 @@ class TransferRequisitionsTable
                     ->searchable(),
                 TrashedFilter::make(),
                 \App\Filament\Support\Filters\AdminReviewFilters::period('requested_at')
-                    ->visible(fn (): bool => auth()->user()?->can('viewAuditFilters', \App\Models\TransferRequisition::class) ?? false),
+                    ->visible(fn (): bool => auth()->user()?->can('viewAuditFilters', TransferRequisition::class) ?? false),
             ])
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(12)

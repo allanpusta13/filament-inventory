@@ -104,7 +104,7 @@ class PurchaseOrdersTable
                     ->label(__('resources.purchase_orders.filters.warehouse')),
                 TrashedFilter::make(),
                 \App\Filament\Support\Filters\AdminReviewFilters::period('ordered_at')
-                    ->visible(fn (): bool => auth()->user()?->can('viewAuditFilters', \App\Models\PurchaseOrder::class) ?? false),
+                    ->visible(fn (): bool => auth()->user()?->can('viewAuditFilters', PurchaseOrder::class) ?? false),
             ])
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(12)
@@ -157,14 +157,14 @@ class PurchaseOrdersTable
 
                                     return TextInput::make("received.{$item->id}")
                                         ->label(__('resources.purchase_orders.fields.receive_line', [
-                                            'sku'         => $item->productVariant->sku,
+                                            'sku' => $item->productVariant->sku,
                                             'outstanding' => $outstandingBase,
-                                            'unit'        => $item->productVariant->base_unit_name,
-                                            'base'        => $outstandingBase,
+                                            'unit' => $item->productVariant->base_unit_name,
+                                            'base' => $outstandingBase,
                                         ]))
                                         ->helperText(__('resources.purchase_orders.help.receive_display_equivalent', [
                                             'display' => $outstandingDisplay,
-                                            'unit'    => $item->ordered_unit_name,
+                                            'unit' => $item->ordered_unit_name,
                                         ]))
                                         ->prefixIcon(Heroicon::ArchiveBoxArrowDown)
                                         ->columnSpan(['default' => 1, 'md' => 1])

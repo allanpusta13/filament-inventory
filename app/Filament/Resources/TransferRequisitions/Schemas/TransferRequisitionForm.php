@@ -14,6 +14,7 @@ use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Icon;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
@@ -125,8 +126,9 @@ class TransferRequisitionForm
 
                     TextInput::make('requested_unit_ratio')
                         ->hiddenLabel()
-                        ->hintIcon(Heroicon::InformationCircle)
-                        ->hint(__('resources.transfer_requisitions.hints.ratio_auto'))
+                        ->afterContent(Icon::make(Heroicon::InformationCircle)->tooltip(__('resources.transfer_requisitions.hints.ratio_auto')))
+                        ->extraAttributes(['aria-label' => __('resources.transfer_requisitions.fields.ratio_base')])
+                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                         ->numeric()
                         ->disabled()
                         ->dehydrated()
@@ -236,9 +238,9 @@ class TransferRequisitionForm
                 }),
 
             TextInput::make('proposed_unit_ratio')
-                ->label(__('resources.transfer_requisitions.fields.ratio_base'))
-                ->hintIcon(Heroicon::InformationCircle)
-                ->hint(__('resources.transfer_requisitions.hints.ratio_auto'))
+                ->hiddenLabel()
+                ->afterContent(Icon::make(Heroicon::InformationCircle)->tooltip(__('resources.transfer_requisitions.hints.ratio_auto')))
+                ->extraAttributes(['aria-label' => __('resources.transfer_requisitions.fields.ratio_base')])
                 ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                 ->numeric()
                 ->disabled()

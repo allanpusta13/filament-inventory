@@ -11,6 +11,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Icon;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
@@ -131,8 +132,14 @@ class PurchaseOrderForm
 
                     TextInput::make('ordered_unit_ratio')
                         ->hiddenLabel()
-                        ->hintIcon(Heroicon::InformationCircle)
-                        ->hint(__('resources.purchase_orders.hints.ratio_auto'))
+                        ->afterContent(
+                            Icon::make(Heroicon::InformationCircle)
+                                ->tooltip(__('resources.purchase_orders.hints.ratio_auto'))
+                        )
+                        ->extraAttributes([
+                            'aria-label' => __('resources.purchase_orders.fields.ratio_base'),
+                        ])
+                        ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                         ->numeric()
                         ->disabled()
                         ->dehydrated()

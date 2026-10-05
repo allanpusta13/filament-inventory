@@ -8527,9 +8527,9 @@ class TransferRequisitionForm
                         }),
 
                     TextInput::make('requested_unit_ratio')
-                        ->label(__('resources.transfer_requisitions.fields.ratio_base'))
-                        ->hintIcon(Heroicon::InformationCircle)
-                        ->hint(__('resources.transfer_requisitions.hints.ratio_auto'))
+                        ->hiddenLabel()
+                        ->afterContent(Icon::make(Heroicon::InformationCircle)->tooltip(__('resources.transfer_requisitions.hints.ratio_auto')))
+                        ->extraAttributes(['aria-label' => __('resources.transfer_requisitions.fields.ratio_base')])
                         ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                         ->numeric()
                         ->disabled()
@@ -8646,9 +8646,9 @@ class TransferRequisitionForm
                 }),
 
             TextInput::make('proposed_unit_ratio')
-                ->label(__('resources.transfer_requisitions.fields.ratio_base'))
-                ->hintIcon(Heroicon::InformationCircle)
-                ->hint(__('resources.transfer_requisitions.hints.ratio_auto'))
+                ->hiddenLabel()
+                ->afterContent(Icon::make(Heroicon::InformationCircle)->tooltip(__('resources.transfer_requisitions.hints.ratio_auto')))
+                ->extraAttributes(['aria-label' => __('resources.transfer_requisitions.fields.ratio_base')])
                 ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                 ->numeric()
                 ->disabled()
@@ -9535,9 +9535,9 @@ class DirectTransferForm
                                 }),
 
                             TextInput::make('unit_ratio')
-                                ->label(__('resources.direct_transfers.fields.ratio_base'))
-                                ->hintIcon(Heroicon::InformationCircle)
-                                ->hint(__('resources.direct_transfers.hints.ratio_auto'))
+                                ->hiddenLabel()
+                                ->afterContent(Icon::make(Heroicon::InformationCircle)->tooltip(__('resources.direct_transfers.hints.ratio_auto')))
+                                ->extraAttributes(['aria-label' => __('resources.direct_transfers.fields.ratio_base')])
                                 ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                                 ->numeric()
                                 ->disabled()
@@ -10428,6 +10428,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Icon;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
@@ -10536,9 +10537,14 @@ class PurchaseOrderForm
                         }),
 
                     TextInput::make('ordered_unit_ratio')
-                        ->label(__('resources.purchase_orders.fields.ratio_base'))
-                        ->hintIcon(Heroicon::InformationCircle)
-                        ->hint(__('resources.purchase_orders.hints.ratio_auto'))
+                        ->hiddenLabel()
+                        ->afterContent(
+                            Icon::make(Heroicon::InformationCircle)
+                                ->tooltip(__('resources.purchase_orders.hints.ratio_auto'))
+                        )
+                        ->extraAttributes([
+                            'aria-label' => __('resources.purchase_orders.fields.ratio_base'),
+                        ])
                         ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                         ->numeric()
                         ->disabled()
@@ -11130,9 +11136,9 @@ class SalesOrderForm
                         }),
 
                     TextInput::make('unit_ratio')
-                        ->label(__('resources.sales_orders.fields.ratio_base'))
-                        ->hintIcon(Heroicon::InformationCircle)
-                        ->hint(__('resources.sales_orders.hints.ratio_auto'))
+                        ->hiddenLabel()
+                        ->afterContent(Icon::make(Heroicon::InformationCircle)->tooltip(__('resources.sales_orders.hints.ratio_auto')))
+                        ->extraAttributes(['aria-label' => __('resources.sales_orders.fields.ratio_base')])
                         ->columnSpan(['default' => 1, 'md' => 1, 'xl' => 1])
                         ->numeric()->disabled()->dehydrated()->required(),
 
@@ -12781,6 +12787,7 @@ public function getColumns(): int | string | array
 9. Repeaters declare `->columns()` plus per-field `columnSpan()`.
 10. `columnStart()` and `columnOrder()` reserved for advanced asymmetric layouts.
 11. Boolean display: `->boolean()` is defined on `IconEntry` and `IconColumn` only. On a `TextEntry` / `TextColumn`, render booleans via `->badge()->formatStateUsing(fn (bool $state) => $state ? __('common.yes') : __('common.no'))->color(fn (bool $state) => $state ? 'success' : 'danger')`. Calling `->boolean()` on a text component throws `BadMethodCallException` at render time. Guarded by `TextBooleanScopeTest`.
+12. Auto-derived `*_unit_ratio` / `unit_ratio` fields inside `->table([...])` repeaters: the visible column label comes from the sibling `TableColumn`, so `->hiddenLabel()` alone strips the accessible name (§0A.13). Every such field MUST carry an accessible name — either `->label(__('...'))`, or `->hiddenLabel()` **plus** `->extraAttributes(['aria-label' => __('...')])` (translated, never a raw string). Every such field MUST declare `->columnSpan([...])` with an explicit `default` key, and MUST stay auto-derived (`->numeric()->disabled()->dehydrated()->required()`). Ratio-field explanation MUST use the icon-with-tooltip pattern: `->hiddenLabel()` + `->afterContent(Icon::make(Heroicon::InformationCircle)->tooltip(__('...hints.ratio_auto')))` + `->extraAttributes(['aria-label' => __('...fields.ratio_base')])`. Do NOT use `->hintIcon()` + `->hint()` — it renders hint text on the label row, which is not the project pattern. Requires `Filament\Schemas\Components\Icon`. Canonical sample §7G.1; converged across §7B.1, §7C.1, §7H.1. Guarded by `FormFieldSpanTest` + `FormSyntaxTest::uses_icon_with_tooltip_on_every_ratio_field`.
 
 ---
 
@@ -14855,6 +14862,7 @@ class DatabaseSeeder extends Seeder
 - All policies return expected booleans for each role.
 - `WarehousePolicy::delete()` blocks warehouses with stock movements, POs, SOs, TRs, or direct transfers.
 - `TextBooleanScopeTest`: no `TextEntry` / `TextColumn` chain carries `boolean()` (scoped to icon components in Filament v5).
+- `FormFieldSpanTest::ratio_fields_declare_an_accessible_name_and_an_explicit_column_span_default`: every `*_unit_ratio` field carries an accessible name (`->label(__())` or `->hiddenLabel()` + translated `aria-label`), an explicit `->columnSpan([...])` `default`, and stays `->disabled()->dehydrated()`. `FormSyntaxTest::has_no_php_syntax_errors_in_filament_classes`: every PHP file under `app/Filament/` parses (guards the PHP 8.4 "Cannot use empty array elements in arrays" class). `FormSyntaxTest::uses_icon_with_tooltip_on_every_ratio_field`: every `*_unit_ratio` field uses `->afterContent(Icon::make(Heroicon::InformationCircle)->tooltip(__()))` and never `->hintIcon()`.
 - QR lifetime = 7 days.
 
 ### Badge Scope Pest Coverage (v13.6)
@@ -15117,6 +15125,9 @@ The Council may implement technical integrity fixes without further product clar
 | Unit fields are `Select`, never free-text `TextInput` | ✅ |
 | Unit `Select` sources from variant's `product_variant_unit_conversions` | ✅ |
 | `*_unit_ratio` is `->disabled()` + `->dehydrated()`, auto-filled via `->live()` | ✅ |
+| `php -l` passes on every PHP file under `app/Filament/` (enforced by `FormSyntaxTest`) | ✅ |
+| Every `*_unit_ratio` field uses `->afterContent(Icon::make(...)->tooltip(...))`, never `->hintIcon()` (enforced by `FormSyntaxTest`) | ✅ |
+| Unit-ratio fields declare an accessible name + explicit `columnSpan` `default` (§7O.8 #12) | ✅ |
 | `ProductVariantObserver` materializes base-unit self-conversion row on create | ✅ |
 | Base-unit row has `unit_name = base_unit_name` and `base_unit_ratio = 1` | ✅ |
 | `ManageUnitConversionsAction` disallows deletion of base-unit row | ✅ |
@@ -19519,6 +19530,7 @@ All criteria below are binding. The following consolidated list supersedes any e
 | 8 | Translation keys (§0A.2a) | Added `actions.more` and `resources.{products,transfer_requisitions,purchase_orders,sales_orders}.actions.more_actions` to the canonical catalogue. ⚠ These keys are referenced by F31 tooltips but are NOT yet present in `lang/{en,es,tl}` — a code-side gap requiring a separate fix (see Unverified list) | P1 |
 | 9 | New file `app/Helpers.php` | Added to §25 file map with `format_money()` role note | Governance |
 | 10 | Wizard files removal | Removed non-existent `app/Filament/Support/Wizards/WizardReviewStep.php` from §25. Deleted dead `app/Filament/Components/WizardReviewStep.php` + its blade, and the now-unused `app/Livewire/Wizards/WizardReviewSummary.php` + its tests (all zero-call-site after item 1) | Governance |
+| 11 | Unit-ratio field pattern (§7G.1, §7H.1, §7B.1, §7C.1, §7O.8 #12) | Fixed fatal stray-comma syntax (`->required(), ,`) in `PurchaseOrderForm`; converged all `*_unit_ratio` fields (PurchaseOrder, SalesOrder, TransferRequisition `requested_`/`proposed_`, DirectTransfer) onto the icon-with-tooltip pattern (`->hiddenLabel()` + `->afterContent(Icon::make(Heroicon::InformationCircle)->tooltip(__()))` + translated `aria-label`), removing `->hintIcon()` + `->hint()`; §7G.1 / §7H.1 / §7B.1 / §7C.1 samples amended; `FormFieldSpanTest` + `FormSyntaxTest` guards added (§12, §14) | P1 |
 
 > **Council note:** items 6 and 8 were reconciled to the *shipped* code, which itself diverges from the original scope description. Item 8's translation keys are a genuine code gap (unresolved `__()` references). Item 1's SalesOrder-vs-others wizard inconsistency and the dead wizard classes were resolved by owner direction: SalesOrder conformed to `View::make`, and `Components/WizardReviewStep.php` + `Livewire/Wizards/WizardReviewSummary.php` (with its tests) were deleted. Application code changed in those two areas only.
 
