@@ -40,8 +40,10 @@ describe('PurchaseOrderFactory', function () {
     });
 
     it('defaults update_cost_price to false (A4)', function () {
-        // A4: cost update is opt-in per order.
-        expect(PurchaseOrder::factory()->create()->update_cost_price)->toBeFalse();
+        // A4: cost update is opt-in per order. The factory omits the column
+        // (§5.13), so the value is the schema default (§2.16) — read it back
+        // from the persisted row.
+        expect(PurchaseOrder::factory()->create()->fresh()->update_cost_price)->toBeFalse();
     });
 
     it('auto-creates the supplier, warehouse, and orderer', function () {
@@ -84,7 +86,9 @@ describe('PurchaseOrderItemFactory', function () {
     });
 
     it('defaults received_base_qty to 0', function () {
-        expect(PurchaseOrderItem::factory()->create()->received_base_qty)->toBe(0);
+        // Factory omits the column (§5.14); the schema default (§2.17) is the
+        // contract, so read it back from the persisted row.
+        expect(PurchaseOrderItem::factory()->create()->fresh()->received_base_qty)->toBe(0);
     });
 
     it('auto-creates the parent order and the variant', function () {

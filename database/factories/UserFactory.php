@@ -65,11 +65,13 @@ final class UserFactory extends Factory
      */
     public function admin(): static
     {
+        // §5.6 / §1B.1a: Admin badge authority is global and independent of
+        // the `user_warehouse` pivot, so the state sets the role only — it
+        // must NOT auto-attach a warehouse. An attached row would be visible
+        // to pivot-reading code and contradict the empty-pivot contract.
         return $this->state(fn (array $attributes): array => [
             'role' => UserRole::Admin->value,
-        ])->afterCreating(function (\App\Models\User $user) {
-            $user->warehouses()->attach(Warehouse::factory()->create());
-        });
+        ]);
     }
 
     /**

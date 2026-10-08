@@ -146,10 +146,10 @@ it('grants canView() to all authenticated users for globally-visible widgets', f
 
     expect($class::canView())->toBeTrue();
 })->with([
-    StatsOverviewWidget::class,
-    RecentMovementsWidget::class,
-    PendingFulfillmentWidget::class,
-    QuickActionsWidget::class,
+    [StatsOverviewWidget::class],
+    [RecentMovementsWidget::class],
+    [PendingFulfillmentWidget::class],
+    [QuickActionsWidget::class],
 ]);
 
 it('grants canView() to admin, auditor, and warehouse staff for operational widgets', function (string $class) {
@@ -162,8 +162,8 @@ it('grants canView() to admin, auditor, and warehouse staff for operational widg
         expect($class::canView())->toBeTrue();
     }
 })->with([
-    LowStockAlertsWidget::class,
-    ActiveInTransitWidget::class,
+    [LowStockAlertsWidget::class],
+    [ActiveInTransitWidget::class],
 ]);
 
 it('denies canView() to warehouse staff for admin-only widgets', function (string $class) {
@@ -176,9 +176,9 @@ it('denies canView() to warehouse staff for admin-only widgets', function (strin
     $this->actingAs(User::factory()->admin()->create());
     expect($class::canView())->toBeTrue();
 })->with([
-    SalesRevenueTrendWidget::class,
-    SalesVsPurchasesWidget::class,
-    TopSellingVariantsWidget::class,
+    [SalesRevenueTrendWidget::class],
+    [SalesVsPurchasesWidget::class],
+    [TopSellingVariantsWidget::class],
 ]);
 
 it('denies canView() to the guest user for every widget', function (string $class) {
@@ -186,15 +186,15 @@ it('denies canView() to the guest user for every widget', function (string $clas
 
     expect($class::canView())->toBeFalse();
 })->with([
-    StatsOverviewWidget::class,
-    LowStockAlertsWidget::class,
-    RecentMovementsWidget::class,
-    SalesRevenueTrendWidget::class,
-    ActiveInTransitWidget::class,
-    SalesVsPurchasesWidget::class,
-    TopSellingVariantsWidget::class,
-    PendingFulfillmentWidget::class,
-    QuickActionsWidget::class,
+    [StatsOverviewWidget::class],
+    [LowStockAlertsWidget::class],
+    [RecentMovementsWidget::class],
+    [SalesRevenueTrendWidget::class],
+    [ActiveInTransitWidget::class],
+    [SalesVsPurchasesWidget::class],
+    [TopSellingVariantsWidget::class],
+    [PendingFulfillmentWidget::class],
+    [QuickActionsWidget::class],
 ]);
 
 // ===========================================================================
@@ -295,9 +295,12 @@ it('resolves every quick-action label through the translation catalogue', functi
 });
 
 it('declares the quick-actions blade view', function () {
-    $reflection = new ReflectionClass(QuickActionsWidget::class);
+    // Filament v5 `Widget::$view` is a NON-static property
+    // (vendor/filament/widgets/src/Widget.php), so it is read per-instance.
+    $widget = new QuickActionsWidget();
+    $property = new ReflectionProperty(QuickActionsWidget::class, 'view');
 
-    expect($reflection->getStaticPropertyValue('view'))->toBe('filament.widgets.quick-actions');
+    expect($property->getValue($widget))->toBe('filament.widgets.quick-actions');
     expect(view()->exists('filament.widgets.quick-actions'))->toBeTrue();
 });
 

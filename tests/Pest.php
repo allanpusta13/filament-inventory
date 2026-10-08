@@ -119,3 +119,23 @@ function actingAsGuest(): void
 {
     auth()->logout();
 }
+
+/**
+ * Create an authenticated WarehouseStaff user assigned to the given
+ * warehouses (mirrors TestCase::actingAsWarehouseStaff but variadic, for
+ * tests asserting the operational-scope boundary).
+ */
+function actingAsStaff(App\Models\Warehouse ...$warehouses): User
+{
+    $user = User::factory()->create([
+        'role' => UserRole::WarehouseStaff->value,
+    ]);
+
+    if ($warehouses !== []) {
+        $user->warehouses()->attach(array_map(static fn ($w) => $w->id, $warehouses));
+    }
+
+    actingAs($user);
+
+    return $user;
+}

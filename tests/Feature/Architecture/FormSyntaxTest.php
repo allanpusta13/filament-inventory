@@ -42,18 +42,8 @@ it('has no PHP syntax errors in Filament classes', function () {
 it('uses icon-with-tooltip on every ratio field, not hintIcon', function () {
     $violations = [];
 
-    // Orphaned dead code (zero call sites), excluded pending the owner's
-    // removal decision — not silently conformed here. Mirrors FormFieldSpanTest.
-    $excluded = [
-        'TransferRequisitions\\Schemas\\RevisionsForm.php',
-    ];
-
     foreach (File::allFiles(app_path('Filament/Resources')) as $file) {
         if ($file->getExtension() !== 'php') {
-            continue;
-        }
-
-        if (in_array(str_replace('/', '\\', $file->getRelativePathname()), $excluded, true)) {
             continue;
         }
 

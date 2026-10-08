@@ -284,7 +284,13 @@ it('produces a non-base conversion row via the §5.4 default state', function ()
 
 it('produces a base-unit self-conversion row via the §5.4 ->baseUnit() state', function () {
     // §5.4: baseUnit() state produces unit_name = 'pc', ratio = 1.
-    $conversion = ProductVariantUnitConversion::factory()->baseUnit()->create();
+    // Variant created quietly so ProductVariantObserver (§3.19) does not
+    // materialize its own pc row first and collide on the
+    // (product_variant_id, unit_name) unique index (§2.4).
+    $variant = ProductVariant::factory()->createQuietly();
+    $conversion = ProductVariantUnitConversion::factory()->baseUnit()->create([
+        'product_variant_id' => $variant->id,
+    ]);
 
     expect($conversion->unit_name)->toBe('pc');
     expect($conversion->base_unit_ratio)->toBe(1);

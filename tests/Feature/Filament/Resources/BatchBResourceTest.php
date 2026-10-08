@@ -78,7 +78,7 @@ describe('DirectTransferResource', function () {
 
     it('resolves the DirectTransferPolicy through the Gate', function () {
         expect(Gate::getPolicyFor(DirectTransfer::class))
-            ->toBe(App\Policies\DirectTransferPolicy::class);
+            ->toBeInstanceOf(App\Policies\DirectTransferPolicy::class);
     });
 
     it('eager-loads fromWarehouse, toWarehouse, transferredBy, and items.productVariant', function () {
@@ -139,7 +139,7 @@ describe('StockMovementResource', function () {
 
     it('resolves the StockMovementPolicy through the Gate', function () {
         expect(Gate::getPolicyFor(StockMovement::class))
-            ->toBe(App\Policies\StockMovementPolicy::class);
+            ->toBeInstanceOf(App\Policies\StockMovementPolicy::class);
     });
 
     it('eager-loads productVariant, warehouse, and createdBy', function () {
@@ -199,7 +199,7 @@ describe('LossLedgerResource', function () {
 
     it('resolves the LossLedgerPolicy through the Gate', function () {
         expect(Gate::getPolicyFor(LossLedger::class))
-            ->toBe(App\Policies\LossLedgerPolicy::class);
+            ->toBeInstanceOf(App\Policies\LossLedgerPolicy::class);
     });
 
     it('renders the list page for an admin', function () {

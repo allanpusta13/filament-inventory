@@ -24,14 +24,6 @@ use Illuminate\Support\Facades\File;
  * stop early inside `->extraAttributes([...])`). No framework boot.
  */
 $sourceForms = function (): array {
-    // Orphaned dead code — zero call sites anywhere in app/tests/
-    // resources/database. Superseded by
-    // TransferRequisitionForm::getRevisionFields(); excluded pending
-    // an owner removal decision, not silently conformed here.
-    $excluded = [
-        'TransferRequisitions\\Schemas\\RevisionsForm.php',
-    ];
-
     $files = [];
     foreach (File::allFiles(app_path('Filament/Resources')) as $file) {
         if ($file->getExtension() !== 'php') {
@@ -41,10 +33,6 @@ $sourceForms = function (): array {
         $relative = str_replace('/', '\\', $file->getRelativePathname());
 
         if (! preg_match('#Schemas\\\\[A-Za-z]+Form\.php$#', $relative)) {
-            continue;
-        }
-
-        if (in_array($relative, $excluded, true)) {
             continue;
         }
 

@@ -81,7 +81,7 @@ it('returns a Heroicon enum case for every case, never a raw string', function (
 })->with(RevisionStatus::cases());
 
 it('assigns a distinct icon and distinct color to every case', function () {
-    $icons = array_map(fn (RevisionStatus $c) => $c->getIcon(), RevisionStatus::cases());
+    $icons = array_map(fn (RevisionStatus $c) => $c->getIcon()->value, RevisionStatus::cases());
     $colors = array_map(fn (RevisionStatus $c) => $c->getColor(), RevisionStatus::cases());
 
     // Three cases, three distinct icons, three distinct colors — the

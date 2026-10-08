@@ -73,7 +73,7 @@ it('returns a Heroicon enum case for every case, never a raw string', function (
 it('assigns a distinct icon and distinct color to the two cases', function () {
     // Two sides, two distinct icons, two distinct colors — a side badge
     // in the negotiation history must read apart at a glance.
-    $icons = array_map(fn (NegotiationSide $c) => $c->getIcon(), NegotiationSide::cases());
+    $icons = array_map(fn (NegotiationSide $c) => $c->getIcon()->value, NegotiationSide::cases());
     $colors = array_map(fn (NegotiationSide $c) => $c->getColor(), NegotiationSide::cases());
 
     expect(array_unique($icons))->toHaveCount(2);

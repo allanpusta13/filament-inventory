@@ -28,4 +28,9 @@ return new class() extends Migration
             $table->index('purchase_order_id');
         });
     }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('purchase_order_items');
+    }
 };

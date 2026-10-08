@@ -33,4 +33,9 @@ return new class() extends Migration
             $table->index(['supplier_id', 'warehouse_id']);
         });
     }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('purchase_orders');
+    }
 };

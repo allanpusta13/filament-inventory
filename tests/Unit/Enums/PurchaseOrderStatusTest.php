@@ -101,7 +101,7 @@ it('locks the §4.2 canonical color mapping per case', function () {
 });
 
 it('assigns a distinct icon to every case', function () {
-    $icons = array_map(fn (PurchaseOrderStatus $c) => $c->getIcon(), PurchaseOrderStatus::cases());
+    $icons = array_map(fn (PurchaseOrderStatus $c) => $c->getIcon()->value, PurchaseOrderStatus::cases());
 
     // Five cases, five distinct icons — no two status badges share a glyph.
     expect(array_unique($icons))->toHaveCount(5);

@@ -74,9 +74,12 @@ class NegotiationService
     /**
      * Materialize requested items as approved items on confirm.
      *
-     * After materialization, verifies every item has a non-null approved
-     * base quantity — a confirm with a null approved qty would silently
-     * produce a wrong reservation.
+     * Invariant: after this method returns, every item has a non-null
+     * `approved_base_qty`. The loop copies `requested_base_qty` (NOT NULL by
+     * schema) onto `approved_base_qty` unconditionally whenever the item's
+     * approved qty is still null, so the post-loop state is guaranteed on
+     * every schema-valid insert. The prior post-loop defensive guard was
+     * therefore unreachable and has been removed.
      *
      * Called by `TransferRequisitionService::confirm()` (§6.6) inside the
      * confirm transaction, after items have been locked and bound to the
@@ -94,12 +97,6 @@ class NegotiationService
                 'approved_unit_ratio' => $item->requested_unit_ratio,
                 'approved_qty' => $item->requested_qty,
                 'approved_base_qty' => $item->requested_base_qty,
-            ]);
-        }
-
-        if ($requisition->items()->whereNull('approved_base_qty')->exists()) {
-            throw new DomainRuleViolationException('errors.missing_approved_quantity', [
-                'requisition' => (int) $requisition->id,
             ]);
         }
     }

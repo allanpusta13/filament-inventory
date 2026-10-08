@@ -32,7 +32,7 @@ uses(RefreshDatabase::class);
 // ---------------------------------------------------------------------------
 
 it('produces a code matching the §2 canonical format', function (string $factoryClass, string $prefix) {
-    $record = $factoryClass::new()->create();
+    $record = $factoryClass::factory()->create();
 
     $pattern = '/^'.preg_quote($prefix, '/').'-\d{14}-\d{3}$/';
     expect($record->reference_code)->toMatch($pattern);
@@ -44,7 +44,7 @@ it('produces a code matching the §2 canonical format', function (string $factor
 ]);
 
 it('produces a random part in [100, 999]', function (string $factoryClass) {
-    $record = $factoryClass::new()->create();
+    $record = $factoryClass::factory()->create();
     $parts = explode('-', $record->reference_code);
     $random = (int) end($parts);
 
@@ -79,7 +79,7 @@ it('uses the same helper the services use — GeneratesReferenceCodes', function
 it('produces unique codes across a single batch', function (string $factoryClass) {
     // The factory passes `$this->faker->unique()->numberBetween(100, 999)`,
     // so a batch of 20 within the same second must not collide.
-    $records = $factoryClass::new()->count(20)->create();
+    $records = $factoryClass::factory()->count(20)->create();
 
     expect($records->pluck('reference_code')->unique())->toHaveCount(20);
 })->with([

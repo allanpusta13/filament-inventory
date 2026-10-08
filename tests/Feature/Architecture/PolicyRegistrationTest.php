@@ -7,13 +7,17 @@ use Illuminate\Support\Facades\Gate;
 /**
  * §23.3 — Policy Registration.
  *
- * Every model→policy binding must be resolvable through the Gate.
- * This asserts the map in AppServiceProvider::registerPolicies() is
- * complete and correct for all 13 model/policy pairs.
+ * Every model→policy binding must be registered EXPLICITLY by the map in
+ * AppServiceProvider::registerPolicies().
+ *
+ * NOTE: `Gate::getPolicyFor()` alone is a weak oracle. `Gate::resolvePolicy()`
+ * falls back to `guessPolicyName()`, which auto-discovers
+ * `App\Models\X` → `App\Policies\XPolicy` for every pair here — so a suite
+ * asserting only `getPolicyFor()` passes even with `registerPolicies()`
+ * deleted. The primary assertions below read the explicit `Gate::$policies`
+ * map instead.
  */
-it('resolves every model to its policy through the Gate', function (string $model, string $policy) {
-    expect(Gate::getPolicyFor($model))->toBe($policy);
-})->with([
+$policyMap = [
     [App\Models\Product::class,             App\Policies\ProductPolicy::class],
     [App\Models\ProductVariant::class,      App\Policies\ProductVariantPolicy::class],
     [App\Models\TransferRequisition::class, App\Policies\TransferRequisitionPolicy::class],
@@ -27,7 +31,24 @@ it('resolves every model to its policy through the Gate', function (string $mode
     [App\Models\Warehouse::class,           App\Policies\WarehousePolicy::class],
     [App\Models\User::class,                App\Policies\UserPolicy::class],
     [App\Models\DirectTransfer::class,      App\Policies\DirectTransferPolicy::class],
-]);
+];
+
+/** The explicit model→policy map held by the Gate (not auto-discovery). */
+$explicitPolicyMap = function (): array {
+    $gate = Gate::getFacadeRoot();
+    $property = new ReflectionProperty($gate, 'policies');
+    $property->setAccessible(true);
+
+    return $property->getValue($gate);
+};
+
+it('registers every model→policy pair explicitly in the Gate map', function (string $model, string $policy) use ($explicitPolicyMap) {
+    expect($explicitPolicyMap()[$model] ?? null)->toBe($policy);
+})->with($policyMap);
+
+it('resolves every model to its policy through the Gate', function (string $model, string $policy) {
+    expect(Gate::getPolicyFor($model))->toBeInstanceOf($policy);
+})->with($policyMap);
 
 it('removes StockMovementPolicy::createDirectTransfer', function () {
     // §8.5: createDirectTransfer() moved to DirectTransferPolicy::create().
@@ -43,10 +64,9 @@ it('declares DirectTransferPolicy::create instead', function () {
     expect($reflection->hasMethod('create'))->toBeTrue();
 });
 
-it('registers every policy class in the AuthServiceProvider map or AppServiceProvider boot', function () {
-    // §17.4: the canonical registration site is AppServiceProvider::boot()
-    // (Laravel 11+ slim skeleton). Verify Gate resolves for a representative
-    // model — the dataset above already proves every binding individually.
+it('registers a policy for every §8 model in the explicit Gate map', function () use ($explicitPolicyMap) {
+    // §17.4: canonical registration site is AppServiceProvider::registerPolicies()
+    // (Laravel 11+ slim skeleton). Assert the EXPLICIT map, not auto-discovery.
     $allModels = [
         App\Models\Product::class,
         App\Models\ProductVariant::class,
@@ -63,9 +83,11 @@ it('registers every policy class in the AuthServiceProvider map or AppServicePro
         App\Models\DirectTransfer::class,
     ];
 
+    $explicit = $explicitPolicyMap();
+
     foreach ($allModels as $model) {
-        expect(Gate::getPolicyFor($model))->not->toBeNull(
-            "No policy registered for {$model}."
+        expect($explicit[$model] ?? null)->not->toBeNull(
+            "No policy explicitly registered for {$model}."
         );
     }
 });

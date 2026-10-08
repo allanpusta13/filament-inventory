@@ -79,10 +79,10 @@ it('casts the four lifecycle timestamps to datetime', function () {
 
     $fresh = $requisition->fresh();
 
-    expect($fresh->requested_at)->toBeInstanceOf(Illuminate\Support\Carbon::class);
-    expect($fresh->approved_at)->toBeInstanceOf(Illuminate\Support\Carbon::class);
-    expect($fresh->dispatched_at)->toBeInstanceOf(Illuminate\Support\Carbon::class);
-    expect($fresh->completed_at)->toBeInstanceOf(Illuminate\Support\Carbon::class);
+    expect($fresh->requested_at)->toBeInstanceOf(Carbon\CarbonImmutable::class);
+    expect($fresh->approved_at)->toBeInstanceOf(Carbon\CarbonImmutable::class);
+    expect($fresh->dispatched_at)->toBeInstanceOf(Carbon\CarbonImmutable::class);
+    expect($fresh->completed_at)->toBeInstanceOf(Carbon\CarbonImmutable::class);
 });
 
 it('defaults status to draft via the §2.7 schema', function () {

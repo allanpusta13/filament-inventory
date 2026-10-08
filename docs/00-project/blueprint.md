@@ -1,4 +1,4 @@
-# Multi-Warehouse Inventory System — Complete System Blueprint (v13.6 + i18n)
+# Multi-Warehouse Inventory System — Complete System Blueprint (v13.9)
 
 **Stack:** Laravel 13 + FilamentPHP v5 + Livewire v4 | **Database:** PostgreSQL / MySQL
 
@@ -16,6 +16,22 @@
 > 7. **Extended** Section 23 runtime completeness tests to include badge-scope resolution.
 > 8. **Extended** Section 26 acceptance criteria with explicit badge role-scoping items.
 > 9. **Extended** Section 27 with the v13.6 change table.
+
+> **Changelog v13.8:** (P1 contract-closure — blueprint ↔ code drift)
+> 1. **Corrected** §10 `StatsOverviewWidget` Type cell — stat-card widget (`BaseWidget` / stat-card grid), not `TableWidget`.
+> 2. **Corrected** §10 `QuickActionsWidget` `$view` to non-static `protected string $view` (Filament v5 `Widget::$view`).
+> 3. **Catalogued** `PurchaseOrderCancelled` event + `NotifyPurchaseOrderCancelled` listener + `PurchaseOrderCancelledNotification` in §22.1/§22.1a/§22.3a/§22.3b/§17.2/§25.
+> 4. **Added** §25 reverse rule — files under §25-covered directories must be declared in the §25 map or deleted.
+> 5. **Extended** Section 27 with the v13.8 change table.
+
+> **Changelog v13.9:** (post-v13.8 residual closure)
+> 1. **Fixed** §7K.1 `WarehouseForm` — the dead `Livewire::helperText()` placeholder block replaced with `Filament\Schemas\Components\Livewire` + `Filament\Schemas\Components\Text` (Filament v5); the resource no longer 500s on create/edit.
+> 2. **Clarified** §4.1 under-review icon pairing — `UnderReviewFulfiller` and `UnderReviewRequestor` deliberately share one icon.
+> 3. **Fixed** §5.6 `UserFactory::admin()` — removed the stray `afterCreating` warehouse auto-attach; restores the empty-pivot contract (§1B.1a).
+> 4. **Amended** §1B.1a — out-of-domain role fail-closed contract stated (enum cast throws on read; the defensive `[]` branch is unreachable while `UserRole` has four wired cases).
+> 5. **Declared** §25 untracked extras + PSR-4 — 36 load-bearing undeclared paths enumerated; `STNManifestController` case fixed.
+> 6. **Deleted** `app/Filament/Exports/ProductExporter.php` — the sole zero-reference dead file (owner-directed).
+> 7. **Extended** Section 27 with the v13.9 change table.
 
 > **Changelog from v13.4 (retained):**
 > 1. **Added** Principle **A11** — Direct Transfers are multi-line fire-and-forget operations.
@@ -1558,6 +1574,8 @@ The four scope tiers are:
 | `WarehouseStaff` | N = 0 | Empty set | Badge returns `null`; resource remains reachable in read-only policy mode |
 
 **The scope rule is never negotiated at the call site.** Every badge implementation must resolve its warehouse ID set through `ScopesNavigationBadges::badgeScopedWarehouseIds()`. Ad hoc `auth()->user()->warehouses()->pluck('id')` inside a resource is prohibited — it silently produces the wrong result for admins and auditors, whose warehouse pivot may be empty while their badge authority is global.
+
+**Out-of-domain role (v13.8 amendment).** `users.role` carries the `UserRole` enum cast (§3.18), so a value outside the four declared cases cannot be persisted through the model and cannot be read back — the cast throws on read. The resolver reads `role` inside its comparison chain, therefore an out-of-domain value **fails closed by throwing**, never silently resolving a wider tier. The trailing `return []` branch in `badgeScopedWarehouseIds()` is defensive: it is only reachable if `UserRole` gains a case without a matching branch, and it prevents that future case from inheriting another role's scope. The contract test asserts the throw rather than a widened or falsely-empty scope.
 
 ### 1B.1b Counterpart Warehouse Does Not Widen Scope
 
@@ -4679,6 +4697,12 @@ enum TransferRequisitionStatus: string implements HasLabel, HasColor
         return match ($this) {
             self::Draft                => 'gray',
             self::Requested            => 'warning',
+            // Deliberate pairing: both under-review cases share the
+            // 'warning' tier (and, per the §1D.4 HasIcon extension, one
+            // glyph) — the fulfiller⇌requestor ping-pong is a single
+            // semantic tier. Pinned by
+            // TransferRequisitionStatusTest::it('assigns a distinct icon
+            // to every case except the deliberate under-review pair').
             self::UnderReviewFulfiller,
             self::UnderReviewRequestor => 'warning',
             self::Confirmed            => 'primary',
@@ -6054,7 +6078,14 @@ class InventoryService
             $reorderPoints = ProductVariant::whereIn('id', $variantIds)->pluck('reorder_point', 'id');
 
             foreach ($items as $item) {
-                if ($item->approved_base_qty === null) {
+                // Dispatch requires a fully materialized line. The stock
+                // movement's audit fields (`unit_name_used`/`unit_ratio_used`)
+                // are NOT NULL in schema (§2.8) and sourced from the approved
+                // unit, so reject a line that never ran negotiation
+                // materialization rather than inserting a null audit value.
+                if ($item->approved_base_qty === null
+                    || $item->approved_unit_name === null
+                    || $item->approved_unit_ratio === null) {
                     throw new DomainRuleViolationException('errors.missing_approved_quantity', [
                         'item' => (int) $item->id,
                     ]);
@@ -6134,22 +6165,6 @@ class InventoryService
         DB::transaction(function () use ($requisition, $scanPayload) {
             $fresh = TransferRequisition::lockForUpdate()->findOrFail($requisition->id);
 
-            // State guard — intake is only valid once stock has left the
-            // source warehouse. Mirrors the `StnController::scan()` (§21.3)
-            // boundary so direct service calls cannot receive a
-            // Draft/Confirmed requisition.
-            if (! in_array($fresh->status, [
-                \App\Enums\TransferRequisitionStatus::Dispatched,
-                \App\Enums\TransferRequisitionStatus::PartiallyReceived,
-            ], true)) {
-                throw new InvalidDocumentStateException(
-                    documentType: TransferRequisition::class,
-                    documentId: (int) $fresh->id,
-                    actualStatus: $fresh->status->value,
-                    action: 'receive',
-                );
-            }
-
             $items = TransferRequisitionItem::where('transfer_requisition_id', $fresh->id)
                 ->orderBy('id')
                 ->lockForUpdate()
@@ -6157,44 +6172,11 @@ class InventoryService
 
             $knownIds = $items->pluck('id')->all();
 
-            // §19.6 — the over-outstanding check must occur before canonical
-            // sorting, JSON encoding, and hashing. Validate per-item received
-            // quantities against outstanding approved qty before computing
-            // the checksum/idempotency key.
-            foreach ($items as $item) {
-                $payload = $scanPayload[$item->id] ?? [
-                    'received_good' => 0,
-                    'received_damaged' => 0,
-                ];
-                $good = (int) ($payload['received_good'] ?? 0);
-                $damaged = (int) ($payload['received_damaged'] ?? 0);
-
-                if (! is_numeric($payload['received_good']) || ! is_numeric($payload['received_damaged'])
-                    || (int) $payload['received_good'] != $payload['received_good']
-                    || (int) $payload['received_damaged'] != $payload['received_damaged']) {
-                    throw new DomainRuleViolationException('errors.non_integer_payload', [
-                        'item' => (int) $item->id,
-                    ]);
-                }
-
-                if ($good < 0 || $damaged < 0) {
-                    throw new DomainRuleViolationException('errors.negative_payload', [
-                        'item' => (int) $item->id,
-                    ]);
-                }
-
-                $outstanding = max(0, (int) $item->approved_base_qty - (int) $item->received_good_base_qty - (int) $item->received_damaged_base_qty);
-
-                if ($good + $damaged > $outstanding) {
-                    throw new OutstandingQuantityExceededException(
-                        itemType: TransferRequisitionItem::class,
-                        itemId: (int) $item->id,
-                        attempted: $good + $damaged,
-                        outstanding: $outstanding,
-                    );
-                }
-            }
-
+            // Canonicalize and validate the payload shape FIRST so a duplicate
+            // replay (§19.8) can be detected and short-circuited BEFORE the
+            // state guard. A replayed payload must no-op even after the
+            // requisition has closed to `Completed`/`ClosedWithLoss`, where
+            // outstanding is 0 and the state guard would otherwise reject it.
             $normalized = [];
             foreach ($scanPayload as $itemId => $quantities) {
                 $good = $quantities['received_good'] ?? 0;
@@ -6231,6 +6213,47 @@ class InventoryService
 
             if ($alreadyProcessed) {
                 return;
+            }
+
+            // State guard — intake is only valid once stock has left the
+            // source warehouse. Mirrors the `STNManifestController::scan()` (§21.3)
+            // boundary so direct service calls cannot receive a
+            // Draft/Confirmed requisition. Runs AFTER the duplicate replay so a
+            // replayed payload no-ops regardless of current state.
+            if (! in_array($fresh->status, [
+                \App\Enums\TransferRequisitionStatus::Dispatched,
+                \App\Enums\TransferRequisitionStatus::PartiallyReceived,
+            ], true)) {
+                throw new InvalidDocumentStateException(
+                    documentType: TransferRequisition::class,
+                    documentId: (int) $fresh->id,
+                    actualStatus: $fresh->status->value,
+                    action: 'receive',
+                );
+            }
+
+            // §19.6 — the over-outstanding check must occur before the
+            // idempotency key is claimed (and thus before any ledger write).
+            // Validate per-item received quantities against outstanding
+            // approved qty.
+            foreach ($items as $item) {
+                $payload = $scanPayload[$item->id] ?? [
+                    'received_good' => 0,
+                    'received_damaged' => 0,
+                ];
+                $good = (int) ($payload['received_good'] ?? 0);
+                $damaged = (int) ($payload['received_damaged'] ?? 0);
+
+                $outstanding = max(0, (int) $item->approved_base_qty - (int) $item->received_good_base_qty - (int) $item->received_damaged_base_qty);
+
+                if ($good + $damaged > $outstanding) {
+                    throw new OutstandingQuantityExceededException(
+                        itemType: TransferRequisitionItem::class,
+                        itemId: (int) $item->id,
+                        attempted: $good + $damaged,
+                        outstanding: $outstanding,
+                    );
+                }
             }
 
             // First-scan detection: no idempotency record exists yet.
@@ -6472,7 +6495,7 @@ class InventoryService
             $fresh = TransferRequisition::lockForUpdate()->findOrFail($requisition->id);
 
             // State guard — losses are only recorded against in-flight
-            // intake. Mirrors the `StnController::scan()` (§21.3) boundary so
+            // intake. Mirrors the `STNManifestController::scan()` (§21.3) boundary so
             // direct service calls cannot write losses on a
             // Draft/Confirmed requisition.
             if (! in_array($fresh->status, [
@@ -6672,9 +6695,12 @@ class NegotiationService
     /**
      * Materialize requested items as approved items on confirm.
      *
-     * After materialization, verifies every item has a non-null approved
-     * base quantity — a confirm with a null approved qty would silently
-     * produce a wrong reservation.
+     * Invariant: after this method returns, every item has a non-null
+     * `approved_base_qty`. The loop copies `requested_base_qty` (NOT NULL by
+     * schema) onto `approved_base_qty` unconditionally whenever the item's
+     * approved qty is still null, so the post-loop state is guaranteed on
+     * every schema-valid insert. The prior post-loop defensive guard was
+     * therefore unreachable and has been removed.
      */
     public function materializeRequestedAsApproved(TransferRequisition $requisition): void
     {
@@ -6688,12 +6714,6 @@ class NegotiationService
                 'approved_unit_ratio' => $item->requested_unit_ratio,
                 'approved_qty'        => $item->requested_qty,
                 'approved_base_qty'   => $item->requested_base_qty,
-            ]);
-        }
-
-        if ($requisition->items()->whereNull('approved_base_qty')->exists()) {
-            throw new DomainRuleViolationException('errors.missing_approved_quantity', [
-                'requisition' => (int) $requisition->id,
             ]);
         }
     }
@@ -11954,12 +11974,14 @@ class CustomersTable
 ```php
 namespace App\Filament\Resources\Warehouses\Schemas;
 
+use App\Livewire\Warehouses\AssignedUsersList;
 use App\Models\Warehouse;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Schemas\Components\Placeholder;
+use Filament\Schemas\Components\Livewire;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Text;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 
@@ -11998,20 +12020,16 @@ class WarehouseForm
                 ->columnSpanFull()
                 ->columns(['default' => 1, 'md' => 2, 'xl' => 2])
                 ->schema([
-                    // Read-only display: a disabled relationship `Select` on a
-                    // `BelongsToMany` does not hydrate the pivot selection
-                    // reliably, so assigned staff render as a `Placeholder`
-                    // resolved from the page record (same `$record` closure
-                    // style as the infolist `users_count` entry in §7K.3, which
-                    // likewise queries via `users()` so no eager-load
-                    // declaration is required on the Create/Edit page context).
-                    // Assignments stay editable from the user record.
-                    Placeholder::make('assigned_users')
-                        ->label(__('resources.warehouses.fields.users'))
-                        ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2])
-                        ->content(fn (?Warehouse $record): string => $record?->users()->pluck('name')->implode(', ')
-                            ?: __('resources.warehouses.empty_staff'))
-                        ->helperText(__('resources.warehouses.help.users_readonly')),
+                    // `Livewire::make()` has no `helperText()` in Filament v5;
+                    // the ownership note is a sibling `Text` component instead.
+                    Livewire::make(AssignedUsersList::class, fn (?Warehouse $record): array => [
+                        'warehouseId' => $record?->id,
+                    ])
+                        ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2]),
+
+                    Text::make(__('resources.warehouses.help.users_readonly'))
+                        ->color('gray')
+                        ->columnSpanFull(),
 
                     Toggle::make('is_active')
                         ->label(__('resources.warehouses.fields.is_active'))
@@ -13610,8 +13628,8 @@ class DirectTransferPolicy
 
 ### 8.14 Policy Registration
 
-Every policy is registered once via the `$policies` map on
-`AuthServiceProvider`, consumed by `registerPolicies()` in `boot()`.
+Every policy is registered once via `Gate::policy()` inside
+`AppServiceProvider::registerPolicies()`, called from `boot()`.
 §17.4 is the full canonical listing — no bindings are duplicated here.
 
 ---
@@ -13803,7 +13821,7 @@ class AdminReviewFilters
 
 | Widget | Data Source | Cache TTL | Type | `$columnSpan` |
 |---|---|---|---|---|
-| `StatsOverviewWidget` | Total On-Hand, Pending Requisitions, Active In-Transit, Total Write-Off | 300s | TableWidget | `['default' => 1, 'md' => 2, 'xl' => 2]` |
+| `StatsOverviewWidget` | Total On-Hand, Pending Requisitions, Active In-Transit, Total Write-Off | 300s | BaseWidget (stat-card grid) | `['default' => 1, 'md' => 2, 'xl' => 2]` |
 | `LowStockAlertsWidget` | Variants where `availableQuantity <= reorder_point` | 300s | ChartWidget (bar) | `['default' => 1, 'md' => 1, 'xl' => 1]` |
 | `RecentMovementsWidget` | Recent `stock_movements` daily buckets, 7 days | 60s | ChartWidget (line) | `['default' => 1, 'md' => 1, 'xl' => 1]` |
 | `SalesRevenueTrendWidget` | Daily Sale value (`dispatched_at`), 30 days | 300s | ChartWidget (line) | `['default' => 1, 'md' => 2, 'xl' => 2]` |
@@ -13838,7 +13856,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Number;
 
 // File: app/Filament/Widgets/StatsOverviewWidget.php
-class StatsOverviewWidget extends TableWidget
+class StatsOverviewWidget extends BaseWidget
 {
     protected static ?int $sort = 1;
     protected int | string | array $columnSpan = ['default' => 1, 'md' => 2, 'xl' => 2];
@@ -14552,7 +14570,7 @@ class QuickActionsWidget extends Widget
         return auth()->user() !== null;
     }
 
-    protected static string $view = 'filament.widgets.quick-actions';
+    protected string $view = 'filament.widgets.quick-actions';
 
     // Static shortcut buttons; no cache.
 
@@ -14680,7 +14698,7 @@ class QuickActionsWidget extends Widget
 5. Install `pestphp/pest`.
 6. Add `'currency' => env('APP_CURRENCY', 'PHP')` to `config/app.php`.
 7. Verify `ext-bcmath` is enabled and declared.
-8. Register `App\Providers\AuthServiceProvider` and `App\Providers\InventoryServiceProvider` in `bootstrap/providers.php`.
+8. Register `App\Providers\AppServiceProvider` and `App\Providers\InventoryServiceProvider` in `bootstrap/providers.php`.
 9. Mandate `->strictAuthorization()` in `AdminPanelProvider`.
 10. Enumerate every policy method before enabling strict mode.
 11. Verify `HasWizard` trait availability on all wizard-based `CreateRecord` page classes.
@@ -14806,7 +14824,7 @@ class DatabaseSeeder extends Seeder
 
 **Phase 10: Dispatch, In-Transit Monitor & Confirm Materialization.** Confirmation is atomic; dispatch verifies `Confirmed`; `InTransitResource` uses standard table + `stackedOnMobile()`; rows transition to `Cleared`/`Lost`.
 
-**Phase 11: Printable STN & Signed QR Route.** `StnController`, print/scan routes, seven-day `URL::temporarySignedRoute()`, `signed` middleware, and explicit `receive` policy authorization.
+**Phase 11: Printable STN & Signed QR Route.** `STNManifestController`, print/scan routes, seven-day `URL::temporarySignedRoute()`, `signed` middleware, and explicit `receive` policy authorization.
 
 **Phase 12: Scan-to-Receive Modal & Multi-Batch Intake.** Canonical checksum, idempotency uniqueness, payload validation, deterministic locking, and no double application under concurrent scans.
 
@@ -15229,11 +15247,11 @@ This section is authoritative. Where an older section says that a surface exists
 | Resource classes | Most Resources were listed but not implemented | Add thin Resource contract for every declared resource |
 | Resource Pages | Most List/Create/Edit/View classes were listed but not defined | Add every page class and register its route |
 | Dashboard widgets | 7 of 9 widgets were only referenced | Add class contract, scope contract, and registration for all 9 |
-| STN route | `route('stn.scan')` was referenced but no route/controller existed | Add `StnController`, named routes, middleware, authorization |
+| STN route | `route('stn.scan')` was referenced but no route/controller existed | Add `STNManifestController`, named routes, middleware, authorization |
 | Signed QR | QR was described as signed but table action generated an unsigned route | Use `URL::temporarySignedRoute()` with 7-day expiry |
 | Service wiring | Services were resolved ad hoc with `app(...)` and no provider contract existed | Add `InventoryServiceProvider` and runtime resolution tests |
 | Observer wiring | Observer registration was only embedded in prose | Make `AppServiceProvider::boot()` registration mandatory and test it |
-| Policy wiring | Registration existed only as a code fragment | Register every policy in `AuthServiceProvider` and test Gate resolution |
+| Policy wiring | Registration existed only as a code fragment | Register every policy in `AppServiceProvider::boot()` and test Gate resolution |
 | Idempotency model | Table/service references existed, but no model was defined | Add `StockMovementIdempotencyKey` model with casts/relations |
 | Direct Transfer architecture | Direct Transfer was a `StockMovement`-backed single-item resource with no header | Add `DirectTransfer` + `DirectTransferItem` models, `DirectTransferPolicy`, multi-item service, repeater form, card table, infolist, view page |
 | Warehouse list exposure | `viewAny()` did not provide collection-level warehouse isolation | Apply server-side query scoping before pagination |
@@ -15308,33 +15326,50 @@ No service may depend on a controller, Filament Page, Livewire component, or HTT
 ```php
 return [
     App\Providers\AppServiceProvider::class,
-    App\Providers\AuthServiceProvider::class,
-    App\Providers\EventServiceProvider::class,
     App\Providers\InventoryServiceProvider::class,
     App\Providers\Filament\AdminPanelProvider::class,
 ];
 ```
 
-The test suite must prove each provider is loaded.
+Laravel 11+ ships a slim skeleton: the framework no longer registers `AuthServiceProvider` / `EventServiceProvider` by default, and this project does not create them. Policy bindings and event→listener wiring live in `AppServiceProvider` (§17.4). The test suite must prove each registered provider is loaded.
 
 Complete `AppServiceProvider` — owns observer registration (§17.3), global table configuration (§7N.5 `configureTable()`), and the badge-scope flush call site (§1B.3):
 
 ```php
+<?php
+
+declare(strict_types=1);
+
 namespace App\Providers;
 
 use App\Filament\Resources\InTransits\InTransitResource;
 use App\Filament\Resources\PurchaseOrders\PurchaseOrderResource;
 use App\Filament\Resources\SalesOrders\SalesOrderResource;
 use App\Filament\Resources\TransferRequisitions\TransferRequisitionResource;
+use App\Events\InventoryBelowReorderPoint;
+use App\Events\PurchaseOrderCancelled;
+use App\Events\TransferConfirmed;
+use App\Listeners\NotifyInventoryBelowReorderPoint;
+use App\Listeners\NotifyPurchaseOrderCancelled;
+use App\Listeners\NotifyTransferConfirmed;
+use App\Models\DirectTransfer;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Observers\ProductObserver;
 use App\Observers\ProductVariantObserver;
+use App\Policies\DirectTransferPolicy;
+use App\Policies\ProductPolicy;
+use Filament\Forms\Components\Field;
+use Filament\Infolists\Components\Entry;
+use Filament\Tables\Columns\Column;
+use Filament\Tables\Filters\BaseFilter;
 use Filament\Tables\Table;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use Livewire\Component;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -15343,35 +15378,87 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureTable();
+        $this->translatableComponents();
 
-        // Observer registration — must run before seeders or factories
-        // create variants so the base-unit conversion always exists.
+        $this->registerObservers();
+        $this->registerPolicies();
+        $this->registerEventListeners();
+        $this->registerBadgeScopeFlush();
+    }
+
+    /**
+     * Project-wide label translation for Filament components
+     * (`Field`, `Column`, `Entry`, `BaseFilter`).
+     */
+    private function translatableComponents(): void
+    {
+        foreach ([Field::class, BaseFilter::class, Column::class, Entry::class] as $component) {
+            /** @var Configurable $component */
+            $component::configureUsing(function (Component $translatable): void {
+                /** @phpstan-ignore method.notFound */
+                $translatable->translateLabel();
+            });
+        }
+    }
+
+    /**
+     * Observer registration — must run before seeders or factories
+     * create variants so the base-unit conversion always exists (§17.3).
+     */
+    private function registerObservers(): void
+    {
         Product::observe(ProductObserver::class);
         ProductVariant::observe(ProductVariantObserver::class);
+    }
 
-        // Badge-scope flush — the canonical call sites. Each
-        // badge-bearing resource holds its own trait-static scope and
-        // count caches, so all four are flushed (scope AND count).
-        // Only matters for long-lived workers; harmless per-request
-        // under PHP-FPM.
-        Event::listen(Logout::class, function (): void {
+    /**
+     * §17.4 — one `Gate::policy()` call per §8 model→policy pair
+     * (thirteen total).
+     */
+    private function registerPolicies(): void
+    {
+        Gate::policy(Product::class, ProductPolicy::class);
+        // …one line per §8 pair (ProductVariant, TransferRequisition,
+        // InTransit, StockMovement, LossLedger, PurchaseOrder, SalesOrder,
+        // Supplier, Customer, Warehouse, User, DirectTransfer)…
+        Gate::policy(DirectTransfer::class, DirectTransferPolicy::class);
+    }
+
+    /**
+     * §17.4 / §22.3a — one `Event::listen()` call per §22.1
+     * event→listener pair.
+     */
+    private function registerEventListeners(): void
+    {
+        Event::listen(TransferConfirmed::class, NotifyTransferConfirmed::class);
+        // …one line per §22.1 pair…
+        Event::listen(PurchaseOrderCancelled::class, NotifyPurchaseOrderCancelled::class);
+        Event::listen(InventoryBelowReorderPoint::class, NotifyInventoryBelowReorderPoint::class);
+    }
+
+    /**
+     * Badge-scope flush — the canonical call sites (§1B.3). Each
+     * badge-bearing resource holds its own trait-static scope and
+     * count caches, so all four are flushed (scope AND count). Only
+     * matters for long-lived workers; harmless per-request under
+     * PHP-FPM.
+     */
+    private function registerBadgeScopeFlush(): void
+    {
+        $flush = static function (): void {
             TransferRequisitionResource::flushBadgeScope();
             PurchaseOrderResource::flushBadgeScope();
             SalesOrderResource::flushBadgeScope();
             InTransitResource::flushBadgeScope();
-        });
+        };
 
-        // Re-authentication without a preceding `Logout` (session expiry
-        // followed by direct `Auth::login()`, programmatic auth in
-        // long-lived workers, Filament re-auth) must flush too —
-        // otherwise the previous user's scope and count survive into the
-        // new session.
-        Event::listen(Login::class, function (): void {
-            TransferRequisitionResource::flushBadgeScope();
-            PurchaseOrderResource::flushBadgeScope();
-            SalesOrderResource::flushBadgeScope();
-            InTransitResource::flushBadgeScope();
-        });
+        // `Logout` closes the normal flow; `Login` closes the
+        // re-auth-without-logout path (session expiry followed by direct
+        // `Auth::login()`, programmatic auth in workers, Filament
+        // re-auth) — otherwise the previous user's scope and count
+        // survive into the new session.
+        Event::listen(Logout::class, $flush);
+        Event::listen(Login::class, $flush);
     }
 
     /**
@@ -15401,114 +15488,23 @@ ProductVariant::observe(ProductVariantObserver::class);
 
 The base-unit observer must be registered **before** seeders or factories create variants.
 
-### 17.4 Policy Registration
+### 17.4 Policy & Event Registration
 
-Complete `AuthServiceProvider` — owns every policy binding in one place via
-the `$policies` map consumed by `registerPolicies()`:
+This project targets Laravel 11+, whose slim skeleton ships without
+`AuthServiceProvider` or `EventServiceProvider`. Both registration sites are
+consolidated into `AppServiceProvider` (the complete class in §17.2):
 
-```php
-namespace App\Providers;
+- **Policies** — the private `registerPolicies()` method issues one
+  `Gate::policy()` call per §8 model→policy pair (thirteen total), called from
+  `boot()`.
+- **Events** — the private `registerEventListeners()` method issues one
+  `Event::listen()` call per §22.1 event→listener pair, called from `boot()`.
 
-use App\Models\Customer;
-use App\Models\DirectTransfer;
-use App\Models\InTransit;
-use App\Models\LossLedger;
-use App\Models\Product;
-use App\Models\ProductVariant;
-use App\Models\PurchaseOrder;
-use App\Models\SalesOrder;
-use App\Models\StockMovement;
-use App\Models\Supplier;
-use App\Models\TransferRequisition;
-use App\Models\User;
-use App\Models\Warehouse;
-use App\Policies\CustomerPolicy;
-use App\Policies\DirectTransferPolicy;
-use App\Policies\InTransitPolicy;
-use App\Policies\LossLedgerPolicy;
-use App\Policies\ProductPolicy;
-use App\Policies\ProductVariantPolicy;
-use App\Policies\PurchaseOrderPolicy;
-use App\Policies\SalesOrderPolicy;
-use App\Policies\StockMovementPolicy;
-use App\Policies\SupplierPolicy;
-use App\Policies\TransferRequisitionPolicy;
-use App\Policies\UserPolicy;
-use App\Policies\WarehousePolicy;
-use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
-
-class AuthServiceProvider extends ServiceProvider
-{
-    /**
-     * The policy mappings for the application.
-     *
-     * This map is the single canonical registration site:
-     * `registerPolicies()` iterates it in `boot()` below. Do not add
-     * parallel `Gate::policy()` calls — edit this map only, so the two
-     * can never diverge.
-     *
-     * @var array<class-string, class-string>
-     */
-    protected $policies = [
-        Product::class             => ProductPolicy::class,
-        ProductVariant::class      => ProductVariantPolicy::class,
-        TransferRequisition::class => TransferRequisitionPolicy::class,
-        InTransit::class           => InTransitPolicy::class,
-        StockMovement::class       => StockMovementPolicy::class,
-        LossLedger::class          => LossLedgerPolicy::class,
-        PurchaseOrder::class       => PurchaseOrderPolicy::class,
-        SalesOrder::class          => SalesOrderPolicy::class,
-        Supplier::class            => SupplierPolicy::class,
-        Customer::class            => CustomerPolicy::class,
-        Warehouse::class           => WarehousePolicy::class,
-        User::class                => UserPolicy::class,
-        DirectTransfer::class      => DirectTransferPolicy::class,
-    ];
-
-    public function boot(): void
-    {
-        $this->registerPolicies();
-    }
-}
-```
-
-Complete `EventServiceProvider` — owns the event→listener wiring (§22.3a):
-
-```php
-namespace App\Providers;
-
-use App\Events\InventoryBelowReorderPoint;
-use App\Events\LossRecorded;
-use App\Events\PurchaseOrderReceived;
-use App\Events\SalesOrderDispatched;
-use App\Events\TransferCancelled;
-use App\Events\TransferConfirmed;
-use App\Events\TransferDispatched;
-use App\Events\TransferReceived;
-use App\Listeners\NotifyInventoryBelowReorderPoint;
-use App\Listeners\NotifyLossRecorded;
-use App\Listeners\NotifyPurchaseOrderReceived;
-use App\Listeners\NotifySalesOrderDispatched;
-use App\Listeners\NotifyTransferCancelled;
-use App\Listeners\NotifyTransferConfirmed;
-use App\Listeners\NotifyTransferDispatched;
-use App\Listeners\NotifyTransferReceived;
-use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
-
-class EventServiceProvider extends ServiceProvider
-{
-    protected $listen = [
-        TransferConfirmed::class          => [NotifyTransferConfirmed::class],
-        TransferCancelled::class          => [NotifyTransferCancelled::class],
-        TransferDispatched::class         => [NotifyTransferDispatched::class],
-        TransferReceived::class           => [NotifyTransferReceived::class],
-        LossRecorded::class               => [NotifyLossRecorded::class],
-        PurchaseOrderReceived::class      => [NotifyPurchaseOrderReceived::class],
-        SalesOrderDispatched::class       => [NotifySalesOrderDispatched::class],
-        InventoryBelowReorderPoint::class => [NotifyInventoryBelowReorderPoint::class],
-    ];
-}
-```
+No `AuthServiceProvider` or `EventServiceProvider` file exists in this project
+(the §25 file map lists only `AppServiceProvider`, `InventoryServiceProvider`,
+and `Filament/AdminPanelProvider`) — do not create them. A runtime test asserts
+`Gate::getPolicyFor()` resolves every model to its registered policy class
+(§23.3).
 
 ### 17.5 Filament Panel Provider
 
@@ -17738,13 +17734,25 @@ Before hashing:
 2. reject unknown item IDs;
 3. reject negative values;
 4. reject non-integer values after normalization;
-5. require `received_good + received_damaged <= outstanding`;
-6. sort item IDs numerically;
-7. sort each payload object's keys;
-8. encode canonical JSON;
-9. hash canonical JSON with SHA-256.
+5. sort item IDs numerically;
+6. sort each payload object's keys;
+7. encode canonical JSON;
+8. hash canonical JSON with SHA-256.
 
 Equivalent payloads must produce the same checksum.
+
+Ordering note: the over-outstanding check (`received_good + received_damaged <=
+outstanding`) is **not** part of the pre-hash canonicalization step. A replayed
+payload must short-circuit on its checksum before any state or outstanding
+validation, because a replayed scan may legitimately arrive after the
+requisition has closed (`Completed`/`ClosedWithLoss`) with zero outstanding.
+Order in `scanToReceive()`:
+
+1. canonicalize, validate shape, hash;
+2. detect an existing idempotency record for the checksum and no-op on replay (§19.8);
+3. state guard (Dispatched / PartiallyReceived only);
+4. over-outstanding check;
+5. claim the idempotency key (§19.8), then perform ledger writes.
 
 ### 19.7 Scan Lock Ordering
 
@@ -17881,15 +17889,19 @@ They must be consistent: a user's badge count must never exceed the number of re
 Full `routes/web.php` wiring (the STN endpoints are the only custom web routes; everything else is served by the Filament panel):
 
 ```php
-use App\Http\Controllers\StnController;
+<?php
+
+declare(strict_types=1);
+
+use App\Http\Controllers\STNManifestController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')
-    ->get('/stn/{transferRequisition}/print', [StnController::class, 'print'])
+    ->get('/stn/{transferRequisition}/print', [STNManifestController::class, 'print'])
     ->name('stn.print');
 
 Route::middleware(['auth', 'signed'])
-    ->get('/stn/{transferRequisition}/scan', [StnController::class, 'scan'])
+    ->get('/stn/{transferRequisition}/scan', [STNManifestController::class, 'scan'])
     ->name('stn.scan');
 ```
 
@@ -17981,11 +17993,16 @@ The `scan` endpoint must authorize `receive`.
 `app/Livewire/Stn/ScanForm.php` — the `<livewire:stn.scan-form>` component referenced above. Mounts on the requisition id, renders one `received_good` / `received_damaged` row per requisition item, and delegates all mutations to `InventoryService::scanToReceive()` (never writes ledger records directly). The full `$lines` map is always submitted — omitting an item on the first scan is a write-off under `scanToReceive()` semantics (§6.2), so the form pre-fills every line with `0` rather than filtering empty rows. Client-side rules mirror the canonicalization contract (§19.6); the service re-validates canonically:
 
 ```php
+<?php
+
+declare(strict_types=1);
+
 namespace App\Livewire\Stn;
 
 use App\Models\TransferRequisition;
 use App\Services\InventoryService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class ScanForm extends Component
@@ -18109,19 +18126,25 @@ for the QR destination.
 ### 21.3 Controller Contract
 
 ```text
-app/Http/Controllers/StnController.php
+app/Http/Controllers/STNManifestController.php
 ```
 
 Methods:
 
 ```php
+<?php
+
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use App\Enums\TransferRequisitionStatus;
 use App\Models\TransferRequisition;
+use Illuminate\Contracts\View\View;
+use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Gate;
 
-class StnController extends Controller
+class STNManifestController extends Controller
 {
     public function print(TransferRequisition $transferRequisition)
     {
@@ -18178,10 +18201,11 @@ TransferDispatched
 TransferReceived
 LossRecorded
 PurchaseOrderReceived
+PurchaseOrderCancelled
 SalesOrderDispatched
 ```
 
-`TransferConfirmed` is added because confirmation is now an explicit transactional service boundary. `TransferCancelled` is listed because `TransferRequisitionService::cancelRequisition()` dispatches it (§19.2).
+`TransferConfirmed` is added because confirmation is now an explicit transactional service boundary. `TransferCancelled` is listed because `TransferRequisitionService::cancelRequisition()` dispatches it (§19.2). `PurchaseOrderCancelled` is listed because `PurchaseOrderService::cancelPurchaseOrder()` dispatches it (§6.4); it was a gap-fill in the P1 cluster (see §22.3a / §25) and is now catalogued.
 
 ### 22.1a Event Class Contract
 
@@ -18288,6 +18312,24 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
 class PurchaseOrderReceived implements ShouldDispatchAfterCommit
+{
+    use Dispatchable, InteractsWithSockets, SerializesModels;
+
+    public function __construct(public readonly int $purchaseOrderId) {}
+}
+```
+
+`app/Events/PurchaseOrderCancelled.php`:
+
+```php
+namespace App\Events;
+
+use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
+
+class PurchaseOrderCancelled implements ShouldDispatchAfterCommit
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -18618,6 +18660,44 @@ class NotifyPurchaseOrderReceived implements ShouldQueue
 namespace App\Listeners;
 
 use App\Enums\UserRole;
+use App\Events\PurchaseOrderCancelled;
+use App\Models\PurchaseOrder;
+use App\Models\User;
+use App\Notifications\PurchaseOrderCancelledNotification;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Support\Facades\Notification;
+
+class NotifyPurchaseOrderCancelled implements ShouldQueue
+{
+    public function handle(PurchaseOrderCancelled $event): void
+    {
+        // v1 (owner-approved): database notification only, queued. Audience is
+        // warehouse-scoped — admins plus staff assigned to the cancelling
+        // warehouse. No mail/broadcast until operators request it.
+        $order = PurchaseOrder::find($event->purchaseOrderId);
+        if (! $order) {
+            return;
+        }
+        $users = User::query()
+            ->where(function ($q) use ($order) {
+                $q->where('role', UserRole::Admin->value)
+                    ->orWhereHas('warehouses', function ($query) use ($order) {
+                        $query->whereIn('warehouses.id', [$order->warehouse_id]);
+                    });
+            })
+            ->get();
+        Notification::send($users, new PurchaseOrderCancelledNotification(
+            $order->id,
+            $order->reference_code,
+        ));
+    }
+}
+```
+
+```php
+namespace App\Listeners;
+
+use App\Enums\UserRole;
 use App\Events\SalesOrderDispatched;
 use App\Models\SalesOrder;
 use App\Models\User;
@@ -18689,7 +18769,7 @@ class NotifyInventoryBelowReorderPoint implements ShouldQueue
 }
 ```
 
-Wiring: the eight event→listener pairs are registered in `EventServiceProvider::$listen` (§17.4), which is the single canonical registration site — no ad hoc `Event::listen()` calls elsewhere.
+Wiring: the nine event→listener pairs are registered in `AppServiceProvider::registerEventListeners()` (§17.4), which is the single canonical registration site — no other `Event::listen()` calls elsewhere.
 
 ### 22.3b Notification Class Contract
 
@@ -18889,6 +18969,38 @@ class PurchaseOrderReceivedNotification extends Notification
 }
 ```
 
+`app/Notifications/PurchaseOrderCancelledNotification.php`:
+
+```php
+namespace App\Notifications;
+
+use Illuminate\Notifications\Notification;
+
+class PurchaseOrderCancelledNotification extends Notification
+{
+    public function __construct(
+        public readonly int $purchaseOrderId,
+        public readonly ?string $referenceCode = null,
+    ) {}
+
+    /** @return array<int, string> */
+    public function via(object $notifiable): array
+    {
+        return ['database'];
+    }
+
+    /** @return array<string, mixed> */
+    public function toDatabase(object $notifiable): array
+    {
+        return [
+            'purchase_order_id' => $this->purchaseOrderId,
+            'reference_code'    => $this->referenceCode,
+            'message'           => __('notifications.purchase_order_cancelled.body', ['reference' => $this->referenceCode ?? (string) $this->purchaseOrderId]),
+        ];
+    }
+}
+```
+
 `app/Notifications/SalesOrderDispatchedNotification.php`:
 
 ```php
@@ -19004,8 +19116,12 @@ The test must assert that every Resource/Page class named in Section 18 can be a
 For every model/policy pair, assert:
 
 ```php
-expect(Gate::getPolicyFor($model))->toBe($policy);
+expect(Gate::getPolicyFor($model))->toBeInstanceOf($policy);
 ```
+
+`Gate::getPolicyFor()` returns an instantiated policy object; compare it with
+`toBeInstanceOf($policy)` against the class-string. `toBe()` compares against the
+class-string directly and fails for every pair regardless of wiring.
 
 ### 23.4 Route Wiring
 
@@ -19246,7 +19362,7 @@ app/
 │   │   └── QuickActionsWidget.php
 ├── Http/
 │   └── Controllers/
-│       └── StnController.php
+│       └── STNManifestController.php
 ├── Livewire/
 │   └── Stn/
 │       └── ScanForm.php
@@ -19279,6 +19395,7 @@ app/
 │   ├── TransferReceivedNotification.php
 │   ├── LossRecordedNotification.php
 │   ├── PurchaseOrderReceivedNotification.php
+│   ├── PurchaseOrderCancelledNotification.php
 │   ├── SalesOrderDispatchedNotification.php
 │   └── InventoryBelowReorderPointNotification.php
 ├── Observers/
@@ -19297,11 +19414,10 @@ app/
 │   ├── CustomerPolicy.php
 │   ├── WarehousePolicy.php
 │   ├── UserPolicy.php
+│   ├── TransferRequisitionItemRevisionPolicy.php
 │   └── DirectTransferPolicy.php
 ├── Providers/
-│   ├── AppServiceProvider.php
-│   ├── AuthServiceProvider.php
-│   ├── EventServiceProvider.php
+│   ├── AppServiceProvider.php        # policies (§17.4) + events (§17.4) + observers (§17.3)
 │   ├── InventoryServiceProvider.php
 │   └── Filament/
 │       └── AdminPanelProvider.php
@@ -19321,6 +19437,7 @@ app/
 │   ├── TransferReceived.php
 │   ├── LossRecorded.php
 │   ├── PurchaseOrderReceived.php
+│   ├── PurchaseOrderCancelled.php
 │   ├── SalesOrderDispatched.php
 │   └── InventoryBelowReorderPoint.php
 ├── Listeners/
@@ -19330,6 +19447,7 @@ app/
 │   ├── NotifyTransferReceived.php
 │   ├── NotifyLossRecorded.php
 │   ├── NotifyPurchaseOrderReceived.php
+│   ├── NotifyPurchaseOrderCancelled.php
 │   ├── NotifySalesOrderDispatched.php
 │   └── NotifyInventoryBelowReorderPoint.php
 ├── Helpers.php   # global format_money(mixed $state, int $precision = 4): string — decimal(15,4) display contract (§0A.14)
@@ -19440,6 +19558,44 @@ tests/
 
 A file appearing in this map but missing from the repository is an implementation failure, not an optional follow-up.
 
+**Reverse rule (v13.8 amendment):** any file that exists in the repository under a §25-covered directory (`app/`, `database/`, `resources/`, `lang/`, `routes/`, `bootstrap/`, `tests/`) but is NOT declared in this map must be either **declared** (added to the map, with its contract documented in the owning section) or **deleted** — no silent extras. A live, load-bearing file absent from the map is a documentation failure of the same weight as a declared file that does not exist. The v13.8 P1 contract-closure additions to this map (`PurchaseOrderCancelled.php`, `NotifyPurchaseOrderCancelled.php`, `PurchaseOrderCancelledNotification.php`, `TransferRequisitionItemRevisionPolicy.php`) were reconciled under this rule.
+### §25 Untracked Extras (Declared)
+
+The paths below exist in the repository and are load-bearing at runtime, but were not enumerated in the §25 map. They are declared here so the map stays exhaustive; each entry states why it exists. A file listed here is **not** an implementation failure — it is an acknowledged extra with a named owner contract.
+
+Runtime support (application code, not Resource scaffolding):
+
+- `app/Filament/Pages/Auth/Login.php` — custom login page registered by `AdminPanelProvider`; panel-access flow (§17, §22).
+- `app/Filament/Pages/Dashboard.php` — the panel dashboard page onto which §10 widgets are registered.
+- `app/Filament/Resources/Users/Pages/ViewUser.php` and `app/Filament/Resources/Users/Schemas/UserInfolist.php` — read-only user view; the User Resource is create / edit / list / view.
+- `app/Http/Middleware/ApplySecurityHeaders.php` — response-hardening headers; registered in `bootstrap/app.php`.
+- `app/Livewire/Warehouses/AssignedUsersList.php` — read-only warehouse↔user pivot embedded by `WarehouseForm` (§7K.1).
+- `app/Filament/Support/Filters/AdminReviewFilters.php` — the §9 admin-review filter set. The map's `Support/AdminReviewFilters.php` entry is a path shorthand; the file lives under `Support/Filters/`.
+
+Widget, page, and print views:
+
+- `resources/views/filament/dashboard-sections/section-header.blade.php`
+- `resources/views/filament/pages/stock-adjustment.blade.php`
+- `resources/views/filament/widgets/{low-stock-alerts,recent-movements,stats-overview,stock-by-warehouse,warehouse-capacity,warehouse-filter}.blade.php`
+- `resources/views/filament/widgets/chart-data-tables/{category-stock,fast-moving-stock,stock-movement-trend}.blade.php` — table fallbacks rendered beneath each chart (§10 accessibility).
+- `resources/views/livewire/warehouses/assigned-users-list.blade.php`
+- `resources/views/pdf/direct-transfer-manifest.blade.php` and `resources/views/pdf/stn-manifest.blade.php` — printable manifests (§21).
+- `resources/views/transfer-notes/show.blade.php`
+- `resources/views/welcome.blade.php` — Laravel default landing page, retained.
+
+Localisation:
+
+- `lang/en/{auth,direct_transfers,pagination,passwords}.php` — framework/domain key files beyond the §0A.2 core set.
+
+Routes and bootstrap:
+
+- `routes/api.php` and `routes/console.php` — Laravel default route files, retained.
+- `bootstrap/app.php` — application bootstrap; the map lists only `providers.php`.
+
+Unreferenced dead code (deleted, v13.9):
+
+- ~~`app/Filament/Exports/ProductExporter.php`~~ — no importer anywhere in the repository, absent from §25 and every other blueprint section. Owner-directed deletion applied in v13.9 (see §27 v13.9 change table, row 12).
+
 ---
 
 ## 🧾 Section 26: Council Acceptance Criteria
@@ -19464,7 +19620,7 @@ All criteria below are binding. The following consolidated list supersedes any e
 - [ ] `DirectTransferForm` uses `Repeater::make('items')` with `->minItems(1)`.
 - [ ] `DirectTransferInfolist` and `ViewDirectTransfer` page exist.
 - [ ] `DirectTransfersTable` uses card layout, declares `->contentGrid()` and `->defaultPaginationPageOption(12)`, and declares no bulk actions (F30).
-- [ ] `DirectTransferPolicy` exists and is registered in `AuthServiceProvider::$policies`.
+- [ ] `DirectTransferPolicy` exists and is registered via `AppServiceProvider::registerPolicies()` (`Gate::policy()`).
 - [ ] `StockMovementPolicy::createDirectTransfer()` is removed.
 - [ ] `WarehousePolicy::delete()` blocks warehouses referenced by direct transfers (from or to).
 - [ ] `DirectTransferResource::getEloquentQuery()` eager-loads `fromWarehouse`, `toWarehouse`, `transferredBy`, `items.productVariant`.
@@ -19512,9 +19668,69 @@ All criteria below are binding. The following consolidated list supersedes any e
 - [ ] Playwright Scenario 15b (single-warehouse role scope) passes.
 - [ ] Playwright Scenario 15c (Admin scope with empty pivot) passes.
 
+### v13.8 P1 Contract-Closure Note
+
+The P1 contract-violation cluster (blueprint ↔ code drift) is closed:
+
+- The project has **no** `AuthServiceProvider` / `EventServiceProvider` —
+  policy bindings ship as `Gate::policy()` and event wiring as
+  `Event::listen()` inside `AppServiceProvider` (§17.2, §17.4). The §17.2
+  sample now shows the complete class, including `registerPolicies()` and
+  `registerEventListeners()`.
+- The STN controller is `STNManifestController` throughout; `StnController`
+  does not exist (§16, §21, §25).
+- §23.3 asserts `Gate::getPolicyFor($model)` with `toBeInstanceOf($policy)` —
+  the facade returns an instantiated policy object, not a class-string.
+- Every PHP block under §21.1 carries `<?php` + `declare(strict_types=1);`,
+  and the `ScanForm` block imports `Illuminate\Support\Facades\Gate`.
+
+Verification: `tests/Feature/Architecture/PolicyRegistrationTest.php` (16
+passed — see caveat below); `tests/Feature/Stn/StnScanFlowTest.php` exercises
+the §21 print + signed-scan intake flow (6 passed, 1 failed).
+
+Open items surfaced by Council review, not yet closed:
+
+- `PolicyRegistrationTest` is auto-discovery-satisfiable: `Gate::resolvePolicy()`
+  falls back to `guessPolicyName()`, which maps `App\Models\X` →
+  `App\Policies\XPolicy` for all thirteen pairs. The suite therefore passes even
+  if `AppServiceProvider::registerPolicies()` is deleted, so it does not prove
+  the explicit map is complete. A stronger assertion (reflecting `Gate::$policies`)
+  is required.
+- `StnScanFlowTest` does not negatively test `ScanForm::submit()`'s own
+  `Gate::authorize('receive', …)`; cases (c)/(d) cover only the GET route.
+- `in_transits.cleared_at` is declared in §4/§7 and written by
+  `InventoryService::markInTransit()`, but the migration does not create the
+  column — this is the single failing case (f). Fixing it is a schema change
+  requiring owner approval.
+
 ---
 
 ## 📊 Section 27: Council Change Summary
+
+### v13.9 Change Table (Post-v13.8 Residual Closure)
+
+| # | Area | Resolution | Severity |
+|---|---|---|---|
+| 8 | §7K.1 `WarehouseForm` components | **Fixed** — `Livewire::make()` is not a Filament v5 form component and has no `helperText()`; the dead placeholder block was replaced with `Filament\Schemas\Components\Livewire` + `Filament\Schemas\Components\Text`. §7K.1 snippet updated to match | P1 |
+| 9 | §4.1 under-review icon pairing | **Clarified** — `UnderReviewFulfiller` and `UnderReviewRequestor` deliberately share one icon (§4.1 ping-pong lifecycle); the test now asserts the pairing instead of distinct icons | P1 |
+| 10 | §5.6 `UserFactory::admin()` | **Fixed** — `admin()` had drifted to chain `afterCreating` attaching a stray `Warehouse`; §5.6 declares `admin()`/`auditor()` as role-`state()` only. Auto-attach removed to restore the empty-pivot contract (§1B.1a) | P1 |
+| 11 | §1B.1a out-of-domain role | **Amended** — resolver fail-closed contract stated: with `users.role` carrying the enum cast, an out-of-domain value throws on read rather than silently widening; the defensive `[]` branch is unreachable while `UserRole` has four wired cases. Test asserts the throw | Governance |
+| 12 | §25 untracked extras + PSR-4 | **Declared + Deleted** — 36 load-bearing files enumerated in the new §25 "Untracked Extras (Declared)" subsection; `STNManifestController` PSR-4 case fixed. `ProductExporter.php` (sole zero-reference dead file) deleted | Governance |
+
+---
+### v13.8 Change Table (P1 Contract-Closure)
+
+| # | Area | Resolution | Severity |
+|---|---|---|---|
+| 1 | Blueprint version | Bumped `v13.6 + i18n` → `v13.8` (header + this table) | Governance |
+| 2 | §10 Widget Definitions — `StatsOverviewWidget` type | Corrected Type cell from `TableWidget` to `BaseWidget` (stat-card grid); Filament v5 `StatsOverviewWidget` extends `BaseWidget` and returns `Stat` instances from `getStats()` | P1 |
+| 3 | §10 `QuickActionsWidget` `$view` | Corrected `protected static string $view` → non-static `protected string $view` (Filament v5 `Widget::$view` is non-static) | P1 |
+| 4 | §22.1/§22.1a ninth event | Catalogued `App\Events\PurchaseOrderCancelled` (implements `ShouldDispatchAfterCommit`) — §6.4 fires it; enumeration now matches the "nine event→listener pairs" statement | P1 |
+| 5 | §22.3a/§22.3b ninth listener + notification | Catalogued `App\Listeners\NotifyPurchaseOrderCancelled` (`ShouldQueue`) + `App\Notifications\PurchaseOrderCancelledNotification`; §17.2 sample wiring + imports updated; §25 map extended | P1 |
+| 6 | §25 reverse rule | Added v13.8 amendment — any file under a §25-covered directory absent from the map must be declared or deleted (no silent extras). Declared the three P1 gap-fill files + `TransferRequisitionItemRevisionPolicy.php` | Governance |
+| 7 | §8.14/§17.4 policy count | **ESCALATED, not changed** — `TransferRequisitionItemRevisionPolicy` exists in `app/Policies/` but `AppServiceProvider::registerPolicies()` registers only thirteen (`Gate::policy()`); no §17.4 binding added (code is truth). Open item below | Open |
+
+> **v13.8 Council note:** item 7 is an unresolved code-vs-blueprint discrepancy. The model `App\Models\TransferRequisitionItemRevision` and its policy file both exist, but the policy is not registered via `Gate::policy()` in `AppServiceProvider` (unlike the other thirteen). Blueprint §8.14/§17.4 count ("thirteen") remains correct against the code; the file is declared in the §25 map for completeness. Registering it (and updating §8.14/§17.4 to "fourteen") requires an owner decision — it is not applied here.
 
 ### v13.7 Change Table (Blueprint ↔ Code Reconciliation)
 
@@ -19575,7 +19791,7 @@ All criteria below are binding. The following consolidated list supersedes any e
 | 15 | Missing Resource classes | Added mandatory Resource implementation contract for all resources | P0 |
 | 16 | Missing Page classes | Added mandatory Page implementation contract | P0 |
 | 17 | Missing dashboard widgets | Added mandatory widget implementation/scope contract | P0 |
-| 18 | STN route/controller gap | Added `StnController` and named routes | P0 |
+| 18 | STN route/controller gap | Added `STNManifestController` and named routes | P0 |
 | 19 | Unsigned QR route | Required seven-day temporary signed URL generation | P0 |
 | 20 | Idempotency model gap | Added `StockMovementIdempotencyKey` model | P0 |
 | 21 | Transfer confirmation race | Moved materialization + confirmation into one locked transaction | P0 |
@@ -19617,4 +19833,4 @@ All criteria below are binding. The following consolidated list supersedes any e
 
 ---
 
-*End of blueprint v13.6 + i18n — Direct Transfer multi-item support, translation coverage, runtime wiring, and role + warehouse scoped navigation badges fully integrated.*
+*End of blueprint v13.9 — post-v13.8 residual closure: §7K.1 `WarehouseForm` Filament v5 fix, §4.1 under-review icon pairing, §5.6 `UserFactory::admin()` empty-pivot restore, §1B.1a fail-closed amendment, §25 untracked-extras declared and `ProductExporter.php` deleted. Retains v13.8 P1 contract-closure: §10 widget type + `$view` corrections, ninth event/listener/notification catalogued, §25 reverse rule. Direct Transfer multi-item support, translation coverage, runtime wiring, and role + warehouse scoped navigation badges fully integrated.*

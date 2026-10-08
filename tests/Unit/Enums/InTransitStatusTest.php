@@ -83,7 +83,7 @@ it('assigns distinct icons and distinct colors across the three cases', function
     // the semantic split (info / success / danger) is the whole point of
     // the extension.
     $colors = array_map(fn (InTransitStatus $c) => $c->getColor(), InTransitStatus::cases());
-    $icons = array_map(fn (InTransitStatus $c) => $c->getIcon(), InTransitStatus::cases());
+    $icons = array_map(fn (InTransitStatus $c) => $c->getIcon()->value, InTransitStatus::cases());
 
     expect(array_unique($colors))->toHaveCount(3);
     expect(array_unique($icons))->toHaveCount(3);

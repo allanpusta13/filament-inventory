@@ -107,7 +107,7 @@ it('returns a Heroicon enum case for every case, never a raw string', function (
 })->with(UserRole::cases());
 
 it('assigns a distinct icon and distinct color to every case', function () {
-    $icons = array_map(fn (UserRole $c) => $c->getIcon(), UserRole::cases());
+    $icons = array_map(fn (UserRole $c) => $c->getIcon()->value, UserRole::cases());
     $colors = array_map(fn (UserRole $c) => $c->getColor(), UserRole::cases());
 
     // Four roles, four distinct icons, four distinct colors — a role

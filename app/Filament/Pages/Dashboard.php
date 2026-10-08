@@ -5,10 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Pages;
 
 use App\Enums\UserRole;
-use App\Filament\Widgets\ActiveInTransitWidget;
-use App\Filament\Widgets\LowStockAlertsWidget;
-use App\Filament\Widgets\RecentMovementsWidget;
-use App\Filament\Widgets\StatsOverviewWidget;
+use App\Filament\Widgets;
 use Filament\Pages\Dashboard as BaseDashboard;
 
 final class Dashboard extends BaseDashboard
@@ -50,10 +47,15 @@ final class Dashboard extends BaseDashboard
     public function getWidgets(): array
     {
         return [
-            StatsOverviewWidget::class,
-            LowStockAlertsWidget::class,
-            RecentMovementsWidget::class,
-            ActiveInTransitWidget::class,
+            Widgets\StatsOverviewWidget::class,
+            Widgets\LowStockAlertsWidget::class,
+            Widgets\RecentMovementsWidget::class,
+            Widgets\ActiveInTransitWidget::class,
+            Widgets\PendingFulfillmentWidget::class,
+            Widgets\QuickActionsWidget::class,
+            Widgets\SalesRevenueTrendWidget::class,
+            Widgets\SalesVsPurchasesWidget::class,
+            Widgets\TopSellingVariantsWidget::class,
         ];
     }
 }

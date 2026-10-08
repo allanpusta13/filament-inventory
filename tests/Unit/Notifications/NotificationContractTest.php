@@ -168,13 +168,13 @@ it('falls back to the document id when no reference code is provided', function 
 
     expect($payload['message'])->toContain((string) $id);
 })->with([
-    'TransferConfirmed' => [TransferConfirmedNotification::class,      'TR-X'],
-    'TransferCancelled' => [TransferCancelledNotification::class,      'TR-X'],
-    'TransferDispatched' => [TransferDispatchedNotification::class,     'TR-X'],
-    'TransferReceived' => [TransferReceivedNotification::class,       'TR-X'],
-    'PurchaseOrderReceived' => [PurchaseOrderReceivedNotification::class,  'PO-X'],
-    'PurchaseOrderCancelled' => [PurchaseOrderCancelledNotification::class, 'PO-X'],
-    'SalesOrderDispatched' => [SalesOrderDispatchedNotification::class,   'SO-X'],
+    'TransferConfirmed' => [TransferConfirmedNotification::class, 1],
+    'TransferCancelled' => [TransferCancelledNotification::class, 2],
+    'TransferDispatched' => [TransferDispatchedNotification::class, 3],
+    'TransferReceived' => [TransferReceivedNotification::class, 4],
+    'PurchaseOrderReceived' => [PurchaseOrderReceivedNotification::class, 6],
+    'PurchaseOrderCancelled' => [PurchaseOrderCancelledNotification::class, 7],
+    'SalesOrderDispatched' => [SalesOrderDispatchedNotification::class, 8],
 ]);
 
 // ===========================================================================
@@ -187,13 +187,13 @@ it('carries the source document id in the payload', function (string $class, int
     expect($payload)->toHaveKey($idKey);
     expect($payload[$idKey])->toBe($id);
 })->with([
-    'TransferConfirmed' => [TransferConfirmedNotification::class,      'requisition_id'],
-    'TransferCancelled' => [TransferCancelledNotification::class,      'requisition_id'],
-    'TransferDispatched' => [TransferDispatchedNotification::class,     'requisition_id'],
-    'TransferReceived' => [TransferReceivedNotification::class,       'requisition_id'],
-    'PurchaseOrderReceived' => [PurchaseOrderReceivedNotification::class,  'purchase_order_id'],
-    'PurchaseOrderCancelled' => [PurchaseOrderCancelledNotification::class, 'purchase_order_id'],
-    'SalesOrderDispatched' => [SalesOrderDispatchedNotification::class,   'sales_order_id'],
+    'TransferConfirmed' => [TransferConfirmedNotification::class, 1, 'requisition_id'],
+    'TransferCancelled' => [TransferCancelledNotification::class, 2, 'requisition_id'],
+    'TransferDispatched' => [TransferDispatchedNotification::class, 3, 'requisition_id'],
+    'TransferReceived' => [TransferReceivedNotification::class, 4, 'requisition_id'],
+    'PurchaseOrderReceived' => [PurchaseOrderReceivedNotification::class, 6, 'purchase_order_id'],
+    'PurchaseOrderCancelled' => [PurchaseOrderCancelledNotification::class, 7, 'purchase_order_id'],
+    'SalesOrderDispatched' => [SalesOrderDispatchedNotification::class, 8, 'sales_order_id'],
 ]);
 
 // ===========================================================================

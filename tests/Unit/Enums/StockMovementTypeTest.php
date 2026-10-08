@@ -91,7 +91,7 @@ it('returns a Heroicon enum case for every case, never a raw string', function (
 })->with(StockMovementType::cases());
 
 it('assigns a distinct icon to every case', function () {
-    $icons = array_map(fn (StockMovementType $c) => $c->getIcon(), StockMovementType::cases());
+    $icons = array_map(fn (StockMovementType $c) => $c->getIcon()->value, StockMovementType::cases());
 
     // Nine cases, nine distinct icons — no two movement rows share a glyph.
     expect(array_unique($icons))->toHaveCount(9);

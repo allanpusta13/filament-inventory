@@ -80,7 +80,7 @@ it('declares no navigation badge', function () {
 
 it('resolves the ProductVariantPolicy through the Gate', function () {
     expect(Gate::getPolicyFor(ProductVariant::class))
-        ->toBe(App\Policies\ProductVariantPolicy::class);
+        ->toBeInstanceOf(App\Policies\ProductVariantPolicy::class);
 });
 
 // ===========================================================================
@@ -148,7 +148,7 @@ it('resolves every products translation key it renders', function () {
 
         // Form fields
         'resources.products.fields.sku',
-        'resources.products.fields.name',
+        'resources.products.fields.variant_name',
         'resources.products.fields.product_family',
         'resources.products.fields.barcode',
         'resources.products.fields.base_unit_name',

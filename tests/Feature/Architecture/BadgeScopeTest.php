@@ -86,7 +86,10 @@ it('grants the full system badge count to an auditor', function () {
 
 it('grants the full system badge count to an admin with an empty warehouse pivot', function () {
     // §1B.1a: admin badge authority is global, independent of pivot.
+    // UserFactory::admin() attaches a warehouse in afterCreating; detach
+    // here so the pivot is genuinely empty — this is the premise under test.
     $admin = User::factory()->admin()->create();
+    $admin->warehouses()->detach();
     $this->actingAs($admin);
 
     expect($admin->warehouses()->count())->toBe(0);

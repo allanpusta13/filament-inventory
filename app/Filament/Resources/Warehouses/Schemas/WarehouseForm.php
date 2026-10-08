@@ -11,6 +11,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Livewire;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Text;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 
@@ -62,11 +63,16 @@ class WarehouseForm
                 ->columnSpanFull()
                 ->columns(['default' => 1, 'md' => 2, 'xl' => 2])
                 ->schema([
+                    // `Livewire::make()` has no `helperText()` in Filament v5;
+                    // the ownership note is a sibling `Text` component instead.
                     Livewire::make(AssignedUsersList::class, fn (?Warehouse $record): array => [
                         'warehouseId' => $record?->id,
                     ])
-                        ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2])
-                        ->helperText(__('resources.warehouses.help.users_readonly')),
+                        ->columnSpan(['default' => 1, 'md' => 2, 'xl' => 2]),
+
+                    Text::make(__('resources.warehouses.help.users_readonly'))
+                        ->color('gray')
+                        ->columnSpanFull(),
 
                     Toggle::make('is_active')
                         ->label(__('resources.warehouses.fields.is_active'))
