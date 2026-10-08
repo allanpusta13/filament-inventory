@@ -97,7 +97,7 @@ it('casts responded_at to datetime', function () {
         'responded_at' => '2026-01-15 10:00:00',
     ]);
 
-    expect($revision->fresh()->responded_at)->toBeInstanceOf(Illuminate\Support\Carbon::class);
+    expect($revision->fresh()->responded_at)->toBeInstanceOf(Carbon\CarbonImmutable::class);
 });
 
 // ---------------------------------------------------------------------------

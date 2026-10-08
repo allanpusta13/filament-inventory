@@ -82,7 +82,9 @@ describe('SalesOrderItemFactory', function () {
     });
 
     it('defaults dispatched_base_qty to 0', function () {
-        expect(SalesOrderItem::factory()->create()->dispatched_base_qty)->toBe(0);
+        // Factory omits the column (§5.16); the schema default (§2.19) is the
+        // contract, so read it back from the persisted row.
+        expect(SalesOrderItem::factory()->create()->fresh()->dispatched_base_qty)->toBe(0);
     });
 
     it('auto-creates the parent order and the variant', function () {

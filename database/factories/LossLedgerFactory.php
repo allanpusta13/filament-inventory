@@ -36,7 +36,14 @@ class LossLedgerFactory extends Factory
             'lost_base_qty' => $lost,
             'damaged_base_qty' => $damaged,
             'unit_cost_price' => $unitCost,
-            'total_financial_loss' => bcmul((string) $unitCost, (string) ($lost + $damaged), 4),
+            // Derived from the RESOLVED attributes, not the pre-override
+            // locals: a caller may override unit_cost_price / quantities,
+            // and the total must track them (§3.11).
+            'total_financial_loss' => fn (array $attributes): string => bcmul(
+                (string) $attributes['unit_cost_price'],
+                (string) ((int) $attributes['lost_base_qty'] + (int) $attributes['damaged_base_qty']),
+                4,
+            ),
             'loss_category' => $this->faker->randomElement(['shortfall', 'damage', 'spoilage', 'theft', 'other']),
             'recorded_at' => now(),
         ];

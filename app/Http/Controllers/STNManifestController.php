@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use App\Enums\TransferRequisitionStatus;
@@ -29,7 +31,7 @@ use Illuminate\Support\Facades\Gate;
  * InventoryService::scanToReceive() (blueprint §6.2), invoked from the
  * Livewire <livewire:stn.scan-form> component embedded by the scan view.
  */
-class StnManifestController extends Controller
+class STNManifestController extends Controller
 {
     /**
      * Render the printable shipment note for a transfer requisition.

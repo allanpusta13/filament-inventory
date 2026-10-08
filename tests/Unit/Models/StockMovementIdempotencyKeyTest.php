@@ -87,7 +87,7 @@ it('casts resulting_item_states to array', function () {
 it('casts created_at to datetime', function () {
     $key = StockMovementIdempotencyKey::factory()->create();
 
-    expect($key->fresh()->created_at)->toBeInstanceOf(Illuminate\Support\Carbon::class);
+    expect($key->fresh()->created_at)->toBeInstanceOf(Carbon\CarbonImmutable::class);
 });
 
 it('round-trips an empty resulting_item_states array', function () {
@@ -310,7 +310,7 @@ it('records created_at when the row is inserted', function () {
     $key = StockMovementIdempotencyKey::where('transfer_requisition_id', $requisition->id)->first();
 
     expect($key->created_at)->not->toBeNull();
-    expect($key->created_at)->toBeInstanceOf(Illuminate\Support\Carbon::class);
+    expect($key->created_at)->toBeInstanceOf(Carbon\CarbonImmutable::class);
 });
 
 it('does not write an updated_at column on save', function () {

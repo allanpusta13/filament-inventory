@@ -18,8 +18,6 @@ use Filament\Support\Colors\Color;
 use Filament\Support\Enums\Platform;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
-use Filament\Widgets\AccountWidget;
-use Filament\Widgets\FilamentInfoWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -92,11 +90,16 @@ final class AdminPanelProvider extends PanelProvider
             ->pages([
                 Dashboard::class,
             ])
-            // ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
-
-                // AccountWidget::class,
-                // FilamentInfoWidget::class,
+                \App\Filament\Widgets\StatsOverviewWidget::class,
+                \App\Filament\Widgets\LowStockAlertsWidget::class,
+                \App\Filament\Widgets\RecentMovementsWidget::class,
+                \App\Filament\Widgets\SalesRevenueTrendWidget::class,
+                \App\Filament\Widgets\ActiveInTransitWidget::class,
+                \App\Filament\Widgets\SalesVsPurchasesWidget::class,
+                \App\Filament\Widgets\TopSellingVariantsWidget::class,
+                \App\Filament\Widgets\PendingFulfillmentWidget::class,
+                \App\Filament\Widgets\QuickActionsWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,

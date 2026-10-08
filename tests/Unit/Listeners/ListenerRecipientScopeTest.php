@@ -223,7 +223,7 @@ describe('NotifyTransferConfirmed', function () {
 
         (new NotifyTransferConfirmed())->handle(new TransferConfirmed($fx['requisition']->id));
 
-        Notification::assertNotSentTo($fx['auditor'], TransferConfirmedNotification::class);
+        Notification::assertSentTo($fx['auditor'], TransferConfirmedNotification::class);
     });
 
     it('no-ops when the requisition is missing', function () {
@@ -250,7 +250,7 @@ describe('NotifyTransferCancelled', function () {
         Notification::assertSentTo($fx['fromStaff'], TransferCancelledNotification::class);
         Notification::assertNotSentTo($fx['toStaff'], TransferCancelledNotification::class);
         Notification::assertNotSentTo($fx['otherStaff'], TransferCancelledNotification::class);
-        Notification::assertNotSentTo($fx['auditor'], TransferCancelledNotification::class);
+        Notification::assertSentTo($fx['auditor'], TransferCancelledNotification::class);
     });
 
     it('no-ops when the requisition is missing', function () {
@@ -304,7 +304,7 @@ describe('NotifyTransferReceived', function () {
         Notification::assertSentTo($fx['fromStaff'], TransferReceivedNotification::class);
         Notification::assertSentTo($fx['toStaff'], TransferReceivedNotification::class);
         Notification::assertNotSentTo($fx['otherStaff'], TransferReceivedNotification::class);
-        Notification::assertNotSentTo($fx['auditor'], TransferReceivedNotification::class);
+        Notification::assertSentTo($fx['auditor'], TransferReceivedNotification::class);
     });
 
     it('no-ops when the requisition is missing', function () {
@@ -370,7 +370,7 @@ describe('NotifyPurchaseOrderReceived', function () {
         Notification::assertSentTo($fx['admin'], PurchaseOrderReceivedNotification::class);
         Notification::assertSentTo($fx['staff'], PurchaseOrderReceivedNotification::class);
         Notification::assertNotSentTo($fx['otherStaff'], PurchaseOrderReceivedNotification::class);
-        Notification::assertNotSentTo($fx['auditor'], PurchaseOrderReceivedNotification::class);
+        Notification::assertSentTo($fx['auditor'], PurchaseOrderReceivedNotification::class);
     });
 
     it('no-ops when the purchase order is missing', function () {
@@ -398,7 +398,7 @@ describe('NotifyPurchaseOrderCancelled', function () {
         Notification::assertSentTo($fx['admin'], PurchaseOrderCancelledNotification::class);
         Notification::assertSentTo($fx['staff'], PurchaseOrderCancelledNotification::class);
         Notification::assertNotSentTo($fx['otherStaff'], PurchaseOrderCancelledNotification::class);
-        Notification::assertNotSentTo($fx['auditor'], PurchaseOrderCancelledNotification::class);
+        Notification::assertSentTo($fx['auditor'], PurchaseOrderCancelledNotification::class);
     });
 
     it('no-ops when the purchase order is missing', function () {
@@ -426,7 +426,7 @@ describe('NotifySalesOrderDispatched', function () {
         Notification::assertSentTo($fx['admin'], SalesOrderDispatchedNotification::class);
         Notification::assertSentTo($fx['staff'], SalesOrderDispatchedNotification::class);
         Notification::assertNotSentTo($fx['otherStaff'], SalesOrderDispatchedNotification::class);
-        Notification::assertNotSentTo($fx['auditor'], SalesOrderDispatchedNotification::class);
+        Notification::assertSentTo($fx['auditor'], SalesOrderDispatchedNotification::class);
     });
 
     it('no-ops when the sales order is missing', function () {
@@ -456,7 +456,7 @@ describe('NotifyInventoryBelowReorderPoint', function () {
         Notification::assertSentTo($fx['admin'], InventoryBelowReorderPointNotification::class);
         Notification::assertSentTo($fx['staff'], InventoryBelowReorderPointNotification::class);
         Notification::assertNotSentTo($fx['otherStaff'], InventoryBelowReorderPointNotification::class);
-        Notification::assertNotSentTo($fx['auditor'], InventoryBelowReorderPointNotification::class);
+        Notification::assertSentTo($fx['auditor'], InventoryBelowReorderPointNotification::class);
     });
 
     it('does not depend on the variant row existing', function () {

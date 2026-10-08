@@ -124,9 +124,12 @@ describe('ProductVariantPriceFactory', function () {
     });
 
     it('produces a sale_price at 40% markup over cost', function () {
-        // §5.3: sale = cost × 1.4.
+        // §5.3 / §2.3: sale = cost × 1.4, stored as decimal(15,4). The
+        // expected value is rounded to 4dp to match the stored precision;
+        // comparing against the unrounded product would fail whenever the
+        // float product carries more than four decimals.
         $price = ProductVariantPrice::factory()->create();
-        expect((float) $price->sale_price)->toBe((float) $price->cost_price * 1.4);
+        expect((float) $price->sale_price)->toBe(round((float) $price->cost_price * 1.4, 4));
     });
 
     it('defaults is_current to true', function () {
@@ -164,7 +167,13 @@ describe('ProductVariantUnitConversionFactory', function () {
 
     it('produces the base-unit self-conversion row via baseUnit()', function () {
         // §5.4: `->baseUnit()` state produces unit_name = 'pc', ratio 1.
-        $conversion = ProductVariantUnitConversion::factory()->baseUnit()->create();
+        // Variant created quietly so ProductVariantObserver (§3.19) does not
+        // materialize its own pc row first and collide on the
+        // (product_variant_id, unit_name) unique index (§2.4).
+        $variant = ProductVariant::factory()->createQuietly();
+        $conversion = ProductVariantUnitConversion::factory()->baseUnit()->create([
+            'product_variant_id' => $variant->id,
+        ]);
 
         expect($conversion->unit_name)->toBe('pc');
         expect($conversion->base_unit_ratio)->toBe(1);

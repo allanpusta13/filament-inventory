@@ -104,7 +104,7 @@ it('casts recorded_at to datetime', function () {
         'recorded_at' => '2026-01-15 10:00:00',
     ]);
 
-    expect($ledger->fresh()->recorded_at)->toBeInstanceOf(Illuminate\Support\Carbon::class);
+    expect($ledger->fresh()->recorded_at)->toBeInstanceOf(Carbon\CarbonImmutable::class);
 });
 
 // ---------------------------------------------------------------------------

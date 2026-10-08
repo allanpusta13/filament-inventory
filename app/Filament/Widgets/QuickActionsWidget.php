@@ -24,7 +24,7 @@ class QuickActionsWidget extends Widget
 
     protected int|string|array $columnSpan = ['default' => 1, 'md' => 2, 'xl' => 4];
 
-    // protected static string $view = 'filament.widgets.quick-actions';
+    protected string $view = 'filament.widgets.quick-actions';
 
     public static function canView(): bool
     {

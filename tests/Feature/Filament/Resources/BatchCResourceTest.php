@@ -58,7 +58,7 @@ describe('WarehouseResource', function () {
     });
 
     it('resolves the WarehousePolicy through the Gate', function () {
-        expect(Gate::getPolicyFor(Warehouse::class))->toBe(App\Policies\WarehousePolicy::class);
+        expect(Gate::getPolicyFor(Warehouse::class))->toBeInstanceOf(App\Policies\WarehousePolicy::class);
     });
 
     it('eager-loads users and withCounts both users and stockMovements', function () {
@@ -134,7 +134,7 @@ describe('SupplierResource', function () {
     });
 
     it('resolves the SupplierPolicy through the Gate', function () {
-        expect(Gate::getPolicyFor(Supplier::class))->toBe(App\Policies\SupplierPolicy::class);
+        expect(Gate::getPolicyFor(Supplier::class))->toBeInstanceOf(App\Policies\SupplierPolicy::class);
     });
 
     it('renders the list page for an admin', function () {
@@ -195,7 +195,7 @@ describe('CustomerResource', function () {
     });
 
     it('resolves the CustomerPolicy through the Gate', function () {
-        expect(Gate::getPolicyFor(Customer::class))->toBe(App\Policies\CustomerPolicy::class);
+        expect(Gate::getPolicyFor(Customer::class))->toBeInstanceOf(App\Policies\CustomerPolicy::class);
     });
 
     it('renders the list page for an admin', function () {

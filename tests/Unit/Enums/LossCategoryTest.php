@@ -87,7 +87,7 @@ it('returns a Heroicon enum case for every case, never a raw string', function (
 })->with(LossCategory::cases());
 
 it('assigns a distinct icon to every case', function () {
-    $icons = array_map(fn (LossCategory $c) => $c->getIcon(), LossCategory::cases());
+    $icons = array_map(fn (LossCategory $c) => $c->getIcon()->value, LossCategory::cases());
 
     // Five cases, five distinct icons — no two category badges share a
     // glyph in the §7F.2 LossLedgersTable.

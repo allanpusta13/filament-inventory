@@ -230,19 +230,25 @@ it('does not widen branch manager to all warehouses even when assigned to one', 
 // Defensive fall-through — unknown roles
 // ===========================================================================
 
-it('returns an empty array for an unknown role rather than widening', function () {
-    // If a future UserRole case is added without wiring it into one of
-    // the branches above, the resolver returns `[]` — no silent
-    // widening to another role's tier.
+it('fails closed for an out-of-domain role rather than widening', function () {
+    // §1B.1a: the resolver must never widen to another role's tier for a
+    // role it does not recognise. `UserRole` has exactly four cases
+    // (Admin/Auditor/WarehouseStaff/BranchManager), all wired into the
+    // branches above, and `users.role` carries the enum cast — so an
+    // unknown value cannot be persisted through the model. The reachable
+    // fail-closed behaviour is the cast rejecting the value on read: the
+    // resolver reads `role` inside its comparison chain, so an
+    // out-of-domain value throws instead of silently resolving wider.
     Warehouse::factory()->count(3)->create();
 
     $user = User::factory()->create();
-    // Force an unknown role value at the DB layer, bypassing the cast.
-    DB::table('users')->where('id', $user->id)->update(['role' => 'unregistered_role']);
+    // Raw attribute assignment bypasses the set mutator — the same
+    // out-of-domain value a drift in the backing column would produce.
+    $user->setRawAttributes([...$user->getAttributes(), 'role' => 'unregistered_role']);
+    $this->actingAs($user);
 
-    $this->actingAs($user->fresh());
-
-    expect(ScopesNavigationBadgesHarness::resolve())->toBe([]);
+    expect(fn () => ScopesNavigationBadgesHarness::resolve())
+        ->toThrow(ValueError::class);
 });
 
 // ===========================================================================
@@ -282,12 +288,16 @@ it('reports hasBadgeScope false for a branch manager with no assignments', funct
     expect(ScopesNavigationBadgesHarness::hasScope())->toBeFalse();
 });
 
-it('reports hasBadgeScope false for an unknown role', function () {
+it('hasBadgeScope fails closed for an out-of-domain role', function () {
+    // Same fail-closed contract as the resolve() case above: an
+    // out-of-domain role throws on the `role` cast rather than reporting
+    // a widened or falsely-empty scope.
     $user = User::factory()->create();
-    DB::table('users')->where('id', $user->id)->update(['role' => 'unregistered_role']);
-    $this->actingAs($user->fresh());
+    $user->setRawAttributes([...$user->getAttributes(), 'role' => 'unregistered_role']);
+    $this->actingAs($user);
 
-    expect(ScopesNavigationBadgesHarness::hasScope())->toBeFalse();
+    expect(fn () => ScopesNavigationBadgesHarness::hasScope())
+        ->toThrow(ValueError::class);
 });
 
 // ===========================================================================

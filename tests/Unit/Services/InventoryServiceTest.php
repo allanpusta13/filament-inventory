@@ -538,6 +538,8 @@ describe('dispatchTransfer()', function () {
         TransferRequisitionItem::factory()->create([
             'transfer_requisition_id' => $requisition->id,
             'product_variant_id' => $variant->id,
+            'approved_unit_name' => 'pc',
+            'approved_unit_ratio' => 1,
             'approved_base_qty' => 100,
         ]);
 
@@ -561,6 +563,8 @@ describe('dispatchTransfer()', function () {
         TransferRequisitionItem::factory()->create([
             'transfer_requisition_id' => $requisition->id,
             'product_variant_id' => $variant->id,
+            'approved_unit_name' => 'pc',
+            'approved_unit_ratio' => 1,
             'approved_base_qty' => 100,
         ]);
 
@@ -585,6 +589,8 @@ describe('dispatchTransfer()', function () {
         TransferRequisitionItem::factory()->create([
             'transfer_requisition_id' => $requisition->id,
             'product_variant_id' => $variant->id,
+            'approved_unit_name' => 'pc',
+            'approved_unit_ratio' => 1,
             'approved_base_qty' => 25,
         ]);
 
@@ -610,6 +616,8 @@ describe('dispatchTransfer()', function () {
         $item = TransferRequisitionItem::factory()->create([
             'transfer_requisition_id' => $requisition->id,
             'product_variant_id' => $variant->id,
+            'approved_unit_name' => 'pc',
+            'approved_unit_ratio' => 1,
             'approved_base_qty' => 25,
             'shipped_base_qty' => 0,
         ]);
@@ -634,6 +642,8 @@ describe('dispatchTransfer()', function () {
         TransferRequisitionItem::factory()->create([
             'transfer_requisition_id' => $requisition->id,
             'product_variant_id' => $variant->id,
+            'approved_unit_name' => 'pc',
+            'approved_unit_ratio' => 1,
             'approved_base_qty' => 25,
         ]);
 
@@ -660,6 +670,8 @@ describe('dispatchTransfer()', function () {
         TransferRequisitionItem::factory()->create([
             'transfer_requisition_id' => $requisition->id,
             'product_variant_id' => $variant->id,
+            'approved_unit_name' => 'pc',
+            'approved_unit_ratio' => 1,
             'approved_base_qty' => 25,
         ]);
 
@@ -683,6 +695,8 @@ describe('dispatchTransfer()', function () {
         TransferRequisitionItem::factory()->create([
             'transfer_requisition_id' => $requisition->id,
             'product_variant_id' => $variant->id,
+            'approved_unit_name' => 'pc',
+            'approved_unit_ratio' => 1,
             'approved_base_qty' => 80, // 100 → 20 crosses 30 threshold
         ]);
 
@@ -707,6 +721,8 @@ describe('dispatchTransfer()', function () {
             'transfer_requisition_id' => $requisition->id,
             'product_variant_id' => $original->id,
             'substitute_product_variant_id' => $substitute->id,
+            'approved_unit_name' => 'pc',
+            'approved_unit_ratio' => 1,
             'approved_base_qty' => 25,
         ]);
 
@@ -1063,6 +1079,9 @@ describe('recordLoss()', function () {
 
 describe('adjustment()', function () {
     it('rejects an unauthenticated actor', function () {
+        // TestCase::setUp() authenticates a default admin; clear it so this
+        // case actually exercises the unauthenticated path.
+        auth()->logout();
         $variant = ProductVariant::factory()->create();
         $warehouse = Warehouse::factory()->create();
 
@@ -1167,6 +1186,8 @@ function dispatchSingleItem(int $qty = 25): array
     $item = TransferRequisitionItem::factory()->create([
         'transfer_requisition_id' => $requisition->id,
         'product_variant_id' => $variant->id,
+        'approved_unit_name' => 'pc',
+        'approved_unit_ratio' => 1,
         'approved_base_qty' => $qty,
         'shipped_base_qty' => 0,
     ]);

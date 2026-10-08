@@ -64,7 +64,7 @@ it('casts transferred_at to datetime', function () {
         'transferred_at' => '2026-01-15 10:00:00',
     ]);
 
-    expect($transfer->fresh()->transferred_at)->toBeInstanceOf(Illuminate\Support\Carbon::class);
+    expect($transfer->fresh()->transferred_at)->toBeInstanceOf(Carbon\CarbonImmutable::class);
 });
 
 it('has no status column — fire-and-forget (A11)', function () {

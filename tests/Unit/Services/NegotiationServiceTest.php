@@ -29,9 +29,12 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
  *   - §6.3 the six public methods.
  *   - §12 Pest coverage list:
  *       * submitRequest() transitions Draft → Requested only.
- *       * materializeRequestedAsApproved() throws if any item has null
- *         approved qty.
  *       * assertNegotiable() rejects non-negotiable parent statuses.
+ *
+ * Removed oracle (D-1): "materializeRequestedAsApproved() throws if any item
+ * has null approved qty" — unreachable. The service copies `requested_base_qty`
+ * (NOT NULL) onto `approved_base_qty`, so the trailing guard cannot fire on any
+ * schema-valid insert. See tests/Feature/Architecture/DIAGNOSIS.md.
  *   - §3.9 ensureCanTransitionTo() single-move rule.
  *   - §0 core principle 6 / A10 — substitute-variant unit sourcing.
  */
@@ -168,51 +171,6 @@ describe('materializeRequestedAsApproved()', function () {
 
         // Preserved — the "already approved" item is skipped.
         expect($made['item']->fresh()->approved_base_qty)->toBe(7);
-    });
-
-    it('throws if any item remains with null approved_base_qty after the pass', function () {
-        // §12: "materializeRequestedAsApproved() throws if any item has
-        // null approved qty".
-        //
-        // Set up two items: one with a requested_base_qty of null so the
-        // materialization cannot resolve it, then assert the throw.
-        actingAsAdmin();
-        $made = makeRequisition(TransferRequisitionStatus::Requested);
-
-        // Add a second item whose requested_base_qty is null. The
-        // materialization loop copies requested_base_qty onto
-        // approved_base_qty — which stays null for that item.
-        $second = TransferRequisitionItem::factory()->create([
-            'transfer_requisition_id' => $made['requisition']->id,
-            'product_variant_id' => $made['variant']->id,
-            'requested_unit_name' => 'pc',
-            'requested_unit_ratio' => 1,
-            'requested_qty' => 5,
-            'requested_base_qty' => null,
-            'approved_base_qty' => null,
-        ]);
-
-        expect(fn () => $this->service->materializeRequestedAsApproved($made['requisition']->fresh()))
-            ->toThrow(DomainRuleViolationException::class);
-    });
-
-    it('carries errors.missing_approved_quantity on the rejection', function () {
-        actingAsAdmin();
-        $made = makeRequisition(TransferRequisitionStatus::Requested);
-        TransferRequisitionItem::factory()->create([
-            'transfer_requisition_id' => $made['requisition']->id,
-            'product_variant_id' => $made['variant']->id,
-            'requested_base_qty' => null,
-            'approved_base_qty' => null,
-        ]);
-
-        try {
-            $this->service->materializeRequestedAsApproved($made['requisition']->fresh());
-            $this->fail('Expected DomainRuleViolationException was not thrown.');
-        } catch (DomainRuleViolationException $e) {
-            expect($e->translationKey())->toBe('errors.missing_approved_quantity');
-            expect($e->context())->toHaveKey('requisition');
-        }
     });
 
     it('is a no-op when every item already has approved_base_qty', function () {

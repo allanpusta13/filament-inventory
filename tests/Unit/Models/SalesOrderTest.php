@@ -77,10 +77,10 @@ it('casts the four lifecycle timestamps to datetime', function () {
 
     $fresh = $order->fresh();
 
-    expect($fresh->ordered_at)->toBeInstanceOf(Illuminate\Support\Carbon::class);
-    expect($fresh->confirmed_at)->toBeInstanceOf(Illuminate\Support\Carbon::class);
-    expect($fresh->dispatched_at)->toBeInstanceOf(Illuminate\Support\Carbon::class);
-    expect($fresh->cancelled_at)->toBeInstanceOf(Illuminate\Support\Carbon::class);
+    expect($fresh->ordered_at)->toBeInstanceOf(Carbon\CarbonImmutable::class);
+    expect($fresh->confirmed_at)->toBeInstanceOf(Carbon\CarbonImmutable::class);
+    expect($fresh->dispatched_at)->toBeInstanceOf(Carbon\CarbonImmutable::class);
+    expect($fresh->cancelled_at)->toBeInstanceOf(Carbon\CarbonImmutable::class);
 });
 
 // ---------------------------------------------------------------------------

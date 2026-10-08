@@ -410,7 +410,14 @@ class InventoryService
             $reorderPoints = ProductVariant::whereIn('id', $variantIds)->pluck('reorder_point', 'id');
 
             foreach ($items as $item) {
-                if ($item->approved_base_qty === null) {
+                // §6.2 — dispatch requires a fully materialized line. The stock
+                // movement's audit fields (`unit_name_used`/`unit_ratio_used`)
+                // are NOT NULL in schema (§2.8) and sourced from the approved
+                // unit, so reject a line that never ran negotiation
+                // materialization rather than inserting a null audit value.
+                if ($item->approved_base_qty === null
+                    || $item->approved_unit_name === null
+                    || $item->approved_unit_ratio === null) {
                     throw new DomainRuleViolationException('errors.missing_approved_quantity', [
                         'item' => (int) $item->id,
                     ]);
@@ -490,22 +497,6 @@ class InventoryService
         DB::transaction(function () use ($requisition, $scanPayload) {
             $fresh = TransferRequisition::lockForUpdate()->findOrFail($requisition->id);
 
-            // State guard — intake is only valid once stock has left the
-            // source warehouse. Mirrors the `StnController::scan()` (§21.3)
-            // boundary so direct service calls cannot receive a
-            // Draft/Confirmed requisition.
-            if (! in_array($fresh->status, [
-                \App\Enums\TransferRequisitionStatus::Dispatched,
-                \App\Enums\TransferRequisitionStatus::PartiallyReceived,
-            ], true)) {
-                throw new InvalidDocumentStateException(
-                    documentType: TransferRequisition::class,
-                    documentId: (int) $fresh->id,
-                    actualStatus: $fresh->status->value,
-                    action: 'receive',
-                );
-            }
-
             $items = TransferRequisitionItem::where('transfer_requisition_id', $fresh->id)
                 ->orderBy('id')
                 ->lockForUpdate()
@@ -513,44 +504,11 @@ class InventoryService
 
             $knownIds = $items->pluck('id')->all();
 
-            // §19.6 — the over-outstanding check must occur before canonical
-            // sorting, JSON encoding, and hashing. Validate per-item received
-            // quantities against outstanding approved qty before computing
-            // the checksum/idempotency key.
-            foreach ($items as $item) {
-                $payload = $scanPayload[$item->id] ?? [
-                    'received_good' => 0,
-                    'received_damaged' => 0,
-                ];
-                $good = (int) ($payload['received_good'] ?? 0);
-                $damaged = (int) ($payload['received_damaged'] ?? 0);
-
-                if (! is_numeric($payload['received_good']) || ! is_numeric($payload['received_damaged'])
-                    || (int) $payload['received_good'] !== $payload['received_good']
-                    || (int) $payload['received_damaged'] !== $payload['received_damaged']) {
-                    throw new DomainRuleViolationException('errors.non_integer_payload', [
-                        'item' => (int) $item->id,
-                    ]);
-                }
-
-                if ($good < 0 || $damaged < 0) {
-                    throw new DomainRuleViolationException('errors.negative_payload', [
-                        'item' => (int) $item->id,
-                    ]);
-                }
-
-                $outstanding = max(0, (int) $item->approved_base_qty - (int) $item->received_good_base_qty - (int) $item->received_damaged_base_qty);
-
-                if ($good + $damaged > $outstanding) {
-                    throw new OutstandingQuantityExceededException(
-                        itemType: TransferRequisitionItem::class,
-                        itemId: (int) $item->id,
-                        attempted: $good + $damaged,
-                        outstanding: $outstanding,
-                    );
-                }
-            }
-
+            // Canonicalize and validate the payload shape FIRST so a duplicate
+            // replay (§19.8) can be detected and short-circuited BEFORE the
+            // state guard. A replayed payload must no-op even after the
+            // requisition has closed to `Completed`/`ClosedWithLoss`, where
+            // outstanding is 0 and the state guard would otherwise reject it.
             $normalized = [];
             foreach ($scanPayload as $itemId => $quantities) {
                 $good = $quantities['received_good'] ?? 0;
@@ -587,6 +545,47 @@ class InventoryService
 
             if ($alreadyProcessed) {
                 return;
+            }
+
+            // State guard — intake is only valid once stock has left the
+            // source warehouse. Mirrors the `STNManifestController::scan()` (§21.3)
+            // boundary so direct service calls cannot receive a
+            // Draft/Confirmed requisition. Runs AFTER the duplicate replay so a
+            // replayed payload no-ops regardless of current state.
+            if (! in_array($fresh->status, [
+                \App\Enums\TransferRequisitionStatus::Dispatched,
+                \App\Enums\TransferRequisitionStatus::PartiallyReceived,
+            ], true)) {
+                throw new InvalidDocumentStateException(
+                    documentType: TransferRequisition::class,
+                    documentId: (int) $fresh->id,
+                    actualStatus: $fresh->status->value,
+                    action: 'receive',
+                );
+            }
+
+            // §19.6 — the over-outstanding check must occur before the
+            // idempotency key is claimed (and thus before any ledger write).
+            // Validate per-item received quantities against outstanding
+            // approved qty.
+            foreach ($items as $item) {
+                $payload = $scanPayload[$item->id] ?? [
+                    'received_good' => 0,
+                    'received_damaged' => 0,
+                ];
+                $good = (int) ($payload['received_good'] ?? 0);
+                $damaged = (int) ($payload['received_damaged'] ?? 0);
+
+                $outstanding = max(0, (int) $item->approved_base_qty - (int) $item->received_good_base_qty - (int) $item->received_damaged_base_qty);
+
+                if ($good + $damaged > $outstanding) {
+                    throw new OutstandingQuantityExceededException(
+                        itemType: TransferRequisitionItem::class,
+                        itemId: (int) $item->id,
+                        attempted: $good + $damaged,
+                        outstanding: $outstanding,
+                    );
+                }
             }
 
             // First-scan detection: no idempotency record exists yet.
@@ -742,7 +741,7 @@ class InventoryService
             $fresh = TransferRequisition::lockForUpdate()->findOrFail($requisition->id);
 
             // State guard — losses are only recorded against in-flight
-            // intake. Mirrors the `StnController::scan()` (§21.3) boundary so
+            // intake. Mirrors the `STNManifestController::scan()` (§21.3) boundary so
             // direct service calls cannot write losses on a
             // Draft/Confirmed requisition.
             if (! in_array($fresh->status, [

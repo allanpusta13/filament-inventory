@@ -114,11 +114,18 @@ it('locks the §4.1 canonical color mapping per case', function () {
     expect(TransferRequisitionStatus::Cancelled->getColor())->toBe('danger');
 });
 
-it('assigns a distinct icon to every case', function () {
-    $icons = array_map(fn (TransferRequisitionStatus $c) => $c->getIcon(), TransferRequisitionStatus::cases());
+it('assigns a distinct icon to every case except the deliberate under-review pair', function () {
+    $icons = array_map(fn (TransferRequisitionStatus $c) => $c->getIcon()->value, TransferRequisitionStatus::cases());
 
-    // Ten cases, ten distinct icons — no two status badges share a glyph.
-    expect(array_unique($icons))->toHaveCount(10);
+    // §4.1: the two under-review cases intentionally share one glyph (and
+    // one color) — the negotiation ping-pong is a single semantic tier.
+    // Ten cases therefore yield nine distinct icons.
+    expect(array_unique($icons))->toHaveCount(9);
+
+    // Pin the shared tier explicitly so a future refactor cannot silently
+    // split the pair apart.
+    expect(TransferRequisitionStatus::UnderReviewFulfiller->getIcon())
+        ->toBe(TransferRequisitionStatus::UnderReviewRequestor->getIcon());
 });
 
 it('locks the pre-dispatch cancellation boundary to the five canBeCancelled() states', function () {

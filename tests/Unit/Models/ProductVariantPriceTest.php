@@ -77,7 +77,7 @@ it('casts effective_from to datetime', function () {
         'effective_from' => '2026-01-15 10:30:00',
     ]);
 
-    expect($price->fresh()->effective_from)->toBeInstanceOf(Illuminate\Support\Carbon::class);
+    expect($price->fresh()->effective_from)->toBeInstanceOf(Carbon\CarbonImmutable::class);
 });
 
 it('casts is_current to boolean', function () {

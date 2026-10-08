@@ -70,7 +70,7 @@ it('casts dispatched_at to datetime', function () {
         'dispatched_at' => '2026-01-15 10:00:00',
     ]);
 
-    expect($inTransit->fresh()->dispatched_at)->toBeInstanceOf(Illuminate\Support\Carbon::class);
+    expect($inTransit->fresh()->dispatched_at)->toBeInstanceOf(Carbon\CarbonImmutable::class);
 });
 
 it('casts cleared_at to datetime', function () {
@@ -78,7 +78,7 @@ it('casts cleared_at to datetime', function () {
         'cleared_at' => '2026-01-16 10:00:00',
     ]);
 
-    expect($inTransit->fresh()->cleared_at)->toBeInstanceOf(Illuminate\Support\Carbon::class);
+    expect($inTransit->fresh()->cleared_at)->toBeInstanceOf(Carbon\CarbonImmutable::class);
 });
 
 it('casts status to the InTransitStatus enum', function () {

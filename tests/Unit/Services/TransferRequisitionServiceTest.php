@@ -31,6 +31,12 @@ use Illuminate\Support\Facades\Event;
  *   - §22.1a / §22.2 the event timing contract (dispatched inside the
  *     transaction, delivered after commit via ShouldDispatchAfterCommit).
  *   - §6.3 the delegated materializeRequestedAsApproved() call.
+ *
+ * Removed oracles (D-1): the two tests asserting that a null-`requested_base_qty`
+ * item makes the delegated materializer throw. That state is unreachable — the
+ * materializer copies `requested_base_qty` (NOT NULL) onto `approved_base_qty`,
+ * so the guard cannot fire on any schema-valid insert. See
+ * tests/Feature/Architecture/DIAGNOSIS.md.
  */
 uses(RefreshDatabase::class);
 
@@ -214,52 +220,6 @@ describe('confirm()', function () {
         } catch (DomainRuleViolationException $e) {
             expect($e->translationKey())->toBe('errors.empty_requisition_items');
         }
-    });
-
-    it('propagates the missing-approved-quantity error from the materializer', function () {
-        // A second item with a null requested_base_qty cannot be
-        // materialized — the delegated materializer throws
-        // DomainRuleViolationException.
-        actingAsAdmin();
-        $made = makeRequisitionForConfirm(TransferRequisitionStatus::Requested);
-
-        TransferRequisitionItem::factory()->create([
-            'transfer_requisition_id' => $made['requisition']->id,
-            'product_variant_id' => $made['variant']->id,
-            'requested_unit_name' => 'pc',
-            'requested_unit_ratio' => 1,
-            'requested_qty' => 5,
-            'requested_base_qty' => null,
-            'approved_base_qty' => null,
-        ]);
-
-        expect(fn () => $this->service->confirm($made['requisition']))
-            ->toThrow(DomainRuleViolationException::class);
-    });
-
-    it('rolls back entirely when materialization fails', function () {
-        // The requisition must remain in its prior status — nothing
-        // should have been partially confirmed.
-        actingAsAdmin();
-        $made = makeRequisitionForConfirm(TransferRequisitionStatus::Requested);
-
-        TransferRequisitionItem::factory()->create([
-            'transfer_requisition_id' => $made['requisition']->id,
-            'product_variant_id' => $made['variant']->id,
-            'requested_base_qty' => null,
-            'approved_base_qty' => null,
-        ]);
-
-        try {
-            $this->service->confirm($made['requisition']);
-        } catch (DomainRuleViolationException) {
-            // expected
-        }
-
-        // The requisition is still in Requested, and the first item's
-        // approved leg is still null (the transaction rolled back).
-        expect($made['requisition']->fresh()->status)->toBe(TransferRequisitionStatus::Requested);
-        expect($made['item']->fresh()->approved_base_qty)->toBeNull();
     });
 
     it('fires TransferConfirmed', function () {

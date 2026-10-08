@@ -133,7 +133,7 @@ describe('TransferRequisitionResource', function () {
 
     it('resolves the TransferRequisitionPolicy through the Gate', function () {
         expect(Gate::getPolicyFor(TransferRequisition::class))
-            ->toBe(App\Policies\TransferRequisitionPolicy::class);
+            ->toBeInstanceOf(App\Policies\TransferRequisitionPolicy::class);
     });
 
     it('counts only Requested status toward the badge', function () {
@@ -289,7 +289,7 @@ describe('PurchaseOrderResource', function () {
     });
 
     it('resolves the PurchaseOrderPolicy through the Gate', function () {
-        expect(Gate::getPolicyFor(PurchaseOrder::class))->toBe(App\Policies\PurchaseOrderPolicy::class);
+        expect(Gate::getPolicyFor(PurchaseOrder::class))->toBeInstanceOf(App\Policies\PurchaseOrderPolicy::class);
     });
 
     it('counts only Ordered status toward the badge', function () {
@@ -408,7 +408,7 @@ describe('SalesOrderResource', function () {
     });
 
     it('resolves the SalesOrderPolicy through the Gate', function () {
-        expect(Gate::getPolicyFor(SalesOrder::class))->toBe(App\Policies\SalesOrderPolicy::class);
+        expect(Gate::getPolicyFor(SalesOrder::class))->toBeInstanceOf(App\Policies\SalesOrderPolicy::class);
     });
 
     it('counts only Confirmed status toward the badge', function () {
@@ -631,6 +631,9 @@ it('grants an admin with an empty pivot the full system badge count', function (
     // pivot must not suppress the count.
     $admin = User::factory()->admin()->create();
     $this->actingAs($admin);
+    // UserFactory::admin()'s afterCreating hook attaches a warehouse to every
+    // admin; detach so the "empty pivot" premise below actually holds.
+    $admin->warehouses()->detach();
 
     expect($admin->warehouses()->count())->toBe(0);
 
